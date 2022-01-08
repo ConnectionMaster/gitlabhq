@@ -246,7 +246,7 @@
     "miragejs": "^0.1.40",
     "mock-apollo-client": "^0.7.0",
     "nodemon": "^2.0.4",
-    "postcss": "^7.0.14",
+    "postcss": "^8.2.13",
     "prettier": "2.2.1",
     "prosemirror-schema-basic": "^1.1.2",
     "prosemirror-schema-list": "^1.1.6",
