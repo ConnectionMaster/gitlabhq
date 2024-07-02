@@ -28,7 +28,7 @@ inherit_mode:
 
 AllCops:
   # The oldest supported Ruby version.
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.1
   TargetRailsVersion: 7.0
   Exclude:
     - 'gems/**/*'
@@ -539,6 +539,27 @@ Gitlab/RSpec/AvoidSetup:
 RSpec/DuplicateSpecLocation:
   Enabled: true
 
+# https://docs.gitlab.com/ee/development/software_design.html#bounded-contexts
+Gitlab/BoundedContexts:
+  Enabled: true
+  Exclude:
+    - '**/lib/api/**/*'
+    - 'ee/lib/ee/api/**/*'
+    - '**/app/assets/**/*'
+    - '**/app/channels/**/*'
+    - '**/app/components/**/*'
+    - '**/app/controllers/**/*'
+    - '**/app/helpers/**/*'
+    - '**/app/presenters/**/*'
+    - '**/app/serializers/**/*'
+    - '**/lib/tasks/**/*'
+    - '**/app/views/**/*'
+  Include:
+    - 'app/**/*'
+    - 'ee/app/**/*'
+    - 'lib/**/*'
+    - 'ee/lib/**/*'
+
 Gitlab/PolicyRuleBoolean:
   Enabled: true
   Include:
@@ -934,6 +955,7 @@ Gitlab/NamespacedClass:
     - 'ee/db/**/*.rb'
     - 'ee/elastic/**/*.rb'
     - 'scripts/**/*'
+    - 'spec/fixtures/migrations/**/*.rb'
     - 'spec/migrations/**/*.rb'
     - 'app/experiments/**/*_experiment.rb'
     - 'ee/app/experiments/**/*_experiment.rb'
@@ -991,6 +1013,11 @@ QA/SelectorUsage:
   Exclude:
     - 'spec/rubocop/**/*_spec.rb'
 
+QA/FeatureFlags:
+  Enabled: true
+  Include:
+    - 'qa/qa/specs/features/**/*.rb'
+
 Performance/ActiveRecordSubtransactions:
   Exclude:
     - 'spec/**/*.rb'
@@ -1001,7 +1028,7 @@ Performance/ActiveRecordSubtransactionMethods:
     - 'spec/**/*.rb'
     - 'ee/spec/**/*.rb'
 
-Migration/BackgroundMigrationBaseClass:
+Migration/BatchedMigrationBaseClass:
   Enabled: false
 
 BackgroundMigration/AvoidSilentRescueExceptions:
@@ -1046,7 +1073,6 @@ Cop/RedisQueueUsage:
     - 'lib/gitlab/redis.rb'
     - 'lib/system_check/app/redis_version_check.rb'
     - 'lib/gitlab/mail_room.rb'
-    - 'config/initializers/sidekiq_route_patch.rb'
     - 'lib/gitlab/sidekiq_sharding/scheduled_enq.rb'
     - 'lib/gitlab/sidekiq_sharding/router.rb'
     - 'app/workers/concerns/application_worker.rb'
@@ -1064,11 +1090,11 @@ Cop/SidekiqApiUsage:
     - 'lib/gitlab/sidekiq_queue.rb'
     - 'config/initializers/sidekiq.rb'
     - 'config/initializers/forbid_sidekiq_in_transactions.rb'
-    - 'config/initializers/sidekiq_route_patch.rb'
     - 'lib/gitlab/sidekiq_sharding/scheduled_enq.rb'
     - 'lib/gitlab/sidekiq_sharding/router.rb'
     - 'lib/gitlab/redis/queues.rb'
     - 'app/workers/concerns/application_worker.rb'
+    - 'config/initializers/active_job_shard_support.rb'
 
 Cop/FeatureFlagUsage:
   Include:
@@ -1102,10 +1128,6 @@ SidekiqLoadBalancing/WorkerDataConsistency:
   Include:
     - 'app/workers/**/*'
     - 'ee/app/workers/**/*'
-
-# This cop is disabled for Ruby 3.0+ anyway.
-Lint/NonDeterministicRequireOrder:
-  Enabled: false
 
 Graphql/ResourceNotAvailableError:
   Exclude:
@@ -1176,3 +1198,14 @@ Gitlab/TokenWithoutPrefix:
     - 'lib/**/*'
     - 'ee/app/**/*'
     - 'ee/lib/**/*'
+
+Rails/StrongParams:
+  Enabled: true
+  SafeAutoCorrect: false
+  Include:
+    - 'app/controllers/**/*'
+    - 'ee/app/controllers/**/*'
+
+QA/FabricateUsage:
+  Include:
+    - 'qa/qa/specs/**/*_spec.rb'

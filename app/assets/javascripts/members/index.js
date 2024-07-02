@@ -5,7 +5,7 @@ import Vuex from 'vuex';
 import VueApollo from 'vue-apollo';
 import createDefaultClient from '~/lib/graphql';
 import { parseDataAttributes } from '~/members/utils';
-import { MEMBER_TYPES } from 'ee_else_ce/members/constants';
+import { TABS } from 'ee_else_ce/members/tabs_metadata';
 import MembersTabs from './components/members_tabs.vue';
 import membersStore from './store';
 
@@ -28,34 +28,23 @@ export const initMembersApp = (el, options) => {
     groupName,
     groupPath,
     manageMemberRolesPath,
+    canApproveAccessRequests,
+    namespaceUserLimit,
     ...vuexStoreAttributes
   } = parseDataAttributes(el);
 
-  const modules = Object.keys(MEMBER_TYPES).reduce((accumulator, namespace) => {
-    const namespacedOptions = options[namespace];
-
-    if (!namespacedOptions) {
+  const modules = TABS.reduce((accumulator, tab) => {
+    if (!options[tab.namespace]) {
       return accumulator;
     }
-
-    const {
-      tableFields = [],
-      tableAttrs = {},
-      tableSortableFields = [],
-      requestFormatter = () => {},
-      filteredSearchBar = { show: false },
-    } = namespacedOptions;
+    const store = tab.store ?? membersStore;
+    const data = vuexStoreAttributes[tab.namespace];
+    const namespacedOptions = options[tab.namespace];
+    const moduleStore = store({ ...data, ...namespacedOptions });
 
     return {
       ...accumulator,
-      [namespace]: membersStore({
-        ...vuexStoreAttributes[namespace],
-        tableFields,
-        tableAttrs,
-        tableSortableFields,
-        requestFormatter,
-        filteredSearchBar,
-      }),
+      [tab.namespace]: moduleStore,
     };
   }, {});
 
@@ -63,6 +52,7 @@ export const initMembersApp = (el, options) => {
 
   return new Vue({
     el,
+    name: 'MembersRoot',
     components: { MembersTabs },
     store,
     apolloProvider: new VueApollo({ defaultClient: createDefaultClient() }),
@@ -75,6 +65,8 @@ export const initMembersApp = (el, options) => {
       canExportMembers,
       exportCsvPath,
       manageMemberRolesPath,
+      canApproveAccessRequests,
+      namespaceUserLimit,
       group: {
         name: groupName,
         path: groupPath,

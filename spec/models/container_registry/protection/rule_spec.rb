@@ -14,25 +14,25 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
   describe 'enums' do
     it {
       is_expected.to(
-        define_enum_for(:push_protected_up_to_access_level)
+        define_enum_for(:minimum_access_level_for_push)
           .with_values(
-            developer: Gitlab::Access::DEVELOPER,
             maintainer: Gitlab::Access::MAINTAINER,
-            owner: Gitlab::Access::OWNER
+            owner: Gitlab::Access::OWNER,
+            admin: Gitlab::Access::ADMIN
           )
-          .with_prefix(:push_protected_up_to)
+          .with_prefix(:minimum_access_level_for_push)
       )
     }
 
     it {
       is_expected.to(
-        define_enum_for(:delete_protected_up_to_access_level)
-          .with_values(
-            developer: Gitlab::Access::DEVELOPER,
-            maintainer: Gitlab::Access::MAINTAINER,
-            owner: Gitlab::Access::OWNER
-          )
-          .with_prefix(:delete_protected_up_to)
+        define_enum_for(:minimum_access_level_for_delete)
+        .with_values(
+          maintainer: Gitlab::Access::MAINTAINER,
+          owner: Gitlab::Access::OWNER,
+          admin: Gitlab::Access::ADMIN
+        )
+        .with_prefix(:minimum_access_level_for_delete)
       )
     }
   end
@@ -90,12 +90,31 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
       end
     end
 
-    describe '#delete_protected_up_to_access_level' do
-      it { is_expected.to validate_presence_of(:delete_protected_up_to_access_level) }
-    end
+    describe '#at_least_one_minimum_access_level_must_be_present' do
+      where(:minimum_access_level_for_delete, :minimum_access_level_for_push, :valid) do
+        :maintainer | :maintainer | true
+        :maintainer | nil         | true
+        nil         | :maintainer | true
+        nil         | nil         | false
+      end
 
-    describe '#push_protected_up_to_access_level' do
-      it { is_expected.to validate_presence_of(:push_protected_up_to_access_level) }
+      with_them do
+        subject(:container_registry_protection_rule) {
+          build(:container_registry_protection_rule, minimum_access_level_for_delete: minimum_access_level_for_delete,
+            minimum_access_level_for_push: minimum_access_level_for_push)
+        }
+
+        if params[:valid]
+          it { is_expected.to be_valid }
+        else
+          it 'is invalid' do
+            expect(container_registry_protection_rule).not_to be_valid
+            expect(container_registry_protection_rule.errors[:base]).to include(
+              'A rule must have at least a minimum access role for push or delete.'
+            )
+          end
+        end
+      end
     end
   end
 
@@ -240,7 +259,7 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
         create(:container_registry_protection_rule,
           project: project_with_crpr,
           repository_path_pattern: "#{project_with_crpr.full_path}/my-container-stage*",
-          push_protected_up_to_access_level: :developer
+          minimum_access_level_for_push: :maintainer
         )
       end
 
@@ -248,7 +267,7 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
         create(:container_registry_protection_rule,
           project: project_with_crpr,
           repository_path_pattern: "#{project_with_crpr.full_path}/my-container-prod*",
-          push_protected_up_to_access_level: :maintainer
+          minimum_access_level_for_push: :owner
         )
       end
 
@@ -256,7 +275,7 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
         create(:container_registry_protection_rule,
           project: project_with_crpr,
           repository_path_pattern: "#{project_with_crpr.full_path}/my-container-release*",
-          push_protected_up_to_access_level: :owner
+          minimum_access_level_for_push: :admin
         )
       end
 
@@ -264,7 +283,7 @@ RSpec.describe ContainerRegistry::Protection::Rule, type: :model, feature_catego
         create(:container_registry_protection_rule,
           project: project_with_crpr,
           repository_path_pattern: "#{project_with_crpr.full_path}/my-container-*",
-          push_protected_up_to_access_level: :developer
+          minimum_access_level_for_push: :maintainer
         )
       end
 

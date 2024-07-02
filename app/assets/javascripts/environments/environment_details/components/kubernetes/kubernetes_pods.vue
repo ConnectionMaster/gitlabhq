@@ -7,6 +7,7 @@ import {
   STATUS_SUCCEEDED,
   STATUS_FAILED,
   STATUS_LABELS,
+  PODS_TABLE_FIELDS,
 } from '~/kubernetes_dashboard/constants';
 import { getAge } from '~/kubernetes_dashboard/helpers/k8s_integration_helper';
 import WorkloadStats from '~/kubernetes_dashboard/components/workload_stats.vue';
@@ -43,6 +44,7 @@ export default {
               kind: s__('KubernetesDashboard|Pod'),
               spec: pod.spec,
               fullStatus: pod.status,
+              containers: pod.spec.containers,
             };
           }) || []
         );
@@ -69,6 +71,7 @@ export default {
   data() {
     return {
       error: '',
+      filterOption: '',
     };
   },
   computed: {
@@ -100,6 +103,12 @@ export default {
     podsCount() {
       return this.k8sPods?.length || 0;
     },
+    filteredPods() {
+      if (!this.k8sPods) return [];
+      if (!this.filterOption) return this.k8sPods;
+
+      return this.k8sPods.filter((pod) => pod.status === this.filterOption);
+    },
   },
   methods: {
     countPodsByPhase(phase) {
@@ -116,28 +125,33 @@ export default {
     onRemoveSelection() {
       this.$emit('remove-selection');
     },
+    filterPods(status) {
+      this.filterOption = status;
+    },
   },
   i18n: {
     podsTitle: s__('Environment|Pods'),
   },
   PAGE_SIZE: 10,
+  PODS_TABLE_FIELDS,
 };
 </script>
 <template>
   <gl-tab>
     <template #title>
       {{ $options.i18n.podsTitle }}
-      <gl-badge size="sm" class="gl-tab-counter-badge">{{ podsCount }}</gl-badge>
+      <gl-badge class="gl-tab-counter-badge">{{ podsCount }}</gl-badge>
     </template>
 
     <gl-loading-icon v-if="loading" />
 
     <template v-else-if="!error">
-      <workload-stats v-if="podStats" :stats="podStats" class="gl-mt-3" />
+      <workload-stats v-if="podStats" :stats="podStats" class="gl-mt-3" @select="filterPods" />
       <workload-table
         v-if="k8sPods"
-        :items="k8sPods"
+        :items="filteredPods"
         :page-size="$options.PAGE_SIZE"
+        :fields="$options.PODS_TABLE_FIELDS"
         class="gl-mt-8"
         @select-item="onItemSelect"
         @remove-selection="onRemoveSelection"

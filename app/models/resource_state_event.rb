@@ -3,6 +3,10 @@
 class ResourceStateEvent < ResourceEvent
   include MergeRequestResourceEvent
   include Importable
+  include Import::HasImportSource
+  include IgnorableColumns
+
+  ignore_column :imported, remove_with: '17.2', remove_after: '2024-07-22'
 
   validate :exactly_one_issuable, unless: :importing?
 
@@ -12,6 +16,10 @@ class ResourceStateEvent < ResourceEvent
   enum state: Issue.available_states.merge(MergeRequest.available_states).merge(reopened: 5)
 
   after_create :issue_usage_metrics
+
+  scope :merged_with_no_event_source, -> do
+    where(state: :merged, source_merge_request: nil, source_commit: nil)
+  end
 
   def self.issuable_attrs
     %i[issue merge_request].freeze

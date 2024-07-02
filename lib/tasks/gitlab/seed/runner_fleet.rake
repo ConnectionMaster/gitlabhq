@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # Seed database with:
+#   1. 1 organization
 #   1. 2 root groups, one with 2 sub-groups and another with 1 sub-group
 #   1. 1 project in each of the sub-groups
 #   1. 1 instance runner, 1 shared project runner, and group/project runners in some groups/projects
@@ -19,7 +20,7 @@ namespace :gitlab do
   namespace :seed do
     desc 'Seed groups with sub-groups/projects/runners/jobs for Runner Fleet testing'
     task :runner_fleet,
-         [:username, :registration_prefix, :runner_count, :job_count] => :gitlab_environment do |_t, args|
+      [:username, :registration_prefix, :runner_count, :job_count] => :gitlab_environment do |_t, args|
       timings = Benchmark.measure do
         projects_to_runners = Gitlab::Seeders::Ci::Runner::RunnerFleetSeeder.new(
           Gitlab::AppLogger,

@@ -162,7 +162,7 @@ export default {
           :toggle-text="__('More actions')"
           :text-sr-only="true"
           category="tertiary"
-          placement="right"
+          placement="bottom-end"
           no-caret
         >
           <gl-disclosure-dropdown-item v-gl-modal-directive="$options.confirmClearCacheModal">
@@ -194,7 +194,7 @@ export default {
         readonly
         :value="dependencyProxyImagePrefix"
         select-on-click
-        class="gl-layout-w-limited"
+        class="gl-max-w-limited"
         data-testid="proxy-url"
       >
         <template #append>

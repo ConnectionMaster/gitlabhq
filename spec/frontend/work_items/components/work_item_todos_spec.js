@@ -71,9 +71,7 @@ describe('WorkItemTodo component', () => {
         workspace: {
           __typename: 'Project',
           id: 'gid://gitlab/Project/1',
-          workItems: {
-            nodes: [workItemQueryResponse.data.workItem],
-          },
+          workItem: workItemQueryResponse.data.workItem,
         },
       },
     });
@@ -97,7 +95,7 @@ describe('WorkItemTodo component', () => {
 
     expect(findTodoWidget().exists()).toBe(true);
     expect(findTodoIcon().props('name')).toEqual(TODO_ADD_ICON);
-    expect(findTodoIcon().classes('gl-fill-blue-500')).toBe(false);
+    expect(findTodoIcon().classes('!gl-fill-blue-500')).toBe(false);
   });
 
   it('renders mark as done button when there is pending item', () => {
@@ -106,7 +104,7 @@ describe('WorkItemTodo component', () => {
     });
 
     expect(findTodoIcon().props('name')).toEqual(TODO_DONE_ICON);
-    expect(findTodoIcon().classes('gl-fill-blue-500')).toBe(true);
+    expect(findTodoIcon().classes('!gl-fill-blue-500')).toBe(true);
   });
 
   it.each`

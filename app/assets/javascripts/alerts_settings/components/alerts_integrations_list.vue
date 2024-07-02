@@ -82,23 +82,23 @@ export default {
     {
       key: 'active',
       label: __('Status'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'name',
       label: s__('AlertsIntegrations|Integration Name'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'type',
       label: __('Type'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
       formatter: (value) => (value === typeSet.prometheus ? capitalize(value) : value),
     },
     {
       key: 'actions',
       thClass: 'gl-text-right',
-      tdClass: 'gl-text-right gl-vertical-align-middle!',
+      tdClass: 'gl-text-right !gl-align-middle',
       label: __('Actions'),
     },
   ],
@@ -180,7 +180,7 @@ export default {
       </template>
 
       <template #cell(actions)="{ item }">
-        <gl-button-group class="gl-ml-3 gl-mt-n2 gl-mb-n2">
+        <gl-button-group class="gl-ml-3 -gl-mt-2 -gl-mb-2">
           <gl-button
             icon="settings"
             :aria-label="$options.i18n.editIntegration"

@@ -29,7 +29,6 @@ See the prerequisites below to add existing clusters to GitLab.
 To add any cluster to GitLab, you need:
 
 - Either a GitLab.com account or an account for a self-managed installation
-  running GitLab 12.5 or later.
 - The Maintainer role for group-level and project-level clusters.
 - Access to the Admin Area for instance-level clusters.
 - A Kubernetes cluster.
@@ -237,10 +236,16 @@ kubectl create clusterrolebinding permissive-binding \
 
 ## Troubleshooting
 
-### `There was a problem authenticating with your cluster. Please ensure your CA Certificate and Token are valid`
+### CA certificate and token errors during authentication
 
-If you encounter this error while connecting a Kubernetes cluster, ensure you're
-properly pasting the service token. Some shells may add a line break to the
+If you encounter this error while connecting a Kubernetes cluster:
+
+```plaintext
+There was a problem authenticating with your cluster.
+Please ensure your CA Certificate and Token are valid
+```
+
+Ensure you're properly pasting the service token. Some shells may add a line break to the
 service token, making it invalid. Ensure that there are no line breaks by
 pasting your token into an editor and removing any additional spaces.
 

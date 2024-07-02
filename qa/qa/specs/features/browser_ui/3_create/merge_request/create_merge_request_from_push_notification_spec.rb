@@ -2,7 +2,7 @@
 
 module QA
   RSpec.describe 'Create' do
-    describe 'new merge request from the event notification', :reliable,
+    describe 'new merge request from the event notification', :blocking,
       product_group: :code_review do
       let(:branch_name) { "merge-request-test-#{SecureRandom.hex(8)}" }
       let(:title) { "Merge from push event notification test #{SecureRandom.hex(8)}" }
@@ -14,6 +14,10 @@ module QA
 
       it(
         'after a push via the git CLI creates a merge request',
+        quarantine: {
+          issue: 'https://gitlab.com/gitlab-org/gitlab/-/issues/442691',
+          type: :flaky
+        },
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/360489'
       ) do
         Resource::Repository::ProjectPush.fabricate! do |push|

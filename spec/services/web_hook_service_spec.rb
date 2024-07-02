@@ -404,20 +404,6 @@ RSpec.describe WebHookService, :request_store, :clean_gitlab_redis_shared_state,
               .once
           end
         end
-
-        context 'when feature flag is disabled' do
-          before do
-            stub_feature_flags(custom_webhook_template: false)
-          end
-
-          it 'does not render custom template', :aggregate_failures do
-            service_instance.execute
-
-            expect(WebMock).to have_requested(:post, stubbed_hostname(project_hook.url))
-              .with(headers: headers, body: '{"before":"oldrev","after":"newrev","ref":"ref"}')
-              .once
-          end
-        end
       end
 
       context 'when template is invalid' do
@@ -476,19 +462,6 @@ RSpec.describe WebHookService, :request_store, :clean_gitlab_redis_shared_state,
 
           expect(WebMock).to have_requested(:post, stubbed_hostname(project_hook.url))
             .with(headers: Gitlab::WebHooks::RecursionDetection.header(project_hook))
-        end
-      end
-
-      context 'when custom_webhook_headers feature flag is disabled' do
-        before do
-          stub_feature_flags(custom_webhook_headers: false)
-        end
-
-        it 'sends request without custom headers' do
-          service_instance.execute
-
-          expect(WebMock).to have_requested(:post, stubbed_hostname(project_hook.url))
-            .with(headers: headers)
         end
       end
     end
@@ -636,7 +609,7 @@ RSpec.describe WebHookService, :request_store, :clean_gitlab_redis_shared_state,
 
       context 'with oversize response body' do
         let(:oversize_body) { 'a' * (described_class::RESPONSE_BODY_SIZE_LIMIT + 1) }
-        let(:stripped_body) { 'a' * (described_class::RESPONSE_BODY_SIZE_LIMIT - ellipsis.bytesize) + ellipsis }
+        let(:stripped_body) { ('a' * (described_class::RESPONSE_BODY_SIZE_LIMIT - ellipsis.bytesize)) + ellipsis }
 
         before do
           stub_full_request(project_hook.url, method: :post).to_return(status: 200, body: oversize_body)
@@ -690,7 +663,7 @@ RSpec.describe WebHookService, :request_store, :clean_gitlab_redis_shared_state,
 
       context 'with oversize header' do
         let(:oversize_header) { 'a' * (described_class::RESPONSE_HEADERS_SIZE_LIMIT + 1) }
-        let(:stripped_header) { 'a' * (described_class::RESPONSE_HEADERS_SIZE_LIMIT - ellipsis.bytesize) + ellipsis }
+        let(:stripped_header) { ('a' * (described_class::RESPONSE_HEADERS_SIZE_LIMIT - ellipsis.bytesize)) + ellipsis }
         let(:response_headers) { { 'oversized-header' => oversize_header } }
         let(:expected_response_headers) { { 'Oversized-Header' => stripped_header } }
 

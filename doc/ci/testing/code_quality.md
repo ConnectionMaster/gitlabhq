@@ -1,6 +1,6 @@
 ---
 stage: Secure
-group: Static Analysis
+group: Secret Detection
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -68,11 +68,6 @@ DETAILS:
 **Tier:** Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/267612) in GitLab 13.11, disabled by default behind the `codequality_mr_diff` [feature flag](../../administration/feature_flags.md).
-> - [Enabled by default](https://gitlab.com/gitlab-org/gitlab/-/issues/284140) in GitLab 13.12.
-> - [Disabled by default](https://gitlab.com/gitlab-org/gitlab/-/issues/2526) in GitLab 14.0 due to [this issue](https://gitlab.com/gitlab-org/gitlab/-/issues/334116).
-> - [Inline annotation added](https://gitlab.com/gitlab-org/gitlab/-/issues/2526) and [feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/284140) in GitLab 14.1.
-
 Code Quality results display in the merge request **Changes** view. Lines containing Code Quality
 issues are marked by a symbol beside the gutter. Select the symbol to see the list of issues, then select an issue to see its details.
 
@@ -107,6 +102,7 @@ Prerequisites:
 - GitLab CI/CD configuration (`.gitlab-ci.yml`) must include the `test` stage.
 - If you're using instance runners, the Code Quality job must be configured for the
   [Docker-in-Docker workflow](../docker/using_docker_build.md#use-docker-in-docker).
+  When using this workflow, the `/builds` volume must be mapped to allow reports to be saved.
 - If you're using private runners, you should use an
   [alternative configuration](#improve-code-quality-performance-with-private-runners)
   recommended for running Code Quality analysis more efficiently.
@@ -403,8 +399,6 @@ code_quality:
 
 ## Use a private container image registry
 
-> - [Introduced](https://gitlab.com/gitlab-org/ci-cd/codequality/-/merge_requests/30) in GitLab 13.7.
-
 Using a private container image registry can reduce the time taken to download images, and also
 reduce external dependencies. You must configure the registry prefix to be passed down
 to CodeClimate's subsequent `docker pull` commands for individual engines, because of
@@ -606,9 +600,9 @@ You must set up Docker in a Docker container (Docker-in-Docker) to use Code Qual
 
 To ensure Code Quality jobs can run on a Kubernetes executor:
 
-- If you're using TLS to communicate with the Docker daemon, the executor [must be running in privileged mode](https://docs.gitlab.com/runner/executors/kubernetes.html#other-configtoml-settings). Additionally, the certificate directory must be [specified as a volume mount](../docker/using_docker_build.md#docker-in-docker-with-tls-enabled-in-kubernetes).
+- If you're using TLS to communicate with the Docker daemon, the executor [must be running in privileged mode](https://docs.gitlab.com/runner/executors/kubernetes/index.html#other-configtoml-settings). Additionally, the certificate directory must be [specified as a volume mount](../docker/using_docker_build.md#docker-in-docker-with-tls-enabled-in-kubernetes).
 - It is possible that the DinD service doesn't start up fully before the Code Quality job starts. This is a limitation documented in
-the [Kubernetes executor for GitLab Runner](https://docs.gitlab.com/runner/executors/kubernetes.html#docker-cannot-connect-to-the-docker-daemon-at-tcpdocker2375-is-the-docker-daemon-running) troubleshooting section. The daemon can be manually waited to start, that is shown in the `before_script` sections of the code blocks below.
+  [Troubleshooting the Kubernetes executor](https://docs.gitlab.com/runner/executors/kubernetes/troubleshooting.html#docker-cannot-connect-to-the-docker-daemon-at-tcpdocker2375-is-the-docker-daemon-running). To resolve the issue, use `before_script` to wait for the Docker daemon to fully boot up. For an example, see the configuration in the `.gitlab-ci.yml` file below.
 
 ### Kubernetes
 
@@ -618,7 +612,7 @@ To run Code Quality in Kubernetes:
 - The Docker daemon in the service container must listen on a TCP and UNIX socket, as both sockets are required by Code Quality.
 - The Docker socket must be shared with a volume.
 
-Due to a [Docker requirement](https://docs.docker.com/engine/reference/commandline/run/#privileged), the privileged flag
+Due to a [Docker requirement](https://docs.docker.com/reference/cli/docker/container/run/#privileged), the privileged flag
 must be enabled for the service container.
 
 ```toml
@@ -718,29 +712,29 @@ name = "docker:20.10.12-dind"
 1. [Set the custom configuration to your runner](https://docs.gitlab.com/runner/configuration/configuring_runner_operator.html#customize-configtoml-with-a-configuration-template).
 
 1. Optional. Attach a [`privileged` service account](https://docs.openshift.com/container-platform/3.11/admin_guide/manage_scc.html)
-to the build Pod. This depends on your OpenShift cluster setup:
+   to the build Pod. This depends on your OpenShift cluster setup:
 
-```shell
-  oc create sa dind-sa
-  oc adm policy add-scc-to-user anyuid -z dind-sa
-  oc adm policy add-scc-to-user -z dind-sa privileged
-```
+   ```shell
+   oc create sa dind-sa
+   oc adm policy add-scc-to-user anyuid -z dind-sa
+   oc adm policy add-scc-to-user -z dind-sa privileged
+   ```
 
-1. Set the permissions in the [`[runners.kubernetes]` section](https://docs.gitlab.com/runner/executors/kubernetes.html#other-configtoml-settings).
+1. Set the permissions in the [`[runners.kubernetes]` section](https://docs.gitlab.com/runner/executors/kubernetes/index.html#other-configtoml-settings).
 1. Set the job definition stays the same as in Kubernetes case:
 
-  ```yaml
-  include:
-  - template: Code-Quality.gitlab-ci.yml
+   ```yaml
+   include:
+   - template: Code-Quality.gitlab-ci.yml
 
-  code_quality:
-  services: []
-  variables:
-    DOCKER_HOST: tcp://dind:2375
-    DOCKER_DRIVER: ""
-  before_script:
-    - while ! docker info > /dev/null 2>&1; do sleep 1; done
-  ```
+   code_quality:
+   services: []
+   variables:
+     DOCKER_HOST: tcp://dind:2375
+     DOCKER_DRIVER: ""
+   before_script:
+     - while ! docker info > /dev/null 2>&1; do sleep 1; done
+   ```
 
 #### Volumes and Docker storage
 

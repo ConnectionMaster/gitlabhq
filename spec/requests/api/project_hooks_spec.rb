@@ -5,7 +5,10 @@ require 'spec_helper'
 RSpec.describe API::ProjectHooks, 'ProjectHooks', feature_category: :webhooks do
   let_it_be(:user) { create(:user) }
   let_it_be(:user3) { create(:user) }
-  let_it_be(:project) { create(:project, creator_id: user.id, namespace: user.namespace) }
+  let_it_be_with_reload(:project) do
+    create(:project, :repository, creator_id: user.id, namespace: user.namespace, maintainers: user, developers: user3)
+  end
+
   let_it_be_with_refind(:hook) do
     create(
       :project_hook,
@@ -15,11 +18,6 @@ RSpec.describe API::ProjectHooks, 'ProjectHooks', feature_category: :webhooks do
       enable_ssl_verification: true,
       push_events_branch_filter: 'master'
     )
-  end
-
-  before_all do
-    project.add_maintainer(user)
-    project.add_developer(user3)
   end
 
   it_behaves_like 'web-hook API endpoints', '/projects/:id' do
@@ -68,6 +66,8 @@ RSpec.describe API::ProjectHooks, 'ProjectHooks', feature_category: :webhooks do
       { push_events: true, confidential_note_events: nil }
     end
 
-    it_behaves_like 'web-hook API endpoints with branch-filter', '/projects/:id'
+    it_behaves_like 'test web-hook endpoint'
+    it_behaves_like 'POST webhook API endpoints with a branch filter', '/projects/:id'
+    it_behaves_like 'PUT webhook API endpoints with a branch filter', '/projects/:id'
   end
 end

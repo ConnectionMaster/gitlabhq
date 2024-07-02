@@ -6,15 +6,12 @@ module Projects
       include ::Integrations::Params
       include ::InternalRedirect
 
-      before_action :authorize_admin_project!
+      before_action :authorize_admin_integrations!
       before_action :ensure_integration_enabled, only: [:edit, :update, :test]
       before_action :integration, only: [:edit, :update, :test]
       before_action :default_integration, only: [:edit, :update]
       before_action :web_hook_logs, only: [:edit, :update]
       before_action -> { check_test_rate_limit! }, only: :test
-      before_action only: [:edit, :update] do
-        push_frontend_feature_flag(:jira_multiple_project_keys, project.group)
-      end
 
       respond_to :html
 

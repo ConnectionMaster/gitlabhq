@@ -5,14 +5,7 @@ module QA
     describe 'Pipeline with project file variables' do
       let(:executor) { "qa-runner-#{Faker::Alphanumeric.alphanumeric(number: 8)}" }
       let(:project) { create(:project, name: 'project-with-file-variables') }
-
-      let!(:runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = project
-          runner.name = executor
-          runner.tags = [executor]
-        end
-      end
+      let!(:runner) { create(:project_runner, project: project, name: executor, tags: [executor]) }
 
       let(:add_ci_file) do
         create(:commit, project: project, commit_message: 'Add .gitlab-ci.yml', actions: [
@@ -66,7 +59,7 @@ module QA
       end
 
       it(
-        'does not expose file variable content with echo', :reliable,
+        'does not expose file variable content with echo', :smoke,
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/370791'
       ) do
         job = create(:job, project: project, id: project.job_by_name('job_echo')[:id])
@@ -81,7 +74,7 @@ module QA
       end
 
       it(
-        'can read file variable content with cat', :reliable,
+        'can read file variable content with cat', :blocking,
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/386409'
       ) do
         job = job = create(:job, project: project, id: project.job_by_name('job_cat')[:id])

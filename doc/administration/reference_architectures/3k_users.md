@@ -4,14 +4,13 @@ group: Distribution
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Reference architecture: up to 3,000 users
+# Reference architecture: Up to 60 RPS or 3,000 users
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** Self-managed
 
-This page describes the GitLab reference architecture designed for the load of up to 3,000 users
-with notable headroom.
+This page describes the GitLab reference architecture designed to target a peak load of 60 requests per second (RPS), the typical peak load of up to 3,000 users, both manual and automated, based on real data.
 
 This architecture is the smallest one available with HA built in. If you require HA but
 have a lower user count or total load the [Supported Modifications for lower user counts](#supported-modifications-for-lower-user-counts-ha)
@@ -22,25 +21,25 @@ For a full list of reference architectures, see
 
 > - **Target Load:** 60 RPS, Web: 6 RPS, Git (Pull): 6 RPS, Git (Push): 1 RPS
 > - **High Availability:** Yes, although [Praefect](#configure-praefect-postgresql) needs a third-party PostgreSQL solution
-> - **Estimated Costs:** [See cost table](index.md#cost-to-run)
+> - **Cost calculator template:** [See cost calculator templates section](index.md#cost-calculator-templates)
 > - **Cloud Native Hybrid Alternative:** [Yes](#cloud-native-hybrid-reference-architecture-with-helm-charts-alternative)
-> - **Unsure which Reference Architecture to use?** [Go to this guide for more info](index.md#deciding-which-architecture-to-use).
+> - **Unsure which Reference Architecture to use?** [Go to this guide for more info](index.md#deciding-which-architecture-to-start-with).
 
 | Service                                   | Nodes | Configuration         | GCP             | AWS          | Azure    |
 |-------------------------------------------|-------|-----------------------|-----------------|--------------|----------|
 | External load balancer<sup>3</sup>        | 1     | 4 vCPU, 3.6 GB memory | `n1-highcpu-4`  | `c5n.xlarge` | `F4s v2` |
-| Redis<sup>2</sup>                         | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`   | `D2s v3` |
-| Consul<sup>1</sup> + Sentinel<sup>2</sup> | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
+| Consul<sup>1</sup>                        | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
 | PostgreSQL<sup>1</sup>                    | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`   | `D2s v3` |
 | PgBouncer<sup>1</sup>                     | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
 | Internal load balancer<sup>3</sup>        | 1     | 4 vCPU, 3.6 GB memory | `n1-highcpu-4`  | `c5n.xlarge` | `F4s v2` |
+| Redis/Sentinel<sup>2</sup>                | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`   | `D2s v3` |
 | Gitaly<sup>5</sup>                        | 3     | 4 vCPU, 15 GB memory<sup>6</sup> | `n1-standard-4` | `m5.xlarge`  | `D4s v3` |
 | Praefect<sup>5</sup>                      | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
 | Praefect PostgreSQL<sup>1</sup>           | 1+    | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
 | Sidekiq<sup>7</sup>                       | 2     | 4 vCPU, 15 GB memory  | `n1-standard-4` | `m5.xlarge`  | `D2s v3` |
 | GitLab Rails<sup>7</sup>                  | 3     | 8 vCPU, 7.2 GB memory | `n1-highcpu-8`  | `c5.2xlarge` | `F8s v2` |
 | Monitoring node                           | 1     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`   | `F2s v2` |
-| Object storage <sup>4</sup>                | -     | -                     | -               | -            | -        |
+| Object storage<sup>4</sup>                | -     | -                     | -               | -            | -        |
 
 **Footnotes:**
 
@@ -55,12 +54,13 @@ For a full list of reference architectures, see
    Review the existing [technical limitations and considerations before deploying Gitaly Cluster](../gitaly/index.md#before-deploying-gitaly-cluster). If you want sharded Gitaly, use the same specs listed above for `Gitaly`.
 1. Gitaly specifications are based on high percentiles of both usage patterns and repository sizes in good health.
    However, if you have [large monorepos](index.md#large-monorepos) (larger than several gigabytes) or [additional workloads](index.md#additional-workloads) these can *significantly* impact Git and Gitaly performance and further adjustments will likely be required.
-1. Can be placed in Auto Scaling Groups (ASGs) as the component doesn't store any [stateful data](index.md#autoscaling-of-stateful-nodes).
-   However, for GitLab Rails certain processes like [migrations](#gitlab-rails-post-configuration) and [Mailroom](../incoming_email.md) should be run on only one node.
+6. Can be placed in Auto Scaling Groups (ASGs) as the component doesn't store any [stateful data](index.md#autoscaling-of-stateful-nodes).
+   However, [Cloud Native Hybrid setups](#cloud-native-hybrid-reference-architecture-with-helm-charts-alternative) are generally preferred as certain components
+   such as like [migrations](#gitlab-rails-post-configuration) and [Mailroom](../incoming_email.md) can only be run on one node, which is handled better in Kubernetes.
 <!-- markdownlint-enable MD029 -->
 
 NOTE:
-For all PaaS solutions that involve configuring instances, it is strongly recommended to implement a minimum of three nodes in three different availability zones to align with resilient cloud architecture practices.
+For all PaaS solutions that involve configuring instances, it's recommended to implement a minimum of three nodes in three different availability zones to align with resilient cloud architecture practices.
 
 ```plantuml
 @startuml 3k
@@ -152,7 +152,7 @@ Before starting, see the [requirements](index.md#requirements) for reference arc
 ## Testing methodology
 
 The 3k architecture is designed to cover a large majority of workflows and is regularly
-[smoke and performance tested](index.md#validation-and-test-results) by the Quality Engineering team
+[smoke and performance tested](index.md#validation-and-test-results) by the Test Platform team
 against the following endpoint throughput targets:
 
 - API: 60 RPS
@@ -161,7 +161,7 @@ against the following endpoint throughput targets:
 - Git (Push): 1 RPS
 
 The above targets were selected based on real customer data of total environmental loads corresponding to the user count,
-including CI and other workloads along with additional substantial headroom added.
+including CI and other workloads.
 
 If you have metrics to suggest that you have regularly higher throughput against the above endpoint targets, [large monorepos](index.md#large-monorepos)
 or notable [additional workloads](index.md#additional-workloads) these can notably impact the performance environment and [further adjustments may be required](index.md#scaling-an-environment).
@@ -174,16 +174,16 @@ The load balancers used for testing were HAProxy for Linux package environments 
 
 ## Set up components
 
-To set up GitLab and its components to accommodate up to 3,000 users:
+To set up GitLab and its components to accommodate up to 60 RPS or 3,000 users:
 
 1. [Configure the external load balancer](#configure-the-external-load-balancer)
    to handle the load balancing of the GitLab application services nodes.
-1. [Configure the internal load balancer](#configure-the-internal-load-balancer).
+1. [Configure the internal load balancer](#configure-the-internal-load-balancer)
    to handle the load balancing of GitLab application internal connections.
-1. [Configure Redis](#configure-redis).
-1. [Configure Consul and Sentinel](#configure-consul-and-sentinel).
+1. [Configure Consul](#configure-consul).
 1. [Configure PostgreSQL](#configure-postgresql), the database for GitLab.
 1. [Configure PgBouncer](#configure-pgbouncer).
+1. [Configure Redis](#configure-redis).
 1. [Configure Gitaly Cluster](#configure-gitaly-cluster),
    provides access to the Git repositories.
 1. [Configure Sidekiq](#configure-sidekiq).
@@ -418,313 +418,30 @@ Refer to your preferred Load Balancer's documentation for further guidance.
   </a>
 </div>
 
-## Configure Redis
+## Configure Consul
 
-Using [Redis](https://redis.io/) in scalable environment is possible using a **Primary** x **Replica**
-topology with a [Redis Sentinel](https://redis.io/docs/manual/sentinel/) service to watch and automatically
-start the failover procedure.
+Next, we set up the Consul servers.
 
 NOTE:
-Multi-node Redis must be deployed in an odd number of 3 nodes or more to ensure Redis Sentinel can take votes as part of a quorum. This does not apply when configuring Redis externally,
-such as a cloud provider service.
-
-NOTE:
-Redis is primarily single threaded and doesn't significantly benefit from an increase in CPU cores.
-Refer to the [scaling documentation](index.md#scaling-an-environment) for more information.
-
-Redis requires authentication if used with Sentinel. See
-[Redis Security](https://redis.io/docs/manual/security/) documentation for more
-information. We recommend using a combination of a Redis password and tight
-firewall rules to secure your Redis service.
-You are highly encouraged to read the [Redis Sentinel](https://redis.io/docs/manual/sentinel/) documentation
-before configuring Redis with GitLab to fully understand the topology and
-architecture.
-
-In this section, you'll be guided through configuring an external Redis instance
-to be used with GitLab. The following IPs will be used as an example:
-
-- `10.6.0.61`: Redis Primary
-- `10.6.0.62`: Redis Replica 1
-- `10.6.0.63`: Redis Replica 2
-
-### Provide your own Redis instance
-
-You can optionally use a [third party external service for the Redis instance](../redis/replication_and_failover_external.md#redis-as-a-managed-service-in-a-cloud-provider) with the following guidance:
-
-- A reputable provider or solution should be used for this. [Google Memorystore](https://cloud.google.com/memorystore/docs/redis/memorystore-for-redis-overview) and [AWS ElastiCache](https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/WhatIs.html) are known to work.
-- Redis Cluster mode is specifically not supported, but Redis Standalone with HA (Redis Sentinel) **is** supported.
-- You must set the [Redis eviction mode](../redis/replication_and_failover_external.md#setting-the-eviction-policy) according to your setup.
-
-For more information, see [Recommended cloud providers and services](index.md#recommended-cloud-providers-and-services).
-
-### Standalone Redis using the Linux package
-
-This is the section where we install and set up the new Redis instances.
-
-The requirements for a Redis setup are the following:
-
-1. All Redis nodes must be able to talk to each other and accept incoming
-   connections over Redis (`6379`) and Sentinel (`26379`) ports (unless you
-   change the default ones).
-1. The server that hosts the GitLab application must be able to access the
-   Redis nodes.
-1. Protect the nodes from access from external networks
-   ([Internet](https://gitlab.com/gitlab-org/gitlab-foss/uploads/c4cc8cd353604bd80315f9384035ff9e/The_Internet_IT_Crowd.png)),
-   using a firewall.
-
-Both the primary and replica Redis nodes need the same password defined in
-`redis['password']`. At any time during a failover, the Sentinels can reconfigure
-a node and change its status from primary to replica (and vice versa).
-
-#### Configuring the primary Redis instance
-
-1. SSH in to the **Primary** Redis server.
-1. [Download and install](https://about.gitlab.com/install/) the Linux
-   package of your choice. Be sure to both follow _only_ installation steps 1 and 2
-   on the page, and to select the correct Linux package, with the same version
-   and type (Community or Enterprise editions) as your current install.
-1. Edit `/etc/gitlab/gitlab.rb` and add the contents:
-
-   ```ruby
-   # Specify server role as 'redis_master_role' and enable Consul agent
-   roles(['redis_master_role', 'consul_role'])
-
-   # IP address pointing to a local IP that the other machines can reach to.
-   # You can also set bind to '0.0.0.0' which listen in all interfaces.
-   # If you really need to bind to an external accessible IP, make
-   # sure you add extra firewall rules to prevent unauthorized access.
-   redis['bind'] = '10.6.0.61'
-
-   # Define a port so Redis can listen for TCP requests which will allow other
-   # machines to connect to it.
-   redis['port'] = 6379
-
-   # Set up password authentication for Redis (use the same password in all nodes).
-   redis['password'] = 'redis-password-goes-here'
-
-   ## Enable service discovery for Prometheus
-   consul['monitoring_service_discovery'] =  true
-
-   ## The IPs of the Consul server nodes
-   ## You can also use FQDNs and intermix them with IPs
-   consul['configuration'] = {
-      retry_join: %w(10.6.0.11 10.6.0.12 10.6.0.13),
-   }
-
-   # Set the network addresses that the exporters will listen on
-   node_exporter['listen_address'] = '0.0.0.0:9100'
-   redis_exporter['listen_address'] = '0.0.0.0:9121'
-   redis_exporter['flags'] = {
-        'redis.addr' => 'redis://10.6.0.61:6379',
-        'redis.password' => 'redis-password-goes-here',
-   }
-
-   # Prevent database migrations from running on upgrade automatically
-   gitlab_rails['auto_migrate'] = false
-   ```
-
-1. Copy the `/etc/gitlab/gitlab-secrets.json` file from the first Linux package node you configured and add or replace
-   the file of the same name on this server. If this is the first Linux package node you are configuring then you can skip this step.
-
-1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.
-
-You can specify multiple roles, like sentinel and Redis, as:
-`roles ['redis_sentinel_role', 'redis_master_role']`. Read more about
-[roles](https://docs.gitlab.com/omnibus/roles/).
-
-You can list the current Redis Primary, Replica status by using:
-
-```shell
-/opt/gitlab/embedded/bin/redis-cli -h <host> -a 'redis-password-goes-here' info replication
-```
-
-Show running GitLab services by using:
-
-```shell
-gitlab-ctl status
-```
-
-The output should be similar to the following:
-
-```plaintext
-run: consul: (pid 30043) 76863s; run: log: (pid 29691) 76892s
-run: logrotate: (pid 31152) 3070s; run: log: (pid 29595) 76908s
-run: node-exporter: (pid 30064) 76862s; run: log: (pid 29624) 76904s
-run: redis: (pid 30070) 76861s; run: log: (pid 29573) 76914s
-run: redis-exporter: (pid 30075) 76861s; run: log: (pid 29674) 76896s
-```
-
-#### Configuring the replica Redis instances
-
-1. SSH in to the **replica** Redis server.
-1. [Download and install](https://about.gitlab.com/install/) the Linux
-   package of your choice. Be sure to both follow _only_ installation steps 1 and 2
-   on the page, and to select the correct Linux package, with the same version
-   and type (Community or Enterprise editions) as your current install.
-1. Edit `/etc/gitlab/gitlab.rb` and add the contents:
-
-   ```ruby
-   # Specify server role as 'redis_replica_role' and enable Consul agent
-   roles(['redis_replica_role', 'consul_role'])
-
-   # IP address pointing to a local IP that the other machines can reach to.
-   # You can also set bind to '0.0.0.0' which listen in all interfaces.
-   # If you really need to bind to an external accessible IP, make
-   # sure you add extra firewall rules to prevent unauthorized access.
-   redis['bind'] = '10.6.0.62'
-
-   # Define a port so Redis can listen for TCP requests which will allow other
-   # machines to connect to it.
-   redis['port'] = 6379
-
-   # The same password for Redis authentication you set up for the primary node.
-   redis['password'] = 'redis-password-goes-here'
-
-   # The IP of the primary Redis node.
-   redis['master_ip'] = '10.6.0.61'
-
-   # Port of primary Redis server, uncomment to change to non default. Defaults
-   # to `6379`.
-   #redis['master_port'] = 6379
-
-   ## Enable service discovery for Prometheus
-   consul['monitoring_service_discovery'] =  true
-
-   ## The IPs of the Consul server nodes
-   ## You can also use FQDNs and intermix them with IPs
-   consul['configuration'] = {
-      retry_join: %w(10.6.0.11 10.6.0.12 10.6.0.13),
-   }
-
-   # Set the network addresses that the exporters will listen on
-   node_exporter['listen_address'] = '0.0.0.0:9100'
-   redis_exporter['listen_address'] = '0.0.0.0:9121'
-   redis_exporter['flags'] = {
-        'redis.addr' => 'redis://10.6.0.62:6379',
-        'redis.password' => 'redis-password-goes-here',
-   }
-
-   # Prevent database migrations from running on upgrade automatically
-   gitlab_rails['auto_migrate'] = false
-   ```
-
-1. Copy the `/etc/gitlab/gitlab-secrets.json` file from the first Linux package node you configured and add or replace
-   the file of the same name on this server. If this is the first Linux package node you are configuring then you can skip this step.
-
-1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.
-1. Go through the steps again for all the other replica nodes, and
-   make sure to set up the IPs correctly.
-
-You can specify multiple roles, like sentinel and Redis, as:
-`roles(['redis_sentinel_role', 'redis_master_role'])`. Read more about
-[roles](https://docs.gitlab.com/omnibus/roles/).
-
-These values don't have to be changed again in `/etc/gitlab/gitlab.rb` after
-a failover, as the nodes will be managed by the [Sentinels](#configure-consul-and-sentinel), and even after a
-`gitlab-ctl reconfigure`, they will get their configuration restored by
-the same Sentinels.
-
-Advanced [configuration options](https://docs.gitlab.com/omnibus/settings/redis.html)
-are supported and can be added if needed.
-
-<div align="right">
-  <a type="button" class="btn btn-default" href="#set-up-components">
-    Back to set up components <i class="fa fa-angle-double-up" aria-hidden="true"></i>
-  </a>
-</div>
-
-## Configure Consul and Sentinel
-
-Now that the Redis servers are all set up, let's configure the Consul + Sentinel
-servers.
-
-NOTE:
-Consul and Redis Sentinel must be deployed in an odd number of 3 nodes or more. This is to ensure the nodes can take votes as part of a quorum.
+Consul must be deployed in an odd number of 3 nodes or more. This is to ensure the nodes can take votes as part of a quorum.
 
 The following IPs will be used as an example:
 
-- `10.6.0.11`: Consul/Sentinel 1
-- `10.6.0.12`: Consul/Sentinel 2
-- `10.6.0.13`: Consul/Sentinel 3
+- `10.6.0.11`: Consul 1
+- `10.6.0.12`: Consul 2
+- `10.6.0.13`: Consul 3
 
-NOTE:
-If you're using an external Redis Sentinel instance, be sure to exclude the
-`requirepass` parameter from the Sentinel configuration. This parameter causes
-clients to report `NOAUTH Authentication required.`.
-[Redis Sentinel 3.2.x doesn't support password authentication](https://github.com/antirez/redis/issues/3279).
+To configure Consul:
 
-To configure the Sentinel:
-
-1. SSH in to the server that will host Consul/Sentinel.
+1. SSH in to the server that will host Consul.
 1. [Download and install](https://about.gitlab.com/install/) the Linux
-   package of your choice. Be sure to both follow _only_ installation steps 1 and 2
+   package of your choice. Be sure to follow _only_ installation steps 1 and 2
    on the page, and to select the correct Linux package, with the same version
    and type (Community or Enterprise editions) as your current install.
 1. Edit `/etc/gitlab/gitlab.rb` and add the contents:
 
    ```ruby
-   roles(['redis_sentinel_role', 'consul_role'])
-
-   # Must be the same in every sentinel node
-   redis['master_name'] = 'gitlab-redis'
-
-   # The same password for Redis authentication you set up for the primary node.
-   redis['master_password'] = 'redis-password-goes-here'
-
-   # The IP of the primary Redis node.
-   redis['master_ip'] = '10.6.0.61'
-
-   # Define a port so Redis can listen for TCP requests which will allow other
-   # machines to connect to it.
-   redis['port'] = 6379
-
-   # Port of primary Redis server, uncomment to change to non default. Defaults
-   # to `6379`.
-   #redis['master_port'] = 6379
-
-   ## Configure Sentinel
-   sentinel['bind'] = '10.6.0.11'
-
-   # Port that Sentinel listens on, uncomment to change to non default. Defaults
-   # to `26379`.
-   # sentinel['port'] = 26379
-
-   ## Quorum must reflect the amount of voting sentinels it take to start a failover.
-   ## Value must NOT be greater then the amount of sentinels.
-   ##
-   ## The quorum can be used to tune Sentinel in two ways:
-   ## 1. If a the quorum is set to a value smaller than the majority of Sentinels
-   ##    we deploy, we are basically making Sentinel more sensible to primary failures,
-   ##    triggering a failover as soon as even just a minority of Sentinels is no longer
-   ##    able to talk with the primary.
-   ## 1. If a quorum is set to a value greater than the majority of Sentinels, we are
-   ##    making Sentinel able to failover only when there are a very large number (larger
-   ##    than majority) of well connected Sentinels which agree about the primary being down.s
-   sentinel['quorum'] = 2
-
-   ## Consider unresponsive server down after x amount of ms.
-   # sentinel['down_after_milliseconds'] = 10000
-
-   ## Specifies the failover timeout in milliseconds. It is used in many ways:
-   ##
-   ## - The time needed to re-start a failover after a previous failover was
-   ##   already tried against the same primary by a given Sentinel, is two
-   ##   times the failover timeout.
-   ##
-   ## - The time needed for a replica replicating to a wrong primary according
-   ##   to a Sentinel current configuration, to be forced to replicate
-   ##   with the right primary, is exactly the failover timeout (counting since
-   ##   the moment a Sentinel detected the misconfiguration).
-   ##
-   ## - The time needed to cancel a failover that is already in progress but
-   ##   did not produced any configuration change (REPLICAOF NO ONE yet not
-   ##   acknowledged by the promoted replica).
-   ##
-   ## - The maximum time a failover in progress waits for all the replica to be
-   ##   reconfigured as replicas of the new primary. However even after this time
-   ##   the replicas will be reconfigured by the Sentinels anyway, but not with
-   ##   the exact parallel-syncs progression as specified.
-   # sentinel['failover_timeout'] = 60000
+   roles(['consul_role'])
 
    ## Enable service discovery for Prometheus
    consul['monitoring_service_discovery'] =  true
@@ -738,7 +455,6 @@ To configure the Sentinel:
 
    # Set the network addresses that the exporters will listen on
    node_exporter['listen_address'] = '0.0.0.0:9100'
-   redis_exporter['listen_address'] = '0.0.0.0:9121'
 
    # Prevent database migrations from running on upgrade automatically
    gitlab_rails['auto_migrate'] = false
@@ -749,7 +465,7 @@ To configure the Sentinel:
 
 1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.
 
-1. Go through the steps again for all the other Consul/Sentinel nodes, and
+1. Go through the steps again for all the other Consul nodes, and
    make sure you set up the correct IPs.
 
 A Consul leader is _elected_ when the provisioning of the third Consul server is
@@ -774,7 +490,6 @@ The output should be similar to the following:
 run: consul: (pid 30074) 76834s; run: log: (pid 29740) 76844s
 run: logrotate: (pid 30925) 3041s; run: log: (pid 29649) 76861s
 run: node-exporter: (pid 30093) 76833s; run: log: (pid 29663) 76855s
-run: sentinel: (pid 30098) 76832s; run: log: (pid 29704) 76850s
 ```
 
 <div align="right">
@@ -785,7 +500,7 @@ run: sentinel: (pid 30098) 76832s; run: log: (pid 29704) 76850s
 
 ## Configure PostgreSQL
 
-In this section, you'll be guided through configuring a highly available PostgreSQL
+In this section, you are guided through configuring a highly available PostgreSQL
 cluster to be used with GitLab.
 
 ### Provide your own PostgreSQL instance
@@ -819,7 +534,7 @@ replication and failover requires:
 
   A local PgBouncer service to be configured on each PostgreSQL node. Note that this is separate from the main PgBouncer cluster that tracks the primary.
 
-The following IPs will be used as an example:
+The following IPs are used as an example:
 
 - `10.6.0.21`: PostgreSQL primary
 - `10.6.0.22`: PostgreSQL secondary 1
@@ -834,8 +549,8 @@ in the second step, do not supply the `EXTERNAL_URL` value.
 #### PostgreSQL nodes
 
 1. SSH in to one of the PostgreSQL nodes.
-1. Generate a password hash for the PostgreSQL username/password pair. This assumes you will use the default
-   username of `gitlab` (recommended). The command will request a password
+1. Generate a password hash for the PostgreSQL username/password pair. This assumes you use the default
+   username of `gitlab` (recommended). The command requests a password
    and confirmation. Use the value that is output by this command in the next
    step as the value of `<postgresql_password_hash>`:
 
@@ -843,8 +558,8 @@ in the second step, do not supply the `EXTERNAL_URL` value.
    sudo gitlab-ctl pg-password-md5 gitlab
    ```
 
-1. Generate a password hash for the PgBouncer username/password pair. This assumes you will use the default
-   username of `pgbouncer` (recommended). The command will request a password
+1. Generate a password hash for the PgBouncer username/password pair. This assumes you use the default
+   username of `pgbouncer` (recommended). The command requests a password
    and confirmation. Use the value that is output by this command in the next
    step as the value of `<pgbouncer_password_hash>`:
 
@@ -852,8 +567,8 @@ in the second step, do not supply the `EXTERNAL_URL` value.
    sudo gitlab-ctl pg-password-md5 pgbouncer
    ```
 
-1. Generate a password hash for the PostgreSQL replication username/password pair. This assumes you will use the default
-   username of `gitlab_replicator` (recommended). The command will request a password
+1. Generate a password hash for the PostgreSQL replication username/password pair. This assumes you use the default
+   username of `gitlab_replicator` (recommended). The command requests a password
    and a confirmation. Use the value that is output by this command in the next step
    as the value of `<postgresql_replication_password_hash>`:
 
@@ -861,8 +576,8 @@ in the second step, do not supply the `EXTERNAL_URL` value.
    sudo gitlab-ctl pg-password-md5 gitlab_replicator
    ```
 
-1. Generate a password hash for the Consul database username/password pair. This assumes you will use the default
-   username of `gitlab-consul` (recommended). The command will request a password
+1. Generate a password hash for the Consul database username/password pair. This assumes you use the default
+   username of `gitlab-consul` (recommended). The command requests a password
    and confirmation. Use the value that is output by this command in the next
    step as the value of `<consul_password_hash>`:
 
@@ -935,7 +650,7 @@ in the second step, do not supply the `EXTERNAL_URL` value.
    # END user configuration
    ```
 
-PostgreSQL, with Patroni managing its failover, will default to use `pg_rewind` by default to handle conflicts.
+PostgreSQL, with Patroni managing its failover, defaults to use `pg_rewind` by default to handle conflicts.
 Like most failover handling methods, this has a small chance of leading to data loss.
 For more information, see the various [Patroni replication methods](../postgresql/replication_and_failover.md#selecting-the-appropriate-patroni-replication-method).
 
@@ -992,7 +707,7 @@ NOTE:
 PgBouncer is single threaded and doesn't significantly benefit from an increase in CPU cores.
 Refer to the [scaling documentation](index.md#scaling-an-environment) for more information.
 
-The following IPs will be used as an example:
+The following IPs are used as an example:
 
 - `10.6.0.31`: PgBouncer 1
 - `10.6.0.32`: PgBouncer 2
@@ -1091,6 +806,198 @@ The following IPs will be used as an example:
    run: pgbouncer: (pid 32033) 75593s; run: log: (pid 31117) 77175s
    run: pgbouncer-exporter: (pid 31558) 77148s; run: log: (pid 31498) 77156s
    ```
+
+<div align="right">
+  <a type="button" class="btn btn-default" href="#set-up-components">
+    Back to set up components <i class="fa fa-angle-double-up" aria-hidden="true"></i>
+  </a>
+</div>
+
+## Configure Redis
+
+Using [Redis](https://redis.io/) in scalable environment is possible using a **Primary** x **Replica**
+topology with a [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) service to watch and automatically
+start the failover procedure.
+
+NOTE:
+Redis clusters must each be deployed in an odd number of 3 nodes or more. This is to ensure Redis Sentinel can take votes as part of a quorum. This does not apply when configuring Redis externally, such as a cloud provider service.
+
+NOTE:
+Redis is primarily single threaded and doesn't significantly benefit from an increase in CPU cores.
+Refer to the [scaling documentation](index.md#scaling-an-environment) for more information.
+
+Redis requires authentication if used with Sentinel. See
+[Redis Security](https://redis.io/docs/latest/operate/rc/security/) documentation for more
+information. We recommend using a combination of a Redis password and tight
+firewall rules to secure your Redis service.
+You are highly encouraged to read the [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) documentation
+before configuring Redis with GitLab to fully understand the topology and
+architecture.
+
+The requirements for a Redis setup are the following:
+
+1. All Redis nodes must be able to talk to each other and accept incoming
+   connections over Redis (`6379`) and Sentinel (`26379`) ports (unless you
+   change the default ones).
+1. The server that hosts the GitLab application must be able to access the
+   Redis nodes.
+1. Protect the nodes from access from external networks (Internet), using options such as a firewall.
+
+In this section, you'll be guided through configuring two external Redis clusters
+to be used with GitLab. The following IPs will be used as an example:
+
+- `10.6.0.61`: Redis Primary
+- `10.6.0.62`: Redis Replica 1
+- `10.6.0.63`: Redis Replica 2
+
+### Provide your own Redis instance
+
+You can optionally use a [third party external service for the Redis instance](../redis/replication_and_failover_external.md#redis-as-a-managed-service-in-a-cloud-provider) with the following guidance:
+
+- A reputable provider or solution should be used for this. [Google Memorystore](https://cloud.google.com/memorystore/docs/redis/memorystore-for-redis-overview) and [AWS ElastiCache](https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/WhatIs.html) are known to work.
+- Redis Cluster mode is specifically not supported, but Redis Standalone with HA is.
+- You must set the [Redis eviction mode](../redis/replication_and_failover_external.md#setting-the-eviction-policy) according to your setup.
+
+For more information, see [Recommended cloud providers and services](index.md#recommended-cloud-providers-and-services).
+
+### Configure the Redis cluster
+
+This is the section where we install and set up the new Redis instances.
+
+Both the primary and replica Redis nodes need the same password defined in
+`redis['password']`. At any time during a failover, the Sentinels can reconfigure
+a node and change its status from primary to replica (and vice versa).
+
+#### Configure the primary Redis node
+
+1. SSH in to the **Primary** Redis server.
+1. [Download and install](https://about.gitlab.com/install/) the Linux
+   package of your choice. Be sure to follow _only_ installation steps 1 and 2
+   on the page, and to select the correct Linux package, with the same version
+   and type (Community or Enterprise editions) as your current install.
+1. Edit `/etc/gitlab/gitlab.rb` and add the contents:
+
+   ```ruby
+   # Specify server roles as 'redis_master_role' with Sentinel and the Consul agent
+   roles ['redis_sentinel_role', 'redis_master_role', 'consul_role']
+
+   # Set IP bind address and Quorum number for Redis Sentinel service
+   sentinel['bind'] = '0.0.0.0'
+   sentinel['quorum'] = 2
+
+   # IP address pointing to a local IP that the other machines can reach to.
+   # You can also set bind to '0.0.0.0' which listen in all interfaces.
+   # If you really need to bind to an external accessible IP, make
+   # sure you add extra firewall rules to prevent unauthorized access.
+   redis['bind'] = '10.6.0.61'
+
+   # Define a port so Redis can listen for TCP requests which will allow other
+   # machines to connect to it.
+   redis['port'] = 6379
+
+   ## Port of primary Redis server for Sentinel, uncomment to change to non default. Defaults
+   ## to `6379`.
+   #redis['master_port'] = 6379
+
+   # Set up password authentication for Redis and replicas (use the same password in all nodes).
+   redis['password'] = 'REDIS_PRIMARY_PASSWORD'
+   redis['master_password'] = 'REDIS_PRIMARY_PASSWORD'
+
+   ## Must be the same in every Redis node
+   redis['master_name'] = 'gitlab-redis'
+
+   ## The IP of this primary Redis node.
+   redis['master_ip'] = '10.6.0.61'
+
+   ## Enable service discovery for Prometheus
+   consul['monitoring_service_discovery'] =  true
+
+   ## The IPs of the Consul server nodes
+   ## You can also use FQDNs and intermix them with IPs
+   consul['configuration'] = {
+      retry_join: %w(10.6.0.11 10.6.0.12 10.6.0.13),
+   }
+
+   # Set the network addresses that the exporters will listen on
+   node_exporter['listen_address'] = '0.0.0.0:9100'
+   redis_exporter['listen_address'] = '0.0.0.0:9121'
+
+   # Prevent database migrations from running on upgrade automatically
+   gitlab_rails['auto_migrate'] = false
+   ```
+
+1. Copy the `/etc/gitlab/gitlab-secrets.json` file from the first Linux package node you configured and add or replace
+   the file of the same name on this server. If this is the first Linux package node you are configuring then you can skip this step.
+
+1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.
+
+#### Configure the replica Redis nodes
+
+1. SSH in to the **replica** Redis server.
+1. [Download and install](https://about.gitlab.com/install/) the Linux
+   package of your choice. Be sure to follow _only_ installation steps 1 and 2
+   on the page, and to select the correct Linux package, with the same version
+   and type (Community or Enterprise editions) as your current install.
+1. Edit `/etc/gitlab/gitlab.rb` and add the contents:
+
+   ```ruby
+   # Specify server roles as 'redis_sentinel_role' and 'redis_replica_role'
+   roles ['redis_sentinel_role', 'redis_replica_role', 'consul_role']
+
+   # Set IP bind address and Quorum number for Redis Sentinel service
+   sentinel['bind'] = '0.0.0.0'
+   sentinel['quorum'] = 2
+
+   # IP address pointing to a local IP that the other machines can reach to.
+   # You can also set bind to '0.0.0.0' which listen in all interfaces.
+   # If you really need to bind to an external accessible IP, make
+   # sure you add extra firewall rules to prevent unauthorized access.
+   redis['bind'] = '10.6.0.62'
+
+   # Define a port so Redis can listen for TCP requests which will allow other
+   # machines to connect to it.
+   redis['port'] = 6379
+
+   ## Port of primary Redis server for Sentinel, uncomment to change to non default. Defaults
+   ## to `6379`.
+   #redis['master_port'] = 6379
+
+   # The same password for Redis authentication you set up for the primary node.
+   redis['password'] = 'REDIS_PRIMARY_PASSWORD'
+   redis['master_password'] = 'REDIS_PRIMARY_PASSWORD'
+
+   ## Must be the same in every Redis node
+   redis['master_name'] = 'gitlab-redis'
+
+   # The IP of the primary Redis node.
+   redis['master_ip'] = '10.6.0.61'
+
+   ## Enable service discovery for Prometheus
+   consul['monitoring_service_discovery'] =  true
+
+   ## The IPs of the Consul server nodes
+   ## You can also use FQDNs and intermix them with IPs
+   consul['configuration'] = {
+      retry_join: %w(10.6.0.11 10.6.0.12 10.6.0.13),
+   }
+
+   # Set the network addresses that the exporters will listen on
+   node_exporter['listen_address'] = '0.0.0.0:9100'
+   redis_exporter['listen_address'] = '0.0.0.0:9121'
+
+   # Prevent database migrations from running on upgrade automatically
+   gitlab_rails['auto_migrate'] = false
+   ```
+
+1. Copy the `/etc/gitlab/gitlab-secrets.json` file from the first Linux package node you configured and add or replace
+   the file of the same name on this server. If this is the first Linux package node you are configuring then you can skip this step.
+
+1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.
+1. Go through the steps again for all the other replica nodes, and
+   make sure to set up the IPs correctly.
+
+Advanced [configuration options](https://docs.gitlab.com/omnibus/settings/redis.html)
+are supported and can be added if needed.
 
 <div align="right">
   <a type="button" class="btn btn-default" href="#set-up-components">
@@ -1697,6 +1604,11 @@ NOTE:
 If you find that the environment's Sidekiq job processing is slow with long queues
 you can scale it accordingly. Refer to the [scaling documentation](index.md#scaling-an-environment) for more information.
 
+NOTE:
+When configuring additional GitLab functionality such as Container Registry, SAML, or LDAP,
+update the Sidekiq configuration in addition to the Rails configuration.
+Refer to the [external Sidekiq documentation](../sidekiq/index.md) for more information.
+
 The following IPs will be used as an example:
 
 - `10.6.0.71`: Sidekiq 1
@@ -1705,16 +1617,18 @@ The following IPs will be used as an example:
 To configure the Sidekiq nodes, on each one:
 
 1. SSH in to the Sidekiq server.
+1. Confirm that you can access the PostgreSQL, Gitaly, and Redis ports:
+
+   ```shell
+   telnet <GitLab host> 5432 # PostgreSQL
+   telnet <GitLab host> 8075 # Gitaly
+   telnet <GitLab host> 6379 # Redis
+   ```
+
 1. [Download and install](https://about.gitlab.com/install/) the Linux
    package of your choice. Be sure to follow _only_ installation steps 1 and 2
    on the page.
 1. Create or edit `/etc/gitlab/gitlab.rb` and use the following configuration:
-
-   <!--
-   Updates to example must be made at:
-   - https://gitlab.com/gitlab-org/gitlab/blob/master/doc/administration/sidekiq.md
-   - all reference architecture pages
-   -->
 
    ```ruby
    # https://docs.gitlab.com/omnibus/roles/#sidekiq-roles
@@ -1758,7 +1672,6 @@ To configure the Sidekiq nodes, on each one:
    gitlab_rails['auto_migrate'] = false
 
    # Sidekiq
-   sidekiq['enable'] = true
    sidekiq['listen_address'] = "0.0.0.0"
 
    ## Set number of Sidekiq queue processes to the same number as available CPUs
@@ -2161,12 +2074,6 @@ There are two ways of specifying object storage configuration in GitLab:
 
 The consolidated form is used in the following examples when available.
 
-NOTE:
-When using the [storage-specific form](../object_storage.md#configure-each-object-type-to-define-its-own-storage-connection-storage-specific-form)
-in GitLab 14.x and earlier, you should enable [direct upload mode](../../development/uploads/index.md#direct-upload).
-The previous [background upload](../../development/uploads/index.md#direct-upload) mode,
-which was deprecated in 14.9, requires shared storage such as NFS.
-
 Using separate buckets for each data type is the recommended approach for GitLab.
 This ensures there are no collisions across the various types of data GitLab stores.
 There are plans to [enable the use of a single bucket](https://gitlab.com/gitlab-org/gitlab/-/issues/292958)
@@ -2202,18 +2109,18 @@ cluster alongside your instance, read how to
 
 ## Supported modifications for lower user counts (HA)
 
-The 3,000 user GitLab reference architecture is the smallest we recommend that achieves High Availability (HA).
-However, for environments that need to serve fewer users but maintain HA, there are several
+The 60 RPS or 3,000 users GitLab reference architecture is the smallest we recommend that achieves High Availability (HA).
+However, for environments that need to serve fewer users or a lower RPS but maintain HA, there are several
 supported modifications you can make to this architecture to reduce complexity and cost.
 
-It should be noted that to achieve HA with GitLab, the 3,000 user architecture's makeup is ultimately what is
-required. Each component has various considerations and rules to follow, and the 3,000 user architecture
+It should be noted that to achieve HA with GitLab, the 60 RPS or 3,000 users architecture's makeup is ultimately what is
+required. Each component has various considerations and rules to follow, and the architecture
 meets all of these. Smaller versions of this architecture will be fundamentally the same,
 but with smaller performance requirements, several modifications can be considered as follows:
 
 - Lowering node specs: Depending on your user count, you can lower all suggested node specs as desired. However, it's recommended that you don't go lower than the [general requirements](../../install/requirements.md).
 - Combining select nodes: Some nodes can be combined to reduce complexity at the cost of some performance:
-  - GitLab Rails and Sidekiq: Sidekiq nodes can be removed and the component instead enabled on the GitLab Rails nodes.
+  - GitLab Rails and Sidekiq: Sidekiq nodes can be removed, and the component instead enabled on the GitLab Rails nodes.
   - PostgreSQL and PgBouncer: PgBouncer nodes could be removed and instead be enabled on PostgreSQL nodes with the Internal Load Balancer pointing to them. However, to enable [Database Load Balancing](../postgresql/database_load_balancing.md), a separate PgBouncer array is still required.
 - Reducing the node counts: Some node types do not need consensus and can run with fewer nodes (but more than one for redundancy). This will also lead to reduced performance.
   - GitLab Rails and Sidekiq: Stateless services don't have a minimum node count. Two are enough for redundancy.
@@ -2257,27 +2164,30 @@ as the typical environment above.
 First are the components that run in Kubernetes. These run across several node groups, although you can change
 the overall makeup as desired as long as the minimum CPU and Memory requirements are observed.
 
-| Service Node Group  | Nodes | Configuration           | GCP             | AWS          | Min Allocatable CPUs and Memory |
-|---------------------|-------|-------------------------|-----------------|--------------|---------------------------------|
-| Webservice          | 2     | 16 vCPU, 14.4 GB memory | `n1-highcpu-16` | `c5.4xlarge` | 31.8 vCPU, 24.8 GB memory       |
-| Sidekiq             | 3     | 4 vCPU, 15 GB memory    | `n1-standard-4` | `m5.xlarge`  | 11.8 vCPU, 38.9 GB memory       |
-| Supporting services | 2     | 2 vCPU, 7.5 GB memory   | `n1-standard-2` | `m5.large`   | 3.9 vCPU, 11.8 GB memory        |
+| Component Node Group | Target Node Pool Totals | GCP Example     | AWS Example  |
+|----------------------|-------------------------|-----------------|--------------|
+| Webservice           | 16 vCPU<br/>20 GB memory (request)<br/>28 GB memory (limit) | 2 x `n1-standard-16` | 2 x `c5.4xlarge` |
+| Sidekiq              | 7.2 vCPU<br/>16 GB memory (request)<br/>32 GB memory (limit) | 3 x `n1-standard-4` | 3 x `m5.xlarge`  |
+| Supporting services  | 4 vCPU<br/>15 GB memory | 2 x `n1-standard-2` | 2 x `m5.large`   |
 
 - For this setup, we **recommend** and regularly [test](index.md#validation-and-test-results)
   [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine) and [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/). Other Kubernetes services may also work, but your mileage may vary.
-- Nodes configuration is shown as it is forced to ensure pod vCPU / memory ratios and avoid scaling during **performance testing**.
-  - In production deployments, there is no need to assign pods to specific nodes. A minimum of three nodes per node group in three different availability zones is strongly recommended to align with resilient cloud architecture practices.
+- GCP and AWS examples of how to reach the Target Node Pool Total are given for convenience. These sizes are used in performance testing but following the example is not required. Different node pool designs can be used as desired as long as the targets are met, and all pods can deploy.
+- The [Webservice](#webservice) and [Sidekiq](#sidekiq) target node pool totals are given for GitLab components only. Additional resources are required for the chosen Kubernetes provider's system processes. The given examples take this into account.
+- The [Supporting](#supporting) target node pool total is given generally to accommodate several resources for supporting the GitLab deployment as well as any additional deployments you may wish to make depending on your requirements. Similar to the other node pools, the chosen Kubernetes provider's system processes also require resources. The given examples take this into account.
+- In production deployments, it's not required to assign pods to specific nodes. However, it is recommended to have several nodes in each pool spread across different availability zones to align with resilient cloud architecture practices.
+- Enabling autoscaling, such as Cluster Autoscaler, for efficiency reasons is encouraged, but it's generally recommended targeting a floor of 75% for Webservice and Sidekiq pods to ensure ongoing performance.
 
 Next are the backend components that run on static compute VMs using the Linux package (or External PaaS
 services where applicable):
 
 | Service                                   | Nodes | Configuration         | GCP             | AWS         |
 |-------------------------------------------|-------|-----------------------|-----------------|-------------|
-| Redis<sup>2</sup>                         | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`  |
-| Consul<sup>1</sup> + Sentinel<sup>2</sup> | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`  |
+| Consul<sup>1</sup>                        | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`  |
 | PostgreSQL<sup>1</sup>                    | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`  |
 | PgBouncer<sup>1</sup>                     | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`  |
 | Internal load balancer<sup>3</sup>        | 1     | 4 vCPU, 3.6 GB memory | `n1-highcpu-4`  | `c5n.xlarge` |
+| Redis/Sentinel<sup>2</sup>                | 3     | 2 vCPU, 7.5 GB memory | `n1-standard-2` | `m5.large`  |
 | Gitaly<sup>5</sup>                        | 3     | 4 vCPU, 15 GB memory<sup>6</sup> | `n1-standard-4` | `m5.xlarge` |
 | Praefect<sup>5</sup>                      | 3     | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`  |
 | Praefect PostgreSQL<sup>1</sup>           | 1+    | 2 vCPU, 1.8 GB memory | `n1-highcpu-2`  | `c5.large`  |
@@ -2299,7 +2209,7 @@ services where applicable):
 <!-- markdownlint-enable MD029 -->
 
 NOTE:
-For all PaaS solutions that involve configuring instances, it is strongly recommended to implement a minimum of three nodes in three different availability zones to align with resilient cloud architecture practices.
+For all PaaS solutions that involve configuring instances, it's recommended to implement a minimum of three nodes in three different availability zones to align with resilient cloud architecture practices.
 
 ```plantuml
 @startuml 3k
@@ -2309,11 +2219,11 @@ card "Kubernetes via Helm Charts" as kubernetes {
   card "**External Load Balancer**" as elb #6a9be7
 
   together {
-    collections "**Webservice** x2" as gitlab #32CD32
-    collections "**Sidekiq** x3" as sidekiq #ff8dd1
+    collections "**Webservice**" as gitlab #32CD32
+    collections "**Sidekiq**" as sidekiq #ff8dd1
   }
 
-  card "**Supporting Services** x2" as support
+  card "**Supporting Services**" as support
 }
 
 card "**Internal Load Balancer**" as ilb #9370DB
@@ -2368,36 +2278,43 @@ consul .[#e76a9b]--> redis
 @enduml
 ```
 
-### Resource usage settings
+### Kubernetes component targets
 
-The following formulas help when calculating how many pods may be deployed within resource constraints.
-The [3k reference architecture example values file](https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/examples/ref/3k.yaml)
-documents how to apply the calculated configuration to the Helm Chart.
+The following section details the targets used for the GitLab components deployed in Kubernetes.
 
 #### Webservice
 
-Webservice pods typically need about 1 CPU and 1.25 GB of memory _per worker_.
-Each Webservice pod consumes roughly 4 CPUs and 5 GB of memory using
-the [recommended topology](#cluster-topology) because four worker processes
-are created by default and each pod has other small processes running.
+Each Webservice pod (Puma and Workhorse) is recommended to be run with the following configuration:
 
-For 3,000 users we recommend a total Puma worker count of around 16.
-With the [provided recommendations](#cluster-topology) this allows the deployment of up to 4
-Webservice pods with 4 workers per pod and 2 pods per node. Expand available resources using
-the ratio of 1 CPU to 1.25 GB of memory _per each worker process_ for each additional
-Webservice pod.
+- 4 Puma Workers
+- 4 vCPU
+- 5 GB memory (request)
+- 7 GB memory (limit)
 
-For further information on resource usage, see the [Webservice resources](https://docs.gitlab.com/charts/charts/gitlab/webservice/#resources).
+For 60 RPS or 3,000 users we recommend a total Puma worker count of around 16 so in turn it's recommended to run at
+least 4 Webservice pods.
+
+For further information on Webservice resource usage, see the Charts documentation on [Webservice resources](https://docs.gitlab.com/charts/charts/gitlab/webservice/#resources).
+
+##### NGINX
+
+It's also recommended deploying the NGINX controller pods across the Webservice nodes as a DaemonSet. This is to allow the controllers to scale dynamically with the Webservice pods they serve as well as take advantage of the higher network bandwidth larger machine types typically have.
+
+Note that this isn't a strict requirement. The NGINX controller pods can be deployed as desired as long as they have enough resources to handle the web traffic.
 
 #### Sidekiq
 
-Sidekiq pods should generally have 0.9 CPU and 2 GB of memory.
+Each Sidekiq pod is recommended to be run with the following configuration:
 
-[The provided starting point](#cluster-topology) allows the deployment of up to
-8 Sidekiq pods. Expand available resources using the 0.9 CPU to 2 GB memory
-ratio for each additional pod.
+- 1 Sidekiq worker
+- 900m vCPU
+- 2 GB memory (request)
+- 4 GB memory (limit)
 
-For further information on resource usage, see the [Sidekiq resources](https://docs.gitlab.com/charts/charts/gitlab/sidekiq/#resources).
+Similar to the standard deployment above, an initial target of 8 Sidekiq workers has been used here.
+Additional workers may be required depending on your specific workflow.
+
+For further information on Sidekiq resource usage, see the Charts documentation on [Sidekiq resources](https://docs.gitlab.com/charts/charts/gitlab/sidekiq/#resources).
 
 ### Supporting
 
@@ -2405,12 +2322,16 @@ The Supporting Node Pool is designed to house all supporting deployments that do
 on the Webservice and Sidekiq pools.
 
 This includes various deployments related to the Cloud Provider's implementation and supporting
-GitLab deployments such as NGINX or [GitLab Shell](https://docs.gitlab.com/charts/charts/gitlab/gitlab-shell/).
+GitLab deployments such as [GitLab Shell](https://docs.gitlab.com/charts/charts/gitlab/gitlab-shell/).
 
-If you wish to make any additional deployments, such as for Monitoring, it's recommended
+If you wish to make any additional deployments such as Container Registry, Pages or Monitoring, it's recommended
 to deploy these in this pool where possible and not in the Webservice or Sidekiq pools, as the Supporting pool has been designed
 specifically to accommodate several additional deployments. However, if your deployments don't fit into the
-pool as given, you can increase the node pool accordingly.
+pool as given, you can increase the node pool accordingly. Conversely, if the pool in your use case is over-provisioned you can reduce accordingly.
+
+### Example config file
+
+An example for the GitLab Helm Charts for the above 60 RPS or 3,000 reference architecture configuration [can be found in the Charts project](https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/examples/ref/3k.yaml).
 
 <div align="right">
   <a type="button" class="btn btn-default" href="#set-up-components">

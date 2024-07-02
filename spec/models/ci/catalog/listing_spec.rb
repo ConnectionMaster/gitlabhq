@@ -6,23 +6,23 @@ RSpec.describe Ci::Catalog::Listing, feature_category: :pipeline_composition do
   let_it_be(:user) { create(:user) }
   let_it_be(:namespace) { create(:group) }
   let_it_be(:public_namespace_project) do
-    create(:project, :public, namespace: namespace, name: 'A public namespace project', star_count: 10)
+    create(:project, :public, namespace: namespace, name: 'A public namespace project', star_count: 10, reporters: user)
   end
 
   let_it_be(:public_project) do
-    create(:project, :public, name: 'B public test project', star_count: 20)
+    create(:project, :public, name: 'B public test project', star_count: 20, reporters: user)
   end
 
   let_it_be(:namespace_project_a) do
-    create(:project, namespace: namespace, name: 'Test namespace project', star_count: 30)
+    create(:project, namespace: namespace, name: 'Test namespace project', star_count: 30, reporters: user)
   end
 
   let_it_be(:namespace_project_b) do
-    create(:project, namespace: namespace, name: 'X namespace Project', star_count: 40)
+    create(:project, namespace: namespace, name: 'X namespace Project', star_count: 40, reporters: user)
   end
 
   let_it_be(:project_noaccess) { create(:project, namespace: namespace, name: 'Project with no access') }
-  let_it_be(:internal_project) { create(:project, :internal, name: 'Internal project') }
+  let_it_be(:internal_project) { create(:project, :internal, name: 'Internal project', owners: user) }
 
   let_it_be(:private_project) do
     create(:project, namespace: namespace, name: 'B Project', description: 'Rspec test framework')
@@ -30,23 +30,27 @@ RSpec.describe Ci::Catalog::Listing, feature_category: :pipeline_composition do
 
   let(:list) { described_class.new(user) }
 
-  before_all do
-    namespace_project_a.add_reporter(user)
-    namespace_project_b.add_reporter(user)
-    public_namespace_project.add_reporter(user)
-    public_project.add_reporter(user)
-    internal_project.add_owner(user)
-  end
-
   describe '#resources' do
     subject(:resources) { list.resources(**params) }
 
     let(:params) { {} }
 
-    let_it_be(:public_resource_a) { create(:ci_catalog_resource, :published, project: public_namespace_project) }
-    let_it_be(:public_resource_b) { create(:ci_catalog_resource, :published, project: public_project) }
-    let_it_be(:internal_resource) { create(:ci_catalog_resource, :published, project: internal_project) }
-    let_it_be(:private_namespace_resource) { create(:ci_catalog_resource, :published, project: namespace_project_a) }
+    let_it_be(:public_resource_a) do
+      create(:ci_catalog_resource, :published, project: public_namespace_project, last_30_day_usage_count: 100)
+    end
+
+    let_it_be(:public_resource_b) do
+      create(:ci_catalog_resource, :published, project: public_project, last_30_day_usage_count: 70)
+    end
+
+    let_it_be(:internal_resource) do
+      create(:ci_catalog_resource, :published, project: internal_project, last_30_day_usage_count: 80)
+    end
+
+    let_it_be(:private_namespace_resource) do
+      create(:ci_catalog_resource, :published, project: namespace_project_a, last_30_day_usage_count: 90)
+    end
+
     let_it_be(:unpublished_resource) { create(:ci_catalog_resource, project: namespace_project_b) }
 
     it 'by default returns all resources visible to the current user' do
@@ -164,6 +168,22 @@ RSpec.describe Ci::Catalog::Listing, feature_category: :pipeline_composition do
 
         it 'contains catalog resource sorted by star_count ascending' do
           is_expected.to eq([internal_resource, public_resource_a, public_resource_b, private_namespace_resource])
+        end
+      end
+
+      context 'when the sort is usage_count descending' do
+        let_it_be(:sort) { :usage_count_desc }
+
+        it 'contains catalog resources sorted by last_30_day_usage_count descending' do
+          is_expected.to eq([public_resource_a, private_namespace_resource, internal_resource, public_resource_b])
+        end
+      end
+
+      context 'when the sort is usage_count ascending' do
+        let_it_be(:sort) { :usage_count_asc }
+
+        it 'contains catalog resources sorted by last_30_day_usage_count ascending' do
+          is_expected.to eq([public_resource_b, internal_resource, private_namespace_resource, public_resource_a])
         end
       end
     end

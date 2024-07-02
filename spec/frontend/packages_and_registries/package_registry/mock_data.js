@@ -93,7 +93,6 @@ export const dependencyLinks = () => [
 export const packageProject = () => ({
   id: '1',
   name: 'gitlab-test',
-  fullPath: 'gitlab-org/gitlab-test',
   webUrl: 'http://gdk.test:3000/gitlab-org/gitlab-test',
   __typename: 'Project',
 });
@@ -167,6 +166,7 @@ export const packageData = (extend) => ({
     'http://__token__:<your_personal_token>@gdk.test:3000/api/v4/projects/1/packages/pypi/simple',
   publicPackage: false,
   pypiSetupUrl: 'http://gdk.test:3000/api/v4/projects/1/packages/pypi',
+  protectionRuleExists: false,
   ...userPermissionsData,
   ...extend,
 });
@@ -232,10 +232,7 @@ export const pagination = (extend) => ({
   ...extend,
 });
 
-export const packageDetailsQuery = ({
-  extendPackage = {},
-  packageSettings = defaultPackageGroupSettings,
-} = {}) => ({
+export const packageDetailsQuery = ({ extendPackage = {} } = {}) => ({
   data: {
     package: {
       ...packageData(),
@@ -251,11 +248,6 @@ export const packageDetailsQuery = ({
         path: 'projectPath',
         name: 'gitlab-test',
         fullPath: 'gitlab-test',
-        group: {
-          id: '1',
-          packageSettings,
-          __typename: 'Group',
-        },
         __typename: 'Project',
       },
       tags: {
@@ -274,6 +266,34 @@ export const packageDetailsQuery = ({
       },
       __typename: 'PackageDetailsType',
       ...extendPackage,
+    },
+  },
+});
+
+export const groupPackageSettingsQueryForGroup = ({
+  packageSettings = defaultPackageGroupSettings,
+} = {}) => ({
+  data: {
+    group: {
+      id: 'group-id',
+      packageSettings,
+      __typename: 'Group',
+    },
+  },
+});
+
+export const groupPackageSettingsQuery = ({
+  packageSettings = defaultPackageGroupSettings,
+} = {}) => ({
+  data: {
+    project: {
+      id: '1',
+      group: {
+        id: '1',
+        packageSettings,
+        __typename: 'Group',
+      },
+      __typename: 'Project',
     },
   },
 });
@@ -417,12 +437,7 @@ export const packageDestroyFilesMutationError = () => ({
   ],
 });
 
-export const packagesListQuery = ({
-  type = 'group',
-  extend = {},
-  extendPagination = {},
-  packageSettings = defaultPackageGroupSettings,
-} = {}) => ({
+export const packagesListQuery = ({ type = 'group', extend = {}, extendPagination = {} } = {}) => ({
   data: {
     [type]: {
       id: '1',
@@ -431,8 +446,9 @@ export const packagesListQuery = ({
         nodes: [
           {
             ...packageData(),
+            protectionRuleExists: false,
             ...linksData,
-            project: packageProject(),
+            ...(type === 'group' && { project: packageProject() }),
             tags: { nodes: packageTags() },
             pipelines: {
               nodes: packagePipelines(),
@@ -440,7 +456,8 @@ export const packagesListQuery = ({
           },
           {
             ...packageData(),
-            project: packageProject(),
+            protectionRuleExists: false,
+            ...(type === 'group' && { project: packageProject() }),
             tags: { nodes: [] },
             pipelines: { nodes: [] },
             ...linksData,
@@ -449,14 +466,6 @@ export const packagesListQuery = ({
         pageInfo: pagination(extendPagination),
         __typename: 'PackageConnection',
       },
-      ...(type === 'group' && { packageSettings }),
-      ...(type === 'project' && {
-        group: {
-          id: '1',
-          packageSettings,
-          __typename: 'Group',
-        },
-      }),
       ...extend,
       __typename: capitalize(type),
     },

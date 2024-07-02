@@ -14,10 +14,6 @@ module Auth
       :build_destroy_container_image
     ].freeze
 
-    FORBIDDEN_IMPORTING_SCOPES = %w[push delete *].freeze
-
-    ActiveImportError = Class.new(StandardError)
-
     def execute(authentication_abilities:)
       @authentication_abilities = authentication_abilities
 
@@ -34,21 +30,11 @@ module Auth
       end
 
       { token: authorized_token(*scopes).encoded }
-    rescue ActiveImportError
-      error(
-        'DENIED',
-        status: 403,
-        message: 'Your repository is currently being migrated to a new platform and writes are temporarily disabled. Go to https://gitlab.com/groups/gitlab-org/-/epics/5523 to learn more.'
-      )
     end
 
     def self.full_access_token(*names)
       names_and_actions = names.index_with { %w[*] }
       access_token(names_and_actions)
-    end
-
-    def self.import_access_token
-      access_token({ 'import' => %w[*] }, 'registry')
     end
 
     def self.pull_access_token(*names)
@@ -194,8 +180,6 @@ module Auth
     def process_repository_access(type, path, actions)
       return unless path.valid?
 
-      raise ActiveImportError if actively_importing?(actions, path)
-
       requested_project = path.repository_project
 
       return unless requested_project
@@ -218,15 +202,6 @@ module Auth
         actions: authorized_actions,
         meta: self.class.access_metadata(project: requested_project)
       }
-    end
-
-    def actively_importing?(actions, path)
-      return false if FORBIDDEN_IMPORTING_SCOPES.intersection(actions).empty?
-
-      container_repository = ContainerRepository.find_by_path(path)
-      return false unless container_repository
-
-      container_repository.migration_importing?
     end
 
     ##
@@ -360,6 +335,8 @@ module Auth
     end
 
     def deploy_token
+      return unless Gitlab::ExternalAuthorization.allow_deploy_tokens_and_deploy_keys?
+
       params[:deploy_token]
     end
 

@@ -22,6 +22,11 @@ export default {
     coverage() {
       return `${this.job.coverage}%`;
     },
+    showCoverage() {
+      const jobCoverage = this.job.coverage;
+
+      return jobCoverage || jobCoverage === 0;
+    },
     duration() {
       return timeIntervalInWords(this.job.duration);
     },
@@ -143,7 +148,7 @@ export default {
       :title="$options.i18n.RUNNER"
       :path="runnerAdminPath"
     />
-    <detail-row v-if="job.coverage" :value="coverage" :title="$options.i18n.COVERAGE" />
+    <detail-row v-if="showCoverage" :value="coverage" :title="$options.i18n.COVERAGE" />
     <detail-row
       v-if="hasTestSummaryDetails"
       :value="testSummaryDescription"
@@ -154,7 +159,7 @@ export default {
 
     <p v-if="hasTags" class="build-detail-row" data-testid="job-tags">
       <span class="font-weight-bold">{{ $options.i18n.TAGS }}:</span>
-      <gl-badge v-for="(tag, i) in job.tags" :key="i" variant="info" size="sm">{{ tag }}</gl-badge>
+      <gl-badge v-for="(tag, i) in job.tags" :key="i" variant="info">{{ tag }}</gl-badge>
     </p>
   </div>
 </template>

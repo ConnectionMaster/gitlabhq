@@ -1,9 +1,8 @@
-import { GlPagination, GlTable } from '@gitlab/ui';
-import Vue from 'vue';
+import { GlTable, GlButton } from '@gitlab/ui';
+import Vue, { nextTick } from 'vue';
 // eslint-disable-next-line no-restricted-imports
 import Vuex from 'vuex';
-import setWindowLocation from 'helpers/set_window_location_helper';
-import { mountExtended, extendedWrapper } from 'helpers/vue_test_utils_helper';
+import { mountExtended } from 'helpers/vue_test_utils_helper';
 import CreatedAt from '~/members/components/table/created_at.vue';
 import ExpirationDatepicker from '~/members/components/table/expiration_datepicker.vue';
 import MemberActions from '~/members/components/table/member_actions.vue';
@@ -11,9 +10,11 @@ import MemberAvatar from '~/members/components/table/member_avatar.vue';
 import MemberSource from '~/members/components/table/member_source.vue';
 import MemberActivity from '~/members/components/table/member_activity.vue';
 import MembersTable from '~/members/components/table/members_table.vue';
+import MembersPagination from '~/members/components/table/members_pagination.vue';
 import MaxRole from '~/members/components/table/max_role.vue';
+import RoleDetailsDrawer from '~/members/components/table/drawer/role_details_drawer.vue';
 import {
-  MEMBER_TYPES,
+  MEMBERS_TAB_TYPES,
   MEMBER_STATE_CREATED,
   MEMBER_STATE_AWAITING,
   MEMBER_STATE_ACTIVE,
@@ -34,15 +35,17 @@ import {
 Vue.use(Vuex);
 
 describe('MembersTable', () => {
+  /** @type {import('helpers/vue_test_utils_helper').ExtendedWrapper} */
   let wrapper;
 
   const createStore = (state = {}) => {
     return new Vuex.Store({
       modules: {
-        [MEMBER_TYPES.invite]: {
+        [MEMBERS_TAB_TYPES.invite]: {
           namespaced: true,
           state: {
             members: [],
+            memberPath: 'invite/path/:id',
             tableFields: [],
             tableAttrs: {
               tr: { 'data-testid': 'member-row' },
@@ -55,7 +58,7 @@ describe('MembersTable', () => {
     });
   };
 
-  const createComponent = (state, provide = {}) => {
+  const createComponent = (state, { showRoleDetailsInDrawer = true } = {}) => {
     wrapper = mountExtended(MembersTable, {
       propsData: {
         tabQueryParamValue: TAB_QUERY_PARAM_VALUES.invite,
@@ -65,37 +68,28 @@ describe('MembersTable', () => {
         sourceId: 1,
         currentUserId: 1,
         canManageMembers: true,
-        namespace: MEMBER_TYPES.invite,
-        ...provide,
+        namespace: MEMBERS_TAB_TYPES.invite,
+        namespaceReachedLimit: false,
+        namespaceUserLimit: 1,
+        glFeatures: { showRoleDetailsInDrawer },
       },
-      stubs: [
-        'member-avatar',
-        'member-source',
-        'created-at',
-        'member-actions',
-        'max-role',
-        'remove-group-link-modal',
-        'remove-member-modal',
-        'expiration-datepicker',
-      ],
+      stubs: {
+        RemoveGroupLinkModal: true,
+        RemoveMemberModal: true,
+        MemberActions: true,
+        MaxRole: true,
+        RoleDetailsDrawer: true,
+      },
     });
   };
 
-  const url = 'https://localhost/foo-bar/-/project_members?tab=invited';
-
   const findTable = () => wrapper.findComponent(GlTable);
+  const findRoleDetailsDrawer = () => wrapper.findComponent(RoleDetailsDrawer);
+  const findRoleButton = () => wrapper.findComponent(GlButton);
   const findTableCellByMemberId = (tableCellLabel, memberId) =>
     wrapper
       .findByTestId(`members-table-row-${memberId}`)
       .find(`[data-label="${tableCellLabel}"][role="cell"]`);
-
-  const findPagination = () => extendedWrapper(wrapper.findComponent(GlPagination));
-
-  const expectCorrectLinkToPage2 = () => {
-    expect(findPagination().findByText('2', { selector: 'a' }).attributes('href')).toBe(
-      `${url}&invited_members_page=2`,
-    );
-  };
 
   describe('fields', () => {
     const memberCanUpdate = {
@@ -103,7 +97,7 @@ describe('MembersTable', () => {
       canUpdate: true,
     };
 
-    it.each`
+    describe.each`
       field           | label           | member             | expectedComponent
       ${'account'}    | ${'Account'}    | ${memberMock}      | ${MemberAvatar}
       ${'source'}     | ${'Source'}     | ${memberMock}      | ${MemberSource}
@@ -112,24 +106,47 @@ describe('MembersTable', () => {
       ${'maxRole'}    | ${'Max role'}   | ${memberCanUpdate} | ${MaxRole}
       ${'expiration'} | ${'Expiration'} | ${memberMock}      | ${ExpirationDatepicker}
       ${'activity'}   | ${'Activity'}   | ${memberMock}      | ${MemberActivity}
-    `('renders the $label field', ({ field, label, member, expectedComponent }) => {
-      createComponent({
-        members: [member],
-        tableFields: [field],
+    `('$label field', ({ field, label, member, expectedComponent }) => {
+      beforeEach(() => {
+        createComponent(
+          { members: [member], tableFields: [field] },
+          { showRoleDetailsInDrawer: false },
+        );
       });
 
-      expect(wrapper.findByText(label, { selector: '[role="columnheader"] > div' }).exists()).toBe(
-        true,
-      );
+      it('shows the table header', () => {
+        expect(wrapper.findByText(label, { selector: 'th span' }).exists()).toBe(true);
+      });
 
-      if (expectedComponent) {
-        expect(
-          wrapper
-            .find(`[data-label="${label}"][role="cell"]`)
-            .findComponent(expectedComponent)
-            .exists(),
-        ).toBe(true);
-      }
+      it('shows the expected component', () => {
+        expect(wrapper.findComponent(expectedComponent).exists()).toBe(true);
+      });
+    });
+
+    describe('Max role column', () => {
+      const createMaxRoleComponent = (member = memberMock) => {
+        createComponent({ members: [member], tableFields: ['maxRole'] });
+      };
+
+      it('shows the role button', () => {
+        createMaxRoleComponent();
+
+        expect(findRoleButton().text()).toBe('Owner');
+      });
+
+      describe('disabled state', () => {
+        it.each`
+          phrase        | busy
+          ${'disables'} | ${true}
+          ${'enables'}  | ${false}
+        `('$phrase the button when the drawer busy state is $busy', async ({ busy }) => {
+          createMaxRoleComponent();
+          findRoleDetailsDrawer().vm.$emit('busy', busy);
+          await nextTick();
+
+          expect(findRoleButton().props('disabled')).toBe(busy);
+        });
+      });
     });
 
     describe('Invited column', () => {
@@ -222,13 +239,13 @@ describe('MembersTable', () => {
 
           expect(findTableCellByMemberId('Actions', members[0].id).classes()).toStrictEqual([
             'col-actions',
-            'gl-display-none!',
-            'gl-lg-display-table-cell!',
-            'gl-vertical-align-middle!',
+            '!gl-hidden',
+            'lg:!gl-table-cell',
+            '!gl-align-middle',
           ]);
           expect(findTableCellByMemberId('Actions', members[1].id).classes()).toStrictEqual([
             'col-actions',
-            'gl-vertical-align-middle!',
+            '!gl-align-middle',
           ]);
         });
       });
@@ -275,81 +292,58 @@ describe('MembersTable', () => {
     });
   });
 
+  describe('role details drawer', () => {
+    it('creates role details drawer with no member selected', () => {
+      createComponent();
+
+      expect(findRoleDetailsDrawer().props('member')).toBe(null);
+    });
+
+    it('does not show drawer if showRoleDetailsInDrawer feature flag is off', () => {
+      createComponent(null, { showRoleDetailsInDrawer: false });
+
+      expect(findRoleDetailsDrawer().exists()).toBe(false);
+    });
+
+    describe('with member selected', () => {
+      beforeEach(() => {
+        createComponent({ members: [memberMock], tableFields: ['maxRole'] });
+        return findRoleButton().trigger('click');
+      });
+
+      it('passes member to drawer', () => {
+        expect(findRoleDetailsDrawer().props('member')).toBe(memberMock);
+      });
+
+      it('clears member when drawer is closed', async () => {
+        findRoleDetailsDrawer().vm.$emit('close');
+        await nextTick();
+
+        expect(findRoleDetailsDrawer().props('member')).toBe(null);
+      });
+
+      it('disables role button when drawer is busy', async () => {
+        findRoleDetailsDrawer().vm.$emit('busy', true);
+        await nextTick();
+
+        expect(findRoleButton().props('disabled')).toBe(true);
+      });
+    });
+  });
+
   it('adds QA testid to table row', () => {
     createComponent();
 
     expect(findTable().find('tbody tr').attributes('data-testid')).toBe('member-row');
   });
 
-  describe('when required pagination data is provided', () => {
-    it('renders `gl-pagination` component with correct props', () => {
-      setWindowLocation(url);
+  it('renders `members-pagination` component with correct props', () => {
+    createComponent();
+    const membersPagination = wrapper.findComponent(MembersPagination);
 
-      createComponent();
-
-      const glPagination = findPagination();
-
-      expect(glPagination.exists()).toBe(true);
-      expect(glPagination.props()).toMatchObject({
-        value: pagination.currentPage,
-        perPage: pagination.perPage,
-        totalItems: pagination.totalItems,
-        prevText: 'Prev',
-        nextText: 'Next',
-        labelNextPage: 'Go to next page',
-        labelPrevPage: 'Go to previous page',
-        align: 'center',
-      });
-    });
-
-    it('uses `pagination.paramName` to generate the pagination links', () => {
-      setWindowLocation(url);
-
-      createComponent({
-        pagination: {
-          currentPage: 1,
-          perPage: 5,
-          totalItems: 10,
-          paramName: 'invited_members_page',
-        },
-      });
-
-      expectCorrectLinkToPage2();
-    });
-
-    it('removes any url params defined as `null` in the `params` attribute', () => {
-      setWindowLocation(`${url}&search_groups=foo`);
-
-      createComponent({
-        pagination: {
-          currentPage: 1,
-          perPage: 5,
-          totalItems: 10,
-          paramName: 'invited_members_page',
-          params: { search_groups: null },
-        },
-      });
-
-      expectCorrectLinkToPage2();
-    });
-  });
-
-  describe.each`
-    attribute        | value
-    ${'paramName'}   | ${null}
-    ${'currentPage'} | ${null}
-    ${'perPage'}     | ${null}
-    ${'totalItems'}  | ${0}
-  `('when pagination.$attribute is $value', ({ attribute, value }) => {
-    it('does not render `gl-pagination`', () => {
-      createComponent({
-        pagination: {
-          ...pagination,
-          [attribute]: value,
-        },
-      });
-
-      expect(findPagination().exists()).toBe(false);
+    expect(membersPagination.props()).toMatchObject({
+      pagination,
+      tabQueryParamValue: TAB_QUERY_PARAM_VALUES.invite,
     });
   });
 });

@@ -35,7 +35,7 @@ class GroupMembersFinder < UnionFinder
     groups = groups_by_relations(include_relations)
 
     members = all_group_members(groups)
-    members = members.distinct_on_user_with_max_access_level if static_roles_only?
+    members = members.distinct_on_user_with_max_access_level(group) if static_roles_only?
 
     filter_members(members)
   end
@@ -101,7 +101,11 @@ class GroupMembersFinder < UnionFinder
     shared_from_groups = groups[:shared_from_groups]
     return members if shared_from_groups.nil?
 
-    shared_members = GroupMember.non_request.of_groups(shared_from_groups).with_group_group_sharing_access
+    # We limit the `access_level` of the shared members to the access levels of the `group_group_links` created
+    # with the group or its ancestors because the shared members cannot have access greater than the `group_group_links`
+    # with itself or its ancestors.
+    shared_members = GroupMember.non_request.of_groups(shared_from_groups)
+                                .with_group_group_sharing_access(group.self_and_ancestors)
     # `members` and `shared_members` should have even select values
     find_union([members.select(Member.column_names), shared_members], GroupMember)
   end

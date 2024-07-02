@@ -36,7 +36,7 @@ RSpec.describe BulkImports::Projects::Pipelines::IssuesPipeline, feature_categor
 
   subject(:pipeline) { described_class.new(context) }
 
-  describe '#run', :clean_gitlab_redis_cache do
+  describe '#run', :clean_gitlab_redis_shared_state do
     before do
       group.add_owner(user)
       issue_with_index = [issue, 0]
@@ -162,7 +162,7 @@ RSpec.describe BulkImports::Projects::Pipelines::IssuesPipeline, feature_categor
         note = project.issues.last.notes.first
 
         aggregate_failures do
-          expect(note.note).to eq("Issue note\n\n *By User 22 on 2016-06-14T15:02:47 (imported from GitLab)*")
+          expect(note.note).to eq("Issue note\n\n *By User 22 on 2016-06-14T15:02:47*")
           expect(note.award_emoji.first.name).to eq('clapper')
         end
       end

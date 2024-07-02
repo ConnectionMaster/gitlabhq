@@ -441,7 +441,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
 
         statistics = json_response.find { |p| p['id'] == project.id }['statistics']
         expect(statistics).to be_present
-        expect(statistics).to include('commit_count', 'storage_size', 'repository_size', 'wiki_size', 'lfs_objects_size', 'job_artifacts_size', 'pipeline_artifacts_size', 'snippets_size', 'packages_size', 'uploads_size')
+        expect(statistics).to include('commit_count', 'storage_size', 'repository_size', 'wiki_size', 'lfs_objects_size', 'job_artifacts_size', 'pipeline_artifacts_size', 'snippets_size', 'packages_size', 'uploads_size', 'container_registry_size')
       end
 
       it "does not include license by default" do
@@ -1184,22 +1184,20 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
     context 'rate limiting' do
       let_it_be(:current_user) { create(:user) }
 
-      shared_examples_for 'does not log request and does not block the request' do
-        specify do
-          request
-          request
-
-          expect(response).not_to have_gitlab_http_status(:too_many_requests)
-          expect(Gitlab::AuthLogger).not_to receive(:error)
-        end
-      end
-
-      before do
-        stub_application_setting(projects_api_rate_limit_unauthenticated: 1)
-      end
-
       context 'when the user is signed in' do
-        it_behaves_like 'does not log request and does not block the request' do
+        it_behaves_like 'rate limited endpoint', rate_limit_key: :projects_api do
+          def request
+            get api(path, current_user)
+          end
+        end
+
+        context 'when rate_limit_groups_and_projects_api feature flag is disabled' do
+          before do
+            stub_feature_flags(rate_limit_groups_and_projects_api: false)
+          end
+
+          it_behaves_like 'unthrottled endpoint'
+
           def request
             get api(path, current_user)
           end
@@ -1735,6 +1733,24 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       expect(json_response.map { |project| project['id'] }).to contain_exactly(public_project.id)
     end
 
+    it_behaves_like 'rate limited endpoint', rate_limit_key: :user_projects_api do
+      def request
+        get api("/users/#{user4.id}/projects/")
+      end
+    end
+
+    context 'when rate_limit_groups_and_projects_api feature flag is disabled' do
+      before do
+        stub_feature_flags(rate_limit_groups_and_projects_api: false)
+      end
+
+      it_behaves_like 'unthrottled endpoint'
+
+      def request
+        get api("/users/#{user4.id}/projects/")
+      end
+    end
+
     it 'includes container_registry_access_level' do
       get api("/users/#{user4.id}/projects/", user)
 
@@ -1876,6 +1892,24 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       expect(json_response['message']).to eq('404 User Not Found')
     end
 
+    it_behaves_like 'rate limited endpoint', rate_limit_key: :user_starred_projects_api do
+      def request
+        get api(path)
+      end
+    end
+
+    context 'when rate_limit_groups_and_projects_api feature flag is disabled' do
+      before do
+        stub_feature_flags(rate_limit_groups_and_projects_api: false)
+      end
+
+      it_behaves_like 'unthrottled endpoint'
+
+      def request
+        get api(path)
+      end
+    end
+
     context 'with a public profile' do
       it 'returns projects filtered by user' do
         get api(path, user)
@@ -1952,6 +1986,24 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       expect(json_response['message']).to eq('404 User Not Found')
     end
 
+    it_behaves_like 'rate limited endpoint', rate_limit_key: :user_contributed_projects_api do
+      def request
+        get api(path)
+      end
+    end
+
+    context 'when rate_limit_groups_and_projects_api feature flag is disabled' do
+      before do
+        stub_feature_flags(rate_limit_groups_and_projects_api: false)
+      end
+
+      it_behaves_like 'unthrottled endpoint'
+
+      def request
+        get api(path)
+      end
+    end
+
     context 'with a public profile' do
       it 'returns projects filtered by user' do
         get api(path, user)
@@ -1971,7 +2023,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       end
 
       context 'user does not have access to view the private profile' do
-        it 'returns no projects' do
+        it 'returns no projects', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/444704' do
           get api(path, user)
 
           expect(response).to have_gitlab_http_status(:ok)
@@ -2227,119 +2279,6 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
     end
   end
 
-  describe "POST /projects/:id/uploads/authorize" do
-    let(:headers) { workhorse_internal_api_request_header.merge({ 'HTTP_GITLAB_WORKHORSE' => 1 }) }
-    let(:path) { "/projects/#{project.id}/uploads/authorize" }
-
-    context 'with authorized user' do
-      it "returns 200" do
-        post api(path, user), headers: headers
-
-        expect(response).to have_gitlab_http_status(:ok)
-        expect(json_response['MaximumSize']).to eq(project.max_attachment_size)
-      end
-    end
-
-    context 'with unauthorized user' do
-      it "returns 404" do
-        post api(path, user2), headers: headers
-
-        expect(response).to have_gitlab_http_status(:not_found)
-      end
-    end
-
-    context 'with exempted project' do
-      before do
-        stub_env('GITLAB_UPLOAD_API_ALLOWLIST', project.id)
-      end
-
-      it "returns 200" do
-        post api(path, user), headers: headers
-
-        expect(response).to have_gitlab_http_status(:ok)
-        expect(json_response['MaximumSize']).to eq(1.gigabyte)
-      end
-    end
-
-    context 'with no Workhorse headers' do
-      it "returns 403" do
-        post api(path, user)
-
-        expect(response).to have_gitlab_http_status(:forbidden)
-      end
-    end
-  end
-
-  describe "POST /projects/:id/uploads" do
-    let(:file) { fixture_file_upload("spec/fixtures/dk.png", "image/png") }
-    let(:path) { "/projects/#{project.id}/uploads" }
-
-    before do
-      project
-    end
-
-    it "uploads the file and returns its info" do
-      expect_next_instance_of(UploadService) do |instance|
-        expect(instance).to receive(:override_max_attachment_size=).with(project.max_attachment_size).and_call_original
-      end
-
-      post api(path, user), params: { file: file }
-
-      expect(response).to have_gitlab_http_status(:created)
-      expect(json_response['alt']).to eq("dk")
-      expect(json_response['url']).to start_with("/uploads/")
-      expect(json_response['url']).to end_with("/dk.png")
-      expect(json_response['full_path']).to start_with("/#{project.namespace.path}/#{project.path}/uploads")
-    end
-
-    it "does not leave the temporary file in place after uploading, even when the tempfile reaper does not run" do
-      tempfile = Tempfile.new('foo')
-      path = tempfile.path
-
-      allow_any_instance_of(Rack::TempfileReaper).to receive(:call) do |instance, env|
-        instance.instance_variable_get(:@app).call(env)
-      end
-
-      expect(path).not_to be(nil)
-      expect(Rack::Multipart::Parser::TEMPFILE_FACTORY).to receive(:call).and_return(tempfile)
-
-      post api(path, user), params: { file: fixture_file_upload("spec/fixtures/dk.png", "image/png") }
-
-      expect(tempfile.path).to be(nil)
-      expect(File.exist?(path)).to be(false)
-    end
-
-    shared_examples 'capped upload attachments' do |upload_allowed|
-      it "limits the upload to 1 GiB" do
-        expect_next_instance_of(UploadService) do |instance|
-          expect(instance).to receive(:override_max_attachment_size=).with(1.gigabyte).and_call_original
-        end
-
-        post api(path, user), params: { file: file }
-
-        expect(response).to have_gitlab_http_status(:created)
-      end
-
-      it "logs a warning if file exceeds attachment size" do
-        allow(Gitlab::CurrentSettings).to receive(:max_attachment_size).and_return(0)
-
-        expect(Gitlab::AppLogger).to receive(:info).with(
-          hash_including(message: 'File exceeds maximum size', upload_allowed: upload_allowed))
-            .and_call_original
-
-        post api(path, user), params: { file: file }
-      end
-    end
-
-    context 'with exempted project' do
-      before do
-        stub_env('GITLAB_UPLOAD_API_ALLOWLIST', project.id)
-      end
-
-      it_behaves_like 'capped upload attachments', true
-    end
-  end
-
   describe "GET /projects/:id/groups" do
     let_it_be(:root_group) { create(:group, :public, name: 'root group') }
     let_it_be(:project_group) { create(:group, :public, parent: root_group, name: 'project group') }
@@ -2573,6 +2512,24 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       let(:failed_status_code) { :not_found }
     end
 
+    it_behaves_like 'rate limited endpoint', rate_limit_key: :project_api do
+      def request
+        get api(path)
+      end
+    end
+
+    context 'when rate_limit_groups_and_projects_api feature flag is disabled' do
+      before do
+        stub_feature_flags(rate_limit_groups_and_projects_api: false)
+      end
+
+      it_behaves_like 'unthrottled endpoint'
+
+      def request
+        get api(path)
+      end
+    end
+
     context 'when unauthenticated' do
       it 'does not return private projects' do
         private_project = create(:project, :private)
@@ -2596,9 +2553,26 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       end
 
       context 'the project is a public fork' do
-        it 'hides details of a public fork parent' do
+        it 'shows details of a public fork parent' do
           public_project = create(:project, :repository, :public)
           fork = fork_project(public_project)
+
+          get api("/projects/#{fork.id}")
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(json_response['forked_from_project']).to include('id' => public_project.id)
+        end
+
+        it 'hides details of a private fork parent' do
+          public_project = create(:project, :repository, :public)
+          parent_user = create(:user)
+          public_project.team.add_developer(parent_user)
+
+          fork = fork_project(public_project, user)
+
+          # Make the parent private
+          public_project.visibility = Gitlab::VisibilityLevel::PRIVATE
+          public_project.save!
 
           get api("/projects/#{fork.id}")
 
@@ -2720,6 +2694,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
         expect(json_response['only_allow_merge_if_pipeline_succeeds']).to eq(project.only_allow_merge_if_pipeline_succeeds)
         expect(json_response['allow_merge_on_skipped_pipeline']).to eq(project.allow_merge_on_skipped_pipeline)
         expect(json_response['restrict_user_defined_variables']).to eq(project.restrict_user_defined_variables?)
+        expect(json_response['ci_pipeline_variables_minimum_override_role']).to eq(project.ci_pipeline_variables_minimum_override_role.to_s)
         expect(json_response['only_allow_merge_if_all_discussions_are_resolved']).to eq(project.only_allow_merge_if_all_discussions_are_resolved)
         expect(json_response['security_and_compliance_access_level']).to be_present
         expect(json_response['releases_access_level']).to be_present
@@ -3227,6 +3202,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
           'build_git_strategy',
           'keep_latest_artifact',
           'restrict_user_defined_variables',
+          'ci_pipeline_variables_minimum_override_role',
           'runners_token',
           'runner_token_expiration_interval',
           'group_runners_enabled',
@@ -3234,7 +3210,8 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
           'build_timeout',
           'auto_devops_enabled',
           'auto_devops_deploy_strategy',
-          'import_error'
+          'import_error',
+          'ci_push_repository_for_job_token_allowed'
         )
       end
     end
@@ -3875,7 +3852,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
       measure_project.add_developer(create(:user))
       measure_project.add_developer(create(:user)) # make this 2nd one to find any n+1
 
-      unresolved_n_plus_ones = 27 # 27 queries added per member
+      unresolved_n_plus_ones = 28 # 28 queries added per member
 
       expect do
         post api("/projects/#{project.id}/import_project_members/#{measure_project.id}", user)
@@ -3945,6 +3922,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
 
       expect(response).to have_gitlab_http_status(:unprocessable_entity)
       expect(json_response['message']).to eq('Import failed')
+      expect(json_response['reason']).to eq('import_failed_error')
     end
 
     context 'when importing of members did not work for some or all members' do
@@ -3960,6 +3938,7 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
         error_message = { project_bot.username => 'User project bots cannot be added to other groups / projects' }
         expect(json_response['message']).to eq(error_message)
         expect(json_response['total_members_count']).to eq(3)
+        expect(json_response['status']).to eq('error')
       end
     end
   end
@@ -3981,6 +3960,20 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
     it_behaves_like 'PUT request permissions for admin mode' do
       let(:params) { { visibility: 'internal' } }
       let(:failed_status_code) { :not_found }
+    end
+
+    describe 'updating ci_push_repository_for_job_token_allowed attribute' do
+      it 'is disabled by default' do
+        expect(project.ci_push_repository_for_job_token_allowed).to be_falsey
+      end
+
+      it 'enables push to repository using job token' do
+        put(api(path, user), params: { ci_push_repository_for_job_token_allowed: true })
+
+        expect(response).to have_gitlab_http_status(:ok)
+        expect(project.reload.ci_push_repository_for_job_token_allowed).to be_truthy
+        expect(json_response['ci_push_repository_for_job_token_allowed']).to eq(true)
+      end
     end
 
     describe 'updating packages_enabled attribute' do
@@ -4229,6 +4222,118 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
         expect(response).to have_gitlab_http_status(:bad_request)
       end
 
+      context 'when ci_pipeline_variables_minimum_override_role is owner' do
+        before do
+          project3.add_maintainer(user2)
+          ci_cd_settings = project3.ci_cd_settings
+          ci_cd_settings.restrict_user_defined_variables = false
+          ci_cd_settings.pipeline_variables_minimum_override_role = 'owner'
+          ci_cd_settings.save!
+        end
+
+        context 'and current user is maintainer' do
+          let_it_be(:current_user) { user2 }
+
+          it 'rejects to change restrict_user_defined_variables' do
+            project_param = { restrict_user_defined_variables: true }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:bad_request)
+          end
+
+          it 'rejects to change ci_pipeline_variables_minimum_override_role' do
+            project_param = { ci_pipeline_variables_minimum_override_role: 'developer' }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:bad_request)
+          end
+        end
+
+        context 'and current user is owner' do
+          let_it_be(:current_user) { user }
+
+          it 'successfully changes restrict_user_defined_variables' do
+            project_param = { restrict_user_defined_variables: true }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:ok)
+          end
+
+          it 'successfully changes ci_pipeline_variables_minimum_override_role' do
+            project_param = { ci_pipeline_variables_minimum_override_role: 'developer' }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:ok)
+          end
+        end
+      end
+
+      context 'when ci_pipeline_variables_minimum_override_role is set to maintainer' do
+        before do
+          project3.add_maintainer(user2)
+          ci_cd_settings = project3.ci_cd_settings
+          ci_cd_settings.restrict_user_defined_variables = false
+          ci_cd_settings.pipeline_variables_minimum_override_role = 'maintainer'
+          ci_cd_settings.save!
+        end
+
+        context 'and current user is maintainer' do
+          let_it_be(:current_user) { user2 }
+
+          it 'successfully changes restrict_user_defined_variables' do
+            project_param = { restrict_user_defined_variables: true }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:ok)
+          end
+
+          it 'successfully changes ci_pipeline_variables_minimum_override_role' do
+            project_param = { ci_pipeline_variables_minimum_override_role: 'developer' }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:ok)
+          end
+
+          it 'rejects to ci_pipeline_variables_minimum_override_role to owner' do
+            project_param = { ci_pipeline_variables_minimum_override_role: 'owner' }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:bad_request)
+          end
+        end
+
+        context 'and current user is developer' do
+          let_it_be(:current_user) { user3 }
+
+          before do
+            project3.add_developer(user3)
+          end
+
+          it 'fails to change restrict_user_defined_variables' do
+            project_param = { restrict_user_defined_variables: true }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:forbidden)
+          end
+
+          it 'fails to change ci_pipeline_variables_minimum_override_role' do
+            project_param = { ci_pipeline_variables_minimum_override_role: 'developer' }
+
+            put api("/projects/#{project3.id}", current_user), params: project_param
+
+            expect(response).to have_gitlab_http_status(:forbidden)
+          end
+        end
+      end
+
       it 'updates restrict_user_defined_variables' do
         project_param = { restrict_user_defined_variables: true }
 
@@ -4239,6 +4344,34 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
         project_param.each_pair do |k, v|
           expect(json_response[k.to_s]).to eq(v)
         end
+      end
+
+      it 'updates ci_pipeline_variables_minimum_override_role' do
+        project_param = { ci_pipeline_variables_minimum_override_role: 'owner' }
+
+        put api("/projects/#{project3.id}", user), params: project_param
+
+        expect(response).to have_gitlab_http_status(:ok)
+
+        project_param.each_pair do |k, v|
+          expect(json_response[k.to_s]).to eq(v)
+        end
+      end
+
+      it 'rejects updating ci_pipeline_variables_minimum_override_role when an invalid role is provided' do
+        project_param = { ci_pipeline_variables_minimum_override_role: 'wrong' }
+
+        put api("/projects/#{project3.id}", user), params: project_param
+
+        expect(response).to have_gitlab_http_status(:bad_request)
+      end
+
+      it 'rejects updating ci_pipeline_variables_minimum_override_role when an existing but not allowed role is provided' do
+        project_param = { ci_pipeline_variables_minimum_override_role: 'guest' }
+
+        put api("/projects/#{project3.id}", user), params: project_param
+
+        expect(response).to have_gitlab_http_status(:bad_request)
       end
 
       it 'updates public_builds (deprecated)' do
@@ -4519,6 +4652,23 @@ RSpec.describe API::Projects, :aggregate_failures, feature_category: :groups_and
 
         expect(response).to have_gitlab_http_status(:bad_request)
         expect(json_response['error']).to eq('container_expiration_policy_attributes[keep_n] is invalid')
+      end
+    end
+
+    context 'with repository_object_format' do
+      it 'ignores repository object format field' do
+        put api(path, user), params: { name: 'new', repository_object_format: 'sha256' }
+
+        expect(response).to have_gitlab_http_status(:ok)
+        expect(json_response['repository_object_format']).to eq 'sha1'
+      end
+    end
+
+    context 'with initialize_with_readme' do
+      it 'ignores initialize_with_readme field' do
+        put api(path, user), params: { name: 'new', initialize_with_readme: true }
+
+        expect(response).to have_gitlab_http_status(:ok)
       end
     end
 

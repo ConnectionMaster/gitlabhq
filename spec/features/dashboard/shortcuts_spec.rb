@@ -16,7 +16,7 @@ RSpec.describe 'Dashboard shortcuts', :js, feature_category: :shared do
     it 'navigate to tabs' do
       find('body').send_keys([:shift, 'I'])
 
-      check_page_title('Issues')
+      check_page_title('Assigned issues')
 
       find('body').send_keys([:shift, 'M'])
 
@@ -56,12 +56,11 @@ RSpec.describe 'Dashboard shortcuts', :js, feature_category: :shared do
     it 'navigate to tabs' do
       find('body').send_keys([:shift, 'G'])
 
-      expect(page).to have_content('No public groups')
+      expect(page).to have_content('No public or internal groups')
 
       find('body').send_keys([:shift, 'S'])
 
-      find('.nothing-here-block')
-      expect(page).to have_content('No snippets found')
+      expect(page).to have_content('There are no snippets found')
 
       find('body').send_keys([:shift, 'P'])
 
@@ -71,6 +70,6 @@ RSpec.describe 'Dashboard shortcuts', :js, feature_category: :shared do
   end
 
   def check_page_title(title)
-    expect(find('.page-title')).to have_content(title)
+    expect(find_by_testid('page-heading')).to have_content(title)
   end
 end

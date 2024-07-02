@@ -2,6 +2,7 @@
 stage: Create
 group: IDE
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Write and compile code in your browser, using a secure cloud-based environment."
 ---
 
 # Remote development
@@ -15,7 +16,7 @@ DETAILS:
 > - [Enabled on self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/115741) in GitLab 15.11.
 
 FLAG:
-On self-managed GitLab, by default this feature is available. To hide the feature, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `vscode_web_ide`. On GitLab.com and GitLab Dedicated, this feature is available. The feature is not ready for production use.
+On self-managed GitLab, by default this feature is available. To hide the feature, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `vscode_web_ide`. On GitLab.com and GitLab Dedicated, this feature is available. This feature is not ready for production use.
 
 You can use remote development to write and compile code hosted on GitLab.
 With remote development, you can:
@@ -35,26 +36,7 @@ With remote development, you can use:
 - A separate machine as a backend runtime environment
 
 For a complete IDE experience, connect the Web IDE to a development environment configured to run as a remote host.
-You can create this environment [inside](../../workspace/configuration.md) or [outside](connect_machine.md) of GitLab.
-
-## Workspaces
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-A [workspace](../../workspace/index.md) is a virtual sandbox environment for your code in GitLab that includes:
-
-- A runtime environment
-- Dependencies
-- Configuration files
-
-You can create a workspace from scratch or from a template that you can also customize.
-
-When you configure and connect a workspace to the [Web IDE](../web_ide/index.md), you can:
-
-- Edit files directly from the Web IDE and commit and push changes to GitLab.
-- Use the Web IDE to run tests, debug code, and view real-time feedback.
+You can create this environment [outside](connect_machine.md) of GitLab.
 
 ## Manage a development environment
 

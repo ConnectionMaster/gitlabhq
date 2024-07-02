@@ -46,16 +46,11 @@ tests = [
 
   {
     explanation: 'https://gitlab.com/gitlab-org/gitlab/-/issues/368628',
-    changed_file: 'lib/gitlab/usage_data_counters/wiki_page_counter.rb',
+    changed_file: 'lib/gitlab/usage_data_counters/web_ide_counter.rb',
     expected: %w[
       spec/lib/gitlab/usage_data_spec.rb
-      spec/lib/gitlab/usage_data_counters/wiki_page_counter_spec.rb
+      spec/lib/gitlab/usage_data_counters/web_ide_counter_spec.rb
     ]
-  },
-  {
-    explanation: 'EE usage counters map to usage data spec',
-    changed_file: 'ee/lib/gitlab/usage_data_counters/license_testing_counter.rb',
-    expected: ['spec/lib/gitlab/usage_data_spec.rb']
   },
 
   {
@@ -86,9 +81,36 @@ tests = [
   },
 
   {
+    explanation: 'Map Ruby config to respective specs',
+    changed_file: 'config/application.rb',
+    expected: ['spec/config/application_spec.rb']
+  },
+  {
+    explanation: 'Map YAML config to respective specs',
+    changed_file: 'config/mail_room.yml',
+    expected: ['spec/config/mail_room_spec.rb']
+  },
+
+  {
     explanation: 'Initializers should map to respective spec',
     changed_file: 'config/initializers/action_mailer_hooks.rb',
     expected: ['spec/initializers/action_mailer_hooks_spec.rb']
+  },
+
+  {
+    explanation: 'FOSS Snowplow definitions map to event validation spec',
+    changed_file: 'config/events/status_page_incident_unpublished.yml',
+    expected: ['spec/lib/gitlab/tracking/event_definition_validate_all_spec.rb']
+  },
+  {
+    explanation: 'EE Snowplow definitions map to event validation spec',
+    changed_file: 'ee/config/events/licenses_list_viewed.yml',
+    expected: ['spec/lib/gitlab/tracking/event_definition_validate_all_spec.rb']
+  },
+  {
+    explanation: 'Snowplow schema maps to event validation spec',
+    changed_file: 'config/events/schema.json',
+    expected: ['spec/lib/gitlab/tracking/event_definition_validate_all_spec.rb']
   },
 
   {
@@ -144,15 +166,34 @@ tests = [
   },
 
   {
-    explanation: 'FOSS factory should map to factories spec',
+    explanation: 'FOSS factories map to FOSS/EE model specs plural',
     changed_file: 'spec/factories/users.rb',
-    expected: ['ee/spec/models/factories_spec.rb']
+    expected: %w[
+      spec/models/user_spec.rb
+      ee/spec/models/ee/user_spec.rb
+    ]
   },
-
   {
-    explanation: 'EE factory should map to factories spec',
+    explanation: 'FOSS factories map to FOSS/EE model specs singular',
+    changed_file: 'spec/factories/ci/build_name.rb',
+    expected: %w[
+      spec/models/ci/build_name_spec.rb
+    ]
+  },
+  {
+    explanation: 'EE factories for extensions map to FOSS/EE model specs',
     changed_file: 'ee/spec/factories/users.rb',
-    expected: ['ee/spec/models/factories_spec.rb']
+    expected: %w[
+      spec/models/user_spec.rb
+      ee/spec/models/ee/user_spec.rb
+    ]
+  },
+  {
+    explanation: 'EE factories map to FOSS/EE model specs',
+    changed_file: 'ee/spec/factories/licenses.rb',
+    expected: %w[
+      ee/spec/models/license_spec.rb
+    ]
   },
 
   {
@@ -260,12 +301,6 @@ tests = [
   },
 
   {
-    explanation: 'Map FOSS rake tasks',
-    changed_file: 'lib/tasks/import.rake',
-    expected: ['spec/tasks/import_rake_spec.rb']
-  },
-
-  {
     explanation: 'Map EE rake tasks',
     changed_file: 'ee/lib/tasks/geo.rake',
     expected: ['ee/spec/tasks/geo_rake_spec.rb']
@@ -356,6 +391,17 @@ tests = [
       ee/spec/graphql/types/remote_development/workspace_type_spec.rb
       ee/spec/requests/api/graphql/remote_development/workspace/with_id_arg_spec.rb
     ]
+  },
+  {
+    explanation: 'Run database dictionary related specs on db/docs changes.',
+    changed_file: 'db/docs/design_management_repositories.yml',
+    expected: %w[
+      ee/spec/lib/gitlab/database/desired_sharding_key_spec.rb
+      spec/db/docs_spec.rb
+      spec/lib/gitlab/database/dictionary_spec.rb
+      spec/lib/gitlab/database/no_new_tables_with_gitlab_main_schema_spec.rb
+      spec/lib/gitlab/database/sharding_key_spec.rb
+    ]
   }
 ]
 
@@ -413,8 +459,8 @@ if failed_tests.any?
   exit 1
 end
 
-bad_sources = YAML.load_file(mapping_file)['mapping'].filter_map do |map|
-  map['source'].match(/(?<!\\)\.\w+\z/)&.string
+bad_sources = YAML.load_file(mapping_file)['mapping'].flat_map do |map|
+  Array(map['source']).filter_map { |source| source.match(/(?<!\\)\.\w+\z/)&.string }
 end
 
 if bad_sources.any?

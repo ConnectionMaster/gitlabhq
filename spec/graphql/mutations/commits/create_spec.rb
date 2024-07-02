@@ -14,8 +14,7 @@ RSpec.describe Mutations::Commits::Create do
   let(:context) do
     GraphQL::Query::Context.new(
       query: query_double(schema: nil), # rubocop:disable RSpec/VerifiedDoubles
-      values: { current_user: user },
-      object: nil
+      values: { current_user: user }
     )
   end
 
@@ -79,8 +78,8 @@ RSpec.describe Mutations::Commits::Create do
             expect(subject[:errors]).to be_empty
 
             expect_to_contain_deltas([
-                                       a_hash_including(a_mode: '0', b_mode: '100644', new_file: true, new_path: file_path)
-                                     ])
+              a_hash_including(a_mode: '0', b_mode: '100644', new_file: true, new_path: file_path)
+            ])
           end
         end
 
@@ -120,13 +119,13 @@ RSpec.describe Mutations::Commits::Create do
             expect(subject[:errors]).to be_empty
 
             expect_to_contain_deltas([
-                                       a_hash_including(a_mode: '0', b_mode: '100644', new_path: 'foo/foobar'),
+              a_hash_including(a_mode: '0', b_mode: '100644', new_path: 'foo/foobar'),
                                        a_hash_including(deleted_file: true, new_path: 'README.md'),
                                        a_hash_including(deleted_file: true, new_path: 'LICENSE'),
                                        a_hash_including(new_file: true, new_path: 'LICENSE.md'),
                                        a_hash_including(new_file: false, new_path: 'VERSION'),
                                        a_hash_including(a_mode: '100644', b_mode: '100755', new_path: 'CHANGELOG')
-                                     ])
+            ])
           end
         end
 
@@ -169,8 +168,8 @@ RSpec.describe Mutations::Commits::Create do
             expect(subject[:content]).to eq(actions.pluck(:content))
 
             expect_to_contain_deltas([
-                                       a_hash_including(a_mode: '0', b_mode: '100644', new_file: true, new_path: 'ANOTHER_FILE.md')
-                                     ])
+              a_hash_including(a_mode: '0', b_mode: '100644', new_file: true, new_path: 'ANOTHER_FILE.md')
+            ])
           end
         end
 

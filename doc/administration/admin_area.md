@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** Self-managed
+**Offering:** Self-managed, GitLab Dedicated
 
 The Admin Area provides a web UI to manage and configure features of GitLab
 self-managed instances. If you are an administrator, to access the Admin Area:
@@ -17,8 +17,11 @@ self-managed instances. If you are an administrator, to access the Admin Area:
 - In GitLab 16.1 and later: on the left sidebar, select **Search or go to**, then select **Admin Area**.
 - In GitLab 16.0 and earlier: on the top bar, select **Main menu > Admin**.
 
+If the GitLab instance uses Admin Mode, you must [enable Admin Mode for your session](settings/sign_in_restrictions.md#turn-on-admin-mode-for-your-session) before
+the **Admin Area** button is visible.
+
 NOTE:
-Only administrators can access the Admin Area.
+Only administrators on GitLab self-managed or GitLab Dedicated can access the Admin Area. On GitLab.com the Admin Area feature is not available.
 
 ## Administering organizations
 
@@ -91,33 +94,34 @@ You can combine the filter options. For example, to list only public projects wi
 
 ## Administering users
 
+> - Filtering users [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/238183) in GitLab 17.0.
+
 You can administer all users in the GitLab instance from the Admin Area's Users page:
 
 1. On the left sidebar, at the bottom, select **Admin Area**.
 1. Select **Overview > Users**.
 
-To list users matching a specific criteria, select one of the following tabs on the **Users** page:
+You can use the user search box to search and filter users by:
 
-- **Active**
-- **Admins**
-- **2FA Enabled**
-- **2FA Disabled**
-- **External**
-- **[Blocked](../administration/moderate_users.md#block-a-user)**
-- **[Deactivated](../administration/moderate_users.md#deactivate-a-user)**
-- **Without projects**
+- User **access level**.
+- Whether **two-factor authentication** is enabled or disabled.
+- User **state**.
+
+You can also type text into the search box. For example, the name of a specific user.
+This text search is case insensitive, and applies partial matching to name, username and email for self-managed instances.
 
 For each user, the following are listed:
 
-1. Username
-1. Email address
-1. Project membership count
-1. Group membership count ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/276215) in GitLab 13.12)
-1. Date of account creation
-1. Date of last activity
+- Username
+- Email address
+- Project membership count
+- Group membership count
+- Date of account creation
+- Date of last activity
 
-To edit a user, in the user's row, select **Edit**. To delete the user, or delete the user and their contributions, select the cog dropdown list in
-that user's row, and select the desired option.
+To edit a user, in the user's row, select **Edit**. To delete the user, or delete
+the user and their contributions, select the cog dropdown list in that user's row,
+and select the desired option.
 
 To change the sort order:
 
@@ -125,10 +129,6 @@ To change the sort order:
 1. Select the desired order.
 
 By default the sort dropdown list shows **Name**.
-
-To search for users, enter your criteria in the search field. The user search is case
-insensitive, and applies partial matching to name and username. To search for an email address,
-you must provide the complete email address.
 
 ### User impersonation
 
@@ -166,10 +166,7 @@ the identities being used for an account.
 
 DETAILS:
 **Tier:** Premium, Ultimate
-**Offering:** Self-managed
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/1772) in GitLab 13.8.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/292436) in GitLab 13.9.
+**Offering:** Self-managed, GitLab Dedicated
 
 An administrator can export user permissions for all users in the GitLab instance from the Admin Area's Users page.
 The export lists direct membership the users have in groups and projects.
@@ -181,7 +178,7 @@ The following data is included in the export:
 - Type
 - Path
 - Access level ([Project](../user/permissions.md#project-members-permissions) and [Group](../user/permissions.md#group-members-permissions))
-- Date of last activity ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/345388) in GitLab 14.6). For a list of activities that populate this column, see the [Users API documentation](../api/users.md#get-user-activities).
+- Date of last activity. For a list of activities that populate this column, see the [Users API documentation](../api/users.md#get-user-activities).
 
 Only the first 100,000 user accounts are exported.
 
@@ -251,7 +248,6 @@ To [Create a new group](../user/group/index.md#create-a-group) select **New grou
 
 ## Administering topics
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/340920) in GitLab 14.4.
 > - Merging topics [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/366884) in GitLab 15.5.
 
 You can categorize and find similar projects with [topics](../user/project/project_topics.md).
@@ -439,7 +435,7 @@ The following topics document the **Monitoring** section of the Admin Area.
 
 > - Support for relative time [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/341248) in GitLab 15.2. "Uptime" statistic was renamed to "System started".
 
-The **System Info** page provides the following statistics:
+The **System information** page provides the following statistics:
 
 | Field          | Description                                       |
 |:---------------|:--------------------------------------------------|
@@ -448,7 +444,7 @@ The **System Info** page provides the following statistics:
 | Disk Usage     | Disk space in use, and total disk space available |
 | System started | When the system hosting GitLab was started. In GitLab 15.1 and earlier, this was an uptime statistic. |
 
-These statistics are updated only when you go to the **System Info** page, or you refresh the page in your browser.
+These statistics are updated only when you go to the **System information** page, or you refresh the page in your browser.
 
 ### Background Jobs
 
@@ -470,7 +466,7 @@ The Sidekiq dashboard consists of the following elements:
 
 ### Logs
 
-Since GitLab 13.0, **Log** view has been removed from the Admin Area dashboard since the logging does not work in multi-node setups and could cause confusion for administrators by displaying partial information.
+**Log** view has been removed from the Admin Area dashboard since the logging does not work in multi-node setups and could cause confusion for administrators by displaying partial information.
 
 For multi-node systems we recommend ingesting the logs into services like Elasticsearch and Splunk.
 
@@ -494,7 +490,7 @@ The content of each log file is listed in chronological order. To minimize perfo
 
 DETAILS:
 **Tier:** Premium, Ultimate
-**Offering:** Self-managed
+**Offering:** Self-managed, GitLab Dedicated
 
 The **Audit Events** page lists changes made within the GitLab server. With this information you can control, analyze, and track every change.
 
@@ -505,4 +501,3 @@ The **Instance overview** section of the Dashboard lists the current statistics 
 NOTE:
 These statistics show exact counts for values less than 10,000. For values of 10,000 and higher, these statistics show approximate data
 when [TablesampleCountStrategy](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/database/count/tablesample_count_strategy.rb?ref_type=heads#L16) and [ReltuplesCountStrategy](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/database/count/reltuples_count_strategy.rb?ref_type=heads) strategies are used for calculations.
-.

@@ -19,7 +19,6 @@ import axios from '~/lib/utils/axios_utils';
 import MarkdownEditor from '~/vue_shared/components/markdown/markdown_editor.vue';
 import { HTTP_STATUS_UNPROCESSABLE_ENTITY } from '~/lib/utils/http_status';
 import CommentForm from '~/notes/components/comment_form.vue';
-import CommentTypeDropdown from '~/notes/components/comment_type_dropdown.vue';
 import * as constants from '~/notes/constants';
 import eventHub from '~/notes/event_hub';
 import { COMMENT_FORM } from '~/notes/i18n';
@@ -44,14 +43,15 @@ describe('issue_comment_form component', () => {
   const findCloseReopenButton = () => wrapper.findByTestId('close-reopen-button');
   const findMarkdownEditor = () => wrapper.findComponent(MarkdownEditor);
   const findMarkdownEditorTextarea = () => findMarkdownEditor().find('textarea');
-  const findAddToReviewButton = () => wrapper.findByTestId('add-to-review-button');
+  const findAddToReviewDropdown = () => wrapper.findByTestId('add-to-review-dropdown');
+  const findAddToReviewButton = () => findAddToReviewDropdown().find('button');
   const findAddCommentNowButton = () => wrapper.findByTestId('add-comment-now-button');
   const findConfidentialNoteCheckbox = () => wrapper.findByTestId('internal-note-checkbox');
-  const findCommentTypeDropdown = () => wrapper.findComponent(CommentTypeDropdown);
+  const findCommentTypeDropdown = () => wrapper.findByTestId('comment-button');
   const findCommentButton = () => findCommentTypeDropdown().find('button');
   const findErrorAlerts = () => wrapper.findAllComponents(GlAlert).wrappers;
 
-  const createStore = ({ actions = { saveNote: jest.fn() }, state = {} } = {}) => {
+  const createStore = ({ actions = { saveNote: jest.fn() }, state = {}, getters = {} } = {}) => {
     const baseModule = notesModule();
 
     return new Vuex.Store({
@@ -63,6 +63,10 @@ describe('issue_comment_form component', () => {
       state: {
         ...baseModule.state,
         ...state,
+      },
+      getters: {
+        ...baseModule.getters,
+        ...getters,
       },
     });
   };
@@ -470,6 +474,50 @@ describe('issue_comment_form component', () => {
                 isDraft: true,
               });
             });
+
+            it('should add comment when shift+cmd+enter is pressed', async () => {
+              mountComponent({ mountFunction: mountExtended, initialData: { note: 'a' }, store });
+              jest.spyOn(store, 'dispatch').mockResolvedValue();
+              await findMarkdownEditorTextarea().trigger('keydown.enter', {
+                shiftKey: true,
+                metaKey: true,
+              });
+              expect(store.dispatch).toHaveBeenCalledWith('saveNote', {
+                data: {
+                  merge_request_diff_head_sha: undefined,
+                  note: {
+                    internal: false,
+                    note: 'a',
+                    noteable_id: noteableDataMock.id,
+                    noteable_type: 'Issue',
+                  },
+                },
+                endpoint: noteableDataMock.create_note_path,
+                isDraft: false,
+              });
+            });
+
+            it('should add comment when shift+ctrl+enter is pressed', async () => {
+              mountComponent({ mountFunction: mountExtended, initialData: { note: 'a' }, store });
+              jest.spyOn(store, 'dispatch').mockResolvedValue();
+              await findMarkdownEditorTextarea().trigger('keydown.enter', {
+                shiftKey: true,
+                ctrlKey: true,
+              });
+              expect(store.dispatch).toHaveBeenCalledWith('saveNote', {
+                data: {
+                  merge_request_diff_head_sha: undefined,
+                  note: {
+                    internal: false,
+                    note: 'a',
+                    noteable_id: noteableDataMock.id,
+                    noteable_type: 'Issue',
+                  },
+                },
+                endpoint: noteableDataMock.create_note_path,
+                isDraft: false,
+              });
+            });
           });
         });
       });
@@ -644,6 +692,14 @@ describe('issue_comment_form component', () => {
         expect(checkbox.element.checked).toBe(false);
       });
 
+      it('renders checkbox when hasDrafts is true', () => {
+        const store = createStore({ getters: { hasDrafts: () => true } });
+
+        mountComponent({ store });
+
+        expect(findConfidentialNoteCheckbox().exists()).toBe(true);
+      });
+
       it('should not render checkbox if user is not at least a reporter', () => {
         mountComponent({
           mountFunction: mountExtended,
@@ -787,7 +843,7 @@ describe('issue_comment_form component', () => {
       it('when no drafts exist, should not render', () => {
         mountComponent({ store });
         expect(findCommentTypeDropdown().exists()).toBe(true);
-        expect(findAddToReviewButton().exists()).toBe(false);
+        expect(findAddToReviewDropdown().exists()).toBe(false);
         expect(findAddCommentNowButton().exists()).toBe(false);
       });
 
@@ -799,7 +855,7 @@ describe('issue_comment_form component', () => {
         it('should render', async () => {
           await mountComponent({ store });
           expect(findCommentTypeDropdown().exists()).toBe(false);
-          expect(findAddToReviewButton().exists()).toBe(true);
+          expect(findAddToReviewDropdown().exists()).toBe(true);
           expect(findAddCommentNowButton().exists()).toBe(true);
         });
 
@@ -820,7 +876,7 @@ describe('issue_comment_form component', () => {
           );
         });
 
-        it('clicking `add comment now`, should call note endpoint, set `isDraft` false', async () => {
+        it('clicking `add comment/thread now`, should call note endpoint, set `isDraft` false', async () => {
           await mountComponent({
             mountFunction: mountExtended,
             initialData: { note: 'a comment' },

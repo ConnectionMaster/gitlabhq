@@ -315,6 +315,8 @@ export default {
           <slot name="select" v-bind="{ exceptionState, inputId: selectId }"></slot>
         </gl-form-group>
 
+        <slot name="after-members-input"></slot>
+
         <gl-form-group
           class="gl-sm-w-half gl-w-full"
           :label="$options.ACCESS_LEVEL"
@@ -336,10 +338,10 @@ export default {
             block
           >
             <template #list-item="{ item }">
-              <div :class="{ 'gl-font-weight-bold': item.memberRoleId }">{{ item.text }}</div>
+              <div :class="{ 'gl-font-bold': item.memberRoleId }">{{ item.text }}</div>
               <div
                 v-if="item.description"
-                class="gl-text-gray-700 gl-font-sm gl-pt-1 gl-line-clamp-2"
+                class="gl-text-gray-700 gl-font-sm gl-pt-1 gl-line-clamp-2 gl-whitespace-normal"
               >
                 {{ item.description }}
               </div>
@@ -358,7 +360,7 @@ export default {
           <gl-datepicker
             v-model="selectedDate"
             :input-id="datepickerId"
-            class="gl-display-block!"
+            class="!gl-block"
             :min-date="minDate"
             :target="null"
           />

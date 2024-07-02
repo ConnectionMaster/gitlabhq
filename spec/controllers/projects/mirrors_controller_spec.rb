@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe Projects::MirrorsController do
+RSpec.describe Projects::MirrorsController, feature_category: :source_code_management do
   include ReactiveCachingHelpers
 
   shared_examples 'only admin is allowed when mirroring is disabled' do
@@ -144,6 +144,18 @@ RSpec.describe Projects::MirrorsController do
       it 'creates a RemoteMirror object' do
         expect { do_put(project, remote_mirrors_attributes: remote_mirror_attributes) }.to change(RemoteMirror, :count).by(1)
       end
+
+      context 'with json format' do
+        it 'processes a successful update' do
+          do_put(project, { remote_mirrors_attributes: remote_mirror_attributes }, { format: :json })
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(json_response).to include(
+            'id' => project.id,
+            'remote_mirrors_attributes' => a_kind_of(Array)
+          )
+        end
+      end
     end
 
     context 'With invalid URL for a push' do
@@ -160,6 +172,52 @@ RSpec.describe Projects::MirrorsController do
 
       it 'does not create a RemoteMirror object' do
         expect { do_put(project, remote_mirrors_attributes: remote_mirror_attributes) }.not_to change(RemoteMirror, :count)
+      end
+
+      context 'when service returns an error' do
+        before do
+          allow(::RemoteMirrors::CreateService).to receive(:new).and_return(
+            instance_double('RemoteMirrors::CreateService', execute: ServiceResponse.error(message: 'ServiceError'))
+          )
+        end
+
+        it 'processes an unsuccessful update' do
+          do_put(project, remote_mirrors_attributes: remote_mirror_attributes)
+
+          expect(response).to redirect_to(project_settings_repository_path(project, anchor: 'js-push-remote-settings'))
+          expect(flash[:alert]).to eq('ServiceError')
+        end
+      end
+
+      context 'with json format' do
+        it 'processes an unsuccessful update' do
+          do_put(project, { remote_mirrors_attributes: remote_mirror_attributes }, { format: :json })
+
+          expect(response).to have_gitlab_http_status(:unprocessable_entity)
+          expect(json_response['url']).to include(/Only allowed schemes are/)
+        end
+      end
+    end
+
+    context 'when user deletes the remote mirror' do
+      let(:remote_mirror_attributes) { { id: mirror_id, _destroy: 1 } }
+      let(:mirror_id) { project.remote_mirrors.first.id }
+
+      it 'processes a successful delete' do
+        expect { do_put(project, remote_mirrors_attributes: remote_mirror_attributes) }.to change(RemoteMirror, :count).by(-1)
+
+        expect(response).to redirect_to(project_settings_repository_path(project, anchor: 'js-push-remote-settings'))
+        expect(flash[:notice]).to match(/successfully updated/)
+      end
+
+      context 'when mirror id is not found' do
+        let(:mirror_id) { non_existing_record_id }
+
+        it 'returns a 404 error' do
+          expect { do_put(project, remote_mirrors_attributes: remote_mirror_attributes) }.not_to change(RemoteMirror, :count)
+
+          expect(response).to have_gitlab_http_status(:not_found)
+        end
       end
     end
   end

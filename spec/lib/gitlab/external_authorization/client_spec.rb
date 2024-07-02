@@ -37,11 +37,11 @@ RSpec.describe Gitlab::ExternalAuthorization::Client do
       )
 
       expect(Gitlab::HTTP).to receive(:post).with(dummy_url,
-                                           hash_including(
-                                             connect_timeout: 3,
-                                             read_timeout: 3,
-                                             write_timeout: 3
-                                           ))
+        hash_including(
+          connect_timeout: 3,
+          read_timeout: 3,
+          write_timeout: 3
+        ))
 
       client.request_access
     end
@@ -88,9 +88,9 @@ RSpec.describe Gitlab::ExternalAuthorization::Client do
     describe 'for ldap users' do
       let(:user) do
         create(:omniauth_user,
-               email: 'dummy_user@example.com',
-               extern_uid: 'external id',
-               provider: 'ldapprovider')
+          email: 'dummy_user@example.com',
+          extern_uid: 'external id',
+          provider: 'ldapprovider')
       end
 
       it 'includes the ldap dn and identities for ldap users' do
@@ -108,10 +108,10 @@ RSpec.describe Gitlab::ExternalAuthorization::Client do
     end
 
     describe 'for non-ldap users with identities' do
+      let(:provider) { 'twitter' }
+
       before do
-        %w[twitter facebook].each do |provider|
-          create(:identity, provider: provider, extern_uid: "#{provider}_external_id", user: user)
-        end
+        create(:identity, provider: provider, extern_uid: "#{provider}_external_id", user: user)
       end
 
       it 'includes all the identities' do
@@ -119,8 +119,7 @@ RSpec.describe Gitlab::ExternalAuthorization::Client do
           user_identifier: 'dummy_user@example.com',
           project_classification_label: 'dummy_label',
           identities: [
-            { provider: 'twitter', extern_uid: 'twitter_external_id' },
-            { provider: 'facebook', extern_uid: 'facebook_external_id' }
+            { provider: 'twitter', extern_uid: 'twitter_external_id' }
           ]
         }.to_json
         expect(Gitlab::HTTP).to receive(:post)

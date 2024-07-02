@@ -60,17 +60,17 @@ export default {
     {
       key: 'name',
       label: s__('CiCatalogComponent|Parameters'),
-      thClass: 'gl-w-40p',
+      thClass: 'gl-w-2/5',
     },
     {
       key: 'default',
       label: s__('CiCatalogComponent|Default Value'),
-      thClass: 'gl-w-40p',
+      thClass: 'gl-w-2/5',
     },
     {
       key: 'required',
       label: s__('CiCatalogComponent|Mandatory'),
-      thClass: 'gl-w-20p',
+      thClass: 'gl-w-1/5',
     },
   ],
   i18n: {
@@ -99,7 +99,7 @@ export default {
         class="gl-mb-8"
         data-testid="component-section"
       >
-        <h3 class="gl-font-size-h2" data-testid="component-name">{{ component.name }}</h3>
+        <h3 class="gl-font-size-h2 gl-mt-0" data-testid="component-name">{{ component.name }}</h3>
         <pre
           data-testid="copy-to-clipboard"
           class="code highlight js-syntax-highlight language-yaml"
@@ -108,7 +108,7 @@ export default {
           generateSnippet(component.includePath)
         }}</code></pre>
         <div class="gl-mt-5">
-          <b class="gl-display-block gl-mb-4"> {{ $options.i18n.inputTitle }}</b>
+          <b class="gl-block gl-mb-4"> {{ $options.i18n.inputTitle }}</b>
           <gl-table-lite :items="component.inputs" :fields="$options.fields">
             <template #cell(required)="{ item }">
               {{ humanizeBoolean(item.required) }}

@@ -7,9 +7,21 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
   include AdminModeHelper
   include_context 'ProjectPolicy context'
 
+  let_it_be_with_reload(:project_with_runner_registration_token) do
+    create(:project, :public, :allow_runner_registration_token)
+  end
+
   let(:project) { public_project }
 
   subject { described_class.new(current_user, project) }
+
+  before_all do
+    project_with_runner_registration_token.add_guest(guest)
+    project_with_runner_registration_token.add_reporter(reporter)
+    project_with_runner_registration_token.add_developer(developer)
+    project_with_runner_registration_token.add_maintainer(maintainer)
+    project_with_runner_registration_token.add_owner(owner)
+  end
 
   def expect_allowed(*permissions)
     permissions.each { |p| is_expected.to be_allowed(p) }
@@ -375,6 +387,7 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
   it_behaves_like 'project policies as developer'
   it_behaves_like 'project policies as maintainer'
   it_behaves_like 'project policies as owner'
+  it_behaves_like 'project policies as organization owner'
   it_behaves_like 'project policies as admin with admin mode'
   it_behaves_like 'project policies as admin without admin mode'
 
@@ -842,46 +855,157 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
     end
   end
 
+  describe 'change_restrict_user_defined_variables' do
+    using RSpec::Parameterized::TableSyntax
+
+    where(:user_role, :minimum_role, :allowed) do
+      :guest      | :developer      | false
+      :reporter   | :developer      | false
+      :developer  | :developer      | false
+      :maintainer | :developer      | true
+      :maintainer | :maintainer     | true
+      :maintainer | :no_one_allowed | true
+      :owner      | :owner          | true
+      :developer  | :owner          | false
+      :maintainer | :owner          | false
+    end
+
+    with_them do
+      let(:current_user) { public_send(user_role) }
+
+      before do
+        ci_cd_settings = project.ci_cd_settings
+        ci_cd_settings.pipeline_variables_minimum_override_role = minimum_role
+        ci_cd_settings.save!
+      end
+
+      it 'allows/disallows change_restrict_user_defined_variables variables based on project defined minimum role' do
+        if allowed
+          is_expected.to be_allowed(:change_restrict_user_defined_variables)
+        else
+          is_expected.to be_disallowed(:change_restrict_user_defined_variables)
+        end
+      end
+    end
+  end
+
   describe 'set_pipeline_variables' do
-    context 'when user is developer' do
-      let(:current_user) { developer }
+    context 'when `pipeline_variables_minimum_override_role` is defined' do
+      using RSpec::Parameterized::TableSyntax
 
-      context 'when project allows user defined variables' do
-        before do
-          project.update!(restrict_user_defined_variables: false)
-        end
-
-        it { is_expected.to be_allowed(:set_pipeline_variables) }
+      where(:user_role, :minimum_role, :restrict_variables, :allowed) do
+        :developer   | :no_one_allowed | true | false
+        :maintainer  | :no_one_allowed | true | false
+        :owner       | :no_one_allowed | true | false
+        :guest       | :no_one_allowed | true | false
+        :reporter    | :no_one_allowed | true | false
+        :anonymous   | :no_one_allowed | true | false
+        :developer   | :developer      | true | true
+        :maintainer  | :developer      | true | true
+        :owner       | :developer      | true | true
+        :guest       | :developer      | true | false
+        :reporter    | :developer      | true | false
+        :anonymous   | :developer      | true | false
+        :developer   | :maintainer     | true | false
+        :maintainer  | :maintainer     | true | true
+        :owner       | :maintainer     | true | true
+        :guest       | :maintainer     | true | false
+        :reporter    | :maintainer     | true | false
+        :anonymous   | :maintainer     | true | false
+        :developer   | :owner          | true | false
+        :maintainer  | :owner          | true | false
+        :owner       | :owner          | true | true
+        :guest       | :owner          | true | false
+        :reporter    | :owner          | true | false
+        :anonymous   | :owner          | true | false
+        :developer   | :no_one_allowed | false | true
+        :maintainer  | :no_one_allowed | false | true
+        :owner       | :no_one_allowed | false | true
+        :guest       | :no_one_allowed | false | true
+        :reporter    | :no_one_allowed | false | true
+        :anonymous   | :no_one_allowed | false | true
+        :developer   | :developer      | false | true
+        :maintainer  | :developer      | false | true
+        :owner       | :developer      | false | true
+        :guest       | :developer      | false | true
+        :reporter    | :developer      | false | true
+        :anonymous   | :developer      | false | true
+        :developer   | :maintainer     | false | true
+        :maintainer  | :maintainer     | false | true
+        :owner       | :maintainer     | false | true
+        :guest       | :maintainer     | false | true
+        :reporter    | :maintainer     | false | true
+        :anonymous   | :maintainer     | false | true
+        :developer   | :owner          | false | true
+        :maintainer  | :owner          | false | true
+        :owner       | :owner          | false | true
+        :guest       | :owner          | false | true
+        :reporter    | :owner          | false | true
+        :anonymous   | :owner          | false | true
       end
+      with_them do
+        let(:current_user) { public_send(user_role) }
 
-      context 'when project restricts use of user defined variables' do
         before do
-          project.update!(restrict_user_defined_variables: true)
+          ci_cd_settings = project.ci_cd_settings
+          ci_cd_settings.restrict_user_defined_variables = restrict_variables
+          ci_cd_settings.pipeline_variables_minimum_override_role = minimum_role
+          ci_cd_settings.save!
         end
 
-        it { is_expected.not_to be_allowed(:set_pipeline_variables) }
+        it 'allows/disallows set pipeline variables based on project defined minimum role' do
+          if allowed
+            is_expected.to be_allowed(:set_pipeline_variables)
+          else
+            is_expected.to be_disallowed(:set_pipeline_variables)
+          end
+        end
       end
     end
 
-    context 'when user is maintainer' do
-      let(:current_user) { maintainer }
+    shared_examples 'set_pipeline_variables only on restrict_user_defined_variables' do
+      context 'when user is developer' do
+        let(:current_user) { developer }
 
-      context 'when project allows user defined variables' do
-        before do
-          project.update!(restrict_user_defined_variables: false)
+        context 'when project allows user defined variables' do
+          before do
+            project.update!(restrict_user_defined_variables: false)
+          end
+
+          it { is_expected.to be_allowed(:set_pipeline_variables) }
         end
 
-        it { is_expected.to be_allowed(:set_pipeline_variables) }
+        context 'when project restricts use of user defined variables' do
+          before do
+            project.update!(restrict_user_defined_variables: true)
+          end
+
+          it { is_expected.not_to be_allowed(:set_pipeline_variables) }
+        end
       end
 
-      context 'when project restricts use of user defined variables' do
-        before do
-          project.update!(restrict_user_defined_variables: true)
+      context 'when user is maintainer' do
+        let(:current_user) { maintainer }
+
+        context 'when project allows user defined variables' do
+          before do
+            project.update!(restrict_user_defined_variables: false)
+          end
+
+          it { is_expected.to be_allowed(:set_pipeline_variables) }
         end
 
-        it { is_expected.to be_allowed(:set_pipeline_variables) }
+        context 'when project restricts use of user defined variables' do
+          before do
+            project.update!(restrict_user_defined_variables: true)
+          end
+
+          it { is_expected.to be_allowed(:set_pipeline_variables) }
+        end
       end
     end
+
+    it_behaves_like 'set_pipeline_variables only on restrict_user_defined_variables'
   end
 
   context 'support bot' do
@@ -2675,6 +2799,118 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
     end
   end
 
+  describe 'public_user_access for internal project' do
+    using RSpec::Parameterized::TableSyntax
+
+    let(:policy) { :public_user_access }
+
+    where(:project_visibility, :external_user, :token_scope_enabled, :role, :allowed) do
+      :private  | false | false | :anonymous | false
+      :private  | false | false | :guest     | true
+      :private  | false | false | :reporter  | true
+      :private  | false | false | :developer | true
+      :private  | false | false | :maintainer | true
+      :private  | false | false | :owner | true
+      :public   | false | false | :anonymous | false
+      :public   | false | false | :guest     | true
+      :public   | false | false | :reporter  | true
+      :public   | false | false | :developer | true
+      :public   | false | false | :maintainer | true
+      :public   | false | false | :owner | true
+      :internal | false | false | :anonymous | false
+      :internal | false | false | :guest     | true
+      :internal | false | false | :reporter  | true
+      :internal | false | false | :developer | true
+      :internal | false | false | :maintainer | true
+      :internal | false | false | :owner | true
+      :private  | true | false | :anonymous | false
+      :private  | true | false | :guest     | false
+      :private  | true | false | :reporter  | false
+      :private  | true | false | :developer | false
+      :private  | true | false | :maintainer | false
+      :private  | true | false | :owner | false
+      :public   | true | false | :anonymous | false
+      :public   | true | false | :guest     | false
+      :public   | true | false | :reporter  | false
+      :public   | true | false | :developer | false
+      :public   | true | false | :maintainer | false
+      :public   | true | false | :owner | false
+      :internal | true | false | :anonymous | false
+      :internal | true | false | :guest     | false
+      :internal | true | false | :reporter  | false
+      :internal | true | false | :developer | false
+      :internal | true | false | :maintainer | false
+      :internal | true | false | :owner | false
+      :private  | false | true | :anonymous | false
+      :private  | false | true | :guest     | true
+      :private  | false | true | :reporter  | true
+      :private  | false | true | :developer | true
+      :private  | false | true | :maintainer | true
+      :private  | false | true | :owner | true
+      :public   | false | true | :anonymous | false
+      :public   | false | true | :guest     | true
+      :public   | false | true | :reporter  | true
+      :public   | false | true | :developer | true
+      :public   | false | true | :maintainer | true
+      :public   | false | true | :owner | true
+      :internal | false | true | :anonymous | false
+      :internal | false | true | :guest     | true
+      :internal | false | true | :reporter  | true
+      :internal | false | true | :developer | true
+      :internal | false | true | :maintainer | true
+      :internal | false | true | :owner | true
+      :private  | true | true | :anonymous | false
+      :private  | true | true | :guest     | false
+      :private  | true | true | :reporter  | false
+      :private  | true | true | :developer | false
+      :private  | true | true | :maintainer | false
+      :private  | true | true | :owner | false
+      :public   | true | true | :anonymous | false
+      :public   | true | true | :guest     | false
+      :public   | true | true | :reporter  | false
+      :public   | true | true | :developer | false
+      :public   | true | true | :maintainer | false
+      :public   | true | true | :owner | false
+      :internal | true | true | :anonymous | false
+      :internal | true | true | :guest     | false
+      :internal | true | true | :reporter  | false
+      :internal | true | true | :developer | false
+      :internal | true | true | :maintainer | false
+      :internal | true | true | :owner | false
+    end
+
+    with_them do
+      let(:current_user) do
+        if role == :anonymous
+          anonymous
+        else
+          public_send(role)
+        end
+      end
+
+      let(:project) { create(:project, :internal, ci_inbound_job_token_scope_enabled: token_scope_enabled) }
+      let(:job) { build_stubbed(:ci_build, project: scope_project, user: current_user) }
+      let(:scope_project) { public_send("#{project_visibility}_project") }
+
+      before do
+        if role != :anonymous
+          # The below two allow statements are to make sure the CI_JOB_TOKEN is used to access the project and the internal project is not in scope
+          allow(current_user).to receive(:ci_job_token_scope).and_return(current_user.set_ci_job_token_scope!(job))
+          allow(Ci::JobToken::Scope).to receive(:accessible?).with(project).and_return(false)
+          current_user.external = external_user
+        end
+      end
+
+      it "enforces the expected permissions" do
+        if allowed
+          is_expected.to be_allowed(policy)
+        else
+          is_expected.to be_disallowed(policy)
+        end
+      end
+    end
+  end
+
   describe 'container_image policies' do
     using RSpec::Parameterized::TableSyntax
 
@@ -2851,6 +3087,14 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
   end
 
   describe 'update_runners_registration_token' do
+    # Override project with a version with namespace_settings
+    let(:project) { project_with_runner_registration_token }
+    let(:allow_runner_registration_token) { true }
+
+    before do
+      stub_application_setting(allow_runner_registration_token: allow_runner_registration_token)
+    end
+
     context 'when anonymous' do
       let(:current_user) { anonymous }
 
@@ -2862,6 +3106,12 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
 
       context 'when admin mode is enabled', :enable_admin_mode do
         it { is_expected.to be_allowed(:update_runners_registration_token) }
+
+        context 'with registration tokens disabled' do
+          let(:allow_runner_registration_token) { false }
+
+          it { is_expected.to be_disallowed(:update_runners_registration_token) }
+        end
       end
 
       context 'when admin mode is disabled' do
@@ -2882,11 +3132,25 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
         let(:current_user) { send(role) }
 
         it { is_expected.to be_allowed(:update_runners_registration_token) }
+
+        context 'with registration tokens disabled' do
+          let(:allow_runner_registration_token) { false }
+
+          it { is_expected.to be_disallowed(:update_runners_registration_token) }
+        end
       end
     end
   end
 
   describe 'register_project_runners' do
+    # Override project with a version with namespace_settings
+    let(:project) { project_with_runner_registration_token }
+    let(:allow_runner_registration_token) { true }
+
+    before do
+      stub_application_setting(allow_runner_registration_token: allow_runner_registration_token)
+    end
+
     context 'admin' do
       let(:current_user) { admin }
 
@@ -2899,6 +3163,12 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
           end
 
           it { is_expected.to be_allowed(:register_project_runners) }
+
+          context 'with registration tokens disabled' do
+            let(:allow_runner_registration_token) { false }
+
+            it { is_expected.to be_disallowed(:register_project_runners) }
+          end
         end
 
         context 'with specific project runner registration disabled' do
@@ -2919,6 +3189,12 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
       let(:current_user) { owner }
 
       it { is_expected.to be_allowed(:register_project_runners) }
+
+      context 'with registration tokens disabled' do
+        let(:allow_runner_registration_token) { false }
+
+        it { is_expected.to be_disallowed(:register_project_runners) }
+      end
 
       context 'with project runner registration disabled' do
         before do
@@ -2941,6 +3217,12 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
       let(:current_user) { maintainer }
 
       it { is_expected.to be_allowed(:register_project_runners) }
+
+      context 'with registration tokens disabled' do
+        let(:allow_runner_registration_token) { false }
+
+        it { is_expected.to be_disallowed(:register_project_runners) }
+      end
     end
 
     context 'with reporter' do
@@ -3400,6 +3682,90 @@ RSpec.describe ProjectPolicy, feature_category: :system_access do
       end
 
       it { expect_allowed(:read_project) }
+    end
+  end
+
+  describe 'webhooks' do
+    context 'when the current_user is a maintainer' do
+      let(:current_user) { maintainer }
+
+      it { expect_allowed(:read_web_hook, :admin_web_hook) }
+    end
+
+    context 'when the current_user is a developer' do
+      let(:current_user) { developer }
+
+      it { expect_disallowed(:read_web_hook, :admin_web_hook) }
+    end
+  end
+
+  describe 'build_push_code' do
+    using RSpec::Parameterized::TableSyntax
+
+    let(:policy) { :build_push_code }
+
+    where(:user_role, :project_visibility, :push_repository_for_job_token_allowed, :self_referential_project, :allowed, :ff_disabled) do
+      :maintainer | :public   | true  | true  | true  | false
+      :owner      | :public   | true  | true  | true  | false
+      :maintainer | :private  | true  | true  | true  | false
+      :developer  | :public   | true  | true  | true  | false
+      :reporter   | :public   | true  | true  | false | false
+      :guest      | :public   | true  | true  | false | false
+      :guest      | :private  | true  | true  | false | false
+      :guest      | :internal | true  | true  | false | false
+      :anonymous  | :public   | true  | true  | false | false
+      :maintainer | :public   | false | true  | false | false
+      :maintainer | :public   | true  | false | false | false
+      :maintainer | :public   | false | false | false | false
+      :maintainer | :public   | true  | true  | false | true
+      :owner      | :public   | true  | true  | false | true
+      :maintainer | :private  | true  | true  | false | true
+      :developer  | :public   | true  | true  | false | true
+      :reporter   | :public   | true  | true  | false | true
+    end
+
+    with_them do
+      let(:current_user) do
+        public_send(user_role)
+      end
+
+      let(:job) { build_stubbed(:ci_build, project: scope_project, user: current_user) }
+      let(:project) { public_send("#{project_visibility}_project") }
+      let(:self_referential_job) { build_stubbed(:ci_build, project: project, user: current_user) }
+      let(:scope_project) { public_send(:private_project) }
+
+      before do
+        stub_feature_flags(allow_push_repository_for_job_token: false) if ff_disabled
+
+        project.add_guest(guest)
+        project.add_reporter(reporter)
+        project.add_developer(developer)
+        project.add_maintainer(maintainer)
+        project.add_maintainer(owner)
+
+        project.ci_inbound_job_token_scope_enabled = true
+        project.save!
+
+        ci_cd_settings = project.ci_cd_settings
+        ci_cd_settings.push_repository_for_job_token_allowed = push_repository_for_job_token_allowed
+        ci_cd_settings.save!
+
+        if user_role != :anonymous
+          if self_referential_project
+            allow(current_user).to receive(:ci_job_token_scope).and_return(current_user.set_ci_job_token_scope!(self_referential_job))
+          else
+            allow(current_user).to receive(:ci_job_token_scope).and_return(current_user.set_ci_job_token_scope!(job))
+          end
+        end
+      end
+
+      it 'allows/disallows build_push_code' do
+        if allowed
+          is_expected.to be_allowed(:build_push_code)
+        else
+          is_expected.to be_disallowed(:build_push_code)
+        end
+      end
     end
   end
 

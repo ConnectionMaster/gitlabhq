@@ -7,29 +7,20 @@ RSpec.describe TodoService, feature_category: :team_planning do
 
   let_it_be(:group) { create(:group) }
   let_it_be(:project) { create(:project, :repository) }
-  let_it_be(:author) { create(:user) }
-  let_it_be(:assignee) { create(:user) }
+  let_it_be(:author) { create(:user, developer_of: project) }
+  let_it_be(:assignee) { create(:user, developer_of: project) }
   let_it_be(:non_member) { create(:user) }
-  let_it_be(:member) { create(:user) }
-  let_it_be(:guest) { create(:user) }
+  let_it_be(:member) { create(:user, developer_of: project) }
+  let_it_be(:guest) { create(:user, guest_of: project) }
   let_it_be(:admin) { create(:admin) }
-  let_it_be(:john_doe) { create(:user) }
-  let_it_be(:skipped) { create(:user) }
+  let_it_be(:john_doe) { create(:user, developer_of: project) }
+  let_it_be(:skipped) { create(:user, developer_of: project) }
 
   let(:skip_users) { [skipped] }
   let(:mentions) { 'FYI: ' + [author, assignee, john_doe, member, guest, non_member, admin, skipped].map(&:to_reference).join(' ') }
   let(:directly_addressed) { [author, assignee, john_doe, member, guest, non_member, admin, skipped].map(&:to_reference).join(' ') }
   let(:directly_addressed_and_mentioned) { member.to_reference + ", what do you think? cc: " + [guest, admin, skipped].map(&:to_reference).join(' ') }
   let(:service) { described_class.new }
-
-  before_all do
-    project.add_guest(guest)
-    project.add_developer(author)
-    project.add_developer(assignee)
-    project.add_developer(member)
-    project.add_developer(john_doe)
-    project.add_developer(skipped)
-  end
 
   shared_examples 'reassigned target' do
     let(:additional_todo_attributes) { {} }
@@ -463,6 +454,22 @@ RSpec.describe TodoService, feature_category: :team_planning do
 
         expect(first_todo.reload).to be_done
         expect(second_todo.reload).to be_done
+      end
+
+      it 'mark related pending todos to the discussion for the note author as done' do
+        first_discussion_note = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: john_doe, note: "Discussion thread 1")
+        first_discussion_reply = create(:discussion_note_on_issue, noteable: issue, project: issue.project, discussion_id: first_discussion_note.discussion_id)
+        first_discussion_todo = create(:todo, :assigned, user: john_doe, project: project, target: issue, author: author, note: first_discussion_reply)
+
+        # Create a second discussion on the same issue
+        second_discussion_note = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: john_doe, note: "Discussion thread 2")
+        second_discussion_todo = create(:todo, :assigned, user: john_doe, project: project, target: issue, author: author, note: second_discussion_note)
+
+        first_discussion_reply_2 = create(:discussion_note_on_issue, project: project, noteable: issue, author: john_doe, note: mentions, discussion_id: first_discussion_note.discussion_id)
+        service.new_note(first_discussion_reply_2, john_doe)
+
+        expect(first_discussion_todo.reload).to be_done
+        expect(second_discussion_todo.reload).not_to be_done
       end
 
       it 'does not mark related pending todos it is a system note' do
@@ -1078,6 +1085,33 @@ RSpec.describe TodoService, feature_category: :team_planning do
         service.new_award_emoji(mentioned_mr, john_doe)
 
         expect(todo.reload).to be_done
+      end
+
+      it 'mark related pending todos to the discussion for the note author as done' do
+        issue = create(:issue)
+
+        # Issue #1
+        # John Doe: "Discussion thread 1"
+        #   Author: "@john_doe Reply to thread 1"
+        #   _Todo generated for John Doe_
+        #
+        first_discussion_note = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: john_doe, note: "Discussion thread 1")
+        first_discussion_reply = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: author, discussion_id: first_discussion_note.discussion_id, note: mentions)
+        first_discussion_todo = create(:todo, user: john_doe, project: issue.project, target: issue, author: author, note: first_discussion_reply)
+
+        # Issue #1
+        # John Doe: "Discussion thread 2"
+        #   Author: "@john_doe Reply to thread 2"
+        #   _Todo generated for John Doe_
+        #
+        second_discussion_note = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: john_doe, note: "Discussion thread 2")
+        second_discussion_reply = create(:discussion_note_on_issue, noteable: issue, project: issue.project, author: author, discussion_id: second_discussion_note.discussion_id, note: mentions)
+        second_discussion_todo = create(:todo, user: john_doe, project: issue.project, target: issue, author: author, note: second_discussion_reply)
+
+        service.new_award_emoji(first_discussion_reply, john_doe)
+
+        expect(first_discussion_todo.reload).to be_done
+        expect(second_discussion_todo.reload).not_to be_done
       end
     end
 

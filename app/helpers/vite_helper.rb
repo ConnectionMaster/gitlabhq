@@ -28,4 +28,16 @@ module ViteHelper
     parts.map
          .with_index { |part, idx| "pages.#{(parts[0, idx] << part).join('.')}.js" }
   end
+
+  def universal_stylesheet_link_tag(path, **options)
+    return stylesheet_link_tag(path, **options) unless vite_enabled?
+
+    vite_stylesheet_tag("stylesheets/styles.#{path}.scss", **options)
+  end
+
+  def universal_path_to_stylesheet(path, **options)
+    return ActionController::Base.helpers.stylesheet_path(path, **options) unless vite_enabled?
+
+    ViteRuby.instance.manifest.path_for("stylesheets/styles.#{path}.scss", **options)
+  end
 end

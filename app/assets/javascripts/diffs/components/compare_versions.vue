@@ -122,7 +122,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions('diffs', ['setInlineDiffViewType', 'setParallelDiffViewType', 'setShowTreeList']),
+    ...mapActions('diffs', ['setShowTreeList']),
     expandAllFiles() {
       eventHub.$emit(EVT_EXPAND_ALL_FILES);
     },
@@ -138,7 +138,7 @@ export default {
         v-if="hasChanges"
         v-gl-tooltip.html="toggleFileBrowserTooltip"
         variant="default"
-        icon="file-tree"
+        icon="sidebar"
         class="gl-mr-3 js-toggle-tree-list btn-icon"
         data-testid="file-tree-button"
         :aria-label="toggleFileBrowserTitle"
@@ -190,7 +190,7 @@ export default {
       </div>
       <gl-sprintf
         v-else-if="!commit && hasSourceVersions"
-        class="d-flex gl-align-items-center compare-versions-container"
+        class="gl-flex gl-items-center compare-versions-container"
         :message="s__('MergeRequest|Compare %{target} and %{source}')"
       >
         <template #target>
@@ -216,7 +216,7 @@ export default {
       >
         {{ __('Show latest version') }}
       </gl-button>
-      <div v-if="hasChanges" class="inline-parallel-buttons d-none gl-md-display-flex! ml-auto">
+      <div v-if="hasChanges" class="inline-parallel-buttons gl-hidden md:gl-flex ml-auto">
         <diff-stats
           :diff-files-count-text="diffFilesCountText"
           :added-lines="addedLines"

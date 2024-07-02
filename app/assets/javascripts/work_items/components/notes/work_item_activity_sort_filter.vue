@@ -85,7 +85,7 @@ export default {
 </script>
 
 <template>
-  <div class="gl-display-inline-block gl-vertical-align-bottom">
+  <div class="gl-display-inline-block gl-align-bottom">
     <local-storage-sync
       :value="sortFilterProp"
       :storage-key="storageKey"
@@ -97,7 +97,7 @@ export default {
       :disabled="loading"
       :items="items"
       :selected="sortFilterProp"
-      placement="right"
+      placement="bottom-end"
       size="small"
       @select="fetchFilteredDiscussions"
     />

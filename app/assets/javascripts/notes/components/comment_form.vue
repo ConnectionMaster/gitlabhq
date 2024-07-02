@@ -190,6 +190,11 @@ export default {
 
       return null;
     },
+    commentNowButtonTitle() {
+      return this.noteType === constants.COMMENT
+        ? this.$options.i18n.addCommentNow
+        : this.$options.i18n.addThreadNow;
+    },
   },
   watch: {
     noteIsInternal(val) {
@@ -301,7 +306,9 @@ export default {
       toggleState()
         .then(() => {
           fetchUserCounts();
-          return badgeState?.updateStatus();
+          // badgeState is only initialized for MR type
+          // To avoid undefined error added an optional chaining to function
+          return badgeState?.updateStatus?.();
         })
         .catch(() =>
           createAlert({
@@ -374,52 +381,55 @@ export default {
                 :autocomplete-data-sources="autocompleteDataSources"
                 supports-quick-actions
                 @keydown.up="editCurrentUserLastNote()"
-                @keydown.meta.enter="handleEnter()"
-                @keydown.ctrl.enter="handleEnter()"
+                @keydown.shift.meta.enter="handleSave()"
+                @keydown.shift.ctrl.enter="handleSave()"
+                @keydown.meta.enter.exact="handleEnter()"
+                @keydown.ctrl.enter.exact="handleEnter()"
                 @input="onInput"
               />
             </comment-field-layout>
-            <div
-              class="note-form-actions gl-font-size-0"
-              :class="{ 'gl-display-flex gl-gap-3': hasDrafts }"
-            >
+            <div class="note-form-actions gl-font-size-0">
+              <gl-form-checkbox
+                v-if="canSetInternalNote"
+                v-model="noteIsInternal"
+                class="gl-mb-2 gl-flex-basis-full"
+                data-testid="internal-note-checkbox"
+              >
+                {{ $options.i18n.internal }}
+                <gl-icon
+                  v-gl-tooltip:tooltipcontainer.bottom
+                  name="question-o"
+                  :size="16"
+                  :title="$options.i18n.internalVisibility"
+                  class="gl-text-blue-500"
+                />
+              </gl-form-checkbox>
               <template v-if="hasDrafts">
-                <gl-button
+                <comment-type-dropdown
+                  v-model="noteType"
+                  class="gl-mr-3"
+                  data-testid="add-to-review-dropdown"
                   :disabled="disableSubmitButton"
-                  data-testid="add-to-review-button"
-                  type="submit"
-                  category="primary"
-                  variant="confirm"
-                  @click.prevent="handleSaveDraft()"
-                  >{{ __('Add to review') }}</gl-button
-                >
+                  :tracking-label="trackingLabel"
+                  is-review-dropdown
+                  :noteable-display-name="noteableDisplayName"
+                  :discussions-require-resolution="discussionsRequireResolution"
+                  @click="handleSaveDraft()"
+                />
                 <gl-button
                   :disabled="disableSubmitButton"
                   data-testid="add-comment-now-button"
                   category="secondary"
+                  class="gl-mr-3"
                   @click.prevent="handleSave()"
-                  >{{ __('Add comment now') }}</gl-button
+                  >{{ commentNowButtonTitle }}</gl-button
                 >
               </template>
               <template v-else>
-                <gl-form-checkbox
-                  v-if="canSetInternalNote"
-                  v-model="noteIsInternal"
-                  class="gl-mb-2 gl-flex-basis-full"
-                  data-testid="internal-note-checkbox"
-                >
-                  {{ $options.i18n.internal }}
-                  <gl-icon
-                    v-gl-tooltip:tooltipcontainer.bottom
-                    name="question-o"
-                    :size="16"
-                    :title="$options.i18n.internalVisibility"
-                    class="gl-text-blue-500"
-                  />
-                </gl-form-checkbox>
                 <comment-type-dropdown
                   v-model="noteType"
                   class="gl-mr-3"
+                  data-testid="comment-button"
                   :disabled="disableSubmitButton"
                   :tracking-label="trackingLabel"
                   :is-internal-note="noteIsInternal"

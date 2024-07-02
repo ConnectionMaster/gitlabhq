@@ -3,10 +3,27 @@
 require "optparse"
 require 'gitlab/housekeeper'
 
+REQUIRED_CONFIG_KEYS = [
+  'HOUSEKEEPER_GITLAB_API_TOKEN',
+  'HOUSEKEEPER_TARGET_PROJECT_ID'
+].freeze
+
+def validate_configuration!
+  missing_keys = REQUIRED_CONFIG_KEYS.select { |required_key| !ENV.key?(required_key) }
+
+  if missing_keys.any?
+    raise "Missing required environment variables: #{missing_keys.join(', ')}"
+  end
+end
+
 options = {}
 
 OptionParser.new do |opts|
   opts.banner = 'Creates merge requests that can be inferred from the current state of the codebase'
+
+  opts.on('-b=BRANCH', '--target-branch=BRANCH', String, 'Target branch to use. Defaults to master.') do |branch|
+    options[:target_branch] = branch
+  end
 
   opts.on('-m=M', '--max-mrs=M', Integer, 'Limit of MRs to create. Defaults to 1.') do |m|
     options[:max_mrs] = m
@@ -28,5 +45,8 @@ OptionParser.new do |opts|
     abort opts.to_s
   end
 end.parse!
+
+# We do not want to validate configuration on dry runs
+validate_configuration! unless options[:dry_run]
 
 Gitlab::Housekeeper::Runner.new(**options).run

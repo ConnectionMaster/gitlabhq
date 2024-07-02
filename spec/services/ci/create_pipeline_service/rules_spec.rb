@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 require 'spec_helper'
 
-RSpec.describe Ci::CreatePipelineService, :yaml_processor_feature_flag_corectness, feature_category: :pipeline_composition do
+RSpec.describe Ci::CreatePipelineService, :ci_config_feature_flag_correctness, feature_category: :pipeline_composition do
   let(:project)     { create(:project, :repository) }
   let(:user)        { project.first_owner }
   let(:ref)         { 'refs/heads/master' }
@@ -111,6 +111,84 @@ RSpec.describe Ci::CreatePipelineService, :yaml_processor_feature_flag_corectnes
 
         it 'sets when: for the created job' do
           expect(regular_job.when).to eq('on_success')
+        end
+      end
+    end
+
+    context 'exists with patterns' do
+      let(:config) do
+        <<-YAML
+        job1:
+          script: echo Hello, World!
+          rules:
+            - exists:
+              - 'docs/*.md' # does not match
+              - 'config/*.rb' # matches
+
+        job2:
+          script: echo Hello, World!
+          rules:
+            - exists:
+              - 'docs/*.md' # does not match
+              - '**/app.rb' # matches
+
+        job3:
+          script: echo Hello, World!
+          rules:
+            - exists:
+              - 'config/*.yml' # does not match
+              - '**/app.rb' # matches
+
+        job4:
+          script: echo Hello, World!
+          rules:
+            - exists:
+              - '**/app.rb' # matches
+        YAML
+      end
+
+      context 'with matches' do
+        let_it_be(:project_files) do
+          {
+            'config/app.rb' => '',
+            'hello1.yml' => '',
+            'hello2.yml' => ''
+          }
+        end
+
+        let_it_be(:project) do
+          create(:project, :custom_repo, files: project_files)
+        end
+
+        let_it_be(:number_of_project_files) { project_files.size }
+
+        it 'creates all jobs' do
+          expect(pipeline).to be_persisted
+          expect(build_names).to contain_exactly('job1', 'job2', 'job3', 'job4')
+        end
+
+        context 'on checking cache', :request_store do
+          it 'does not evaluate the same glob more than once' do
+            expect(File).to receive(:fnmatch?)
+              .with('docs/*.md', anything, anything)
+              .exactly(number_of_project_files).times # it iterates all files
+              .and_call_original
+            expect(File).to receive(:fnmatch?)
+              .with('config/*.rb', anything, anything)
+              .once # it iterates once and finds the file
+              .and_call_original
+            expect(File).to receive(:fnmatch?)
+              .with('config/*.yml', anything, anything)
+              .exactly(number_of_project_files).times # it iterates all files
+              .and_call_original
+            expect(File).to receive(:fnmatch?)
+              .with('**/app.rb', anything, anything)
+              .once # it iterates once and finds the file
+              .and_call_original
+
+            expect(pipeline).to be_persisted
+            expect(build_names).to contain_exactly('job1', 'job2', 'job3', 'job4')
+          end
         end
       end
     end
@@ -660,6 +738,78 @@ RSpec.describe Ci::CreatePipelineService, :yaml_processor_feature_flag_corectnes
 
               it 'does not create job1' do
                 expect(build_names).to contain_exactly('job2')
+              end
+            end
+          end
+
+          context 'for jobs rules with variables' do
+            let(:config) do
+              <<-EOY
+              variables:
+                VALID_BRANCH_NAME: feature_1
+                FEATURE_BRANCH_NAME_PREFIX: feature_
+                INVALID_BRANCH_NAME: invalid-branch
+              job1:
+                script: exit 0
+                rules:
+                  - changes:
+                      paths: [#{changed_file}]
+                      compare_to: #{compare_to}
+
+              job2:
+                script: exit 0
+              EOY
+            end
+
+            context 'when there is no such compare_to ref' do
+              let(:compare_to) { '${INVALID_BRANCH_NAME}' }
+
+              it 'returns an error' do
+                expect(pipeline.errors.full_messages).to eq(
+                  ['Failed to parse rule for job1: rules:changes:compare_to is not a valid ref']
+                )
+              end
+            end
+
+            context 'when the compare_to ref exists' do
+              let(:compare_to) { '${FEATURE_BRANCH_NAME_PREFIX}1' }
+
+              context 'when the rule in job1 matches' do
+                it 'creates job1 and job2' do
+                  expect(build_names).to contain_exactly('job1', 'job2')
+                end
+              end
+
+              context 'when the rule in job1 does not match' do
+                let(:changed_file) { 'file1.txt' }
+
+                it 'does not create job1' do
+                  expect(build_names).to contain_exactly('job2')
+                end
+              end
+            end
+
+            context 'when the compare_to variable does not exist' do
+              let(:compare_to) { '$NON_EXISTENT_VAR' }
+
+              it 'returns an error' do
+                expect(pipeline.errors.full_messages).to eq(
+                  ['Failed to parse rule for job1: rules:changes:compare_to is not a valid ref']
+                )
+              end
+            end
+
+            context 'when the compare_to variable feature flag is disabled' do
+              before do
+                stub_feature_flags(ci_expand_variables_in_compare_to: false)
+              end
+
+              let(:compare_to) { '$VALID_BRANCH_NAME' }
+
+              it 'returns an error' do
+                expect(pipeline.errors.full_messages).to eq(
+                  ['Failed to parse rule for job1: rules:changes:compare_to is not a valid ref']
+                )
               end
             end
           end

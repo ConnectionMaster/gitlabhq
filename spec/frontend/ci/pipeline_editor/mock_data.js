@@ -124,10 +124,8 @@ const mockJobFields = {
 export const mockIncludesWithBlob = {
   location: 'test-include.yml',
   type: 'local',
-  blob:
-    'http://gdk.test:3000/root/upstream/-/blob/dd54f00bb3645f8ddce7665d2ffb3864540399cb/test-include.yml',
-  raw:
-    'http://gdk.test:3000/root/upstream/-/raw/dd54f00bb3645f8ddce7665d2ffb3864540399cb/test-include.yml',
+  blob: 'http://gdk.test:3000/root/upstream/-/blob/dd54f00bb3645f8ddce7665d2ffb3864540399cb/test-include.yml',
+  raw: 'http://gdk.test:3000/root/upstream/-/raw/dd54f00bb3645f8ddce7665d2ffb3864540399cb/test-include.yml',
   __typename: 'CiConfigInclude',
 };
 
@@ -135,8 +133,7 @@ export const mockDefaultIncludes = {
   location: 'npm.gitlab-ci.yml',
   type: 'template',
   blob: null,
-  raw:
-    'https://gitlab.com/gitlab-org/gitlab/-/raw/master/lib/gitlab/ci/templates/npm.gitlab-ci.yml',
+  raw: 'https://gitlab.com/gitlab-org/gitlab/-/raw/master/lib/gitlab/ci/templates/npm.gitlab-ci.yml',
   __typename: 'CiConfigInclude',
 };
 
@@ -146,10 +143,8 @@ export const mockIncludes = [
   {
     location: 'a_really_really_long_name_for_includes_file.yml',
     type: 'local',
-    blob:
-      'http://gdk.test:3000/root/upstream/-/blob/dd54f00bb3645f8ddce7665d2ffb3864540399cb/a_really_really_long_name_for_includes_file.yml',
-    raw:
-      'http://gdk.test:3000/root/upstream/-/raw/dd54f00bb3645f8ddce7665d2ffb3864540399cb/a_really_really_long_name_for_includes_file.yml',
+    blob: 'http://gdk.test:3000/root/upstream/-/blob/dd54f00bb3645f8ddce7665d2ffb3864540399cb/a_really_really_long_name_for_includes_file.yml',
+    raw: 'http://gdk.test:3000/root/upstream/-/raw/dd54f00bb3645f8ddce7665d2ffb3864540399cb/a_really_really_long_name_for_includes_file.yml',
     __typename: 'CiConfigInclude',
   },
 ];
@@ -317,8 +312,8 @@ export const generateMockProjectBranches = (prefix = '') => ({
   },
 });
 
-export const mockTotalBranchResults = generateMockProjectBranches().data.project.repository
-  .branchNames.length;
+export const mockTotalBranchResults =
+  generateMockProjectBranches().data.project.repository.branchNames.length;
 
 export const mockSearchBranches = {
   data: {
@@ -416,6 +411,7 @@ export const mockLinkedPipelines = ({ hasDownstream = true, hasUpstream = true }
           },
           detailedStatus: {
             id: 'success-612-612',
+            detailsPath: '/root/trigger-downstream/-/pipelines/610',
             group: 'success',
             icon: 'status_success',
             label: 'passed',
@@ -437,6 +433,7 @@ export const mockLinkedPipelines = ({ hasDownstream = true, hasUpstream = true }
           },
           detailedStatus: {
             id: 'success-611-611',
+            detailsPath: '/root/trigger-downstream/-/pipelines/610',
             group: 'success',
             icon: 'status_success',
             label: 'passed',
@@ -458,6 +455,7 @@ export const mockLinkedPipelines = ({ hasDownstream = true, hasUpstream = true }
           },
           detailedStatus: {
             id: 'success-609-609',
+            detailsPath: '/root/trigger-downstream/-/pipelines/610',
             group: 'success',
             icon: 'status_success',
             label: 'passed',
@@ -485,6 +483,7 @@ export const mockLinkedPipelines = ({ hasDownstream = true, hasUpstream = true }
       },
       detailedStatus: {
         id: 'success-610-610',
+        detailsPath: '/root/trigger-downstream/-/pipelines/610',
         group: 'success',
         icon: 'status_success',
         label: 'passed',

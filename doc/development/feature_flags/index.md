@@ -12,7 +12,7 @@ If you want to use feature flags to show and hide functionality in your own appl
 view [this feature flags information](../../operations/feature_flags.md) instead.
 
 WARNING:
-All newly-introduced feature flags should be [disabled by default](https://about.gitlab.com/handbook/product-development-flow/feature-flag-lifecycle/#feature-flags-in-gitlab-development).
+All newly-introduced feature flags should be [disabled by default](https://handbook.gitlab.com/handbook/product-development-flow/feature-flag-lifecycle/).
 
 WARNING:
 All newly-introduced feature flags should be [used with an actor](controls.md#percentage-based-actor-selection).
@@ -29,6 +29,21 @@ For an [overview of the feature flag lifecycle](https://handbook.gitlab.com/hand
 ## When to use feature flags
 
 Moved to the ["When to use feature flags"](https://handbook.gitlab.com/handbook/product-development-flow/feature-flag-lifecycle/#when-to-use-feature-flags) section in the handbook.
+
+### Do not use feature flags for long lived settings
+
+Feature flags are meant to be short lived. If you are intending on adding a
+feature flag so that something can be enabled per user/group/project for a long
+period of time, consider introducing
+[Cascading Settings](../cascading_settings.md) or [Application Settings](../application_settings.md)
+instead. Settings
+offer a way for customers to enable or disable features for themselves on
+GitLab.com or self-managed and can remain in the codebase as long as needed. In
+contrast users have no way to enable or disable feature flags for themselves on
+GitLab.com and only self-managed admins can change the feature flags.
+Also note that
+[feature flags are not supported in GitLab Dedicated](../enabling_features_on_dedicated.md#feature-flags)
+which is another reason you should not use them as a replacement for settings.
 
 ## Feature flags in GitLab development
 
@@ -60,7 +75,7 @@ When the feature implementation is delivered over multiple merge requests:
    with the implementation. Do not enable the feature flag for a public project
    like `gitlab-org/gitlab` if there is no documentation. Team members and contributors might search for
    documentation on how to use the feature if they see it enabled in a public project.
-1. When the feature is ready for production use, open a merge request to:
+1. When the feature is ready for production use, including self-managed instances, open one merge request to:
    - Update the documentation to describe the latest flag status.
    - Add a [changelog entry](#changelog).
    - Remove the feature flag to enable the new behavior, or flip the feature flag to be **enabled by default** (only for `ops` and `beta` feature flags).
@@ -97,7 +112,7 @@ GitLab are of the `gitlab_com_derisk` type.
 
 - `default_enabled`: **Must not** be set to true. This kind of feature flag is meant to lower the risk on GitLab.com, thus there's no need to keep the flag in the codebase after it's been enabled on GitLab.com. `default_enabled: true` will not have any effect for this type of feature flag.
 - Maximum Lifespan: 2 months after it's merged into the default branch
-- Documentation: This type of feature flag don't need to be documented in the
+- Documentation: This type of feature flag doesn't need to be documented in the
   [All feature flags in GitLab](../../user/feature_flags.md) page given they're short-lived and deployment-related
 - Rollout issue: **Must** have a rollout issue created from the
   [Feature flag Roll Out template](https://gitlab.com/gitlab-org/gitlab/-/blob/master/.gitlab/issue_templates/Feature%20Flag%20Roll%20Out.md)
@@ -145,7 +160,7 @@ Once the feature is complete, the feature flag type can be changed to the `gitla
 
 - `default_enabled`: **Must not** be set to true. If needed, this type can be changed to beta once the feature is complete.
 - Maximum Lifespan: 4 months after it's merged into the default branch
-- Documentation: This type of feature flag don't need to be documented in the
+- Documentation: This type of feature flag doesn't need to be documented in the
   [All feature flags in GitLab](../../user/feature_flags.md) page given they're mostly hiding unfinished code
 - Rollout issue: Likely no need for a rollout issues, as `wip` feature flags should be transitioned to
   another type before being enabled
@@ -165,15 +180,13 @@ push_frontend_feature_flag(:my_wip_flag, project)
 
 ### `beta` type
 
-We might
-[not be confident we'll be able to scale, support, and maintain a feature](https://handbook.gitlab.com/handbook/product/gitlab-the-product/#experiment-beta-ga)
-in its current form for every designed use case ([example](https://gitlab.com/gitlab-org/gitlab/-/issues/336070#note_1523983444)).
+We might [not be confident we'll be able to scale, support, and maintain a feature](../../policy/experiment-beta-support.md) in its current form for every designed use case ([example](https://gitlab.com/gitlab-org/gitlab/-/issues/336070#note_1523983444)).
 There are also scenarios where a feature is not complete enough to be considered an MVC.
 Providing a flag in this case allows engineers and customers to disable the new feature until it's performant enough.
 
 #### Constraints
 
-- `default_enabled`: Can be set to `true` so that a feature can be "released" to everyone in Beta with the
+- `default_enabled`: Can be set to `true` so that a feature can be "released" to everyone in beta with the
   possibility to disable it in the case of scalability issues (ideally it should only be disabled for this
   reason on specific on-premise installations)
 - Maximum Lifespan: 6 months after it's merged into the default branch
@@ -234,7 +247,7 @@ push_frontend_feature_flag(:my_ops_flag, project)
 
 An `experiment` feature flag should conform to the same standards as a `beta` feature flag,
 although the interface has some differences. An experiment feature flag should have a rollout issue,
-created using the [Experiment Tracking template](https://gitlab.com/gitlab-org/gitlab/-/blob/master/.gitlab/issue_templates/Experiment%20Rollout.md). More information can be found in the [experiment guide](../experiment_guide/index.md).
+created using the [Experiment tracking template](https://gitlab.com/gitlab-org/gitlab/-/blob/master/.gitlab/issue_templates/Experiment%20Rollout.md). More information can be found in the [experiment guide](../experiment_guide/index.md).
 
 #### Constraints
 
@@ -254,8 +267,6 @@ flags can be found in [deferring Sidekiq jobs](#deferring-sidekiq-jobs).
 The `development` type is deprecated in favor of the `gitlab_com_derisk`, `wip`, and `beta` feature flag types.
 
 ## Feature flag definition and validation
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/229161) in GitLab 13.3.
 
 During development (`RAILS_ENV=development`) or testing (`RAILS_ENV=test`) all feature flag usage is being strictly validated.
 
@@ -342,7 +353,7 @@ type: beta
 default_enabled: false
 ```
 
-All newly-introduced feature flags must be [**disabled by default**](https://about.gitlab.com/handbook/product-development-flow/feature-flag-lifecycle/#feature-flags-in-gitlab-development).
+All newly-introduced feature flags must be [**disabled by default**](https://handbook.gitlab.com/handbook/product-development-flow/feature-flag-lifecycle/).
 
 Features that are developed and merged behind a feature flag
 should not include a changelog entry. The entry should be added either in the merge
@@ -363,7 +374,7 @@ When choosing a name for a new feature flag, consider the following guidelines:
   with double negatives. Consider starting the name with `hide_`, `remove_`, or `disallow_`.
 
   In software engineering this problem is known as
-  ["negative names for boolean variables"](https://www.serendipidata.com/posts/naming-guidelines-for-boolean-variables).
+  ["negative names for boolean variables"](https://www.serendipidata.com/posts/naming-guidelines-for-boolean-variables/).
   But we can't forbid negative words altogether, to be able to introduce flags as
   [disabled by default](#feature-flags-in-gitlab-development), use them to remove a feature by moving it behind a flag, or to [selectively disable a flag by actor](controls.md#selectively-disable-by-actor).
 
@@ -691,7 +702,9 @@ Feature groups can be enabled via the group name:
 Feature.enable(:feature_flag_name, :gitlab_team_members)
 ```
 
-### Enabling a feature flag locally (in development)
+### Controlling feature flags locally
+
+#### On rails console
 
 In the rails console (`rails c`), enter the following command to enable a feature flag:
 
@@ -711,17 +724,18 @@ You can also enable a feature flag for a given gate:
 Feature.enable(:feature_flag_name, Project.find_by_full_path("root/my-project"))
 ```
 
-### Disabling a feature flag locally (in development)
-
 When manually enabling or disabling a feature flag from the Rails console, its default value gets overwritten.
 This can cause confusion when changing the flag's `default_enabled` attribute.
 
-To reset the feature flag to the default status, you can disable it in the rails console (`rails c`)
-as follows:
+To reset the feature flag to the default status:
 
 ```ruby
 Feature.remove(:feature_flag_name)
 ```
+
+#### On your browser
+
+Access `http://gdk.test:3000/rails/features` to see the manage locally the feature flag.
 
 ### Logging
 

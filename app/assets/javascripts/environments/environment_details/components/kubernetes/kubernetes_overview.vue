@@ -2,11 +2,19 @@
 import { GlEmptyState, GlSprintf, GlLink, GlAlert } from '@gitlab/ui';
 import CLUSTER_EMPTY_SVG from '@gitlab/svgs/dist/illustrations/empty-state/empty-state-clusters.svg?url';
 import { s__ } from '~/locale';
+import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import { helpPagePath } from '~/helpers/help_page_helper';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import { k8sResourceType } from '~/environments/graphql/resolvers/kubernetes/constants';
 import { createK8sAccessConfiguration } from '~/environments/helpers/k8s_integration_helper';
-import { CLUSTER_HEALTH_SUCCESS, CLUSTER_HEALTH_ERROR } from '~/environments/constants';
+import fluxKustomizationQuery from '~/environments/graphql/queries/flux_kustomization.query.graphql';
+import fluxHelmReleaseQueryStatus from '~/environments/graphql/queries/flux_helm_release_status.query.graphql';
+import {
+  CLUSTER_HEALTH_SUCCESS,
+  CLUSTER_HEALTH_ERROR,
+  HELM_RELEASES_RESOURCE_TYPE,
+  KUSTOMIZATIONS_RESOURCE_TYPE,
+} from '~/environments/constants';
 import KubernetesStatusBar from './kubernetes_status_bar.vue';
 import KubernetesAgentInfo from './kubernetes_agent_info.vue';
 import KubernetesTabs from './kubernetes_tabs.vue';
@@ -43,13 +51,49 @@ export default {
       default: '',
     },
   },
-
+  apollo: {
+    fluxKustomization: {
+      query: fluxKustomizationQuery,
+      variables() {
+        return {
+          configuration: this.k8sAccessConfiguration,
+          fluxResourcePath: this.fluxResourcePath,
+        };
+      },
+      skip() {
+        return Boolean(
+          !this.fluxResourcePath || this.fluxResourcePath?.includes(HELM_RELEASES_RESOURCE_TYPE),
+        );
+      },
+      error(err) {
+        this.fluxApiError = err.message;
+      },
+    },
+    fluxHelmReleaseStatus: {
+      query: fluxHelmReleaseQueryStatus,
+      variables() {
+        return {
+          configuration: this.k8sAccessConfiguration,
+          fluxResourcePath: this.fluxResourcePath,
+        };
+      },
+      skip() {
+        return Boolean(
+          !this.fluxResourcePath || this.fluxResourcePath?.includes(KUSTOMIZATIONS_RESOURCE_TYPE),
+        );
+      },
+      error(err) {
+        this.fluxApiError = err.message;
+      },
+    },
+  },
   data() {
     return {
       error: null,
       failedState: {},
       podsLoading: false,
       activeTab: k8sResourceType.k8sPods,
+      fluxApiError: '',
     };
   },
   computed: {
@@ -71,9 +115,17 @@ export default {
     hasFailedState() {
       return Object.values(this.failedState).some((item) => item);
     },
+    fluxResourceStatus() {
+      return this.fluxKustomization?.conditions || this.fluxHelmReleaseStatus?.conditions;
+    },
   },
   methods: {
     handleError(message) {
+      Sentry.captureException(message, {
+        tags: {
+          vue_component: 'KubernetesOverview',
+        },
+      });
       this.error = message;
     },
     handleFailedState(event) {
@@ -96,7 +148,7 @@ export default {
 };
 </script>
 <template>
-  <div v-if="clusterAgent" class="gl-p-5 gl-bg-gray-10 gl-mt-n3">
+  <div v-if="clusterAgent" class="gl-p-5 gl-bg-gray-10 -gl-mt-3">
     <div
       class="gl-display-flex gl-flex-wrap gl-justify-content-space-between gl-align-items-center"
     >
@@ -108,6 +160,8 @@ export default {
         :environment-name="environmentName"
         :flux-resource-path="fluxResourcePath"
         :resource-type="activeTab"
+        :flux-resource-status="fluxResourceStatus"
+        :flux-api-error="fluxApiError"
         @error="handleError"
       />
     </div>
@@ -115,11 +169,11 @@ export default {
     <gl-alert v-if="error" variant="danger" :dismissible="false" class="gl-my-5">
       {{ error }}
     </gl-alert>
-
     <kubernetes-tabs
       v-model="activeTab"
       :configuration="k8sAccessConfiguration"
       :namespace="kubernetesNamespace"
+      :flux-kustomization="fluxKustomization"
       class="gl-mb-5"
       @cluster-error="handleError"
       @loading="podsLoading = $event"

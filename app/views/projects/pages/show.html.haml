@@ -2,19 +2,17 @@
 
 - unless @project.pages_deployed?
   = render 'waiting'
-
 - else
   = render 'header'
-
-  %section
-
+  - if Feature.enabled?('new_pages_ui', @project)
+    #js-pages{ data: { full_path: @project.full_path } }
+    %h2.gl-heading-2
+      = s_('Settings')
   = render 'pages_settings'
-
-  %hr.clearfix
-    = render 'ssl_limitations_warning' if pages_subdomain(@project).include?(".")
-    = render 'access'
-    - if Gitlab.config.pages.external_http || Gitlab.config.pages.external_https
-      = render 'list'
-    - else
-      = render 'no_domains'
-    = render 'destroy'
+  = render 'ssl_limitations_warning' if pages_subdomain(@project).include?(".")
+  = render 'access'
+  - if Gitlab.config.pages.external_http || Gitlab.config.pages.external_https
+    = render 'list'
+  - else
+    = render 'no_domains'
+  = render 'destroy'

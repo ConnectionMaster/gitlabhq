@@ -58,6 +58,27 @@ To update Elastic index mappings, apply the configuration to the respective file
 Migrations can be built with a retry limit and have the ability to be [failed and marked as halted](https://gitlab.com/gitlab-org/gitlab/-/blob/66e899b6637372a4faf61cfd2f254cbdd2fb9f6d/ee/lib/elastic/migration.rb#L40).
 Any data or index cleanup needed to support migration retries should be handled in the migration.
 
+### Skipped migrations
+
+You can skip a migration by adding a `skip_if` proc which evaluates to `true` or `false`:
+
+```ruby
+class MigrationName < Elastic::Migration
+  skip_if ->() { true|false }
+```
+
+The migration is executed only if the condition is `false`. Skipped migrations will not be shown as part of pending migrations.
+
+Skipped migrations can be marked as obsolete, but the `skip_if` condition must be kept so that these migrations are always skipped.
+Once a skipped migration is obsolete, the only way to apply the change is by [recreating the index from scratch](../../integration/advanced_search/elasticsearch_troubleshooting.md#last-resort-to-recreate-an-index).
+
+Update the skipped migration's documentation file with the following attributes:
+
+```yaml
+skippable: true
+skip_condition: '<description>'
+```
+
 ### Migration helpers
 
 The following migration helpers are available in `ee/app/workers/concerns/elastic/`:
@@ -176,6 +197,8 @@ class MigrationName < Elastic::Migration
 end
 ```
 
+When marking a skippable migration as obsolete, you must keep the `skip_if` condition.
+
 #### `Elastic::MigrationCreateIndex`
 
 Creates a new index.
@@ -183,7 +206,7 @@ Creates a new index.
 Requires:
 
 - The `target_class` and `document_type` methods
-- Mappings and index settings for the class in `ee/lib/elastic/latest/` and `ee/lib/elastic/v12p1/`
+- Mappings and index settings for the class
 
 WARNING:
 You must perform a follow-up migration to populate the index in the same milestone.
@@ -455,6 +478,7 @@ being upgraded to, we do the following:
    include Elastic::MigrationObsolete
    ```
 
+1. When marking a skippable migration as obsolete, keep the `skip_if` condition.
 1. Delete any spec files to support this migration.
 1. Verify that there are no references of the migration in the `.rubocop_todo/` directory.
 1. Remove any logic handling backwards compatibility for this migration. You

@@ -108,6 +108,30 @@ For user contributions to be mapped, each user must complete the following befor
    - For the first time: Select **Import**.
    - Again: Select **Re-import**. Specify a new name and select **Re-import** again. Re-importing creates a new copy of the source project.
 
+### Generate a Bitbucket Cloud app password
+
+If you want to use the [GitLab REST API](../../../api/import.md#import-repository-from-bitbucket-cloud) to import a
+Bitbucket Cloud repository, you must create a Bitbucket Cloud app password.
+
+To generate a Bitbucket Cloud app password:
+
+1. Go to <https://bitbucket.org/account/settings/>.
+1. In the **Access Management** section, select **App passwords**.
+1. Select **Create app password**.
+1. Enter password name.
+1. Select at least the following permissions:
+
+   ```plaintext
+   Account: Email, Read
+   Projects: Read
+   Repositories: Read
+   Pull Requests: Read
+   Issues: Read
+   Wiki: Read and Write
+   ```
+
+1. Select **Create**.
+
 ## Troubleshooting
 
 ### If you have more than one Bitbucket account

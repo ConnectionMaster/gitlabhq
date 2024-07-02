@@ -1,5 +1,6 @@
 <script>
 import { GlAvatar, GlLoadingIcon, GlIcon } from '@gitlab/ui';
+import { escape } from 'lodash';
 import SafeHtml from '~/vue_shared/directives/safe_html';
 
 export default {
@@ -138,7 +139,7 @@ export default {
           return `${this.char}${item.username}`;
         case 'issue':
         case 'merge_request':
-          return `${this.char}${item.iid}`;
+          return item.reference || `${this.char}${item.iid}`;
         case 'snippet':
           return `${this.char}${item.id}`;
         case 'milestone':
@@ -254,11 +255,11 @@ export default {
 
     highlight(text) {
       return this.query
-        ? String(text).replace(
+        ? String(escape(text)).replace(
             new RegExp(this.query, 'i'),
             (match) => `<strong class="gl-text-body!">${match}</strong>`,
           )
-        : text;
+        : escape(text);
     },
   },
   safeHtmlConfig: { ALLOWED_TAGS: ['strong'] },
@@ -267,10 +268,7 @@ export default {
 
 <template>
   <div class="gl-new-dropdown content-editor-suggestions-dropdown">
-    <div
-      v-if="!loading && items.length > 0"
-      class="gl-new-dropdown-panel gl-display-block! gl-absolute"
-    >
+    <div v-if="!loading && items.length > 0" class="gl-new-dropdown-panel !gl-block gl-absolute">
       <div class="gl-new-dropdown-inner">
         <ul class="gl-new-dropdown-contents" data-testid="content-editor-suggestions-dropdown">
           <li
@@ -288,45 +286,49 @@ export default {
               @click="selectItem(index)"
             >
               <div class="gl-new-dropdown-item-text-wrapper">
-                <span v-if="isUser" class="gl-flex">
+                <span v-if="isUser" class="gl-display-flex gl-align-items-center gl-gap-3">
                   <gl-avatar
                     :src="item.avatar_url"
                     :entity-name="item.username"
                     :size="24"
                     :shape="item.type === 'Group' ? 'rect' : 'circle'"
-                    class="gl-vertical-align-middle gl-mx-2"
                   />
-                  <span class="gl-vertical-align-middle">
-                    <span v-safe-html:safeHtmlConfig="highlight(item.username)"></span>
+                  <span>
+                    <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.username)"></span>
                     <small
-                      v-safe-html:safeHtmlConfig="highlight(avatarSubLabel(item))"
+                      v-safe-html:[$options.safeHtmlConfig]="highlight(avatarSubLabel(item))"
                       class="gl-text-gray-500"
                     ></small>
                   </span>
                 </span>
                 <span v-if="isIssue || isMergeRequest">
+                  <gl-icon
+                    v-if="item.icon_name"
+                    class="gl-mr-2 gl-text-secondary"
+                    :name="item.icon_name"
+                  />
                   <small
-                    v-safe-html:safeHtmlConfig="highlight(item.iid)"
+                    v-safe-html:[$options.safeHtmlConfig]="highlight(item.reference || item.iid)"
                     class="gl-text-gray-500"
                   ></small>
-                  <span v-safe-html:safeHtmlConfig="highlight(item.title)"></span>
+                  <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.title)"></span>
                 </span>
                 <span v-if="isVulnerability || isSnippet">
                   <small
-                    v-safe-html:safeHtmlConfig="highlight(item.id)"
+                    v-safe-html:[$options.safeHtmlConfig]="highlight(item.id)"
                     class="gl-text-gray-500"
                   ></small>
-                  <span v-safe-html:safeHtmlConfig="highlight(item.title)"></span>
+                  <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.title)"></span>
                 </span>
                 <span v-if="isEpic">
                   <small
-                    v-safe-html:safeHtmlConfig="highlight(item.reference)"
+                    v-safe-html:[$options.safeHtmlConfig]="highlight(item.reference)"
                     class="gl-text-gray-500"
                   ></small>
-                  <span v-safe-html:safeHtmlConfig="highlight(item.title)"></span>
+                  <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.title)"></span>
                 </span>
                 <span v-if="isMilestone">
-                  <span v-safe-html:safeHtmlConfig="highlight(item.title)"></span>
+                  <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.title)"></span>
                   <span v-if="item.expired">{{ __('(expired)') }}</span>
                 </span>
                 <span v-if="isWiki">
@@ -344,15 +346,15 @@ export default {
                     class="dropdown-label-box gl-flex-shrink-0 gl-top-0 gl-mr-3"
                     :style="{ backgroundColor: item.color }"
                   ></span>
-                  <span v-safe-html:safeHtmlConfig="highlight(item.title)"></span>
+                  <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.title)"></span>
                 </span>
                 <div v-if="isCommand">
                   <div class="gl-mb-1">
-                    /<span v-safe-html:safeHtmlConfig="highlight(item.name)"></span>
+                    /<span v-safe-html:[$options.safeHtmlConfig]="highlight(item.name)"></span>
                     <span class="gl-text-gray-500 gl-font-sm">{{ item.params[0] }}</span>
                   </div>
                   <em
-                    v-safe-html:safeHtmlConfig="highlight(item.description)"
+                    v-safe-html:[$options.safeHtmlConfig]="highlight(item.description)"
                     class="gl-text-gray-500 gl-font-sm"
                   ></em>
                 </div>
@@ -368,7 +370,7 @@ export default {
                     >
                   </div>
                   <div class="gl-flex-grow-1">
-                    <span v-safe-html:safeHtmlConfig="highlight(item.fieldValue)"></span>
+                    <span v-safe-html:[$options.safeHtmlConfig]="highlight(item.fieldValue)"></span>
                   </div>
                 </div>
               </div>
@@ -377,7 +379,7 @@ export default {
         </ul>
       </div>
     </div>
-    <div v-if="loading" class="gl-new-dropdown-panel gl-display-block! gl-absolute">
+    <div v-if="loading" class="gl-new-dropdown-panel !gl-block gl-absolute">
       <div class="gl-new-dropdown-inner">
         <div class="gl-px-4 gl-py-3">
           <gl-loading-icon size="sm" class="gl-display-inline-block" /> {{ __('Loading...') }}

@@ -1,15 +1,21 @@
 <script>
-import { GlLoadingIcon, GlEmptyState, GlKeysetPagination } from '@gitlab/ui';
+import { GlLoadingIcon, GlKeysetPagination } from '@gitlab/ui';
 import { s__, __ } from '~/locale';
 import ProjectsList from '~/vue_shared/components/projects_list/projects_list.vue';
 import { ACTION_DELETE } from '~/vue_shared/components/list_actions/constants';
 import { DEFAULT_PER_PAGE } from '~/api';
 import { deleteProject } from '~/rest_api';
 import { createAlert } from '~/alert';
+import {
+  renderDeleteSuccessToast,
+  deleteParams,
+  formatProjects,
+  timestampType,
+} from 'ee_else_ce/organizations/shared/utils';
 import { SORT_ITEM_NAME, SORT_DIRECTION_ASC } from '../constants';
 import projectsQuery from '../graphql/queries/projects.query.graphql';
-import { formatProjects } from '../utils';
 import NewProjectButton from './new_project_button.vue';
+import GroupsAndProjectsEmptyState from './groups_and_projects_empty_state.vue';
 
 export default {
   i18n: {
@@ -25,15 +31,14 @@ export default {
         'GroupsEmptyState|Projects are where you can store your code, access issues, wiki, and other features of GitLab.',
       ),
     },
-    prev: __('Prev'),
-    next: __('Next'),
+    project: __('Project'),
   },
   components: {
     ProjectsList,
     GlLoadingIcon,
-    GlEmptyState,
     GlKeysetPagination,
     NewProjectButton,
+    GroupsAndProjectsEmptyState,
   },
   inject: {
     organizationGid: {},
@@ -142,15 +147,8 @@ export default {
     isLoading() {
       return this.$apollo.queries.projects.loading;
     },
-    emptyStateProps() {
-      const baseProps = {
-        svgHeight: 144,
-        svgPath: this.projectsEmptyStateSvgPath,
-        title: this.$options.i18n.emptyState.title,
-        description: this.$options.i18n.emptyState.description,
-      };
-
-      return baseProps;
+    timestampType() {
+      return timestampType(this.sortName);
     },
   },
   methods: {
@@ -174,8 +172,9 @@ export default {
 
       try {
         this.setProjectIsDeleting(nodeIndex, true);
-        await deleteProject(project.id);
+        await deleteProject(project.id, deleteParams(project));
         this.$apollo.queries.projects.refetch();
+        renderDeleteSuccessToast(project, this.$options.i18n.project);
       } catch (error) {
         createAlert({ message: this.$options.i18n.deleteErrorMessage, error, captureError: true });
       } finally {
@@ -193,21 +192,22 @@ export default {
       :projects="nodes"
       show-project-icon
       :list-item-class="listItemClass"
+      :timestamp-type="timestampType"
       @delete="deleteProject"
     />
     <div v-if="pageInfo.hasNextPage || pageInfo.hasPreviousPage" class="gl-text-center gl-mt-5">
-      <gl-keyset-pagination
-        v-bind="pageInfo"
-        :prev-text="$options.i18n.prev"
-        :next-text="$options.i18n.next"
-        @prev="onPrev"
-        @next="onNext"
-      />
+      <gl-keyset-pagination v-bind="pageInfo" @prev="onPrev" @next="onNext" />
     </div>
   </div>
-  <gl-empty-state v-else v-bind="emptyStateProps">
+  <groups-and-projects-empty-state
+    v-else
+    :svg-path="projectsEmptyStateSvgPath"
+    :title="$options.i18n.emptyState.title"
+    :description="$options.i18n.emptyState.description"
+    :search="search"
+  >
     <template v-if="shouldShowEmptyStateButtons" #actions>
       <new-project-button />
     </template>
-  </gl-empty-state>
+  </groups-and-projects-empty-state>
 </template>

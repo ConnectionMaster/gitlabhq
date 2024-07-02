@@ -33,8 +33,6 @@ A confirmation is displayed.
 
 ## Use a Rake task
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/52347) in GitLab 13.9.
-
 Use the following Rake task to reset a user's password.
 
 ::Tabs
@@ -152,7 +150,7 @@ user's password.
 
 ### Email confirmation issues
 
-If the new password doesn't work, it might be [an email confirmation issue](../user/upgrade_email_bypass.md). You can
+If the new password doesn't work, it might be an email confirmation issue. You can
 attempt to fix this issue in a Rails console. For example, if a new `root` password isn't working:
 
 1. Start a [Rails console](../administration/operations/rails_console.md).

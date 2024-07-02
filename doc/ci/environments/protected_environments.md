@@ -45,8 +45,8 @@ To protect an environment:
    - There are two roles to choose from:
      - **Maintainers**: Allows access to all of the project's users with the Maintainer role.
      - **Developers**: Allows access to all of the project's users with the Maintainer and Developer role.
-   - You can only select groups that are already [invited](../../user/project/members/share_project_with_groups.md#share-a-project-with-a-group) to the project.
-   - Users must have at least the Developer role to appear in
+   - You can also select groups that are already [invited](../../user/project/members/share_project_with_groups.md#share-a-project-with-a-group) to the project. Invited groups added to the project with the Reporter role appear in the dropdown list for [deployment-only access](#deployment-only-access-to-protected-environments).
+   - You can also select specific users. The users must have at least the Developer role to appear in
      the **Allowed to deploy** list.
 1. In the **Approvers** list, select the role, users, or groups you
    want to give deploy access to. Keep in mind that:
@@ -120,7 +120,7 @@ Alternatively, you can use the API to protect an environment:
 1. Use the API to add the group with protected environment access:
 
    ```shell
-   curl --header 'Content-Type: application/json' --request POST --data '{"name": "production", "deploy_access_levels": [{"group_id": 9899826}], "required_approval_count": 0}' \
+   curl --header 'Content-Type: application/json' --request POST --data '{"name": "production", "deploy_access_levels": [{"group_id": 9899826}]}' \
         --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.com/api/v4/projects/22034114/protected_environments"
    ```
 
@@ -174,10 +174,6 @@ be re-entered if the environment is re-protected.
 For more information, see [Deployment safety](deployment_safety.md).
 
 ## Group-level protected environments
-
-> - Introduced in GitLab 14.0 [with a flag](https://gitlab.com/gitlab-org/gitlab/-/issues/215888) named `group_level_protected_environments`. Disabled by default.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/331085) in GitLab 14.3.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/331085) in GitLab 14.3.
 
 Typically, large enterprise organizations have an explicit permission boundary
 between [developers and operators](https://about.gitlab.com/topics/devops/).

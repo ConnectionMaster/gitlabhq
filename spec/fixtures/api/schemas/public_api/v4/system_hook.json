@@ -12,7 +12,9 @@
     "alert_status",
     "disabled_until",
     "url_variables",
-    "custom_webhook_template"
+    "custom_webhook_template",
+    "custom_headers",
+    "branch_filter_strategy"
   ],
   "properties": {
     "id": {
@@ -20,6 +22,18 @@
     },
     "url": {
       "type": "string"
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "created_at": {
       "type": "string"
@@ -73,6 +87,30 @@
         "string",
         "null"
       ]
+    },
+    "custom_headers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "push_events_branch_filter": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "branch_filter_strategy": {
+      "type": "string"
     }
   },
   "additionalProperties": false

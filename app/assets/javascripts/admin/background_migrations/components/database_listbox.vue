@@ -36,13 +36,11 @@ export default {
 
 <template>
   <div class="gl-display-flex gl-align-items-center">
-    <label id="label" class="gl-font-weight-bold gl-mr-4 gl-mb-0">{{
-      $options.i18n.database
-    }}</label>
+    <label id="label" class="gl-font-bold gl-mr-4 gl-mb-0">{{ $options.i18n.database }}</label>
     <gl-collapsible-listbox
       v-model="selected"
       :items="databases"
-      placement="right"
+      placement="bottom-end"
       :toggle-text="selectedDatabase"
       toggle-aria-labelled-by="label"
       @select="selectDatabase"

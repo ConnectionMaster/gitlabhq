@@ -9,7 +9,6 @@ RSpec.describe Cli, feature_category: :service_ping do
 
   let(:prompt) { TTY::Prompt::Test.new }
   let(:files_to_cleanup) { [] }
-  let(:max_wait_time) { 20 }
 
   let(:event1_filepath) { 'config/events/internal_events_cli_used.yml' }
   let(:event1_content) { internal_event_fixture('events/event_with_identifiers.yml') }
@@ -82,7 +81,7 @@ RSpec.describe Cli, feature_category: :service_ping do
 
     def wait_for_cli_completion
       with_cli_thread do |thread|
-        wait_for(timeout_error, max_wait_time: max_wait_time) { !thread.alive? }
+        wait_for(timeout_error) { !thread.alive? }
       end
     end
   end
@@ -127,7 +126,9 @@ RSpec.describe Cli, feature_category: :service_ping do
           "badDDD_ event (name) with // prob.lems\n" # Submit action name
         ])
 
-        expect_cli_output { prompt.output.string.include?('Invalid event name.') }
+        with_cli_thread do
+          expect { prompt.output.string }.to eventually_include_cli_text('Invalid event name.')
+        end
       end
     end
   end
@@ -138,16 +139,14 @@ RSpec.describe Cli, feature_category: :service_ping do
     end
 
     context 'when creating a metric from multiple events' do
+      # all of these product_groups belong to 'dev' product_section
       let(:events) do
         [{
-          action: '00_event1', internal_events: true,
-          product_section: 'dev', product_stage: 'plan', product_group: 'optimize'
+          action: '00_event1', internal_events: true, product_group: 'optimize'
         }, {
-          action: '00_event2', internal_events: true,
-          product_section: 'dev', product_stage: 'create', product_group: 'ide'
+          action: '00_event2', internal_events: true, product_group: 'ide'
         }, {
-          action: '00_event3', internal_events: true,
-          product_section: 'dev', product_stage: 'create', product_group: 'source_code'
+          action: '00_event3', internal_events: true, product_group: 'source_code'
         }]
       end
 
@@ -168,8 +167,7 @@ RSpec.describe Cli, feature_category: :service_ping do
           "\n", # Submit selections
           "\n", # Select: Weekly/Monthly count of unique users
           "aggregate metric description\n", # Submit description
-          "\n", # Accept description for weekly
-          "\n" # Copy & continue
+          "\n" # Accept description for weekly
         ])
 
         # Filter down to "dev" options
@@ -185,7 +183,9 @@ RSpec.describe Cli, feature_category: :service_ping do
           dev:create:code_creation
         TEXT
 
-        expect_cli_output { plain_last_lines(9) == expected_output }
+        with_cli_thread do
+          expect { plain_last_lines(9) }.to eventually_equal_cli_text(expected_output)
+        end
       end
 
       it 'filters the product group options based on common section & stage' do
@@ -200,8 +200,7 @@ RSpec.describe Cli, feature_category: :service_ping do
           "\n", # Submit selections
           "\n", # Select: Weekly/Monthly count of unique users
           "aggregate metric description\n", # Submit description
-          "\n", # Accept description for weekly
-          "\n" # Copy & continue
+          "\n" # Accept description for weekly
         ])
 
         # Filter down to "dev:create" options
@@ -213,14 +212,16 @@ RSpec.describe Cli, feature_category: :service_ping do
           dev:create:code_creation
         TEXT
 
-        expect_cli_output { plain_last_lines(5) == expected_output }
+        with_cli_thread do
+          expect { plain_last_lines(5) }.to eventually_equal_cli_text(expected_output)
+        end
       end
     end
 
     context 'when product group for event no longer exists' do
       let(:event) do
         {
-          action: '00_event1', product_section: 'other', product_stage: 'other', product_group: 'other'
+          action: '00_event1', product_group: 'other'
         }
       end
 
@@ -240,8 +241,8 @@ RSpec.describe Cli, feature_category: :service_ping do
         ])
 
         # Filter down to "dev" options
-        expect_cli_output do
-          plain_last_lines(50).include?('Select one: Which group owns the metric?')
+        with_cli_thread do
+          expect { plain_last_lines(50) }.to eventually_include_cli_text('Select one: Which group owns the metric?')
         end
       end
     end
@@ -262,7 +263,9 @@ RSpec.describe Cli, feature_category: :service_ping do
           Total count of [internal_events_cli_used occurrences]
         TEXT
 
-        expect_cli_output { plain_last_lines(5) == expected_output }
+        with_cli_thread do
+          expect { plain_last_lines(5) }.to eventually_equal_cli_text(expected_output)
+        end
       end
 
       context 'with an existing weekly metric' do
@@ -285,7 +288,9 @@ RSpec.describe Cli, feature_category: :service_ping do
             Total count of [internal_events_cli_used occurrences]
           TEXT
 
-          expect_cli_output { plain_last_lines(6) == expected_output }
+          with_cli_thread do
+            expect { plain_last_lines(6) }.to eventually_equal_cli_text(expected_output)
+          end
         end
       end
 
@@ -308,7 +313,9 @@ RSpec.describe Cli, feature_category: :service_ping do
           ✘ Total count of [internal_events_cli_used occurrences] (already defined)
           TEXT
 
-          expect_cli_output { plain_last_lines(5) == expected_output }
+          with_cli_thread do
+            expect { plain_last_lines(5) }.to eventually_equal_cli_text(expected_output)
+          end
         end
       end
 
@@ -345,7 +352,9 @@ RSpec.describe Cli, feature_category: :service_ping do
           Total count of [internal_events_cli_opened occurrences]
         TEXT
 
-        expect_cli_output { plain_last_lines(5) == expected_output }
+        with_cli_thread do
+          expect { plain_last_lines(5) }.to eventually_equal_cli_text(expected_output)
+        end
       end
     end
 
@@ -378,7 +387,9 @@ RSpec.describe Cli, feature_category: :service_ping do
 
         expected_output = 'Looks like the potential metrics for this event either already exist or are unsupported.'
 
-        expect_cli_output { plain_last_lines(15).include?(expected_output) }
+        with_cli_thread do
+          expect { plain_last_lines(15) }.to eventually_include_cli_text(expected_output)
+        end
       end
     end
   end
@@ -386,19 +397,20 @@ RSpec.describe Cli, feature_category: :service_ping do
   context 'when showing usage examples' do
     let(:expected_example_prompt) do
       <<~TEXT.chomp
-      Select one: Select a use-case to view examples for: (Press ↑/↓ arrow or 1-8 number to move and Enter to select)
+      Select one: Select a use-case to view examples for: (Press ↑/↓ arrow or 1-9 number to move and Enter to select)
       ‣ 1. ruby/rails
         2. rspec
         3. javascript (vue)
         4. javascript (plain)
         5. vue template
         6. haml
-        7. View examples for a different event
-        8. Exit
+        7. Manual testing in GDK
+        8. View examples for a different event
+        9. Exit
       TEXT
     end
 
-    context 'for an event with identifiers' do
+    context 'for an event with identifiers and metrics' do
       let(:expected_rails_example) do
         <<~TEXT.chomp
         --------------------------------------------------
@@ -433,8 +445,28 @@ RSpec.describe Cli, feature_category: :service_ping do
         TEXT
       end
 
+      let(:expected_gdk_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        # RAILS CONSOLE -- generate service ping payload, including most recent usage data
+
+        require_relative 'spec/support/helpers/service_ping_helpers.rb'
+
+        # Get current value of a metric
+        ServicePingHelpers.get_current_usage_metric_value('redis_hll_counters.count_distinct_user_id_from_internal_events_cli_used_weekly')
+
+        # View entire service ping payload
+        ServicePingHelpers.get_current_service_ping_payload
+        --------------------------------------------------
+        TEXT
+      end
+
       before do
         File.write(event1_filepath, File.read(event1_content))
+        File.write(
+          'config/metrics/counts_7d/count_distinct_user_id_from_internal_events_cli_used_weekly.yml',
+          File.read('spec/fixtures/scripts/internal_events/metrics/user_id_7d_single_event.yml')
+        )
       end
 
       it 'shows backend examples' do
@@ -445,15 +477,17 @@ RSpec.describe Cli, feature_category: :service_ping do
           "\n", # Select: ruby/rails
           "\e[B", # Arrow down to: rspec
           "\n", # Select: rspec
-          "8\n" # Exit
+          "7\n", # Select: Manual testing: check current values of metrics from rails console (any data source)
+          "9\n" # Exit
         ])
 
-        expect_cli_output do
-          output = plain_last_lines(100)
-
-          output.include?(expected_example_prompt) &&
-            output.include?(expected_rails_example) &&
-            output.include?(expected_rspec_example)
+        with_cli_thread do
+          expect { plain_last_lines(200) }.to eventually_include_cli_text(
+            expected_example_prompt,
+            expected_rails_example,
+            expected_rspec_example,
+            expected_gdk_example
+          )
         end
       end
     end
@@ -577,7 +611,7 @@ RSpec.describe Cli, feature_category: :service_ping do
         --------------------------------------------------
         # HAML -- ON-CLICK
 
-        .gl-display-inline-block{ data: { event_tracking: 'internal_events_cli_opened' } }
+        .inline-block{ data: { event_tracking: 'internal_events_cli_opened' } }
           = _('Important Text')
 
         --------------------------------------------------
@@ -591,6 +625,38 @@ RSpec.describe Cli, feature_category: :service_ping do
         = render Pajamas::ButtonComponent.new(button_options: { data: { event_tracking_load: true, event_tracking: 'internal_events_cli_opened' } })
 
         --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_gdk_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        # TERMINAL -- monitor events & changes to service ping metrics as they occur
+
+        1. From `gitlab/` directory, run the monitor script:
+
+        bin/rails runner scripts/internal_events/monitor.rb internal_events_cli_opened
+
+        2. View metric updates within the terminal
+
+        3. [Optional] Configure gdk with snowplow micro to see individual events: https://gitlab.com/gitlab-org/gitlab-development-kit/-/blob/main/doc/howto/snowplow_micro.md
+
+        --------------------------------------------------
+        # RAILS CONSOLE -- generate service ping payload, including most recent usage data
+
+        require_relative 'spec/support/helpers/service_ping_helpers.rb'
+
+        # Get current value of a metric
+        # Warning: There are no metrics for internal_events_cli_opened yet. When there are, replace <key_path> below.
+        ServicePingHelpers.get_current_usage_metric_value(<key_path>)
+
+        # View entire service ping payload
+        ServicePingHelpers.get_current_service_ping_payload
+        --------------------------------------------------
+        Need to test something else? Check these docs:
+        - https://docs.gitlab.com/ee/development/internal_analytics/internal_event_instrumentation/local_setup_and_debugging.html
+        - https://docs.gitlab.com/ee/development/internal_analytics/service_ping/troubleshooting.html
+        - https://docs.gitlab.com/ee/development/internal_analytics/review_guidelines.html
         TEXT
       end
 
@@ -614,19 +680,22 @@ RSpec.describe Cli, feature_category: :service_ping do
           "\n", # Select: vue template
           "\e[B", # Arrow down to: haml
           "\n", # Select: haml
-          "8\n" # Exit
+          "\e[B", # Arrow down to: gdk
+          "\n", # Select: gdk
+          "9\n" # Exit
         ])
 
-        expect_cli_output do
-          output = plain_last_lines
-
-          output.include?(expected_example_prompt) &&
-            output.include?(expected_rails_example) &&
-            output.include?(expected_rspec_example) &&
-            output.include?(expected_vue_example) &&
-            output.include?(expected_js_example) &&
-            output.include?(expected_vue_template_example) &&
-            output.include?(expected_haml_example)
+        with_cli_thread do
+          expect { plain_last_lines }.to eventually_include_cli_text(
+            expected_example_prompt,
+            expected_rails_example,
+            expected_rspec_example,
+            expected_vue_example,
+            expected_js_example,
+            expected_vue_template_example,
+            expected_haml_example,
+            expected_gdk_example
+          )
         end
       end
     end
@@ -674,19 +743,228 @@ RSpec.describe Cli, feature_category: :service_ping do
           'internal_events_cli_used', # Filters to this event
           "\n", # Select: config/events/internal_events_cli_used.yml
           "\n", # Select: ruby/rails
-          "7\n", # Select: View examples for a different event
+          "8\n", # Select: View examples for a different event
           'internal_events_cli_opened', # Filters to this event
           "\n", # Select: config/events/internal_events_cli_opened.yml
           "\n", # Select: ruby/rails
-          "8\n" # Exit
+          "9\n" # Exit
         ])
 
-        expect_cli_output do
-          output = plain_last_lines
+        with_cli_thread do
+          expect { plain_last_lines }.to eventually_include_cli_text(
+            expected_example_prompt,
+            expected_event1_example,
+            expected_event2_example
+          )
+        end
+      end
+    end
 
-          output.include?(expected_example_prompt) &&
-            output.include?(expected_event1_example) &&
-            output.include?(expected_event2_example)
+    context 'for an event with additional properties' do
+      let(:event_filepath) { 'config/events/internal_events_cli_used.yml' }
+      let(:event_content) { internal_event_fixture('events/event_with_additional_properties.yml') }
+
+      let(:expected_rails_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        # RAILS
+
+        include Gitlab::InternalEventsTracking
+
+        track_internal_event(
+          'internal_events_cli_used',
+          project: project,
+          namespace: project.namespace,
+          user: user,
+          additional_properties: {
+            label: 'string', # TODO
+            value: 72 # Time the CLI ran before closing (seconds)
+          }
+        )
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_rspec_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        # RSPEC
+
+        it_behaves_like 'internal event tracking' do
+          let(:event) { 'internal_events_cli_used' }
+          let(:project) { project }
+          let(:namespace) { project.namespace }
+          let(:user) { user }
+          let(:label) { 'string' }
+          let(:value) { 72 }
+        end
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_vue_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        // VUE
+
+        <script>
+        import { InternalEvents } from '~/tracking';
+        import { GlButton } from '@gitlab/ui';
+
+        const trackingMixin = InternalEvents.mixin();
+
+        export default {
+          mixins: [trackingMixin],
+          components: { GlButton },
+          methods: {
+            performAction() {
+              this.trackEvent(
+                'internal_events_cli_used',
+                {
+                  label: 'string', // TODO
+                  value: 72, // Time the CLI ran before closing (seconds)
+                },
+              );
+            },
+          },
+        };
+        </script>
+
+        <template>
+          <gl-button @click=performAction>Click Me</gl-button>
+        </template>
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_js_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        // FRONTEND -- RAW JAVASCRIPT
+
+        import { InternalEvents } from '~/tracking';
+
+        export const performAction = () => {
+          InternalEvents.trackEvent(
+            'internal_events_cli_used',
+            {
+              label: 'string', // TODO
+              value: 72, // Time the CLI ran before closing (seconds)
+            },
+          );
+
+          return true;
+        };
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_vue_template_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        // VUE TEMPLATE -- ON-CLICK
+
+        <script>
+        import { GlButton } from '@gitlab/ui';
+
+        export default {
+          components: { GlButton }
+        };
+        </script>
+
+        <template>
+          <gl-button
+            data-event-tracking="internal_events_cli_used"
+            data-event-label="string"
+            data-event-value=72
+          >
+            Click Me
+          </gl-button>
+        </template>
+
+        --------------------------------------------------
+        // VUE TEMPLATE -- ON-LOAD
+
+        <script>
+        import { GlButton } from '@gitlab/ui';
+
+        export default {
+          components: { GlButton }
+        };
+        </script>
+
+        <template>
+          <gl-button
+            data-event-tracking-load="internal_events_cli_used"
+            data-event-label="string"
+            data-event-value=72
+          >
+            Click Me
+          </gl-button>
+        </template>
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      let(:expected_haml_example) do
+        <<~TEXT.chomp
+        --------------------------------------------------
+        # HAML -- ON-CLICK
+
+        .inline-block{ data: { event_tracking: 'internal_events_cli_used', event_label: 'string', event_value: 72 } }
+          = _('Important Text')
+
+        --------------------------------------------------
+        # HAML -- COMPONENT ON-CLICK
+
+        = render Pajamas::ButtonComponent.new(button_options: { data: { event_tracking: 'internal_events_cli_used', event_label: 'string', event_value: 72 } })
+
+        --------------------------------------------------
+        # HAML -- COMPONENT ON-LOAD
+
+        = render Pajamas::ButtonComponent.new(button_options: { data: { event_tracking_load: true, event_tracking: 'internal_events_cli_used', event_label: 'string', event_value: 72 } })
+
+        --------------------------------------------------
+        TEXT
+      end
+
+      before do
+        File.write(event_filepath, File.read(event_content))
+      end
+
+      it 'shows examples with additional properties included' do
+        queue_cli_inputs([
+          "3\n", # Enum-select: View Usage -- look at code examples for an existing event
+          'internal_events_cli_used', # Filters to this event
+          "\n", # Select: config/events/internal_events_cli_used.yml
+          "\n", # Select: ruby/rails
+          "\e[B", # Arrow down to: rspec
+          "\n", # Select: rspec
+          "\e[B", # Arrow down to: js vue
+          "\n", # Select: js vue
+          "\e[B", # Arrow down to: js plain
+          "\n", # Select: js plain
+          "\e[B", # Arrow down to: vue template
+          "\n", # Select: vue template
+          "\e[B", # Arrow down to: haml
+          "\n", # Select: haml
+          "9\n" # Exit
+        ])
+
+        with_cli_thread do
+          expect { plain_last_lines }.to eventually_include_cli_text(
+            expected_rails_example,
+            expected_rspec_example,
+            expected_vue_example,
+            expected_js_example,
+            expected_vue_template_example,
+            expected_haml_example
+          )
         end
       end
     end
@@ -705,9 +983,8 @@ RSpec.describe Cli, feature_category: :service_ping do
           "Internal Event CLI is opened\n", # Submit description
           "internal_events_cli_opened\n", # Submit action name
           "6\n", # Select: None
+          "\n", # Select: None! Continue to next section!
           "\n", # Skip MR URL
-          "analytics\n", # Input section
-          "monitor\n", # Input stage
           "analytics_instrumentation\n", # Input group
           "2\n", # Select [premium, ultimate]
           "y\n", # Create file
@@ -734,8 +1011,6 @@ RSpec.describe Cli, feature_category: :service_ping do
           "where a defition file was created with the CLI\n", # Input description
           "\n", # Submit weekly description for monthly
           "2\n", # Select: Modify attributes
-          "\n", # Accept section
-          "\n", # Accept stage
           "\n", # Accept group
           "\n", # Skip URL
           "1\n", # Select: [free, premium, ultimate]
@@ -781,6 +1056,7 @@ RSpec.describe Cli, feature_category: :service_ping do
           "Internal Event CLI is opened\n", # Submit description
           "internal_events_cli_opened\n", # Submit action name
           "6\n", # Select: None
+          "\n", # Select: None! Continue to next section!
           "\n", # Skip MR URL
           "instrumentation\n", # Filter & select group
           "2\n", # Select [premium, ultimate]
@@ -800,8 +1076,8 @@ RSpec.describe Cli, feature_category: :service_ping do
         "n\n" # No --> Are you trying to track customer usage of a GitLab feature?
       ])
 
-      expect_cli_output do
-        plain_last_lines(50).include?("Oh no! This probably isn't the tool you need!")
+      with_cli_thread do
+        expect { plain_last_lines(50) }.to eventually_include_cli_text("Oh no! This probably isn't the tool you need!")
       end
     end
 
@@ -812,8 +1088,8 @@ RSpec.describe Cli, feature_category: :service_ping do
         "n\n" # No --> Can usage for the feature be measured by tracking a specific user action?
       ])
 
-      expect_cli_output do
-        plain_last_lines(50).include?("Oh no! This probably isn't the tool you need!")
+      with_cli_thread do
+        expect { plain_last_lines(50) }.to eventually_include_cli_text("Oh no! This probably isn't the tool you need!")
       end
     end
 
@@ -826,8 +1102,9 @@ RSpec.describe Cli, feature_category: :service_ping do
         "n\n" # No --> Ready to start?
       ])
 
-      expect_cli_output do
-        plain_last_lines(30).include?("Okay! The next step is adding a new event! (~5 min)")
+      with_cli_thread do
+        expect { plain_last_lines(30) }
+          .to eventually_include_cli_text("Okay! The next step is adding a new event! (~5 min)")
       end
     end
 
@@ -840,8 +1117,9 @@ RSpec.describe Cli, feature_category: :service_ping do
         "n\n" # No --> Ready to start?
       ])
 
-      expect_cli_output do
-        plain_last_lines(30).include?("Amazing! The next step is adding a new metric! (~8 min)")
+      with_cli_thread do
+        expect { plain_last_lines(30) }
+          .to eventually_include_cli_text("Amazing! The next step is adding a new metric! (~8 min)")
       end
     end
   end
@@ -909,9 +1187,5 @@ RSpec.describe Cli, feature_category: :service_ping do
     yield thread
   ensure
     thread.exit
-  end
-
-  def expect_cli_output(&blk)
-    with_cli_thread { wait_for(blk.source, max_wait_time: max_wait_time, &blk) }
   end
 end

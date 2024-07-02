@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewMiddleware(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, "OK\n")
 	})
 
@@ -25,6 +25,7 @@ func TestNewMiddleware(t *testing.T) {
 			middleware.ServeHTTP(recorder, tmpRequest)
 
 			result := recorder.Result()
+			defer func() { _ = result.Body.Close() }()
 
 			require.Equal(t, http.StatusOK, result.StatusCode)
 		})
@@ -33,10 +34,12 @@ func TestNewMiddleware(t *testing.T) {
 	t.Run("UNKNOWN", func(t *testing.T) {
 		tmpRequest, _ := http.NewRequest("UNKNOWN", "/", nil)
 		recorder := httptest.NewRecorder()
+		defer func() { _ = recorder.Result().Body.Close() }()
 
 		middleware.ServeHTTP(recorder, tmpRequest)
 
 		result := recorder.Result()
+		defer func() { _ = result.Body.Close() }()
 
 		require.Equal(t, http.StatusMethodNotAllowed, result.StatusCode)
 	})

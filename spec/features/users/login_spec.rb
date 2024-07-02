@@ -46,17 +46,18 @@ RSpec.describe 'Login', :clean_gitlab_redis_sessions, feature_category: :system_
       user = create(:admin, password_automatically_set: true)
 
       visit root_path
-      expect(page).to have_current_path edit_user_password_path, ignore_query: true
-      expect(page).to have_content('Please create a password for your new account.')
+      expect(page).to have_current_path new_admin_initial_setup_path, ignore_query: true
+      expect(page).to have_content('Administrator Account Setup')
 
+      fill_in 'user_email',                 with: 'admin_specs@example.com'
       fill_in 'user_password',              with: user.password
       fill_in 'user_password_confirmation', with: user.password
-      click_button 'Change your password'
+      click_button 'Set up root account'
 
       expect(page).to have_current_path new_user_session_path, ignore_query: true
-      expect(page).to have_content(I18n.t('devise.passwords.updated_not_active'))
+      expect(page).to have_content('Initial account configured! Please sign in.')
 
-      gitlab_sign_in(user)
+      gitlab_sign_in(user.reload)
 
       expect_single_session_with_authenticated_ttl
       expect(page).to have_current_path root_path, ignore_query: true
@@ -103,7 +104,6 @@ RSpec.describe 'Login', :clean_gitlab_redis_sessions, feature_category: :system_
     before do
       stub_application_setting_enum('email_confirmation_setting', 'hard')
       allow(User).to receive(:allow_unconfirmed_access_for).and_return grace_period
-      stub_feature_flags(identity_verification: false)
     end
 
     context 'within the grace period' do
@@ -1045,7 +1045,7 @@ RSpec.describe 'Login', :clean_gitlab_redis_sessions, feature_category: :system_
         fill_in 'user_password', with: user.password
         fill_in 'user_new_password', with: new_password
         fill_in 'user_password_confirmation', with: new_password
-        click_button 'Set new password'
+        click_button 'Update password'
 
         expect(page).to have_content('Password successfully changed')
       end
@@ -1092,7 +1092,6 @@ RSpec.describe 'Login', :clean_gitlab_redis_sessions, feature_category: :system_
 
     before do
       stub_application_setting_enum('email_confirmation_setting', 'soft')
-      stub_feature_flags(identity_verification: false)
       allow(User).to receive(:allow_unconfirmed_access_for).and_return grace_period
     end
 
@@ -1118,6 +1117,67 @@ RSpec.describe 'Login', :clean_gitlab_redis_sessions, feature_category: :system_
           expect(page).to have_content(alert_title)
           expect(page).to have_content(alert_message)
           expect(page).to have_link('Resend confirmation email', href: new_user_confirmation_path)
+        end
+      end
+    end
+  end
+
+  context 'when signing in with JWT' do
+    let_it_be(:user) { create(:user) }
+
+    before do
+      stub_omniauth_config(providers: [{ name: 'jwt', label: 'JWT', args: {} }])
+      stub_omniauth_provider('jwt')
+      mock_auth_hash('jwt', 'jwt_uid', user.email)
+    end
+
+    context 'when the user does not have a JWT identity' do
+      context 'when the user is already signed in' do
+        before do
+          expect(authentication_metrics).to increment(:user_authenticated_counter)
+
+          gitlab_sign_in(user)
+        end
+
+        it 'requires the user to authorize linking the JWT identity' do
+          visit user_jwt_omniauth_callback_path
+
+          expect(page).to have_current_path new_user_settings_identities_path, ignore_query: true
+          expect(page).to have_content(
+            format(
+              s_('Allow %{strongOpen}%{provider}%{strongClose} to sign you in?'),
+              strongOpen: '',
+              strongClose: '',
+              provider: 'JWT')
+          )
+
+          click_button 'Authorize'
+
+          expect(page).to have_current_path profile_account_path
+          expect(page).to have_content(_('Authentication method updated'))
+
+          expect(user.identities.last.provider).to eq('jwt')
+          expect(user.identities.last.extern_uid).to eq('jwt_uid')
+        end
+
+        it 'does not link the identity when the user clicks Cancel' do
+          visit user_jwt_omniauth_callback_path
+
+          expect(page).to have_current_path new_user_settings_identities_path, ignore_query: true
+          expect(page).to have_content(
+            format(
+              s_('Allow %{strongOpen}%{provider}%{strongClose} to sign you in?'),
+              strongOpen: '',
+              strongClose: '',
+              provider: 'JWT')
+          )
+
+          click_link 'Cancel'
+
+          expect(page).to have_current_path profile_account_path
+          expect(page).not_to have_content(_('Authentication method updated'))
+
+          expect(user.identities).to be_empty
         end
       end
     end

@@ -222,6 +222,43 @@ curl --request POST \
 }'
 ```
 
+## Import repository from Bitbucket Cloud
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/215036) in GitLab 17.0.
+
+Import your projects from Bitbucket Cloud to GitLab using by the API.
+
+Prerequisites:
+
+- The [prerequisites for Bitbucket Cloud importer](../user/project/import/bitbucket.md).
+- A [Bitbucket Cloud app password](../user/project/import/bitbucket.md#generate-a-bitbucket-cloud-app-password).
+
+```plaintext
+POST /import/bitbucket
+```
+
+| Attribute                | Type   | Required | Description |
+|:-------------------------|:-------|:---------|:------------|
+| `bitbucket_username`     | string | yes      | Bitbucket Cloud username |
+| `bitbucket_app_password` | string | yes      | Bitbucket Cloud app password |
+| `repo_path`              | string | yes      | Path to repository |
+| `target_namespace`       | string | yes      | Namespace to import repository into. Supports subgroups like `/namespace/subgroup` |
+| `new_name`               | string | no       | Name of the new project. Also used as the new path so must not start or end with a special character and must not contain consecutive special characters. |
+
+```shell
+curl --request POST \
+  --url "https://gitlab.example.com/api/v4/import/bitbucket" \
+  --header "content-type: application/json" \
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --data '{
+    "bitbucket_username": "bitbucket_username",
+    "bitbucket_app_password": "bitbucket_app_password",
+    "repo_path": "username/my_project"
+    "target_namespace": "my_group/my_subgroup"
+    "new_name": "new_project_name"
+}'
+```
+
 ## Related topics
 
 - [Group migration by direct transfer API](bulk_imports.md).

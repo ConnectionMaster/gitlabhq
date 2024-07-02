@@ -4,16 +4,15 @@ import {
   GlFormCheckbox,
   GlIcon,
   GlLink,
-  GlSprintf,
   GlTruncate,
 } from '@gitlab/ui';
 import { mountExtended, shallowMountExtended } from 'helpers/vue_test_utils_helper';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import ListItem from '~/vue_shared/components/registry/list_item.vue';
 import PackageTags from '~/packages_and_registries/shared/components/package_tags.vue';
+import PublishMessage from '~/packages_and_registries/shared/components/publish_message.vue';
 import PublishMethod from '~/packages_and_registries/shared/components/publish_method.vue';
 import VersionRow from '~/packages_and_registries/package_registry/components/details/version_row.vue';
-import TimeAgoTooltip from '~/vue_shared/components/time_ago_tooltip.vue';
 import { PACKAGE_ERROR_STATUS } from '~/packages_and_registries/package_registry/constants';
 import { createMockDirective, getBinding } from 'helpers/vue_mock_directive';
 
@@ -27,9 +26,9 @@ describe('VersionRow', () => {
   const findListItem = () => wrapper.findComponent(ListItem);
   const findLink = () => wrapper.findComponent(GlLink);
   const findPackageTags = () => wrapper.findComponent(PackageTags);
+  const findPublishMessage = () => wrapper.findComponent(PublishMessage);
   const findPublishMethod = () => wrapper.findComponent(PublishMethod);
-  const findTimeAgoTooltip = () => wrapper.findComponent(TimeAgoTooltip);
-  const findPackageName = () => wrapper.findComponent(GlTruncate);
+  const findPackageName = () => wrapper.findByTestId('package-name');
   const findWarningIcon = () => wrapper.findComponent(GlIcon);
   const findBulkDeleteAction = () => wrapper.findComponent(GlFormCheckbox);
   const findDeleteDropdownItem = () => wrapper.findComponent(GlDisclosureDropdownItem);
@@ -47,7 +46,6 @@ describe('VersionRow', () => {
         selected,
       },
       stubs: {
-        GlSprintf,
         GlTruncate,
         GlDisclosureDropdown,
       },
@@ -86,10 +84,10 @@ describe('VersionRow', () => {
 
     expect(findPublishMethod().props('packageEntity')).toBe(packageVersion);
   });
-  it('has a time-ago tooltip', () => {
+  it('renders publish message component & passes createdAt', () => {
     createComponent();
 
-    expect(findTimeAgoTooltip().props('time')).toBe(packageVersion.createdAt);
+    expect(findPublishMessage().props('publishDate')).toBe(packageVersion.createdAt);
   });
 
   describe('left action template', () => {
@@ -162,7 +160,7 @@ describe('VersionRow', () => {
     });
 
     it('lists the package name', () => {
-      expect(findPackageName().props('text')).toBe('@gitlab-org/package-15');
+      expect(findPackageName().text()).toBe('@gitlab-org/package-15');
     });
 
     it('does not have a link to navigate to the details page', () => {
@@ -194,7 +192,7 @@ describe('VersionRow', () => {
     });
 
     it('lists the package name', () => {
-      expect(findPackageName().props('text')).toBe('@gitlab-org/package-15');
+      expect(findPackageName().text()).toBe('@gitlab-org/package-15');
     });
 
     it('does not have a link to navigate to the details page', () => {

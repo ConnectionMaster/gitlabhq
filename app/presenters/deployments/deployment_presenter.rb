@@ -23,5 +23,9 @@ module Deployments
     def ref_path
       project_tree_path(project, id: ref)
     end
+
+    def web_path
+      project_environment_deployment_path(project, environment, deployment)
+    end
   end
 end

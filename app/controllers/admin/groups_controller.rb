@@ -38,7 +38,7 @@ class Admin::GroupsController < Admin::ApplicationController
   end
 
   def create
-    response = ::Groups::CreateService.new(current_user, group_params).execute
+    response = ::Groups::CreateService.new(current_user, group_params.with_defaults(organization_id: Current.organization_id)).execute
     @group = response[:group]
 
     if response.success?
@@ -65,9 +65,9 @@ class Admin::GroupsController < Admin::ApplicationController
   def destroy
     Groups::DestroyService.new(@group, current_user).async_execute
 
-    redirect_to admin_groups_path,
-      status: :found,
-      alert: format(_('Group %{group_name} was scheduled for deletion.'), group_name: @group.name)
+    flash[:toast] = format(_("Group '%{group_name}' is being deleted."), group_name: @group.full_name)
+
+    redirect_to admin_groups_path, status: :found
   end
 
   private
@@ -103,9 +103,10 @@ class Admin::GroupsController < Admin::ApplicationController
       :enabled_git_access_protocol,
       :project_creation_level,
       :subgroup_creation_level,
-      admin_note_attributes: [
+      :organization_id,
+      { admin_note_attributes: [
         :note
-      ]
+      ] }
     ]
   end
 end

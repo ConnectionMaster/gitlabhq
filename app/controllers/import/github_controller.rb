@@ -43,9 +43,6 @@ class Import::GithubController < Import::BaseController
   end
 
   def personal_access_token
-    experiment(:default_to_import_tab, actor: current_user)
-      .track(:authentication, property: provider_name)
-
     session[access_token_key] = params[:personal_access_token]&.strip
     redirect_to status_import_url
   end
@@ -169,7 +166,7 @@ class Import::GithubController < Import::BaseController
   end
 
   def authorize_owner_access!
-    return render_404 unless current_user.can?(:owner_access, project)
+    render_404 unless current_user.can?(:owner_access, project)
   end
 
   def import_params
@@ -263,8 +260,8 @@ class Import::GithubController < Import::BaseController
     tag_pair_docs_link = tag_pair(docs_link, :link_start, :link_end)
     alert_message = safe_format(
       s_(
-        "GithubImport|Your GitHub personal access token does not have the required scope or permission to import. " \
-        "Please see our %{link_start}documentation%{link_end} for more information about GitHub access tokens."
+        "GithubImport|Your GitHub personal access token does not have the required scope to import. " \
+        "%{link_start}Learn More%{link_end}."
       ),
       tag_pair_docs_link
     )

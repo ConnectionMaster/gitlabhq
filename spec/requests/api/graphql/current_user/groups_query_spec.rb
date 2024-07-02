@@ -5,13 +5,14 @@ require 'spec_helper'
 RSpec.describe 'Query current user groups', feature_category: :groups_and_projects do
   include GraphqlHelpers
 
+  let_it_be(:organization) { create(:organization) }
   let_it_be(:user) { create(:user) }
-  let_it_be(:root_group) { create(:group, name: 'Root group', path: 'root-group') }
-  let_it_be(:guest_group) { create(:group, name: 'public guest', path: 'public-guest') }
-  let_it_be(:private_maintainer_group) { create(:group, :private, name: 'b private maintainer', path: 'b-private-maintainer', parent: root_group) }
-  let_it_be(:public_developer_group) { create(:group, project_creation_level: nil, name: 'c public developer', path: 'c-public-developer') }
-  let_it_be(:public_maintainer_group) { create(:group, name: 'a public maintainer', path: 'a-public-maintainer', parent: root_group) }
-  let_it_be(:public_owner_group) { create(:group, name: 'a public owner', path: 'a-public-owner') }
+  let_it_be(:root_group) { create(:group, name: 'Root group', path: 'root-group', organization: organization) }
+  let_it_be(:guest_group) { create(:group, name: 'public guest', path: 'public-guest', guests: user, organization: organization) }
+  let_it_be(:private_maintainer_group) { create(:group, :private, name: 'b private maintainer', path: 'b-private-maintainer', parent: root_group, maintainers: user, organization: organization) }
+  let_it_be(:public_developer_group) { create(:group, project_creation_level: nil, name: 'c public developer', path: 'c-public-developer', developers: user, organization: organization) }
+  let_it_be(:public_maintainer_group) { create(:group, name: 'a public maintainer', path: 'a-public-maintainer', parent: root_group, maintainers: user, organization: organization) }
+  let_it_be(:public_owner_group) { create(:group, name: 'a public owner', path: 'a-public-owner', owners: user, organization: organization) }
 
   let(:group_arguments) { {} }
   let(:current_user) { user }
@@ -26,14 +27,6 @@ RSpec.describe 'Query current user groups', feature_category: :groups_and_projec
     graphql_query_for('currentUser', {}, query_graphql_field('groups', group_arguments, fields))
   end
 
-  before_all do
-    guest_group.add_guest(user)
-    private_maintainer_group.add_maintainer(user)
-    public_developer_group.add_developer(user)
-    public_maintainer_group.add_maintainer(user)
-    public_owner_group.add_owner(user)
-  end
-
   subject { graphql_data.dig('currentUser', 'groups', 'nodes') }
 
   before do
@@ -45,7 +38,7 @@ RSpec.describe 'Query current user groups', feature_category: :groups_and_projec
   it 'avoids N+1 queries', :request_store do
     control = ActiveRecord::QueryRecorder.new { post_graphql(query, current_user: current_user) }
 
-    new_group = create(:group, :private)
+    new_group = create(:group, :private, organization: organization)
     new_group.add_maintainer(current_user)
 
     expect { post_graphql(query, current_user: current_user) }.not_to exceed_query_limit(control)

@@ -4,43 +4,37 @@ module Gitlab
   module Ci
     module Build
       class Rules::Rule::Clause::Exists < Rules::Rule::Clause
+        include Gitlab::Utils::StrongMemoize
+
         # The maximum number of patterned glob comparisons that will be
         # performed before the rule assumes that it has a match
         MAX_PATTERN_COMPARISONS = 10_000
 
         WILDCARD_NESTED_PATTERN = "**/*"
 
-        def initialize(globs)
-          @globs = Array(globs)
+        def initialize(clause)
+          @globs = Array(clause[:paths])
+          @project_path = clause[:project]
+          @ref = clause[:ref]
+
           @top_level_only = @globs.all?(&method(:top_level_glob?))
         end
 
         def satisfied_by?(_pipeline, context)
-          if ::Feature.disabled?(:ci_rule_exists_extension_optimization, context.project, type: :gitlab_com_derisk)
-            return legacy_satisfied_by?(context)
-          end
+          # Return early to avoid redundant Gitaly calls
+          return false unless @globs.any?
+
+          context = change_context(context) if @project_path
 
           paths = worktree_paths(context)
           exact_globs, extension_globs, pattern_globs = separate_globs(context)
 
           exact_matches?(paths, exact_globs) ||
             matches_extension?(paths, extension_globs) ||
-            pattern_matches?(paths, pattern_globs)
+            pattern_matches?(paths, pattern_globs, context)
         end
 
         private
-
-        def legacy_satisfied_by?(context)
-          paths = worktree_paths(context)
-          exact_globs, pattern_globs = legacy_separate_globs(context)
-
-          exact_matches?(paths, exact_globs) || pattern_matches?(paths, pattern_globs)
-        end
-
-        def legacy_separate_globs(context)
-          expanded_globs = expand_globs(context)
-          expanded_globs.partition(&method(:exact_glob?))
-        end
 
         def separate_globs(context)
           expanded_globs = expand_globs(context)
@@ -51,7 +45,7 @@ module Gitlab
 
         def expand_globs(context)
           @globs.map do |glob|
-            ExpandVariables.expand_existing(glob, -> { context.variables_hash })
+            expand_value(glob, context)
           end
         end
 
@@ -91,13 +85,14 @@ module Gitlab
           end
         end
 
-        def pattern_matches?(paths, pattern_globs)
-          comparisons = 0
+        def pattern_matches?(paths, pattern_globs, context)
+          return true if (paths.size * pattern_globs.size) > MAX_PATTERN_COMPARISONS
 
           pattern_globs.any? do |glob|
-            paths.any? do |path|
-              comparisons += 1
-              comparisons > MAX_PATTERN_COMPARISONS || pattern_match?(glob, path)
+            Gitlab::SafeRequestStore.fetch("ci_rules_exists_pattern_matches_#{context.project&.id}_#{glob}") do
+              paths.any? do |path|
+                pattern_match?(glob, path)
+              end
             end
           end
         end
@@ -108,23 +103,87 @@ module Gitlab
 
         # matches glob patterns that only match files in the top level directory
         def top_level_glob?(glob)
-          !glob.include?('/') && !glob.include?('**')
+          glob.exclude?('/') && glob.exclude?('**')
         end
 
         # matches glob patterns that have no metacharacters for File#fnmatch?
         def exact_glob?(glob)
-          !glob.include?('*') && !glob.include?('?') && !glob.include?('[') && !glob.include?('{')
+          glob.exclude?('*') && glob.exclude?('?') && glob.exclude?('[') && glob.exclude?('{')
         end
 
         # matches glob patterns like **/*.js or **/*.so.1 to optimize with path.end_with?('.js')
         def extension_glob?(glob)
           without_nested = without_wildcard_nested_pattern(glob)
 
-          without_nested.start_with?('.') && !without_nested.include?('/') && exact_glob?(without_nested)
+          without_nested.start_with?('.') && without_nested.exclude?('/') && exact_glob?(without_nested)
         end
 
         def without_wildcard_nested_pattern(glob)
           glob.delete_prefix(WILDCARD_NESTED_PATTERN)
+        end
+
+        def change_context(old_context)
+          user = find_context_user(old_context)
+          new_project = find_context_project(user, old_context)
+          new_sha = find_context_sha(new_project, old_context)
+
+          Gitlab::Ci::Config::External::Context.new(
+            project: new_project,
+            user: user,
+            sha: new_sha,
+            variables: old_context.variables
+          )
+        end
+
+        def find_context_user(context)
+          context.is_a?(Gitlab::Ci::Config::External::Context) ? context.user : context.pipeline.user
+        end
+
+        def find_context_project(user, context)
+          full_path = expand_value(@project_path, context)
+          project = Project.find_by_full_path(full_path)
+
+          unless project
+            raise Rules::Rule::Clause::ParseError,
+              "rules:exists:project `#{mask_context_variables_from(context, full_path)}` is not a valid project path"
+          end
+
+          unless Ability.allowed?(user, :read_code, project)
+            raise Rules::Rule::Clause::ParseError,
+              "rules:exists:project access denied to project " \
+              "`#{mask_context_variables_from(context, project.full_path)}`"
+          end
+
+          project
+        end
+
+        def find_context_sha(project, context)
+          return project.commit&.sha unless @ref
+
+          ref = expand_value(@ref, context)
+          commit = project.commit(ref)
+
+          unless commit
+            raise Rules::Rule::Clause::ParseError,
+              "rules:exists:ref `#{mask_context_variables_from(context, ref)}` is not a valid ref " \
+              "in project `#{mask_context_variables_from(context, project.full_path)}`"
+          end
+
+          commit.sha
+        end
+
+        def mask_context_variables_from(context, string)
+          context.variables.reduce(string.dup) do |str, variable|
+            if variable[:masked]
+              Gitlab::Ci::MaskSecret.mask!(str, variable[:value])
+            else
+              str
+            end
+          end
+        end
+
+        def expand_value(value, context)
+          ExpandVariables.expand_existing(value, -> { context.variables_hash })
         end
       end
     end

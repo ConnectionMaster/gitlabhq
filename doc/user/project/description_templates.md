@@ -91,6 +91,7 @@ For example: `https://gitlab.com/gitlab-org/gitlab/-/issues/new?issuable_templat
 ### Supported variables in merge request templates
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/89810) in GitLab 15.7.
+> - `merge_request_author` [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/152510) in GitLab 17.1.
 
 NOTE:
 This feature is available only for
@@ -105,6 +106,7 @@ your merge request template with their values:
 | `%{co_authored_by}` | Names and emails of commit authors in a `Co-authored-by` Git commit trailer format. Limited to authors of 100 most recent commits in merge request. | `Co-authored-by: Zane Doe <zdoe@example.com>` <br> `Co-authored-by: Blake Smith <bsmith@example.com>` |
 | `%{first_commit}` | Full message of the first commit in merge request diff. | `Update README.md` |
 | `%{first_multiline_commit}` | Full message of the first commit that's not a merge commit and has more than one line in message body. Merge request title if all commits aren't multiline. | `Update README.md` <br><br> `Improved project description in readme file.` |
+| `%{merge_request_author}` | Name and email of the merge request author. | `Zane Doe <zdoe@example.com>` |
 | `%{source_branch}` | The name of the branch being merged. | `my-feature-branch`  |
 | `%{target_branch}` | The name of the branch that the changes are applied to. | `main` |
 
@@ -126,9 +128,6 @@ that you can use when creating a new project in the instance.
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/52360) in GitLab 13.9.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/321247) in GitLab 14.0.
 
 With **group-level** description templates, you can select a project within the group to store
 your templates. Then, you can access these templates in other projects in the group.
@@ -154,8 +153,6 @@ You might also be interested in templates for various
 
 ### Set a default template for merge requests and issues
 
-> - `Default.md` (case insensitive) template [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/78302) in GitLab 14.8.
-
 In a project, you can choose a default description template for new issues and merge requests.
 As a result, every time a new merge request or issue is created, it's pre-filled with the text you
 entered in the template.
@@ -167,7 +164,7 @@ Prerequisites:
 
 To set a default description template for merge requests, either:
 
-- [In GitLab 14.8 and later](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/78302), [create a merge request template](#create-a-merge-request-template) named `Default.md` (case insensitive)
+- [Create a merge request template](#create-a-merge-request-template) named `Default.md` (case insensitive)
   and save it in `.gitlab/merge_request_templates/`.
   This [doesn't overwrite](#priority-of-default-description-templates) the default template if one has been set in the project settings.
 - Users on GitLab Premium and Ultimate: set the default template in project settings:
@@ -179,7 +176,7 @@ To set a default description template for merge requests, either:
 
 To set a default description template for issues, either:
 
-- [In GitLab 14.8 and later](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/78302), [create an issue template](#create-an-issue-template) named `Default.md` (case insensitive)
+- [Create an issue template](#create-an-issue-template) named `Default.md` (case insensitive)
   and save it in `.gitlab/issue_templates/`.
   This [doesn't overwrite](#priority-of-default-description-templates) the default template if one has been set in the project settings.
 - Users on GitLab Premium and Ultimate: set the default template in project settings:

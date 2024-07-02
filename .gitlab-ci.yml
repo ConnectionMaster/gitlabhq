@@ -10,6 +10,7 @@ stages:
   - review
   - qa
   - post-qa
+  - pre-merge
   - pages
   - notify
   - release-environments
@@ -27,16 +28,12 @@ default:
   # Default job timeout doesn't work: https://gitlab.com/gitlab-org/gitlab/-/issues/387528
   timeout: 90m
 
-.old-ruby-variables: &old-ruby-variables
-  RUBY_VERSION: "3.0"
-  OMNIBUS_GITLAB_CACHE_EDITION: "GITLAB_RUBY3_0"
-
 .default-ruby-variables: &default-ruby-variables
-  RUBY_VERSION: "3.1"
+  RUBY_VERSION: "${RUBY_VERSION_DEFAULT}"
   OMNIBUS_GITLAB_CACHE_EDITION: "GITLAB_RUBY3_1"
 
 .next-ruby-variables: &next-ruby-variables
-  RUBY_VERSION: "3.2"
+  RUBY_VERSION: "${RUBY_VERSION_NEXT}"
   OMNIBUS_GITLAB_CACHE_EDITION: "GITLAB_RUBY3_2"
 
 .default-branch-pipeline-failure-variables: &default-branch-pipeline-failure-variables
@@ -45,7 +42,10 @@ default:
   CREATE_RAILS_TEST_FAILURE_ISSUES: "true"
 
 .default-merge-request-variables: &default-merge-request-variables
+  NO_SOURCEMAPS: "true"
   ADD_SLOW_TEST_NOTE_TO_MERGE_REQUEST: "true"
+  FF_NETWORK_PER_BUILD: "true"
+  FF_TIMESTAMPS: "true"
 
 .if-merge-request-security-canonical-sync: &if-merge-request-security-canonical-sync
   if: '$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-org/security/gitlab" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == $CI_DEFAULT_BRANCH && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH'
@@ -76,47 +76,40 @@ workflow:
     # they serve no purpose and will run anyway when the changes are merged.
     - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^release-tools\/\d+\.\d+\.\d+-rc\d+$/ && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^[\d-]+-stable(-ee)?$/ && $CI_PROJECT_PATH == "gitlab-org/gitlab"'
       when: never
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /pipeline:run-in-ruby3_0/'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /pipeline:run-in-ruby3_1/ || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^[\d-]+-stable(-ee)?$/'
       variables:
-        <<: *old-ruby-variables
+        <<: [*default-ruby-variables, *default-merge-request-variables]
         PIPELINE_NAME: 'Ruby $RUBY_VERSION MR'
-        NO_SOURCEMAPS: 'true'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /pipeline:run-in-ruby3_1/'
-      variables:
-        <<: *default-ruby-variables
-        PIPELINE_NAME: 'Ruby $RUBY_VERSION MR'
-        NO_SOURCEMAPS: 'true'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /pipeline:run-in-ruby3_2/'
-      variables:
-        <<: *next-ruby-variables
-        PIPELINE_NAME: 'Ruby $RUBY_VERSION MR'
-        NO_SOURCEMAPS: 'true'
     - if: '$CI_MERGE_REQUEST_LABELS =~ /Community contribution/'
       variables:
-        <<: *default-ruby-variables
+        <<: [*next-ruby-variables, *default-merge-request-variables]
         GITLAB_DEPENDENCY_PROXY_ADDRESS: ""
         PIPELINE_NAME: 'Ruby $RUBY_VERSION MR (community contribution)'
-        NO_SOURCEMAPS: 'true'
+    # This work around https://gitlab.com/gitlab-org/gitlab/-/issues/332411 which prevents usage of dependency proxy
+    # when pipeline is triggered by a project access token.
+    # Example of project bot usernames (the format changed over time):
+    # - project_278964_bot2
+    # - project_278964_bot_7fb4d1cca8242cb399a0b8f483783120
+    - if: '$CI_MERGE_REQUEST_IID && $GITLAB_USER_LOGIN =~ /project_\d+_bot/'
+      variables:
+        <<: [*next-ruby-variables, *default-merge-request-variables]
+        GITLAB_DEPENDENCY_PROXY_ADDRESS: ""
+        PIPELINE_NAME: 'Ruby $RUBY_VERSION MR (triggered by a project token)'
     - <<: *if-merge-request-security-canonical-sync
       variables:
-        <<: *default-ruby-variables
+        <<: [*next-ruby-variables, *default-merge-request-variables]
         PIPELINE_NAME: '$CI_DEFAULT_BRANCH security->canonical sync'
         SKIP_MESSAGE: 'MR only contains changes from the security mirror, which have already been reviewed, tested and deployed.'
     # For (detached) merge request pipelines.
     - if: '$CI_MERGE_REQUEST_IID'
       variables:
-        <<: [*default-ruby-variables, *default-merge-request-variables]
+        <<: [*next-ruby-variables, *default-merge-request-variables]
         PIPELINE_NAME: 'Ruby $RUBY_VERSION MR'
-        NO_SOURCEMAPS: 'true'
     # For the scheduled pipelines, we set specific variables.
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
         <<: [*default-ruby-variables, *default-branch-pipeline-failure-variables]
         CRYSTALBALL: "true"
-        PIPELINE_NAME: 'Scheduled Ruby $RUBY_VERSION $CI_COMMIT_BRANCH branch'
-    - if: '$CI_COMMIT_BRANCH == "ruby3_0" && $CI_PIPELINE_SOURCE == "schedule"'
-      variables:
-        <<: *old-ruby-variables
         PIPELINE_NAME: 'Scheduled Ruby $RUBY_VERSION $CI_COMMIT_BRANCH branch'
     - if: '$CI_COMMIT_BRANCH == "ruby3_2" && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
@@ -124,7 +117,10 @@ workflow:
         PIPELINE_NAME: 'Scheduled Ruby $RUBY_VERSION $CI_COMMIT_BRANCH branch'
     # This work around https://gitlab.com/gitlab-org/gitlab/-/issues/332411 which prevents usage of dependency proxy
     # when pipeline is triggered by a project access token.
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $GITLAB_USER_LOGIN =~ /project_\d+_bot\d*/'
+    # Example of project bot usernames (the format changed over time):
+    # - project_278964_bot2
+    # - project_278964_bot_7fb4d1cca8242cb399a0b8f483783120
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $GITLAB_USER_LOGIN =~ /project_\d+_bot/'
       variables:
         <<: [*default-ruby-variables, *default-branch-pipeline-failure-variables]
         GITLAB_DEPENDENCY_PROXY_ADDRESS: ""
@@ -163,7 +159,7 @@ workflow:
 
 variables:
   PG_VERSION: "14"
-  DEFAULT_CI_IMAGE: "${REGISTRY_HOST}/${REGISTRY_GROUP}/gitlab-build-images/${BUILD_OS}-${OS_VERSION}-ruby-${RUBY_VERSION}.patched-golang-${GO_VERSION}-rust-${RUST_VERSION}-node-18.17-postgresql-${PG_VERSION}:rubygems-${RUBYGEMS_VERSION}-git-2.36-lfs-2.9-chrome-${CHROME_VERSION}-yarn-1.22-graphicsmagick-1.3.36"
+  DEFAULT_CI_IMAGE: "${REGISTRY_HOST}/${REGISTRY_GROUP}/gitlab-build-images/${BUILD_OS}-${OS_VERSION}-ruby-${RUBY_VERSION}-golang-${GO_VERSION}-rust-${RUST_VERSION}-node-${NODE_VERSION}-postgresql-${PG_VERSION}:rubygems-${RUBYGEMS_VERSION}-git-2.36-lfs-2.9-chrome-${CHROME_VERSION}-yarn-1.22-graphicsmagick-1.3.36"
   # We set $GITLAB_DEPENDENCY_PROXY to another variable (since it's set at the group level and has higher precedence than .gitlab-ci.yml)
   # so that we can override $GITLAB_DEPENDENCY_PROXY_ADDRESS in workflow rules.
   GITLAB_DEPENDENCY_PROXY_ADDRESS: "${GITLAB_DEPENDENCY_PROXY}"
@@ -181,15 +177,6 @@ variables:
   GET_SOURCES_ATTEMPTS: "3"
   # CI_FETCH_REPO_GIT_STRATEGY: "none" is from artifacts. "clone" is from cloning
   CI_FETCH_REPO_GIT_STRATEGY: "none"
-  BUILD_OS: "debian"
-  OS_VERSION: "bookworm"
-  UBI_VERSION: "8.6"
-  CHROME_VERSION: "120"
-  DOCKER_VERSION: "24.0.5"
-  RUBYGEMS_VERSION: "3.4"
-  BUNDLER_VERSION: "2.5"
-  GO_VERSION: "1.20"
-  RUST_VERSION: "1.73"
 
   FLAKY_RSPEC_SUITE_REPORT_PATH: rspec/flaky/report-suite.json
   FRONTEND_FIXTURES_MAPPING_PATH: crystalball/frontend_fixtures_mapping.json
@@ -199,7 +186,6 @@ variables:
   RSPEC_CHANGED_FILES_PATH: rspec/changed_files.txt
   RSPEC_FAIL_FAST_THRESHOLD: 20
   RSPEC_FAST_QUARANTINE_PATH: rspec/fast_quarantine-gitlab.txt
-  RSPEC_FOSS_IMPACT_PIPELINE_TEMPLATE_YML: .gitlab/ci/rails/rspec-foss-impact.gitlab-ci.yml.erb
   RSPEC_LAST_RUN_RESULTS_FILE: rspec/rspec_last_run_results.txt
   RSPEC_MATCHING_JS_FILES_PATH: rspec/js_matching_files.txt
   RSPEC_MATCHING_TESTS_EE_PATH: rspec/matching_tests-ee.txt
@@ -226,7 +212,7 @@ variables:
   DOCS_REVIEW_APPS_DOMAIN: "docs.gitlab-review.app"
   DOCS_GITLAB_REPO_SUFFIX: "ee"
 
-  REVIEW_APPS_IMAGE: "${REGISTRY_HOST}/${REGISTRY_GROUP}/gitlab-build-images/debian-bookworm-ruby-3.0:gcloud-383-kubectl-1.26-helm-3.9"
+  REVIEW_APPS_IMAGE: "${REGISTRY_HOST}/${REGISTRY_GROUP}/gitlab-build-images/${BUILD_OS}-${OS_VERSION}-ruby-${RUBY_VERSION}:gcloud-383-kubectl-1.27-helm-3.9"
   REVIEW_APPS_DOMAIN: "gitlab-review.app"
   REVIEW_APPS_GCP_PROJECT: "gitlab-review-apps"
   REVIEW_APPS_GCP_REGION: "us-central1"
@@ -247,7 +233,6 @@ variables:
 
   # CI jobs behavior can be changed by changing the value of these variables in the project's CI/CD variables
   AVERAGE_KNAPSACK_REPORT: "true"
-  ENABLE_DEPSASTER: "true"
   ENABLE_DEPSCORE: "true"
   CACHE_ASSETS_AS_PACKAGE: "true"
   REUSE_FRONTEND_FIXTURES_ENABLED: "true"
@@ -258,6 +243,7 @@ include:
   - local: .gitlab/ci/_skip.yml
     rules:
       - <<: *if-merge-request-security-canonical-sync
+  - local: .gitlab/ci/version.yml
   - local: .gitlab/ci/*.gitlab-ci.yml
     rules:
       - <<: *if-not-security-canonical-sync
@@ -271,13 +257,13 @@ include:
   - local: .gitlab/ci/includes/as-if-jh.gitlab-ci.yml
     rules:
       # Only run as-if-jh triggerred pipelines for gitlab.com/gitlab-org/gitlab MRs that don't target stable branches
-      # and that don't have the quarantine or pipeline:expedite labels.
+      # and that don't have the quarantine or pipeline::expedited labels.
       - if: '$CI_PROJECT_URL != "https://gitlab.com/gitlab-org/gitlab"'
         when: never
       - if: '$CI_MERGE_REQUEST_ID == null'
         when: never
       - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^[\d-]+-stable(-ee|-jh)?$/'
         when: never
-      - if: '$CI_MERGE_REQUEST_LABELS =~ /quarantine/ || $CI_MERGE_REQUEST_LABELS =~ /pipeline:expedite/'
+      - if: '$CI_MERGE_REQUEST_LABELS =~ /quarantine/ || $CI_MERGE_REQUEST_LABELS =~ /pipeline::expedited/ || $CI_MERGE_REQUEST_LABELS =~ /pipeline:expedite/'
         when: never
       - when: always

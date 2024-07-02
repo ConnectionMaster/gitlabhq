@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Pipeline Authoring
+group: Pipeline Execution
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -39,7 +39,7 @@ single-tenant SaaS service.
 
 ### Agents vs Runners
 
-Bamboo uses [agents](https://confluence.atlassian.com/confeval/development-tools-evaluator-resources/bamboo/bamboo-remote-agents-and-local-agents)
+Bamboo uses [agents](https://confluence.atlassian.com/bamboo/configuring-agents-289277172.html)
 to run builds and deployments. Agents can be local agents running on the Bamboo server or
 remote agents running external to the server.
 
@@ -81,7 +81,7 @@ Bamboo Specs can also be [repository-stored](https://confluence.atlassian.com/ba
 
 #### `.gitlab-ci.yml` configuration file
 
-GitLab, by default, uses a [`.gitlab-ci.yml` file](../index.md#the-gitlab-ciyml-file) for CI/CD configuration.
+GitLab, by default, uses a `.gitlab-ci.yml` file for CI/CD configuration.
 Alternatively, [Auto DevOps](../../topics/autodevops/index.md) can automatically build,
 test, and deploy your application without a manually configured `.gitlab-ci.yml` file.
 

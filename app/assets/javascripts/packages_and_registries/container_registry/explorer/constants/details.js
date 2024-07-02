@@ -23,7 +23,7 @@ export const TAGS_LIST_TITLE = s__('ContainerRegistry|Image tags');
 export const DIGEST_LABEL = s__('ContainerRegistry|Digest: %{imageId}');
 export const CREATED_AT_LABEL = s__('ContainerRegistry|Published %{timeInfo}');
 export const PUBLISHED_DETAILS_ROW_TEXT = s__(
-  'ContainerRegistry|Published to the %{repositoryPath} image repository at %{time} on %{date}',
+  'ContainerRegistry|Published to the %{repositoryPath} image repository on %{dateTime}',
 );
 export const MANIFEST_DETAILS_ROW_TEST = s__('ContainerRegistry|Manifest digest: %{digest}');
 export const CONFIGURATION_DETAILS_ROW_TEST = s__(
@@ -66,6 +66,7 @@ export const MISSING_MANIFEST_WARNING_TOOLTIP = s__(
 );
 
 export const CREATED_AT = s__('ContainerRegistry|Created %{time}');
+export const LAST_PUBLISHED_AT = s__('ContainerRegistry|Last published at %{time}');
 
 export const NOT_AVAILABLE_TEXT = __('Not applicable.');
 export const NOT_AVAILABLE_SIZE = __('0 B');

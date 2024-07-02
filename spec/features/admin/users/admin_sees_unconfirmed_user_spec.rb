@@ -14,17 +14,16 @@ RSpec.describe 'Admin sees unconfirmed user', feature_category: :user_management
   end
 
   context 'when user has an unconfirmed email', :js do
-    # Email address contains HTML to ensure email address is displayed in an HTML safe way.
-    let_it_be(:unconfirmed_email) { "#{generate(:email)}<h2>testing<img/src=http://localhost:8000/test.png>" }
+    let_it_be(:unconfirmed_email) { generate(:email) }
     let_it_be(:unconfirmed_user) { create(:user, :unconfirmed, unconfirmed_email: unconfirmed_email) }
 
     where(:path_helper) do
       [
-        [-> (user) { admin_user_path(user) }],
-        [-> (user) { projects_admin_user_path(user) }],
-        [-> (user) { keys_admin_user_path(user) }],
-        [-> (user) { admin_user_identities_path(user) }],
-        [-> (user) { admin_user_impersonation_tokens_path(user) }]
+        [->(user) { admin_user_path(user) }],
+        [->(user) { projects_admin_user_path(user) }],
+        [->(user) { keys_admin_user_path(user) }],
+        [->(user) { admin_user_identities_path(user) }],
+        [->(user) { admin_user_impersonation_tokens_path(user) }]
       ]
     end
 

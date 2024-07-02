@@ -53,7 +53,8 @@ module QA
         Page::Main::Menu.perform(&:go_to_admin_area)
         Page::Admin::Menu.perform(&:go_to_users_overview)
         Page::Admin::Overview::Users::Index.perform do |index|
-          index.search_user(user.username)
+          index.choose_search_user(user.username)
+          index.click_search
           index.click_user(user.name)
         end
 
@@ -67,7 +68,7 @@ module QA
 
       # Expire in 2 days just in case the token is created just before midnight
       def expires_at
-        @expires_at || Time.now.utc.to_date + 2
+        @expires_at || (Time.now.utc.to_date + 2)
       end
 
       def fabricate!
@@ -76,7 +77,8 @@ module QA
         Page::Main::Menu.perform(&:go_to_admin_area)
         Page::Admin::Menu.perform(&:go_to_users_overview)
         Page::Admin::Overview::Users::Index.perform do |index|
-          index.search_user(user.username)
+          index.choose_search_user(user.username)
+          index.click_search
           index.click_user(user.name)
         end
 

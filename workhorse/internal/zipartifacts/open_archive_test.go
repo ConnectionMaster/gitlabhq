@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,8 +27,8 @@ func createArchive(t *testing.T, dir string) (map[string][]byte, int64) {
 		entryName := fmt.Sprintf("file_%d", size)
 		entries[entryName] = bytes.Repeat([]byte{'z'}, size)
 
-		w, err := zw.Create(entryName)
-		require.NoError(t, err)
+		w, entryNameErr := zw.Create(entryName)
+		require.NoError(t, entryNameErr)
 
 		_, err = w.Write(entries[entryName])
 		require.NoError(t, err)
@@ -118,8 +119,8 @@ func TestMinimalRangeRequests(t *testing.T) {
 
 func TestOpenHTTPArchiveNotSendingAcceptEncodingHeader(t *testing.T) {
 	requestHandler := func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "GET", r.Method)
-		require.Nil(t, r.Header["Accept-Encoding"])
+		assert.Equal(t, "GET", r.Method)
+		assert.Nil(t, r.Header["Accept-Encoding"])
 		w.WriteHeader(http.StatusOK)
 	}
 

@@ -51,11 +51,11 @@ class Repository
   # For example, for entry `:commit_count` there's a method called `commit_count` which
   # stores its data in the `commit_count` cache key.
   CACHED_METHODS = %i[size recent_objects_size commit_count readme_path contribution_guide
-                      changelog license_blob license_gitaly gitignore
-                      gitlab_ci_yml branch_names tag_names branch_count
-                      tag_count avatar exists? root_ref merged_branch_names
-                      has_visible_content? issue_template_names_hash merge_request_template_names_hash
-                      xcode_project? has_ambiguous_refs?].freeze
+    changelog license_blob license_gitaly gitignore
+    branch_names tag_names branch_count
+    tag_count avatar exists? root_ref merged_branch_names
+    has_visible_content? issue_template_names_hash merge_request_template_names_hash
+    xcode_project? has_ambiguous_refs?].freeze
 
   # Certain method caches should be refreshed when certain types of files are
   # changed. This Hash maps file types (as returned by Gitlab::FileDetector) to
@@ -66,7 +66,6 @@ class Repository
     license: %i[license_blob license_gitaly],
     contributing: :contribution_guide,
     gitignore: :gitignore,
-    gitlab_ci: :gitlab_ci_yml,
     avatar: :avatar,
     issue_template: :issue_template_names_hash,
     merge_request_template: :merge_request_template_names_hash,
@@ -450,6 +449,10 @@ class Repository
     expire_status_cache
 
     repository_event(:create_repository)
+
+    return unless project.present?
+
+    project.run_after_commit_or_now { Onboarding::ProgressWorker.perform_async(namespace_id, 'git_write') }
   end
 
   # Runs code just before a repository is deleted.
@@ -674,12 +677,6 @@ class Repository
   end
   cache_method :gitignore
 
-  # Deprecated, use `project.has_ci_config_file?` instead.
-  def gitlab_ci_yml
-    file_on_head(:gitlab_ci)
-  end
-  cache_method :gitlab_ci_yml
-
   def jenkinsfile?
     file_on_head(:jenkinsfile).present?
   end
@@ -790,12 +787,16 @@ class Repository
     Commit.order_by(collection: commits, order_by: order_by, sort: sort)
   end
 
-  def branch_names_contains(sha, limit: 0)
-    raw_repository.branch_names_contains_sha(sha, limit: limit)
+  def branch_names_contains(sha, limit: 0, exclude_refs: [])
+    refs = raw_repository.branch_names_contains_sha(sha, limit: adjust_containing_limit(limit: limit, exclude_refs: exclude_refs))
+
+    adjust_containing_refs(limit: limit, refs: refs - exclude_refs)
   end
 
-  def tag_names_contains(sha, limit: 0)
-    raw_repository.tag_names_contains_sha(sha, limit: limit)
+  def tag_names_contains(sha, limit: 0, exclude_refs: [])
+    refs = raw_repository.tag_names_contains_sha(sha, limit: adjust_containing_limit(limit: limit, exclude_refs: exclude_refs))
+
+    adjust_containing_refs(limit: limit, refs: refs - exclude_refs)
   end
 
   def local_branches
@@ -814,38 +815,34 @@ class Repository
     commit_files(user, **options)
   end
 
+  def create_file_actions(path, content, execute_filemode: nil)
+    actions = [{ action: :create, file_path: path, content: content }]
+    actions << { action: :chmod, file_path: path, execute_filemode: execute_filemode } unless execute_filemode.nil?
+    actions
+  end
+
   def create_file(user, path, content, **options)
-    options[:actions] = [{ action: :create, file_path: path, content: content }]
+    actions = create_file_actions(path, content, execute_filemode: options.delete(:execute_filemode))
+    commit_files(user, **options.merge(actions: actions))
+  end
 
-    execute_filemode = options.delete(:execute_filemode)
-
-    unless execute_filemode.nil?
-      options[:actions].push({ action: :chmod, file_path: path, execute_filemode: execute_filemode })
-    end
-
-    commit_files(user, **options)
+  def update_file_actions(path, content, previous_path: nil, execute_filemode: nil)
+    action = previous_path && previous_path != path ? :move : :update
+    actions = [{ action: action, file_path: path, content: content, previous_path: previous_path }]
+    actions << { action: :chmod, file_path: path, execute_filemode: execute_filemode } unless execute_filemode.nil?
+    actions
   end
 
   def update_file(user, path, content, **options)
-    previous_path = options.delete(:previous_path)
-    action = previous_path && previous_path != path ? :move : :update
-
-    options[:actions] = [{ action: action, file_path: path, previous_path: previous_path, content: content }]
-
-    execute_filemode = options.delete(:execute_filemode)
-
-    unless execute_filemode.nil?
-      options[:actions].push({ action: :chmod, file_path: path, execute_filemode: execute_filemode })
-    end
-
-    commit_files(user, **options)
+    actions = update_file_actions(path, content, previous_path: options.delete(:previous_path), execute_filemode: options.delete(:execute_filemode))
+    commit_files(user, **options.merge(actions: actions))
   end
 
-  def move_dir_files(user, path, previous_path, **options)
+  def move_dir_files_actions(path, previous_path, branch_name: nil)
     regex = Regexp.new("^#{Regexp.escape(previous_path + '/')}", 'i')
-    files = ls_files(options[:branch_name])
+    files = ls_files(branch_name)
 
-    options[:actions] = files.each_with_object([]) do |item, list|
+    files.each_with_object([]) do |item, list|
       next unless regex.match?(item)
 
       list.push(
@@ -855,10 +852,13 @@ class Repository
         infer_content: true
       )
     end
+  end
 
-    return if options[:actions].blank?
+  def move_dir_files(user, path, previous_path, **options)
+    actions = move_dir_files_actions(path, previous_path, branch_name: options[:branch_name])
+    return if actions.blank?
 
-    commit_files(user, **options)
+    commit_files(user, **options.merge(actions: actions))
   end
 
   def delete_file(user, path, **options)
@@ -951,7 +951,8 @@ class Repository
 
   def cherry_pick(
     user, commit, branch_name, message,
-    start_branch_name: nil, start_project: project, dry_run: false)
+    start_branch_name: nil, start_project: project,
+    author_name: nil, author_email: nil, dry_run: false)
 
     with_cache_hooks do
       raw_repository.cherry_pick(
@@ -961,6 +962,8 @@ class Repository
         message: message,
         start_branch_name: start_branch_name,
         start_repository: start_project.repository.raw_repository,
+        author_name: author_name,
+        author_email: author_email,
         dry_run: dry_run
       )
     end
@@ -1076,16 +1079,6 @@ class Repository
     regexp_string.gsub!('\*', anything_but_not_slash)
 
     raw_repository.search_files_by_regexp("^#{regexp_string}$", ref)
-  end
-
-  def copy_gitattributes(ref)
-    actual_ref = ref || root_ref
-    begin
-      raw_repository.copy_gitattributes(actual_ref)
-      true
-    rescue Gitlab::Git::Repository::InvalidRef
-      false
-    end
   end
 
   def file_on_head(type, object_type = :blob)
@@ -1223,7 +1216,6 @@ class Repository
     if branch_exists?(branch)
       before_change_head
       raw_repository.write_ref('HEAD', "refs/heads/#{branch}")
-      copy_gitattributes(branch)
       after_change_head
     else
       container.after_change_head_branch_does_not_exist(branch)
@@ -1317,6 +1309,22 @@ class Repository
   end
 
   private
+
+  # Increase the limit by number of excluded refs
+  # to prevent a situation when we return less refs than requested
+  def adjust_containing_limit(limit:, exclude_refs:)
+    return limit if limit == 0
+
+    limit + exclude_refs.size
+  end
+
+  # Limit number of returned refs
+  # in case the result has more refs than requested
+  def adjust_containing_refs(limit:, refs:)
+    return refs if limit == 0
+
+    refs.take(limit)
+  end
 
   def ancestor_cache_key(ancestor_id, descendant_id)
     "ancestor:#{ancestor_id}:#{descendant_id}"

@@ -7,12 +7,11 @@ module QA
       let(:job_name) { "test-job-#{pull_policies.join('-')}" }
       let(:project) { create(:project, name: 'pipeline-with-image-pull-policy') }
       let!(:runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = project
-          runner.name = runner_name
-          runner.tags = [runner_name]
-          runner.executor = :docker
-        end
+        create(:project_runner,
+          project: project,
+          name: runner_name,
+          tags: [runner_name],
+          executor: :docker)
       end
 
       before do
@@ -35,13 +34,13 @@ module QA
             'with [always] policy' => {
               pull_policies: %w[always],
               pull_image: true,
-              message: 'Pulling docker image ruby:2.6',
+              message: 'Pulling docker image ruby:latest',
               testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/367154'
             },
             'with [always if-not-present] policies' => {
               pull_policies: %w[always if-not-present],
               pull_image: true,
-              message: 'Pulling docker image ruby:2.6',
+              message: 'Pulling docker image ruby:latest',
               testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/368857'
             },
             'with [if-not-present] policy' => {
@@ -53,14 +52,14 @@ module QA
             'with [never] policy' => {
               pull_policies: %w[never],
               pull_image: false,
-              message: 'Pulling docker image',
+              message: 'Pulling docker image ruby:latest',
               testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/368859'
             }
           }
         end
 
         with_them do
-          it 'applies pull policy in job correctly', :reliable, testcase: params[:testcase] do
+          it 'applies pull policy in job correctly', testcase: params[:testcase] do
             visit_job
 
             if pull_image
@@ -84,8 +83,12 @@ module QA
         let(:text2) { 'is not one of the allowed_pull_policies ([never])' }
 
         it(
-          'fails job with policy not allowed message', :reliable,
-          testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/368853'
+          'fails job with policy not allowed message', :smoke,
+          testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/368853',
+          quarantine: {
+            type: :flaky,
+            issue: "https://gitlab.com/gitlab-org/gitlab/-/issues/462232"
+          }
         ) do
           visit_job
 
@@ -123,13 +126,13 @@ module QA
             file_path: '.gitlab-ci.yml',
             content: <<~YAML
               default:
-                image: ruby:2.6
+                image: ruby:latest
                 tags: [#{runner_name}]
 
               #{job_name}:
                 script: echo "Using pull policies #{pull_policies}"
                 image:
-                  name: ruby:2.6
+                  name: ruby:latest
                   pull_policy: #{pull_policies}
             YAML
           }

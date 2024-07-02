@@ -15,48 +15,47 @@ DETAILS:
 > - Operational container scanning [introduced](https://gitlab.com/groups/gitlab-org/-/epics/3410) in GitLab 15.5
 > - Support for custom CI variables in the Scan Execution Policies editor [introduced](https://gitlab.com/groups/gitlab-org/-/epics/9566) in GitLab 16.2.
 > - Enforcement of scan execution policies on projects with an existing GitLab CI/CD configuration [introduced](https://gitlab.com/groups/gitlab-org/-/epics/6880) in GitLab 16.2 [with a flag](../../../administration/feature_flags.md) named `scan_execution_policy_pipelines`. Feature flag `scan_execution_policy_pipelines` removed in GitLab 16.5.
-> - Overriding predefined variables in scan execution policies [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/440855) in GitLab 16.10 [with a flag](../../../administration/feature_flags.md) named `allow_restricted_variables_at_policy_level`. Disabled by default.
+> - Overriding predefined variables in scan execution policies [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/440855) in GitLab 16.10 [with a flag](../../../administration/feature_flags.md) named `allow_restricted_variables_at_policy_level`. Enabled by default.
 
-FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `allow_restricted_variables_at_policy_level`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
-Group, subgroup, or project owners can use scan execution policies to require that security scans
-run on a specified schedule or with the project pipeline. The security scan runs with multiple
-project pipelines if you define the policy at a group or subgroup level. GitLab injects the required
-scans into the CI/CD pipeline as new jobs.
+Use scan execution policies to enforce security scans, either as part of the pipeline or on a
+specified schedule. The security scans run with multiple project pipelines if you define the policy
+at a group or subgroup level.
 
-Scan execution policies are enforced for all applicable projects, even those without a GitLab
-CI/CD configuration file or where AutoDevOps is disabled. Security policies create the file
-implicitly so that the policies can be enforced. This ensures policies enabling execution of
-secret detection, static analysis, or other scanners that do not require a build in the
-project, are still able to execute and be enforced.
-
-GitLab appends a hyphen and a number to the job name. The number is unique per policy action to avoid name conflicts.
-policy at the group level, it applies to every child project or subgroup. You cannot edit a
-group-level policy from a child project or subgroup.
+Scan execution policies are enforced for all applicable projects. For projects without a
+`.gitlab-ci.yml` file, or where AutoDevOps is disabled, security policies create the
+`.gitlab-ci.yml` file implicitly. This ensures policies enabling execution of secret detection,
+static analysis, or other scanners that do not require a build in the project, are still able to
+run and be enforced.
 
 This feature has some overlap with [compliance framework pipelines](../../group/compliance_pipelines.md),
 as we have not [unified the user experience for these two features](https://gitlab.com/groups/gitlab-org/-/epics/7312).
 For details on the similarities and differences between these features, see
 [Enforce scan execution](../index.md#enforce-scan-execution).
 
-NOTE:
-Policy jobs for scans other than DAST scans are created in the `test` stage of the pipeline. If you modify the default pipeline
-[`stages`](../../../ci/yaml/index.md#stages),
-to remove the `test` stage, jobs will run in the `scan-policies` stage instead. This stage is injected into the CI pipeline at evaluation time if it doesn't exist. If the `build` stage exists, it is injected just after the `build` stage. If the `build` stage does not exist, it is injected at the beginning of the pipeline. DAST scans always run in the `dast` stage. If this stage does not exist, then a `dast` stage is injected at the end of the pipeline.
-
 - <i class="fa fa-youtube-play youtube" aria-hidden="true"></i> For a video walkthrough, see [How to set up Security Scan Policies in GitLab](https://youtu.be/ZBcqGmEwORA?si=aeT4EXtmHjosgjBY).
 - <i class="fa fa-youtube-play youtube" aria-hidden="true"></i> For an overview, see [Enforcing scan execution policies on projects with no GitLab CI/CD configuration](https://www.youtube.com/watch?v=sUfwQQ4-qHs).
 
-## Requirements and limitations
+## Jobs
 
-- The maximum number of scan execution policies is five per security policy project.
+Policy jobs for scans, other than DAST scans, are created in the `test` stage of the pipeline. If
+you remove the `test` stage from the default pipeline, jobs run in the `scan-policies` stage
+instead. This stage is injected into the CI/CD pipeline at evaluation time if it doesn't exist. If
+the `build` stage exists, it is injected just after the `build` stage, otherwise it is injected at
+the beginning of the pipeline. DAST scans always run in the `dast` stage. If this stage does not
+exist, then a `dast` stage is injected at the end of the pipeline.
+
+To avoid job name conflicts, a hyphen and a number is appended to the job name. The number is unique
+per policy action.
 
 ## Scan execution policy editor
 
-NOTE:
-Only group, subgroup, or project Owners have the [permissions](../../permissions.md#project-members-permissions)
-to select Security Policy Project.
+Use the scan execution policy editor to create or edit a scan execution policy.
+
+Prerequisites:
+
+- Only group, subgroup, or project Owners have the [permissions](../../permissions.md#project-members-permissions)
+  to select Security Policy Project.
+- The maximum number of scan execution policies is five per security policy project.
 
 Once your policy is complete, save it by selecting **Configure with a merge request**
 at the bottom of the editor. You are redirected to the merge request on the project's
@@ -155,14 +154,15 @@ If the project does not have a security policy bot user, the bot will be automat
 
 GitLab supports the following types of CRON syntax for the `cadence` field:
 
-- A daily cadence of once per hour at a specified hour, for example: `0 18 * * *`
-- A weekly cadence of once per week on a specified day and at a specified hour, for example: `0 13 * * 0`
+- A daily cadence of once per hour around specified time, for example: `0 18 * * *`
+- A weekly cadence of once per week on a specified day and around specified time, for example: `0 13 * * 0`
 
 NOTE:
 Other elements of the [CRON syntax](https://docs.oracle.com/cd/E12058_01/doc/doc.1014/e12030/cron_expressions.htm) may work in the cadence field if supported by the [cron](https://github.com/robfig/cron) we are using in our implementation, however, GitLab does not officially test or support them.
 The comma (,), hyphens (-), or step operators (/) are not supported for minutes and hours.
 An error is displayed if the cadence is invalid when creating or editing a policy.
 The scheduled pipelines for a previously created policy using comma (,), hyphen(-), or step operator (/) in minutes or hours fields is skipped.
+The pipelines that have been scheduled will use the `cadence` value to create a new pipeline around the time mentioned in the policy. The pipeline will be executed after a specified time when the resources become available to create it.
 
 When using the `schedule` rule type in conjunction with the `agents` field, note the following:
 
@@ -173,6 +173,7 @@ When using the `schedule` rule type in conjunction with the `branches` field, no
 
 - The cron worker runs on 15 minute intervals and starts any pipelines that were scheduled to run during the previous 15 minutes.
 - Based on your rule, you might expect scheduled pipelines to run with an offset of up to 15 minutes.
+- If a policy is enforced on a large number of projects or branches, it will be processed in batches, and it may take some time to create all pipelines.
 - The CRON expression is evaluated in standard [UTC](https://www.timeanddate.com/worldclock/timezone/utc) time from GitLab.com. If you have a self-managed GitLab instance and have [changed the server time zone](../../../administration/timezone.md), the CRON expression is evaluated with the new time zone.
 
 ![CRON worker diagram](img/scheduled_scan_execution_policies_diagram.png)
@@ -211,6 +212,7 @@ The keys for a schedule rule are:
 ## `scan` action type
 
 > - Scan Execution Policies variable precedence was [changed](https://gitlab.com/gitlab-org/gitlab/-/issues/424028) in GitLab 16.7 [with a flag](../../../administration/feature_flags.md) named `security_policies_variables_precedence`. Enabled by default. [Feature flag removed in GitLab 16.8](https://gitlab.com/gitlab-org/gitlab/-/issues/435727).
+> - Selection of Security templates for given action was [added](https://gitlab.com/gitlab-org/gitlab/-/issues/415427) in GitLab 17.1 [with a flag](../../../administration/feature_flags.md) named `scan_execution_policies_with_latest_templates`. Disabled by default.
 
 This action executes the selected `scan` with additional parameters when conditions for at least one
 rule in the defined policy are met.
@@ -222,6 +224,7 @@ rule in the defined policy are met.
 | `scanner_profile` | `string` or `null` | Name of the selected [DAST scanner profile](../dast/on-demand_scan.md#scanner-profile). | The DAST scanner profile to execute the DAST scan. This field should only be set if `scan` type is `dast`.|
 | `variables` | `object` | | A set of CI variables, supplied as an array of `key: value` pairs, to apply and enforce for the selected scan. The `key` is the variable name, with its `value` provided as a string. This parameter supports any variable that the GitLab CI job supports for the specified scan. |
 | `tags` | `array` of `string` | | A list of runner tags for the policy. The policy jobs are run by runner with the specified tags. |
+| `template` | `string` | `default`, `latest` | CI/CD template edition to be enforced. The [`latest`](../../../development/cicd/templates.md#latest-version) edition may introduce breaking changes. |
 
 Note the following:
 
@@ -250,15 +253,15 @@ Note the following:
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp
   SECRET_DETECTION_EXCLUDED_PATHS: ''
   SECRET_DETECTION_HISTORIC_SCAN: false
-  SAST_DISABLED_ANALYZERS: ''
-  DS_DISABLED_ANALYZERS: ''
+  SAST_EXCLUDED_ANALYZERS: ''
+  DS_EXCLUDED_ANALYZERS: ''
   ```
 
   In GitLab 16.9 and earlier:
 
   - If the CI/CD variables suffixed `_EXCLUDED_PATHS` were declared in a policy, their values _could_
     be overridden by group or project CI/CD variables.
-  - If the CI/CD variables suffixed `_DISABLED_ANALYZERS` were declared in a policy, their values were
+  - If the CI/CD variables suffixed `_EXCLUDED_ANALYZERS` were declared in a policy, their values were
     ignored, regardless of where they were defined: policy, group, or project.
 
 ## Security policy scopes
@@ -453,14 +456,6 @@ CI you want enforced. Scan execution policies then merge this file with the
 project's `.gitlab-ci.yml` to execute the compliance jobs for each project
 enforced by the policy.
 
-#### `ci_configuration_path` object
-
-| Field     | Type                | Required | Description |
-|-----------|---------------------|----------|-------------|
-| `project` | `string`            | true     | A project namespace path. |
-| `file`    | `string`            | true     | The filename of the CI/CD YAML file. |
-| `ref`     | `string`            | false    | The branch name, tag name, or commit SHA. If not specified, uses the default branch. |
-
 #### `scan` action type
 
 This action executes the selected `scan` with additional parameters when
@@ -471,6 +466,14 @@ conditions for at least one rule in the defined policy are met.
 | `scan`                  | `string` | `custom`        | The action's type. |
 | `ci_configuration`      | `string` |                 | GitLab CI YAML as formatted as string. |
 | `ci_configuration_path` | object   |                 | Object with project path and filename pointing to a CI configuration. |
+
+#### `ci_configuration_path` object
+
+| Field     | Type                | Required | Description |
+|-----------|---------------------|----------|-------------|
+| `project` | `string`            | true     | A project namespace path. |
+| `file`    | `string`            | true     | The filename of the CI/CD YAML file. |
+| `ref`     | `string`            | false    | The branch name, tag name, or commit SHA. If not specified, uses the default branch. |
 
 Note the following:
 

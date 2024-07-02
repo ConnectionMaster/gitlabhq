@@ -176,7 +176,7 @@ For example:
 
 If Gitaly Cluster is used, Praefect manages storage locations. The internal path used by Praefect for the repository
 differs from the hashed path. For more information, see
-[Praefect-generated replica paths](gitaly/index.md#praefect-generated-replica-paths-gitlab-150-and-later).
+[Praefect-generated replica paths](gitaly/index.md#praefect-generated-replica-paths).
 
 ### Object storage support
 
@@ -225,7 +225,7 @@ LFS objects are also [S3-compatible](lfs/index.md#storing-lfs-objects-in-remote-
 
 ## Configure where new repositories are stored
 
-After you configure multiple repository storages, you can choose where new repositories are stored:
+After you [configure multiple repository storages](https://docs.gitlab.com/omnibus/settings/configuration.html#store-git-data-in-an-alternative-directory), you can choose where new repositories are stored:
 
 1. On the left sidebar, at the bottom, select **Admin Area**.
 1. Select **Settings > Repository**.

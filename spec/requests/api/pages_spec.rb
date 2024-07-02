@@ -88,4 +88,83 @@ RSpec.describe API::Pages, feature_category: :pages do
       end
     end
   end
+
+  describe 'PATCH /projects/:id/pages' do
+    let(:path) { "/projects/#{project.id}/pages" }
+    let(:params) { { pages_unique_domain_enabled: true, pages_https_only: true } }
+
+    before do
+      stub_pages_setting(external_https: true)
+    end
+
+    context 'when the user is authorized' do
+      context 'and the update succeeds' do
+        it 'updates the pages settings and returns 200' do
+          patch api(path, admin, admin_mode: true), params: params
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(json_response['force_https']).to eq(true)
+          expect(json_response['is_unique_domain_enabled']).to eq(true)
+        end
+      end
+
+      context 'when the service returns any kind of error' do
+        let(:service_response) { ServiceResponse.error(message: service_error_message) }
+        let(:service_error_message) { 'the reason it stopped' }
+
+        before do
+          allow_next_instance_of(Pages::UpdateService) do |service|
+            allow(service).to receive(:execute).and_return(service_response)
+          end
+        end
+
+        it 'returns 403 forbidden with the passed along error message' do
+          patch api(path, admin, admin_mode: true), params: params
+
+          expect(response).to have_gitlab_http_status(:forbidden)
+          expect(response.body).to include(service_error_message)
+        end
+      end
+    end
+
+    context 'when the user is unauthorized' do
+      it 'returns a 403 forbidden' do
+        patch api(path, user), params: params
+
+        expect(response).to have_gitlab_http_status(:forbidden)
+      end
+    end
+
+    context 'when pages feature is disabled' do
+      before do
+        stub_pages_setting(enabled: false)
+      end
+
+      it 'returns a 404 not found' do
+        patch api(path, admin, admin_mode: true), params: params
+
+        expect(response).to have_gitlab_http_status(:not_found)
+      end
+    end
+
+    context 'when there is no project' do
+      it 'returns 404 not found' do
+        non_existent_project_id = -1
+        patch api("/projects/#{non_existent_project_id}/pages", admin, admin_mode: true), params: params
+
+        expect(response).to have_gitlab_http_status(:not_found)
+      end
+    end
+
+    context 'when the parameters are invalid' do
+      let(:invalid_params) { { pages_unique_domain_enabled: nil, pages_https_only: "not_a_boolean" } }
+
+      it 'returns a 400 bad request' do
+        patch api(path, admin, admin_mode: true), params: invalid_params
+
+        expect(response).to have_gitlab_http_status(:bad_request)
+        expect(json_response['error']).to eq('pages_https_only is invalid')
+      end
+    end
+  end
 end

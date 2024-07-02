@@ -7,9 +7,9 @@ module Mutations
         graphql_name 'CreateDiffNote'
 
         argument :position,
-                  Types::Notes::DiffPositionInputType,
-                  required: true,
-                  description: copy_field_description(Types::Notes::NoteType, :position)
+          Types::Notes::DiffPositionInputType,
+          required: true,
+          description: copy_field_description(Types::Notes::NoteType, :position)
 
         def ready?(**args)
           # As both arguments are optional, validate here that one of the
@@ -21,7 +21,7 @@ module Mutations
 
           if args[:position].to_hash.values_at(:old_line, :new_line).compact.blank?
             raise Gitlab::Graphql::Errors::ArgumentError,
-                  'position oldLine or newLine arguments are required'
+              'position oldLine or newLine arguments are required'
           end
 
           super(**args)
@@ -31,10 +31,10 @@ module Mutations
 
         def create_note_params(noteable, args)
           super(noteable, args).merge({
-                                        type: 'DiffNote',
-                                        position: position(noteable, args),
-                                        merge_request_diff_head_sha: args[:position][:head_sha]
-                                      })
+            type: 'DiffNote',
+            position: position(noteable, args),
+            merge_request_diff_head_sha: args[:position][:head_sha]
+          })
         end
 
         def position(noteable, args)

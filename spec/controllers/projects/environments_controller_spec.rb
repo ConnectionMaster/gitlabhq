@@ -6,8 +6,8 @@ RSpec.describe Projects::EnvironmentsController, feature_category: :continuous_d
   include KubernetesHelpers
 
   let_it_be(:project) { create(:project, :repository) }
-  let_it_be(:maintainer) { create(:user, name: 'main-dos').tap { |u| project.add_maintainer(u) } }
-  let_it_be(:reporter) { create(:user, name: 'repo-dos').tap { |u| project.add_reporter(u) } }
+  let_it_be(:maintainer) { create(:user, name: 'main-dos', maintainer_of: project) }
+  let_it_be(:reporter) { create(:user, name: 'repo-dos', reporter_of: project) }
 
   let(:user) { maintainer }
 
@@ -264,6 +264,26 @@ RSpec.describe Projects::EnvironmentsController, feature_category: :continuous_d
         expect(environments.map { |env| env['name'] }).to eq(['staging-1.0/zzz'])
         expect(json_response['available_count']).to eq 1
         expect(json_response['stopped_count']).to eq 0
+      end
+    end
+  end
+
+  describe 'GET k8s' do
+    context 'with valid id' do
+      it 'responds with a status code 200' do
+        get :k8s, params: environment_params
+
+        expect(response).to be_ok
+      end
+    end
+
+    context 'with invalid id' do
+      it 'responds with a status code 404' do
+        params = environment_params
+        params[:id] = non_existing_record_id
+        get :k8s, params: params
+
+        expect(response).to have_gitlab_http_status(:not_found)
       end
     end
   end

@@ -18,7 +18,7 @@
               = link_to user_path(@user) do
                 = @user.username
     -# Rendered on mobile only so order of cards can be different on desktop vs mobile
-    .gl-md-display-none
+    .md:gl-hidden
       = render 'admin/users/profile', user: @user
       = render 'admin/users/user_detail_note'
     = render Pajamas::CardComponent.new(card_options: { class: 'gl-mb-5' }, body_options: { class: 'gl-py-2'}) do |c|
@@ -37,6 +37,10 @@
             %span.light= _('Email:')
             %strong
               = render partial: 'shared/email_with_badge', locals: { email: mail_to(@user.email), verified: @user.confirmed? }
+          %li{ data: { testid: 'email-verification-last-sent-at' } }
+            %span.light= s_('UserProfile|Email verification last sent at:')
+            %strong
+              = @user.confirmation_sent_at&.to_fs(:medium) || _('never')
           - @user.emails.reject(&:user_primary_email?).each do |email|
             %li
               %span.light= _('Secondary email:')
@@ -94,7 +98,7 @@
                 = @user.confirmed_at.to_fs(:medium)
           - else
             %li
-              %span.ligh= _('Confirmed:')
+              %span.light= _('Confirmed:')
               %strong.cred
                 = _('No')
 
@@ -156,6 +160,6 @@
     = render 'shared/custom_attributes', custom_attributes: @user.custom_attributes
 
   -# Rendered on desktop only so order of cards can be different on desktop vs mobile
-  .col-md-6.gl-display-none.gl-md-display-block
+  .col-md-6.gl-hidden.md:gl-block
     = render 'admin/users/profile', user: @user
     = render 'admin/users/user_detail_note'

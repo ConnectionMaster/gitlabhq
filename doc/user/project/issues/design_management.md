@@ -18,7 +18,8 @@ You can share mockups of designs with your team, or visual regressions can be
 viewed and addressed.
 
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
-For a video overview, see [Design Management (GitLab 12.2)](https://www.youtube.com/watch?v=CCMtCqdK_aM).
+For a video overview, see [Design Management](https://www.youtube.com/watch?v=CCMtCqdK_aM).
+<!-- Video published on 2019-07-11 -->
 
 ## Requirements
 
@@ -110,10 +111,11 @@ To move around the image while zoomed in, drag the image.
 ## Add a design to an issue
 
 > - Ability to edit the description [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/388449) in GitLab 16.1.
+> - Minimum role to add a design to an issue [changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/147053) from Developer to Reporter in GitLab 16.11.
 
 Prerequisites:
 
-- You must have at least the Developer role for the project.
+- You must have at least the Reporter role for the project.
 - The names of the uploaded files must be no longer than 255 characters.
 
 To add a design to an issue:
@@ -144,11 +146,13 @@ To add a design to an issue:
 
 ## Add a new version of a design
 
+> - Minimum role to add a new version of a design [changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/147053) from Developer to Reporter in GitLab 16.11.
+
 As discussion on a design continues, you might want to upload a new version of a design.
 
 Prerequisites:
 
-- You must have at least the Developer role for the project.
+- You must have at least the Reporter role for the project.
 
 To do so, [add a design](#add-a-design-to-an-issue) with the same filename.
 
@@ -163,6 +167,8 @@ When designs are skipped, a warning message is displayed.
 
 ## Archive a design
 
+> - Minimum role to archive a design [changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/147053) from Developer to Reporter in GitLab 16.11.
+
 You can archive individual designs or select a few of them to archive at once.
 
 Archived designs are not permanently lost.
@@ -174,7 +180,7 @@ URL.
 
 Prerequisites:
 
-- You must have at least the Developer role for the project.
+- You must have at least the Reporter role for the project.
 - You can archive only the latest version of a design.
 
 To archive a single design:

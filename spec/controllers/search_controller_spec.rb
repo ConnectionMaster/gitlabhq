@@ -62,9 +62,40 @@ RSpec.describe SearchController, feature_category: :global_search do
         end
       end
 
+      it_behaves_like 'internal event tracking' do
+        let(:params) { { search: 'foobar' } }
+        let(:event) { 'perform_search' }
+        let(:category) { described_class.to_s }
+        let(:namespace) { nil }
+        let(:project) { nil }
+
+        subject(:tracked_event) { get :show, params: params }
+      end
+
+      context 'for navbar search' do
+        let(:params) { { search: 'foobar', nav_source: 'navbar' } }
+        let(:category) { described_class.to_s }
+        let(:namespace) { nil }
+        let(:project) { nil }
+
+        it_behaves_like 'internal event tracking' do
+          let(:event) { 'perform_navbar_search' }
+
+          subject(:tracked_event) { get :show, params: params }
+        end
+      end
+
       it_behaves_like 'with external authorization service enabled', :show, { search: 'hello' }
       it_behaves_like 'support for active record query timeouts', :show, { search: 'hello' }, :search_objects, :html
       it_behaves_like 'metadata is set', :show
+
+      it 'verifies search type' do
+        expect_next_instance_of(SearchService) do |service|
+          expect(service).to receive(:search_type_errors).once
+        end
+
+        get :show, params: { search: 'hello', scope: 'blobs' }
+      end
 
       describe 'rate limit scope' do
         it 'uses current_user and search scope' do
@@ -144,8 +175,8 @@ RSpec.describe SearchController, feature_category: :global_search do
               term_limit = Gitlab::Search::Params::SEARCH_TERM_LIMIT
               term_char_limit = Gitlab::Search::AbuseDetection::ABUSIVE_TERM_SIZE
               {
-                chars_under_limit: (('a' * (term_char_limit - 1) + ' ') * (term_limit - 1))[0, char_limit],
-                chars_over_limit: (('a' * (term_char_limit - 1) + ' ') * (term_limit - 1))[0, char_limit + 1],
+                chars_under_limit: ((('a' * (term_char_limit - 1)) + ' ') * (term_limit - 1))[0, char_limit],
+                chars_over_limit: ((('a' * (term_char_limit - 1)) + ' ') * (term_limit - 1))[0, char_limit + 1],
                 terms_under_limit: ('abc ' * (term_limit - 1)),
                 terms_over_limit: ('abc ' * (term_limit + 1)),
                 term_length_over_limit: ('a' * (term_char_limit + 1)),
@@ -212,7 +243,7 @@ RSpec.describe SearchController, feature_category: :global_search do
             it 'succeeds but does NOT do anything' do
               get :show, params: { scope: 'projects', search: '*', repository_ref: '-1%20OR%203%2B640-640-1=0%2B0%2B0%2B1' }
               expect(response).to have_gitlab_http_status(:ok)
-              expect(assigns(:search_results)).to be_a Gitlab::EmptySearchResults
+              expect(assigns(:search_results)).to be_a ::Search::EmptySearchResults
             end
           end
         end
@@ -488,6 +519,36 @@ RSpec.describe SearchController, feature_category: :global_search do
         expect(json_response).to eq({ 'count' => '0' })
       end
 
+      describe 'database transaction' do
+        before do
+          allow_next_instance_of(SearchService) do |search_service|
+            allow(search_service).to receive(:search_type).and_return(search_type)
+          end
+        end
+
+        subject(:count) { get :count, params: { search: 'hello', scope: 'projects' } }
+
+        context 'for basic search' do
+          let(:search_type) { 'basic' }
+
+          it 'executes within transaction with short timeout' do
+            expect(ApplicationRecord).to receive(:with_fast_read_statement_timeout)
+
+            count
+          end
+        end
+
+        context 'for advacned search' do
+          let(:search_type) { 'advanced' }
+
+          it 'does not execute within transaction' do
+            expect(ApplicationRecord).not_to receive(:with_fast_read_statement_timeout)
+
+            count
+          end
+        end
+      end
+
       it_behaves_like 'rate limited endpoint', rate_limit_key: :search_rate_limit do
         let(:current_user) { user }
 
@@ -681,7 +742,7 @@ RSpec.describe SearchController, feature_category: :global_search do
       end
 
       it 'returns EmptySearchResults' do
-        expect(Gitlab::EmptySearchResults).to receive(:new).and_call_original
+        expect(::Search::EmptySearchResults).to receive(:new).and_call_original
         make_abusive_request
         expect(response).to have_gitlab_http_status(:ok)
       end

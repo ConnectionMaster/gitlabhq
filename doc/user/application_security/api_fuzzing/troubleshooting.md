@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 ## API Fuzzing job times out after N hours
 
-For larger repositories, the API Fuzzing job could time out on the [small hosted runner on Linux](../../../ci/runners/hosted_runners/linux.md#machine-types-available-for-linux-x86-64), which is set per default. If this happens in your jobs, you should scale up to a [larger runner](performance.md#using-a-larger-runner).
+For larger repositories, the API Fuzzing job could time out on the [small hosted runner on Linux](../../../ci/runners/hosted_runners/linux.md#machine-types-available-for-linux---x86-64), which is set per default. If this happens in your jobs, you should scale up to a [larger runner](performance.md#using-a-larger-runner).
 
 See the following documentation sections for assistance:
 
@@ -76,15 +76,22 @@ Once you have confirmed the issue was produced because the port was already take
 1. Ensure your `.gitlab-ci.yml` file defines the configuration variable `FUZZAPI_API_PORT`.
 1. Update the value of `FUZZAPI_API_PORT` to any available port number greater than 1024. We recommend checking that the new value is not in used by GitLab. See the full list of ports used by GitLab in [Package defaults](../../../administration/package_information/defaults.md#ports)
 
-## `Error, the OpenAPI document is not valid. Errors were found during validation of the document using the published OpenAPI schema`
+## Error: `Errors were found during validation of the document using the published OpenAPI schema`
 
-At the start of an API Fuzzing job the OpenAPI Specification is validated against the [published schema](https://github.com/OAI/OpenAPI-Specification/tree/master/schemas). This error is shown when the provided OpenAPI Specification has validation errors. Errors can be introduced when creating an OpenAPI Specification manually, and also when the schema is generated.
+At the start of an API Fuzzing job the OpenAPI Specification is validated against the [published schema](https://github.com/OAI/OpenAPI-Specification/tree/master/schemas). This error is shown when the provided OpenAPI Specification has validation errors:
+
+```plaintext
+Error, the OpenAPI document is not valid.
+Errors were found during validation of the document using the published OpenAPI schema
+```
+
+Errors can be introduced when creating an OpenAPI Specification manually, and also when the schema is generated.
 
 For OpenAPI Specifications that are generated automatically validation errors are often the result of missing code annotations.
 
 **Error message**
 
-- In [GitLab 13.11 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/323939), `Error, the OpenAPI document is not valid. Errors were found during validation of the document using the published OpenAPI schema`
+- `Error, the OpenAPI document is not valid. Errors were found during validation of the document using the published OpenAPI schema`
   - `OpenAPI 2.0 schema validation error ...`
   - `OpenAPI 3.0.x schema validation error ...`
 
@@ -93,8 +100,8 @@ For OpenAPI Specifications that are generated automatically validation errors ar
 **For generated OpenAPI Specifications**
 
 1. Identify the validation errors.
-    1. Use the [Swagger Editor](https://editor.swagger.io/) to identify validation problems in your specification. The visual nature of the Swagger Editor makes it easier to understand what needs to change.
-    1. Alternatively, you can check the log output and look for schema validation warnings. They are prefixed with messages such as `OpenAPI 2.0 schema validation error` or `OpenAPI 3.0.x schema validation error`. Each failed validation provides extra information about `location` and `description`. JSON Schema validation messages can be complex, and editors can help you validate schema documents.
+   1. Use the [Swagger Editor](https://editor.swagger.io/) to identify validation problems in your specification. The visual nature of the Swagger Editor makes it easier to understand what needs to change.
+   1. Alternatively, you can check the log output and look for schema validation warnings. They are prefixed with messages such as `OpenAPI 2.0 schema validation error` or `OpenAPI 3.0.x schema validation error`. Each failed validation provides extra information about `location` and `description`. JSON Schema validation messages can be complex, and editors can help you validate schema documents.
 1. Review the documentation for the OpenAPI generation your framework/tech stack is using. Identify the changes needed to produce a correct OpenAPI document.
 1. After the validation issues are resolved, re-run your pipeline.
 
@@ -111,8 +118,7 @@ The API Fuzzing engine outputs an error message when it cannot establish a conne
 
 **Error message**
 
-- In [GitLab 13.11 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/323939), `Failed to start scanner session (version header not found).`
-- In GitLab 13.10 and earlier, `API Security version header not found.  Are you sure that you are connecting to the API Security server?`.
+- `Failed to start scanner session (version header not found).`
 
 **Solution**
 
@@ -186,7 +192,7 @@ To detect and correct elements that don't comply with the OpenAPI specifications
 | Editor | OpenAPI 2.0 | OpenAPI 3.0.x | OpenAPI 3.1.x |
 | -- | -- | -- | -- |
 | [Swagger Editor](https://editor.swagger.io/) | **{check-circle}** YAML, JSON | **{check-circle}** YAML, JSON | **{dotted-circle}** YAML, JSON |
-| [Stoplight Studio](https://stoplight.io/studio) | **{check-circle}** YAML, JSON | **{check-circle}** YAML, JSON | **{check-circle}** YAML, JSON |
+| [Stoplight Studio](https://stoplight.io/solutions) | **{check-circle}** YAML, JSON | **{check-circle}** YAML, JSON | **{check-circle}** YAML, JSON |
 
 If your OpenAPI document is generated manually, load your document in the editor and fix anything that is non-compliant. If your document is generated automatically, load it in your editor to identify the issues in the schema, then go to the application and perform the corrections based on the framework you are using.
 
@@ -216,17 +222,25 @@ API Fuzzing uses the specified media types in the OpenAPI document to generate r
 
 **Error message**
 
-- In [GitLab 14.10 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/333304), `Error, no operation in the OpenApi document is consuming any supported media type. Check 'OpenAPI Specification' to check the supported media types.`
+- `Error, no operation in the OpenApi document is consuming any supported media type. Check 'OpenAPI Specification' to check the supported media types.`
 
 **Solution**
 
 1. Review the supported media types in the [OpenAPI Specification](configuration/enabling_the_analyzer.md#openapi-specification) section.
 1. Edit your OpenAPI document, allowing at least a given operation to accept any of the supported media types. Alternatively, a supported media type could be set in the OpenAPI document level and get applied to all operations. This step may require changes in your application to ensure the supported media type is accepted by the application.
 
-## ``Error, error occurred trying to download `<URL>`: There was an error when retrieving content from Uri:' <URL>'. Error:The SSL connection could not be established, see inner exception.``
+## Error: `The SSL connection could not be established, see inner exception.`
 
 API fuzzing is compatible with a broad range of TLS configurations, including outdated protocols and ciphers.
-Despite broad support, you might encounter connection errors. This error occurs because API fuzzing could not establish a secure connection with the server at the given URL.
+Despite broad support, you might encounter connection errors, like this:
+
+```plaintext
+Error, error occurred trying to download `<URL>`:
+There was an error when retrieving content from Uri:' <URL>'.
+Error:The SSL connection could not be established, see inner exception.
+```
+
+This error occurs because API fuzzing could not establish a secure connection with the server at the given URL.
 
 To resolve the issue:
 
@@ -327,3 +341,133 @@ The following example uses the [statically defined credentials](../../../ci/dock
    app@sha256:2b69fc7c3627dbd0ebaa17674c264fcd2f2ba21ed9552a472acf8b065d39039c ...
    Waiting for services to be up and running (timeout 30 seconds)...
    ```
+
+## `sudo: The "no new privileges" flag is set, which prevents sudo from running as root.`
+
+Starting with v5 of the analyzer, a non-root user is used by default. This requires the use of `sudo` when performing privileged operations.
+
+This error occurs with a specific container daemon setup that prevents running containers from obtaining new permissions. In most settings, this is not the default configuration, it's something specifically configured, often as part of a security hardening guide.
+
+**Error message**
+
+This issue can be identified by the error message generated when a `before_script` or `FUZZAPI_PRE_SCRIPT` is executed:
+
+```shell
+$ sudo apk add nodejs
+
+sudo: The "no new privileges" flag is set, which prevents sudo from running as root.
+
+sudo: If sudo is running in a container, you may need to adjust the container configuration to disable the flag.
+```
+
+**Solution**
+
+This issue can be worked around in the following ways:
+
+- Run the container as the `root` user. It's recommended to test this configuration as it may not work in all cases. This can be done by modifying the CICD configuration and checking the job output to make sure that `whoami` returns `root` and not `gitlab`. If `gitlab` is displayed, use another workaround. Once tested the `before_script` can be removed.
+
+   ```yaml
+   apifuzzer_fuzz:
+     image:
+       name: $SECURE_ANALYZERS_PREFIX/$FUZZAPI_IMAGE:$FUZZAPI_VERSION$FUZZAPI_IMAGE_SUFFIX
+       docker:
+         user: root
+    before_script:
+      - whoami
+   ```
+
+   _Example job console output:_
+
+   ```log
+   Executing "step_script" stage of the job script
+   Using docker image sha256:8b95f188b37d6b342dc740f68557771bb214fe520a5dc78a88c7a9cc6a0f9901 for registry.gitlab.com/security-products/api-security:5 with digest registry.gitlab.com/security-products/api-security@sha256:092909baa2b41db8a7e3584f91b982174772abdfe8ceafc97cf567c3de3179d1 ...
+   $ whoami
+   root
+   $ /peach/analyzer-api-fuzzing
+   17:17:14 [INF] API Security: Gitlab API Security
+   17:17:14 [INF] API Security: -------------------
+   17:17:14 [INF] API Security:
+   17:17:14 [INF] API Security: version: 5.7.0
+   ```
+
+- Wrap the container and add any dependencies at build time. This option has the benefit of running with lower privileges than root which may be a requirement for some customers.
+   1. Create a new `Dockerfile` that wraps the existing image.
+
+      ```yaml
+      ARG SECURE_ANALYZERS_PREFIX
+      ARG FUZZAPI_IMAGE
+      ARG FUZZAPI_VERSION
+      ARG FUZZAPI_IMAGE_SUFFIX
+      FROM $SECURE_ANALYZERS_PREFIX/$FUZZAPI_IMAGE:$FUZZAPI_VERSION$FUZZAPI_IMAGE_SUFFIX
+      USER root
+
+      RUN pip install ...
+      RUN apk add ...
+
+      USER gitlab
+      ```
+
+   1. Build the new image and push it to your local container registry before the API Fuzzing job starts. The image should be removed after the `` job has been completed.
+
+      ```shell
+      TARGET_NAME=apifuzz-$CI_COMMIT_SHA
+      docker build -t $TARGET_IMAGE \
+        --build-arg "SECURE_ANALYZERS_PREFIX=$SECURE_ANALYZERS_PREFIX" \
+        --build-arg "FUZZAPI_IMAGE=$APISEC_IMAGE" \
+        --build-arg "FUZZAPI_VERSION=$APISEC_VERSION" \
+        --build-arg "FUZZAPI_IMAGE_SUFFIX=$APISEC_IMAGE_SUFFIX" \
+        .
+      docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+      docker push $TARGET_IMAGE
+      ```
+
+   1. Extend the `apifuzzer_fuzz` job and use the new image name.
+
+      ```yaml
+      apifuzzer_fuzz:
+        image: apifuzz-$CI_COMMIT_SHA
+      ```
+
+   1. Remove the temporary container from the registry. See [this documentation page for information on removing container images.](../../packages/container_registry/delete_container_registry_images.md)
+- Change the GitLab Runner configuration, disabling the no-new-privileges flag. This could have security implications and should be discussed with your operations and security teams.
+
+## `Index was outside the bounds of the array.    at Peach.Web.Runner.Services.RunnerOptions.GetHeaders()`
+
+This error message indicates that the API Fuzzing analyzer is unable to parse the value of the `FUZZAPI_REQUEST_HEADERS` or `FUZZAPI_REQUEST_HEADERS_BASE64` configuration variable.
+
+**Error message**
+
+This issue can be identified by two error messages. The first error message is seen in the job console output and the second in the `gl-api-security-scanner.log` file.
+
+_Error message from job console:_
+
+```log
+05:48:38 [ERR] API Security: Testing failed: An unexpected exception occurred: Index was outside the bounds of the array.
+```
+
+_Error message from `gl_api_security-scanner.log`:_
+
+```log
+08:45:43.616 [ERR] <Peach.Web.Core.Services.WebRunnerMachine> Unexpected exception in WebRunnerMachine::Run()
+System.IndexOutOfRangeException: Index was outside the bounds of the array.
+   at Peach.Web.Runner.Services.RunnerOptions.GetHeaders() in /builds/gitlab-org/security-products/analyzers/api-fuzzing-src/web/PeachWeb/Runner/Services/[RunnerOptions.cs:line 362
+   at Peach.Web.Runner.Services.RunnerService.Start(Job job, IRunnerOptions options) in /builds/gitlab-org/security-products/analyzers/api-fuzzing-src/web/PeachWeb/Runner/Services/RunnerService.cs:line 67
+   at Peach.Web.Core.Services.WebRunnerMachine.Run(IRunnerOptions runnerOptions, CancellationToken token) in /builds/gitlab-org/security-products/analyzers/api-fuzzing-src/web/PeachWeb/Core/Services/WebRunnerMachine.cs:line 321
+08:45:43.634 [WRN] <Peach.Web.Core.Services.WebRunnerMachine> * Session failed: An unexpected exception occurred: Index was outside the bounds of the array.
+08:45:43.677 [INF] <Peach.Web.Core.Services.WebRunnerMachine> Finished testing. Performed a total of 0 requests.
+```
+
+**Solution**
+
+This issue occurs due to a malformed `FUZZAPI_REQUEST_HEADERS` or `FUZZAPI_REQUEST_HEADERS_BASE64` variable. The expected format is one or more headers of `Header: value` construction separated by a comma. The solution is to correct the syntax to match what is expected.
+
+_Valid examples:_
+
+- `Authorization: Bearer XYZ`
+- `X-Custom: Value,Authorization: Bearer XYZ`
+
+_Invalid examples:_
+
+- `Header:,value`
+- `HeaderA: value,HeaderB:,HeaderC: value`
+- `Header`

@@ -43,6 +43,7 @@ type routeOptions struct {
 	tracing         bool
 	isGeoProxyRoute bool
 	matchers        []matcherFunc
+	allowOrigins    *regexp.Regexp
 }
 
 const (
@@ -92,11 +93,17 @@ func withGeoProxy() func(*routeOptions) {
 	}
 }
 
+func withAllowOrigins(pattern string) func(*routeOptions) {
+	return func(options *routeOptions) {
+		options.allowOrigins = compileRegexp(pattern)
+	}
+}
+
 func (u *upstream) observabilityMiddlewares(handler http.Handler, method string, regexpStr string, opts *routeOptions) http.Handler {
 	handler = log.AccessLogger(
 		handler,
 		log.WithAccessLogger(u.accessLogger),
-		log.WithExtraFields(func(r *http.Request) log.Fields {
+		log.WithExtraFields(func(_ *http.Request) log.Fields {
 			return log.Fields{
 				"route": regexpStr, // This field matches the `route` label in Prometheus metrics
 			}
@@ -127,6 +134,9 @@ func (u *upstream) route(method, regexpStr string, handler http.Handler, opts ..
 	if options.tracing {
 		// Add distributed tracing
 		handler = tracing.Handler(handler, tracing.WithRouteIdentifier(regexpStr))
+	}
+	if options.allowOrigins != nil {
+		handler = corsMiddleware(handler, options.allowOrigins)
 	}
 
 	return routeEntry{
@@ -242,6 +252,7 @@ func configureRoutes(u *upstream) {
 		u.route("POST", gitProjectPattern+`git-upload-pack\z`, contentEncodingHandler(git.UploadPack(api)), withMatcher(isContentType("application/x-git-upload-pack-request"))),
 		u.route("POST", gitProjectPattern+`git-receive-pack\z`, contentEncodingHandler(git.ReceivePack(api)), withMatcher(isContentType("application/x-git-receive-pack-request"))),
 		u.route("PUT", gitProjectPattern+`gitlab-lfs/objects/([0-9a-f]{64})/([0-9]+)\z`, requestBodyUploader, withMatcher(isContentType("application/octet-stream"))),
+		u.route("POST", gitProjectPattern+`ssh-upload-pack\z`, git.SSHUploadPack(api)),
 
 		// CI Artifacts
 		u.route("POST", apiPattern+`v4/jobs/[0-9]+/artifacts\z`, contentEncodingHandler(upload.Artifacts(api, signingProxy, preparer, &u.Config))),
@@ -313,6 +324,7 @@ func configureRoutes(u *upstream) {
 		u.route("PUT", apiTopicPattern, tempfileMultipartProxy),
 		u.route("POST", apiPattern+`v4/groups/import`, mimeMultipartUploader),
 		u.route("POST", apiPattern+`v4/projects/import`, mimeMultipartUploader),
+		u.route("POST", apiPattern+`v4/projects/import-relation`, mimeMultipartUploader),
 
 		// Project Import via UI upload acceleration
 		u.route("POST", importPattern+`gitlab_project`, mimeMultipartUploader),
@@ -343,6 +355,7 @@ func configureRoutes(u *upstream) {
 		u.route("PUT", apiPattern+`v4/groups/[^/]+\z`, tempfileMultipartProxy),
 
 		// User Avatar
+		u.route("PUT", apiPattern+`v4/user/avatar\z`, tempfileMultipartProxy),
 		u.route("POST", apiPattern+`v4/users\z`, tempfileMultipartProxy),
 		u.route("PUT", apiPattern+`v4/users/[0-9]+\z`, tempfileMultipartProxy),
 
@@ -358,6 +371,7 @@ func configureRoutes(u *upstream) {
 				assetsNotFoundHandler,
 			),
 			withoutTracing(), // Tracing on assets is very noisy
+			withAllowOrigins("^https://.*\\.web-ide\\.gitlab-static\\.net$"),
 		),
 
 		// Uploads
@@ -382,8 +396,8 @@ func configureRoutes(u *upstream) {
 	u.geoLocalRoutes = []routeEntry{
 		// Git and LFS requests
 		//
-		// Note that Geo already redirects pushes, with special terminal output.
-		// Note that excessive secondary lag can cause unexpected behavior since
+		// Geo already redirects pushes, with special terminal output.
+		// Excessive secondary lag can cause unexpected behavior since
 		// pulls are performed against a different source of truth. Ideally, we'd
 		// proxy/redirect pulls as well, when the secondary is not up-to-date.
 		//
@@ -423,6 +437,7 @@ func configureRoutes(u *upstream) {
 				assetsNotFoundHandler,
 			),
 			withoutTracing(), // Tracing on assets is very noisy
+			withAllowOrigins("^https://.*\\.web-ide\\.gitlab-static\\.net$"),
 		),
 
 		// Don't define a catch-all route. If a route does not match, then we know
@@ -435,6 +450,23 @@ func denyWebsocket(next http.Handler) http.Handler {
 		if websocket.IsWebSocketUpgrade(r) {
 			httpError(w, r, "websocket upgrade not allowed", http.StatusBadRequest)
 			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func corsMiddleware(next http.Handler, allowOriginRegex *regexp.Regexp) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestOrigin := r.Header.Get("Origin")
+		hasOriginMatch := allowOriginRegex.MatchString(requestOrigin)
+		hasMethodMatch := r.Method == "GET" || r.Method == "HEAD" || r.Method == "OPTIONS"
+
+		if hasOriginMatch && hasMethodMatch {
+			w.Header().Set("Access-Control-Allow-Origin", requestOrigin)
+			// why: `Vary: Origin` is needed because allowable origin is variable
+			//      https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#the_http_response_headers
+			w.Header().Set("Vary", "Origin")
 		}
 
 		next.ServeHTTP(w, r)

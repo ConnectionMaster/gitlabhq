@@ -10,11 +10,13 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
   let_it_be(:project_c) { create(:project, name: 'C', description: 'B', star_count: 30) }
 
   let_it_be_with_reload(:resource_a) do
-    create(:ci_catalog_resource, project: project_a, latest_released_at: '2023-02-01T00:00:00Z')
+    create(:ci_catalog_resource, project: project_a, latest_released_at: '2023-02-01T00:00:00Z',
+      last_30_day_usage_count: 150)
   end
 
   let_it_be(:resource_b) do
-    create(:ci_catalog_resource, project: project_b, latest_released_at: '2023-01-01T00:00:00Z')
+    create(:ci_catalog_resource, project: project_b, latest_released_at: '2023-01-01T00:00:00Z',
+      last_30_day_usage_count: 100)
   end
 
   let_it_be(:resource_c) { create(:ci_catalog_resource, project: project_c) }
@@ -47,9 +49,9 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
 
   it { is_expected.to define_enum_for(:state).with_values({ unpublished: 0, published: 1 }) }
 
-  it do
+  it 'defines verification levels matching the source of truth in VerifiedNamespace' do
     is_expected.to define_enum_for(:verification_level)
-      .with_values({ unverified: 0, gitlab: 1 })
+      .with_values(::Ci::Catalog::VerifiedNamespace::VERIFICATION_LEVELS)
   end
 
   describe '.for_projects' do
@@ -141,6 +143,22 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
       ordered_resources = described_class.order_by_star_count(:asc)
 
       expect(ordered_resources).to eq([resource_b, resource_a, resource_c])
+    end
+  end
+
+  describe 'order_by_last_30_day_usage_count_desc' do
+    it 'returns catalog resources sorted by last 30-day usage count in descending order' do
+      ordered_resources = described_class.order_by_last_30_day_usage_count_desc
+
+      expect(ordered_resources).to eq([resource_a, resource_b, resource_c])
+    end
+  end
+
+  describe 'order_by_last_30_day_usage_count_asc' do
+    it 'returns catalog resources sorted by last 30-day usage count in ascending order' do
+      ordered_resources = described_class.order_by_last_30_day_usage_count_asc
+
+      expect(ordered_resources).to eq([resource_c, resource_b, resource_a])
     end
   end
 
@@ -302,7 +320,7 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
       release = create(:release, :with_catalog_resource_version, project: project, tag: 'v1',
         released_at: '2023-01-01T00:00:00Z')
 
-      release.catalog_resource_version.update!(version: '1.0.0')
+      release.catalog_resource_version.update!(semver: '1.0.0')
 
       release
     end
@@ -311,7 +329,7 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
       release = create(:release, :with_catalog_resource_version, project: project, tag: 'v2',
         released_at: '2023-02-01T00:00:00Z')
 
-      release.catalog_resource_version.update!(version: '2.0.0')
+      release.catalog_resource_version.update!(semver: '2.0.0')
 
       release
     end
@@ -325,7 +343,7 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
         march_release = create(:release, :with_catalog_resource_version, project: project, tag: 'v3',
           released_at: '2023-03-01T00:00:00Z')
 
-        march_release.catalog_resource_version.update!(version: '3.0.0')
+        march_release.catalog_resource_version.update!(semver: '3.0.0')
 
         expect(resource.reload.latest_released_at).to eq(march_release.released_at)
       end
@@ -343,7 +361,7 @@ RSpec.describe Ci::Catalog::Resource, feature_category: :pipeline_composition do
       it 'updates the latest_released_at value' do
         january_release.update!(released_at: '2024-03-01T00:00:00Z')
 
-        january_release.catalog_resource_version.update!(version: '4.0.0')
+        january_release.catalog_resource_version.update!(semver: '4.0.0')
 
         expect(resource.reload.latest_released_at).to eq(january_release.released_at)
       end

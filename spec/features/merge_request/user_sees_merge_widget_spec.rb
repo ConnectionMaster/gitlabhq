@@ -331,11 +331,26 @@ RSpec.describe 'Merge request > User sees merge widget', :js, feature_category: 
       visit project_merge_request_path(project_only_mwps, merge_request_in_only_mwps_project)
     end
 
-    it 'is allowed to merge' do
-      # Wait for the `ci_status` and `merge_check` requests
-      wait_for_requests
+    context 'when using merge when pipeline succeeds' do
+      before do
+        stub_feature_flags(merge_when_checks_pass: false)
+      end
 
-      expect(page).not_to have_selector('.accept-merge-request')
+      it 'is not allowed to merge' do
+        # Wait for the `ci_status` and `merge_check` requests
+        wait_for_requests
+
+        expect(page).not_to have_selector('.accept-merge-request')
+      end
+    end
+
+    context 'when using merge when checks pass' do
+      it 'is not allowed to set auto merge' do
+        # Wait for the `ci_status` and `merge_check` requests
+        wait_for_requests
+
+        expect(page).to have_selector('.accept-merge-request')
+      end
     end
   end
 

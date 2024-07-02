@@ -28,10 +28,10 @@ customizable, with the ultimate goal of making *all* permissions customizable.
 As we've started planning this work, there are two large challenges:
 
 1. The GitLab permissions system is not a stable, backwards-compatible API.
-    But [the custom roles feature is built on top of the current permissions system](https://gitlab.com/gitlab-org/gitlab/-/issues/352891#note_993031741).
-    Which means that custom roles relies on permissions being a stable,
-    backwards-compatible API. So we must change how we approach our permissions
-    system if we plan to continue on with the current architecture.
+   But [the custom roles feature is built on top of the current permissions system](https://gitlab.com/gitlab-org/gitlab/-/issues/352891#note_993031741).
+   Which means that custom roles relies on permissions being a stable,
+   backwards-compatible API. So we must change how we approach our permissions
+   system if we plan to continue on with the current architecture.
 1. Refactoring our permissions system is difficult due to the sheer number of
    permissions (over 700), duplication of permissions checks throughout the
    codebase, and the importance of permissions for security (cost
@@ -127,7 +127,9 @@ Cons:
   think about permissions system as a whole
 - Permissions system can spiral into an unmaintainable code if we iterate on it without a strategically important vision.
 
-### Leave the current permissions system as-is and build a parallel Declarative Policy-based system alongside it to be used for custom roles
+### Leave the current permissions system as-is and build a parallel system
+
+Instead, build a parallel Declarative Policy-based system alongside it to use for custom roles.
 
 Pros:
 
@@ -144,7 +146,9 @@ Cons:
   custom roles feature) is more difficult with this approach because it requires
   retiring the legacy permissions system.
 
-### Bundle existing permissions into custom permissions; use "custom permissions" for the custom roles API
+### Bundle existing permissions into custom permissions
+
+Use "custom permissions" for the custom roles API.
 
 Pros:
 

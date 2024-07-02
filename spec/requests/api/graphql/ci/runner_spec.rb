@@ -17,15 +17,11 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
       creator: user,
       contacted_at: 2.hours.ago,
       active: true,
-      version: 'adfe156',
-      revision: 'a',
       locked: true,
-      ip_address: '127.0.0.1',
       maximum_timeout: 600,
       access_level: 0,
       tag_list: %w[tag1 tag2],
       run_untagged: true,
-      executor_type: :custom,
       maintenance_note: '**Test maintenance note**')
   end
 
@@ -35,9 +31,6 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
       creator: another_admin,
       contacted_at: 1.day.ago,
       active: false,
-      version: 'adfe157',
-      revision: 'b',
-      ip_address: '10.10.10.10',
       access_level: 1,
       run_untagged: true)
   end
@@ -48,15 +41,11 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
       description: 'Group runner 1',
       contacted_at: 2.hours.ago,
       active: true,
-      version: 'adfe156',
-      revision: 'a',
       locked: true,
-      ip_address: '127.0.0.1',
       maximum_timeout: 600,
       access_level: 0,
       tag_list: %w[tag1 tag2],
-      run_untagged: true,
-      executor_type: :shell)
+      run_untagged: true)
   end
 
   let_it_be(:project1) { create(:project) }
@@ -89,9 +78,7 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
         created_by: runner.creator ? a_graphql_entity_for(runner.creator) : nil,
         created_at: runner.created_at&.iso8601,
         contacted_at: runner.contacted_at&.iso8601,
-        version: runner.version,
         short_sha: runner.short_sha,
-        revision: runner.revision,
         locked: false,
         active: runner.active,
         paused: !runner.active,
@@ -100,12 +87,9 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
         maximum_timeout: runner.maximum_timeout,
         access_level: runner.access_level.to_s.upcase,
         run_untagged: runner.run_untagged,
-        ip_address: runner.ip_address,
         runner_type: runner.instance_type? ? 'INSTANCE_TYPE' : 'PROJECT_TYPE',
+        creation_method: runner.authenticated_user_registration_type? ? 'AUTHENTICATED_USER' : 'REGISTRATION_TOKEN',
         ephemeral_authentication_token: nil,
-        executor_name: runner.executor_type&.dasherize,
-        architecture_name: runner.architecture,
-        platform_name: runner.platform,
         maintenance_note: runner.maintenance_note,
         maintenance_note_html:
           runner.maintainer_note.present? ? a_string_including('<strong>Test maintenance note</strong>') : '',
@@ -345,9 +329,6 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
         contacted_at: 1.day.ago,
         active: false,
         locked: false,
-        version: 'adfe157',
-        revision: 'b',
-        ip_address: '10.10.10.10',
         access_level: 1,
         run_untagged: true
       )
@@ -562,8 +543,8 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
     it_behaves_like 'runner details fetch'
   end
 
-  describe 'for registration type' do
-    context 'when registered with registration token' do
+  describe 'for creation method' do
+    context 'when created with registration token' do
       let(:runner) do
         create(:ci_runner, registration_type: :registration_token)
       end
@@ -571,7 +552,7 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
       it_behaves_like 'runner details fetch'
     end
 
-    context 'when registered with authenticated user' do
+    context 'when created by authenticated user' do
       let(:runner) do
         create(:ci_runner, registration_type: :authenticated_user)
       end
@@ -708,7 +689,7 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
     end
 
     let_it_be(:never_contacted_instance_runner) do
-      create(:ci_runner, description: 'Missing runner 1', created_at: 1.month.ago, contacted_at: nil)
+      create(:ci_runner, :unregistered, :created_within_stale_deadline, description: 'Missing runner 1')
     end
 
     let(:query) do
@@ -818,8 +799,8 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
           'projectCount' => 2,
           'projects' => {
             'nodes' => [
-              a_graphql_entity_for(project1),
-              a_graphql_entity_for(project2)
+              a_graphql_entity_for(project2),
+              a_graphql_entity_for(project1)
             ]
           })
         expect(runner2_data).to match a_hash_including(
@@ -1030,7 +1011,8 @@ RSpec.describe 'Query.runner(id)', :freeze_time, feature_category: :fleet_visibi
     # - createdBy: Known N+1 issues, but only on exotic fields which we don't normally use
     # - ownerProject.pipeline: Needs arguments (iid or sha)
     # - project.productAnalyticsState: Can be requested only for 1 Project(s) at a time.
-    let(:excluded_fields) { %w[createdBy jobs pipeline productAnalyticsState] }
+    # - project.mergeTrains: Is a licensed feature
+    let(:excluded_fields) { %w[createdBy jobs pipeline productAnalyticsState mergeTrains] }
 
     it 'avoids N+1 queries', :use_sql_query_cache do
       discrete_runners_control = ActiveRecord::QueryRecorder.new(skip_cached: false) do

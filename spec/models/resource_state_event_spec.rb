@@ -9,6 +9,7 @@ RSpec.describe ResourceStateEvent, feature_category: :team_planning, type: :mode
   let(:merge_request) { create(:merge_request) }
 
   it_behaves_like 'a resource event'
+  it_behaves_like 'a resource event that responds to imported'
   it_behaves_like 'a resource event for issues'
   it_behaves_like 'a resource event for merge requests'
   it_behaves_like 'a note for work item resource event'
@@ -63,8 +64,13 @@ RSpec.describe ResourceStateEvent, feature_category: :team_planning, type: :mode
 
           let(:event) { Gitlab::UsageDataCounters::IssueActivityUniqueCounter::ISSUE_CLOSED }
           let(:project) { issue.project }
-          let(:namespace) { issue.project.namespace }
           let(:user) { issue.author }
+
+          let(:issue) do
+            # The g_project_management_issue_created event is triggered by creating the issue.
+            # So we'll trigger the irrelevant event outside of the metric time ranges
+            travel_to(2.months.ago) { create(:issue) }
+          end
         end
       end
 
@@ -89,7 +95,12 @@ RSpec.describe ResourceStateEvent, feature_category: :team_planning, type: :mode
           let(:event) { Gitlab::UsageDataCounters::IssueActivityUniqueCounter::ISSUE_REOPENED }
           let(:project) { issue.project }
           let(:user) { issue.author }
-          let(:namespace) { issue.project.namespace }
+
+          let(:issue) do
+            # The g_project_management_issue_created event is triggered by creating the issue.
+            # So we'll trigger the irrelevant event outside of the metric time ranges
+            travel_to(2.months.ago) { create(:issue) }
+          end
         end
       end
 
@@ -98,6 +109,22 @@ RSpec.describe ResourceStateEvent, feature_category: :team_planning, type: :mode
 
         create(described_class.name.underscore.to_sym, merge_request: merge_request, state: described_class.states[:closed])
       end
+    end
+  end
+
+  describe '.merged_with_no_event_source', feature_category: :code_review_workflow do
+    let!(:merged_event) { create(:resource_state_event, merge_request: merge_request, state: :merged) }
+
+    before do
+      create(:resource_state_event, merge_request: merge_request, state: :closed)
+      create(:resource_state_event, merge_request: merge_request, state: :merged, source_merge_request: merge_request)
+      create(:resource_state_event, merge_request: merge_request, state: :merged, source_commit: 'abcd1234')
+    end
+
+    subject { described_class.merged_with_no_event_source }
+
+    it 'returns expected events' do
+      expect(subject).to contain_exactly(merged_event)
     end
   end
 end

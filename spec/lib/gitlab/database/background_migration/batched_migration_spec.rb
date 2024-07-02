@@ -201,6 +201,16 @@ RSpec.describe Gitlab::Database::BackgroundMigration::BatchedMigration, type: :m
     end
   end
 
+  describe '.unfinished' do
+    let!(:migration_1) { create(:batched_background_migration, :failed) }
+    let!(:migration_2) { create(:batched_background_migration, :finished) }
+    let!(:migration_3) { create(:batched_background_migration, :finalized) }
+
+    it 'returns batched migrations that are not finished or finalized' do
+      expect(described_class.unfinished).to contain_exactly(migration_1)
+    end
+  end
+
   describe '.find_executable' do
     let(:connection) { Gitlab::Database.database_base_models[:main].connection }
     let(:migration_id) { migration.id }
@@ -809,6 +819,18 @@ RSpec.describe Gitlab::Database::BackgroundMigration::BatchedMigration, type: :m
     context 'when the migration is completed' do
       let(:migration) do
         create(:batched_background_migration, :finished, total_tuple_count: 1).tap do |record|
+          create(:batched_background_migration_job, :succeeded, batched_migration: record, batch_size: 1)
+        end
+      end
+
+      it 'returns 100' do
+        expect(subject).to be 100
+      end
+    end
+
+    context 'when the migration is finalized' do
+      let(:migration) do
+        create(:batched_background_migration, :finalized, total_tuple_count: 1).tap do |record|
           create(:batched_background_migration_job, :succeeded, batched_migration: record, batch_size: 1)
         end
       end

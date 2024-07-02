@@ -264,7 +264,7 @@ export default {
         </template>
 
         <template #actions>
-          <div class="gl-vertical-align-middle">
+          <div class="gl-align-middle">
             <gl-button
               variant="confirm"
               :loading="state.isRunningMergeRequestPipeline"
@@ -282,7 +282,7 @@ export default {
       <gl-button
         v-if="canRenderPipelineButton"
         block
-        class="gl-mt-3 gl-mb-3 gl-lg-display-none"
+        class="gl-mt-3 gl-mb-3 lg:gl-hidden"
         variant="confirm"
         data-testid="run_pipeline_button_mobile"
         :loading="state.isRunningMergeRequestPipeline"

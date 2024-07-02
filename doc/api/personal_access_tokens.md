@@ -1,6 +1,6 @@
 ---
 stage: Govern
-group: Compliance
+group: Authentication
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -14,8 +14,6 @@ You can read more about [personal access tokens](../user/profile/personal_access
 
 ## List personal access tokens
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/227264) in GitLab 13.3.
-> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/270200) from GitLab Ultimate to GitLab Free in 13.6.
 > - `created_after`, `created_before`, `last_used_after`, `last_used_before`, `revoked`, `search` and `state` filters were [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/362248) in GitLab 15.5.
 
 Get all personal access tokens the authenticated user has access to. By default, returns an unfiltered list of:
@@ -337,9 +335,6 @@ Revoke a personal access token by either:
 
 ### Using a personal access token ID
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/216004) in GitLab 13.3.
-> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/270200) from GitLab Ultimate to GitLab Free in 13.6.
-
 Revoke a personal access token using its ID.
 
 ```plaintext
@@ -397,3 +392,7 @@ DETAILS:
 
 See the [Users API documentation](users.md#create-a-personal-access-token-with-limited-scopes-for-the-currently-authenticated-user)
 for information on creating a personal access token for the currently authenticated user.
+
+## Troubleshooting access tokens
+
+To troubleshoot access token issues, see the [token troubleshooting guide](../security/token_overview.md#troubleshooting).

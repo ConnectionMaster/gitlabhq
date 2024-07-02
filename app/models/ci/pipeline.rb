@@ -19,7 +19,7 @@ module Ci
     include FastDestroyAll::Helpers
 
     include IgnorableColumns
-    ignore_column :id_convert_to_bigint, remove_with: '16.3', remove_after: '2023-08-22'
+    ignore_column :id_convert_to_bigint, remove_with: '17.2', remove_after: '2024-06-15'
 
     MAX_OPEN_MERGE_REQUESTS_REFS = 4
 
@@ -32,7 +32,8 @@ module Ci
     CANCELABLE_STATUSES = (Ci::HasStatus::CANCELABLE_STATUSES + ['manual']).freeze
     UNLOCKABLE_STATUSES = (Ci::Pipeline.completed_statuses + [:manual]).freeze
     INITIAL_PARTITION_VALUE = 100
-    NEXT_PARTITION_VALUE = 101
+    SECOND_PARTITION_VALUE = 101
+    NEXT_PARTITION_VALUE = 102
 
     paginates_per 15
 
@@ -69,7 +70,7 @@ module Ci
         end
       end
 
-    has_many :stages, -> (pipeline) { in_partition(pipeline).order(position: :asc) },
+    has_many :stages, ->(pipeline) { in_partition(pipeline).order(position: :asc) },
       partition_foreign_key: :partition_id, inverse_of: :pipeline
 
     #
@@ -79,12 +80,13 @@ module Ci
     # DEPRECATED:
     has_many :statuses, ->(pipeline) { in_partition(pipeline) }, class_name: 'CommitStatus', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :processables, ->(pipeline) { in_partition(pipeline) }, class_name: 'Ci::Processable', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
-    has_many :latest_statuses_ordered_by_stage, -> (pipeline) { latest.in_partition(pipeline).order(:stage_idx, :stage) }, class_name: 'CommitStatus', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
+    has_many :latest_statuses_ordered_by_stage, ->(pipeline) { latest.in_partition(pipeline).order(:stage_idx, :stage) }, class_name: 'CommitStatus', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :latest_statuses, ->(pipeline) { latest.in_partition(pipeline) }, class_name: 'CommitStatus', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :statuses_order_id_desc, ->(pipeline) { in_partition(pipeline).order_id_desc }, class_name: 'CommitStatus', foreign_key: :commit_id,
       inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :bridges, ->(pipeline) { in_partition(pipeline) }, class_name: 'Ci::Bridge', foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :builds, ->(pipeline) { in_partition(pipeline) }, foreign_key: :commit_id, inverse_of: :pipeline, partition_foreign_key: :partition_id
+    has_many :build_execution_configs, ->(pipeline) { in_partition(pipeline) }, class_name: 'Ci::BuildExecutionConfig', inverse_of: :pipeline, partition_foreign_key: :partition_id
     has_many :generic_commit_statuses, ->(pipeline) { in_partition(pipeline) }, foreign_key: :commit_id, inverse_of: :pipeline, class_name: 'GenericCommitStatus', partition_foreign_key: :partition_id
     #
     # NEW:
@@ -165,6 +167,7 @@ module Ci
     validates :status, presence: { unless: :importing? }
     validate :valid_commit_sha, unless: :importing?
     validates :source, exclusion: { in: %w[unknown], unless: :importing? }, on: :create
+    validates :project, presence: true, on: :create
 
     after_create :keep_around_commits, unless: :importing?
     after_commit :track_ci_pipeline_created_event, on: :create, if: :internal_pipeline?
@@ -227,7 +230,7 @@ module Ci
         transition any => :success
       end
 
-      event :canceling do
+      event :start_cancel do
         transition any - [:canceling, :canceled] => :canceling
       end
 
@@ -408,6 +411,7 @@ module Ci
 
     scope :with_unlockable_status, -> { with_status(*UNLOCKABLE_STATUSES) }
     scope :internal, -> { where(source: internal_sources) }
+    scope :no_tag, -> { where(tag: false) }
     scope :no_child, -> { where.not(source: :parent_pipeline) }
     scope :ci_sources, -> { where(source: Enums::Ci::Pipeline.ci_sources.values) }
     scope :ci_branch_sources, -> { where(source: Enums::Ci::Pipeline.ci_branch_sources.values) }
@@ -416,32 +420,32 @@ module Ci
       where(source: Enums::Ci::Pipeline.ci_and_security_orchestration_sources.values)
     end
 
-    scope :for_user, -> (user) { where(user: user) }
-    scope :for_sha, -> (sha) { where(sha: sha) }
-    scope :where_not_sha, -> (sha) { where.not(sha: sha) }
-    scope :for_source_sha, -> (source_sha) { where(source_sha: source_sha) }
-    scope :for_sha_or_source_sha, -> (sha) { for_sha(sha).or(for_source_sha(sha)) }
-    scope :for_ref, -> (ref) { where(ref: ref) }
-    scope :for_branch, -> (branch) { for_ref(branch).where(tag: false) }
-    scope :for_iid, -> (iid) { where(iid: iid) }
-    scope :for_project, -> (project_id) { where(project_id: project_id) }
-    scope :for_name, -> (name) do
+    scope :for_user, ->(user) { where(user: user) }
+    scope :for_sha, ->(sha) { where(sha: sha) }
+    scope :where_not_sha, ->(sha) { where.not(sha: sha) }
+    scope :for_source_sha, ->(source_sha) { where(source_sha: source_sha) }
+    scope :for_sha_or_source_sha, ->(sha) { for_sha(sha).or(for_source_sha(sha)) }
+    scope :for_ref, ->(ref) { where(ref: ref) }
+    scope :for_branch, ->(branch) { for_ref(branch).where(tag: false) }
+    scope :for_iid, ->(iid) { where(iid: iid) }
+    scope :for_project, ->(project_id) { where(project_id: project_id) }
+    scope :for_name, ->(name) do
       name_column = Ci::PipelineMetadata.arel_table[:name]
 
       joins(:pipeline_metadata).where(name_column.eq(name))
     end
-    scope :for_status, -> (status) { where(status: status) }
-    scope :created_after, -> (time) { where(arel_table[:created_at].gt(time)) }
-    scope :created_before_id, -> (id) { where(arel_table[:id].lt(id)) }
-    scope :before_pipeline, -> (pipeline) { created_before_id(pipeline.id).outside_pipeline_family(pipeline) }
-    scope :with_pipeline_source, -> (source) { where(source: source) }
+    scope :for_status, ->(status) { where(status: status) }
+    scope :created_after, ->(time) { where(arel_table[:created_at].gt(time)) }
+    scope :created_before_id, ->(id) { where(arel_table[:id].lt(id)) }
+    scope :before_pipeline, ->(pipeline) { created_before_id(pipeline.id).outside_pipeline_family(pipeline) }
+    scope :with_pipeline_source, ->(source) { where(source: source) }
     scope :preload_pipeline_metadata, -> { preload(:pipeline_metadata) }
 
     scope :outside_pipeline_family, ->(pipeline) do
       where.not(id: pipeline.same_family_pipeline_ids)
     end
 
-    scope :with_reports, -> (reports_scope) do
+    scope :with_reports, ->(reports_scope) do
       where_exists(Ci::Build.latest.scoped_pipeline.with_artifacts(reports_scope))
     end
 
@@ -454,7 +458,7 @@ module Ci
     # Returns the pipelines that associated with the given merge request.
     # In general, please use `Ci::PipelinesForMergeRequestFinder` instead,
     # for checking permission of the actor.
-    scope :triggered_by_merge_request, -> (merge_request) do
+    scope :triggered_by_merge_request, ->(merge_request) do
       where(
         source: :merge_request_event,
         merge_request: merge_request,
@@ -573,8 +577,12 @@ module Ci
 
     def self.current_partition_value(project = nil)
       Gitlab::SafeRequestStore.fetch(:ci_current_partition_value) do
-        if Feature.enabled?(:ci_current_partition_value_101, project)
+        if Feature.enabled?(:ci_partitioning_automation, project)
+          Ci::Partition.current&.id || NEXT_PARTITION_VALUE
+        elsif Feature.enabled?(:ci_current_partition_value_102, project)
           NEXT_PARTITION_VALUE
+        elsif Feature.enabled?(:ci_current_partition_value_101, project)
+          SECOND_PARTITION_VALUE
         else
           INITIAL_PARTITION_VALUE
         end
@@ -583,10 +591,6 @@ module Ci
 
     def self.object_hierarchy(relation, options = {})
       ::Gitlab::Ci::PipelineObjectHierarchy.new(relation, options: options)
-    end
-
-    def self.use_partition_id_filter?
-      true
     end
 
     def uses_needs?
@@ -830,8 +834,8 @@ module Ci
 
     # Like #drop!, but does not persist the pipeline nor trigger any state
     # machine callbacks.
-    def set_failed(drop_reason)
-      self.failure_reason = drop_reason.to_s
+    def set_failed(failure_reason)
+      self.failure_reason = failure_reason.to_s
       self.status = 'failed'
     end
 
@@ -883,7 +887,7 @@ module Ci
         when 'running' then run
         when 'success' then succeed
         when 'failed' then drop
-        when 'canceling' then canceling
+        when 'canceling' then start_cancel
         when 'canceled' then cancel
         when 'skipped' then skip
         when 'manual' then block
@@ -1234,7 +1238,9 @@ module Ci
     end
 
     def modified_paths_since(compare_to_sha)
-      project.repository.diff_stats(project.repository.merge_base(compare_to_sha, sha), sha).paths
+      strong_memoize_with(:modified_paths_since, compare_to_sha) do
+        project.repository.diff_stats(project.repository.merge_base(compare_to_sha, sha), sha).paths
+      end
     end
 
     def all_worktree_paths
@@ -1413,8 +1419,6 @@ module Ci
     end
 
     def cancel_async_on_job_failure
-      return unless Feature.enabled?(:auto_cancel_pipeline_on_job_failure, project)
-
       case auto_cancel_on_job_failure
       when 'none'
         # no-op

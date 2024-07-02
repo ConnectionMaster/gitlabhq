@@ -126,9 +126,6 @@ export default {
       }
       return false;
     },
-    showRemove() {
-      return this.canUpdate;
-    },
     displayLabels() {
       return this.showLabels && this.labels.length;
     },
@@ -148,7 +145,7 @@ export default {
 
 <template>
   <div
-    class="item-body work-item-link-child gl-relative gl-display-flex gl-flex-grow-1 gl-overflow-break-word gl-min-w-0 gl-rounded-base gl-p-3 gl-gap-3"
+    class="item-body work-item-link-child gl-relative gl-display-flex gl-flex-grow-1 gl-break-words gl-hyphens-auto gl-min-w-0 gl-rounded-base gl-p-3 gl-gap-3"
     data-testid="links-child"
   >
     <div ref="stateIcon" class="gl-cursor-help">
@@ -174,7 +171,7 @@ export default {
           </span>
           <gl-link
             :href="childItem.webUrl"
-            class="gl-overflow-break-word gl-font-weight-semibold"
+            class="gl-break-words gl-hyphens-auto gl-font-semibold"
             @click="$emit('click', $event)"
             @mouseover="$emit('mouseover')"
             @mouseout="$emit('mouseout')"
@@ -191,7 +188,7 @@ export default {
             :avatar-size="16"
             badge-tooltip-prop="name"
             :badge-sr-only-text="assigneesCollapsedTooltip"
-            class="gl-white-space-nowrap gl-mr-3"
+            class="gl-whitespace-nowrap gl-mr-3"
           >
             <template #avatar="{ avatar }">
               <gl-avatar-link v-gl-tooltip :href="avatar.webUrl" :title="avatar.name">
@@ -205,7 +202,6 @@ export default {
             data-testid="item-status-icon"
           >
             <gl-icon
-              class="gl-text-secondary"
               :class="statusIconClass"
               :name="statusIconName"
               :aria-label="stateTimestampTypeText"
@@ -232,7 +228,7 @@ export default {
           :background-color="label.color"
           :description="label.description"
           :scoped="showScopedLabel(label)"
-          class="gl-mt-2 gl-mr-2 gl-mb-auto gl-label-sm"
+          class="gl-mt-2 gl-mr-2 gl-mb-auto"
           tooltip-placement="top"
         />
       </div>
@@ -240,8 +236,7 @@ export default {
     <div v-if="canUpdate">
       <gl-button
         v-gl-tooltip
-        :class="{ 'gl-visibility-visible': showRemove }"
-        class="gl-visibility-hidden gl-mt-n2"
+        class="-gl-mt-2 -gl-mr-2"
         category="tertiary"
         size="small"
         icon="close"

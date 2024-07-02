@@ -189,7 +189,7 @@ export default {
         };
       },
       update(data) {
-        return data.workspace?.workItems?.nodes[0] ?? {};
+        return data.workspace?.workItem ?? {};
       },
       skip() {
         return !this.workItemIid;
@@ -343,9 +343,9 @@ export default {
             :note-url="note.url"
             :is-internal-note="note.internal"
           >
-            <span v-if="note.createdAt" class="d-none d-sm-inline">&middot;</span>
+            <span v-if="note.createdAt" class="gl-hidden sm:gl-inline">&middot;</span>
           </note-header>
-          <div class="gl-display-inline-flex">
+          <div class="gl-inline-flex">
             <note-actions
               :full-path="fullPath"
               :show-award-emoji="hasAwardEmojiPermission"

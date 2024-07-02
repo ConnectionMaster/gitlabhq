@@ -6,6 +6,8 @@
 # 3. an emoji, with the format of `:smile:`
 module WorkItems
   class Type < ApplicationRecord
+    DEFAULT_TYPES_NOT_SEEDED = Class.new(StandardError)
+
     self.table_name = 'work_item_types'
 
     include CacheMarkdownField
@@ -60,9 +62,14 @@ module WorkItems
       inverse_of: :work_item_type, class_name: 'WorkItems::WidgetDefinition'
     has_many :child_restrictions, class_name: 'WorkItems::HierarchyRestriction', foreign_key: :parent_type_id,
       inverse_of: :parent_type
+    has_many :parent_restrictions, class_name: 'WorkItems::HierarchyRestriction', foreign_key: :child_type_id,
+      inverse_of: :child_type
     has_many :allowed_child_types_by_name, -> { order_by_name_asc },
       through: :child_restrictions, class_name: 'WorkItems::Type',
       foreign_key: :child_type_id, source: :child_type
+    has_many :allowed_parent_types_by_name, -> { order_by_name_asc },
+      through: :parent_restrictions, class_name: 'WorkItems::Type',
+      foreign_key: :parent_type_id, source: :parent_type
 
     before_validation :strip_whitespace
     after_save :clear_reactive_cache!
@@ -80,7 +87,20 @@ module WorkItems
 
     def self.default_by_type(type)
       found_type = find_by(namespace_id: nil, base_type: type)
-      return found_type if found_type
+      return found_type if found_type || !WorkItems::Type.base_types.key?(type.to_s)
+
+      if Feature.enabled?(:rely_on_work_item_type_seeder, type: :beta) # rubocop:disable Gitlab/FeatureFlagWithoutActor -- Default types exist instance wide
+        error_message = <<~STRING
+          Default work item types have not been created yet. Make sure the DB has been seeded successfully.
+          See related documentation in
+          https://docs.gitlab.com/omnibus/settings/database.html#seed-the-database-fresh-installs-only
+
+          If you have additional questions, you can ask in
+          https://gitlab.com/gitlab-org/gitlab/-/issues/423483
+        STRING
+
+        raise DEFAULT_TYPES_NOT_SEEDED, error_message
+      end
 
       Gitlab::DatabaseImporters::WorkItems::BaseTypeImporter.upsert_types
       Gitlab::DatabaseImporters::WorkItems::HierarchyRestrictionsImporter.upsert_restrictions
@@ -118,13 +138,22 @@ module WorkItems
     end
 
     def calculate_reactive_cache
-      allowed_child_types_by_name
+      {
+        allowed_child_types_by_name: allowed_child_types_by_name,
+        allowed_parent_types_by_name: allowed_parent_types_by_name
+      }
     end
 
     def allowed_child_types(cache: false)
-      cached_data = cache ? with_reactive_cache { |query_data| query_data } : nil
+      cached_data = cache ? with_reactive_cache { |query_data| query_data[:allowed_child_types_by_name] } : nil
 
       cached_data || allowed_child_types_by_name
+    end
+
+    def allowed_parent_types(cache: false)
+      cached_data = cache ? with_reactive_cache { |query_data| query_data[:allowed_parent_types_by_name] } : nil
+
+      cached_data || allowed_parent_types_by_name
     end
 
     private

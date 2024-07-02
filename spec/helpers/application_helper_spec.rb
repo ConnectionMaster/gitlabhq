@@ -299,7 +299,7 @@ RSpec.describe ApplicationHelper do
     end
 
     it 'changes if promo_host changes' do
-      allow(helper).to receive(:promo_host).and_return('foobar.baz')
+      allow(described_class).to receive(:promo_host).and_return('foobar.baz')
 
       is_expected.to eq('https://foobar.baz')
     end
@@ -559,6 +559,7 @@ RSpec.describe ApplicationHelper do
             group_full_path: nil,
             project_id: project.id,
             project: project.path,
+            project_full_path: project.full_path,
             namespace_id: project.namespace.id
           }
         )
@@ -578,6 +579,7 @@ RSpec.describe ApplicationHelper do
               group_full_path: project.group.full_path,
               project_id: project.id,
               project: project.path,
+              project_full_path: project.full_path,
               namespace_id: project.namespace.id
             }
           )
@@ -605,6 +607,7 @@ RSpec.describe ApplicationHelper do
                 group_full_path: nil,
                 project_id: issue.project.id,
                 project: issue.project.path,
+                project_full_path: project.full_path,
                 namespace_id: issue.project.namespace.id
               }
             )
@@ -868,7 +871,7 @@ RSpec.describe ApplicationHelper do
 
   describe 'stylesheet_link_tag_defer' do
     it 'uses media="all" in stylesheet' do
-      expect(helper.stylesheet_link_tag_defer('test')).to eq( '<link rel="stylesheet" href="/stylesheets/test.css" media="all" />')
+      expect(helper.stylesheet_link_tag_defer('test')).to eq('<link rel="stylesheet" href="/stylesheets/test.css" media="all" />')
     end
   end
 

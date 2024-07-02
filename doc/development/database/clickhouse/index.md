@@ -61,7 +61,7 @@ Suggested reads:
 
 Sharding is a feature that allows splitting the data into multiple ClickHouse nodes to increase throughput and decrease latency. The sharding feature uses a distributed engine that is backed by local tables. The distributed engine is a "virtual" table that does not store any data. It is used as an interface to insert and query data.
 
-See [the ClickHouse documentation](https://clickhouse.com/docs/en/engines/table-engines/special/distributed) and this section on [replication and sharding](https://clickhouse.com/docs/en/manage/replication-and-sharding/). ClickHouse can use either Zookeeper or its own compatible API via a component called [ClickHouse Keeper](https://clickhouse.com/docs/en/operations/clickhouse-keeper) to maintain consensus.
+See [the ClickHouse documentation](https://clickhouse.com/docs/en/engines/table-engines/special/distributed) and this section on [replication and sharding](https://clickhouse.com/docs/en/architecture/replication#replication-and-sharding-configuration). ClickHouse can use either Zookeeper or its own compatible API via a component called [ClickHouse Keeper](https://clickhouse.com/docs/en/operations/clickhouse-keeper) to maintain consensus.
 
 After nodes are set up, they can become invisible from the Clients and both write and read queries can be issued to any node.
 
@@ -73,7 +73,6 @@ ClickHouse relies on a distributed coordination component (either Zookeeper or C
 ## Materialized views
 
 One of the defining features of ClickHouse is materialized views. Functionally they resemble insert triggers for ClickHouse.
-Materialized views can be used for a variety of use cases which are well [documented](https://www.polyscale.ai/blog/polyscale-metrics-materialized-views/) on the web.
 
 We recommended reading the [views](https://clickhouse.com/docs/en/sql-reference/statements/create/view#materialized-view) section from the official documentation to get a better understanding of how they work.
 
@@ -124,7 +123,7 @@ Files: `config.xml`
 | Topic | Security Requirement | Reason |
 | ----- | -------------------- | ------ |
 | `logger` | `Log` and `errorlog` **must** be defined and writable by `clickhouse`. | Make sure logs are stored. |
-| SIEM  | If hosted on GitLab.com, the ClickHouse instance or cluster **must** report [logs to our SIEM](https://internal-handbook.gitlab.io/handbook/security/infrastructure_security_logging/tooling/devo/) (internal link). | [GitLab logs critical information system activity](https://handbook.gitlab.com/handbook/security/audit-logging-policy/). |
+| SIEM  | If hosted on GitLab.com, the ClickHouse instance or cluster **must** report [logs to our SIEM](https://internal.gitlab.com/handbook/security/security_operations/security_logging/tooling/devo/) (internal link). | [GitLab logs critical information system activity](https://handbook.gitlab.com/handbook/security/audit-logging-policy/). |
 | Log sensitive data | Query masking rules **must** be used if sensitive data can be logged. See [example masking rules](#example-masking-rules). | [Column level encryption](https://clickhouse.com/docs/en/sql-reference/functions/encryption-functions) can be used and leak sensitive data (keys) in logs. |
 
 #### Example masking rules

@@ -41,7 +41,7 @@ if this is enough to support backports to the last 3 minor GitLab releases.
 For example, if we want to drop support for `go 1.11` in GitLab `12.10`, we need
 to verify which Go versions we are using in `12.9`, `12.8`, and `12.7`. We do not
 consider the active milestone, `12.10`, because a backport for `12.7` is required
-in case of a critical security release.
+in case of a critical patch release.
 
 - If both [Omnibus GitLab and Cloud-Native GitLab (CNG)](#updating-go-version) were using Go `1.12` in GitLab `12.7` and later,
   then we can safely drop support for `1.11`.
@@ -81,7 +81,7 @@ if you need help finding the correct person or labels:
        [the product page](https://handbook.gitlab.com/handbook/product/categories/) or the
        [feature page](https://handbook.gitlab.com/handbook/product/categories/features/).
      - If you still can't find the engineering manager, use
-       [Git blame](/ee/user/project/repository/git_blame.md) to identify a maintainer
+       [Git blame](/ee/user/project/repository/files/git_blame.md) to identify a maintainer
        involved in the project.
 
 1. Create an upgrade issue for each dependency in the
@@ -155,6 +155,7 @@ if you need help finding the correct person or labels:
 | GitLab Compose Kit            | [Issuer Tracker](https://gitlab.com/gitlab-org/gitlab-compose-kit/-/issues) |
 | GitLab container registry     | [Issue Tracker](https://gitlab.com/gitlab-org/container-registry) |
 | GitLab Elasticsearch Indexer  | [Issue Tracker](https://gitlab.com/gitlab-org/gitlab-elasticsearch-indexer/-/issues) |
+| GitLab Zoekt Indexer          | [Issue Tracker](https://gitlab.com/gitlab-org/gitlab-zoekt-indexer/-/issues) |
 | GitLab agent server for Kubernetes (KAS) | [Issue Tracker](https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/issues) |
 | GitLab Pages                  | [Issue Tracker](https://gitlab.com/gitlab-org/gitlab-pages/-/issues) |
 | GitLab Quality Images         | [Issue Tracker](https://gitlab.com/gitlab-org/gitlab-build-images/-/issues) |

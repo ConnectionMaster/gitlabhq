@@ -19,14 +19,14 @@ for tags, but the workflow prevents tag pipelines, the job never runs.
 
 Some example `if` clauses for `workflow: rules`:
 
-| Example rules                                        | Details |
-|------------------------------------------------------|---------|
-| `if: '$CI_PIPELINE_SOURCE == "merge_request_event"'` | Control when merge request pipelines run. |
+| Example rules                                        | Details                                                   |
+|------------------------------------------------------|-----------------------------------------------------------|
+| `if: '$CI_PIPELINE_SOURCE == "merge_request_event"'` | Control when merge request pipelines run.                 |
 | `if: '$CI_PIPELINE_SOURCE == "push"'`                | Control when both branch pipelines and tag pipelines run. |
-| `if: $CI_COMMIT_TAG`                                 | Control when tag pipelines run. |
-| `if: $CI_COMMIT_BRANCH`                              | Control when branch pipelines run. |
+| `if: $CI_COMMIT_TAG`                                 | Control when tag pipelines run.                           |
+| `if: $CI_COMMIT_BRANCH`                              | Control when branch pipelines run.                        |
 
-See the [common `if` clauses for `rules`](../jobs/job_control.md#common-if-clauses-for-rules) for more examples.
+See the [common `if` clauses for `rules`](../jobs/job_rules.md#common-if-clauses-with-predefined-variables) for more examples.
 
 ## `workflow: rules` examples
 
@@ -70,7 +70,7 @@ request pipelines.
 To make the pipeline switch from branch pipelines to merge request pipelines after
 a merge request is created, add a `workflow: rules` section to your `.gitlab-ci.yml` file.
 
-If you use both pipeline types at the same time, [duplicate pipelines](../jobs/job_control.md#avoid-duplicate-pipelines)
+If you use both pipeline types at the same time, [duplicate pipelines](../jobs/job_rules.md#avoid-duplicate-pipelines)
 might run at the same time. To prevent duplicate pipelines, use the
 [`CI_OPEN_MERGE_REQUESTS` variable](../variables/predefined_variables.md).
 
@@ -136,7 +136,14 @@ workflow:
 
 This example assumes that your long-lived branches are [protected](../../user/project/protected_branches.md).
 
-## `workflow:rules` templates
+<!--- start_remove The following content will be removed on remove_date: '2025-05-15' -->
+
+## `workflow:rules` templates (Deprecated)
+
+WARNING:
+The `workflow:rules` templates were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/456394)
+in GitLab 17.0 and are planned for removal in 18.0. This change is a breaking change.
+To configure `workflow:rules` in your pipeline, add the keyword explicitly. See the examples above for options.
 
 GitLab provides templates that set up `workflow: rules`
 for common scenarios. These templates help prevent duplicate pipelines.
@@ -170,13 +177,15 @@ include:
   - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
 ```
 
+<!--- end_remove -->
+
 ## Troubleshooting
 
 ### Merge request stuck with `Checking pipeline status.` message
 
 If a merge request displays `Checking pipeline status.`, but the message never goes
 away (the "spinner" never stops spinning), it might be due to `workflow:rules`.
-This issue can happen if a project has [**Pipelines must succeed**](../../user/project/merge_requests/merge_when_pipeline_succeeds.md#require-a-successful-pipeline-for-merge)
+This issue can happen if a project has [**Pipelines must succeed**](../../user/project/merge_requests/auto_merge.md#require-a-successful-pipeline-for-merge)
 enabled, but the `workflow:rules` prevent a pipeline from running for the merge request.
 
 For example, with this workflow, merge requests cannot be merged, because no

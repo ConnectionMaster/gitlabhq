@@ -3,6 +3,8 @@
 require 'uri'
 
 module ApplicationHelper
+  include ViteHelper
+
   # See https://docs.gitlab.com/ee/development/ee_features.html#code-in-appviews
   # rubocop: disable CodeReuse/ActiveRecord
   # We allow partial to be nil so that collection views can be passed in
@@ -145,6 +147,7 @@ module ApplicationHelper
     {
       project_id: @project.id,
       project: @project.path,
+      project_full_path: @project.full_path,
       group: @project.group&.path,
       group_full_path: @project.group&.full_path,
       namespace_id: @project.namespace&.id
@@ -206,11 +209,11 @@ module ApplicationHelper
   def edited_time_ago_with_tooltip(editable_object, placement: 'top', html_class: 'time_ago', exclude_author: false)
     return unless editable_object.edited?
 
-    content_tag :small, class: 'edited-text' do
+    content_tag :div, class: 'edited-text gl-mt-4 gl-text-gray-500 gl-font-sm' do
       timeago = time_ago_with_tooltip(editable_object.last_edited_at, placement: placement, html_class: html_class)
 
       if !exclude_author && editable_object.last_edited_by
-        author_link = link_to_member(editable_object.project, editable_object.last_edited_by, avatar: false, extra_class: 'gl-hover-text-decoration-underline', author_class: nil)
+        author_link = link_to_member(editable_object.project, editable_object.last_edited_by, avatar: false, extra_class: 'gl-hover-text-decoration-underline gl-text-gray-700', author_class: nil)
         output = safe_format(_("Edited %{timeago} by %{author}"), timeago: timeago, author: author_link)
       else
         output = safe_format(_("Edited %{timeago}"), timeago: timeago)
@@ -240,8 +243,12 @@ module ApplicationHelper
     ApplicationHelper.community_forum
   end
 
-  def promo_url
+  def self.promo_url
     "https://#{promo_host}"
+  end
+
+  def promo_url
+    ApplicationHelper.promo_url
   end
 
   def support_url
@@ -286,7 +293,7 @@ module ApplicationHelper
   end
 
   def stylesheet_link_tag_defer(path)
-    stylesheet_link_tag(path, media: "all", crossorigin: ActionController::Base.asset_host ? 'anonymous' : nil)
+    universal_stylesheet_link_tag(path, media: "all", crossorigin: ActionController::Base.asset_host ? 'anonymous' : nil)
   end
 
   def sign_in_with_redirect?
@@ -301,7 +308,7 @@ module ApplicationHelper
     if admin
       admin_user_key_path(@user, key)
     else
-      profile_key_path(key)
+      user_settings_ssh_key_path(key)
     end
   end
 
@@ -421,7 +428,7 @@ module ApplicationHelper
       if defer
         stylesheet_link_tag_defer path
       else
-        stylesheet_link_tag path
+        universal_stylesheet_link_tag path
       end
     end
   end

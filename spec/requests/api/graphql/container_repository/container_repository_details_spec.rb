@@ -11,17 +11,35 @@ RSpec.describe 'container repository details', feature_category: :container_regi
   let_it_be_with_reload(:project) { create(:project) }
   let_it_be_with_reload(:container_repository) { create(:container_repository, project: project) }
 
-  let(:excluded) { %w[pipeline size agentConfigurations iterations iterationCadences productAnalyticsState] }
+  let(:variables) do
+    { id: container_repository_global_id }
+  end
+
   let(:query) do
-    graphql_query_for(
-      'containerRepository',
-      { id: container_repository_global_id },
-      all_graphql_fields_for('ContainerRepositoryDetails', excluded: excluded, max_depth: 4)
-    )
+    <<~GQL
+      query($id: ContainerRepositoryID!) {
+        containerRepository(id: $id) {
+          #{all_graphql_fields_for('ContainerRepositoryDetails', max_depth: 1)}
+          tags {
+            nodes {
+              #{all_graphql_fields_for('ContainerRepositoryTag', max_depth: 1)}
+              userPermissions {
+                destroyContainerRepositoryTag
+              }
+            }
+          }
+          userPermissions {
+            destroyContainerRepository
+          }
+          project {
+            id
+          }
+        }
+      }
+    GQL
   end
 
   let(:user) { project.first_owner }
-  let(:variables) { {} }
   let(:tags) { %w[latest tag1 tag2 tag3 tag4 tag5] }
   let(:container_repository_global_id) { container_repository.to_global_id.to_s }
   let(:container_repository_details_response) { graphql_data.dig('containerRepository') }
@@ -55,7 +73,9 @@ RSpec.describe 'container repository details', feature_category: :container_regi
         <<~GQL
           query($id: ContainerRepositoryID!, $n: ContainerRepositoryTagSort) {
             containerRepository(id: $id) {
-              canDelete
+              userPermissions {
+                destroyContainerRepository
+              }
               tags(sort: $n) {
                 edges {
                   node {
@@ -68,7 +88,7 @@ RSpec.describe 'container repository details', feature_category: :container_regi
         GQL
       end
 
-      where(:project_visibility, :role, :access_granted, :can_delete) do
+      where(:project_visibility, :role, :access_granted, :destroy_container_repository) do
         :private | :maintainer | true  | true
         :private | :developer  | true  | true
         :private | :reporter   | true  | false
@@ -92,7 +112,7 @@ RSpec.describe 'container repository details', feature_category: :container_regi
 
           if access_granted
             expect(tags_response.size).to eq(repository_tags.size)
-            expect(container_repository_details_response.dig('canDelete')).to eq(can_delete)
+            expect(container_repository_details_response.dig('userPermissions', 'destroyContainerRepository')).to eq(destroy_container_repository)
           else
             expect(container_repository_details_response).to eq(nil)
           end
@@ -266,7 +286,7 @@ RSpec.describe 'container repository details', feature_category: :container_regi
 
     it 'returns the size' do
       stub_container_registry_gitlab_api_support(supported: true) do |client|
-        stub_container_registry_gitlab_api_repository_details(client, path: container_repository.path, size_bytes: 12345)
+        stub_container_registry_gitlab_api_repository_details(client, path: container_repository.path, size_bytes: 12345, sizing: :self)
       end
 
       subject
@@ -291,6 +311,68 @@ RSpec.describe 'container repository details', feature_category: :container_regi
         subject
 
         expect(size_response).to eq(nil)
+      end
+    end
+  end
+
+  context 'lastPublishedAt field' do
+    let(:last_published_at_response) { container_repository_details_response.dig('lastPublishedAt') }
+    let(:variables) do
+      { id: container_repository_global_id }
+    end
+
+    let(:query) do
+      <<~GQL
+        query($id: ContainerRepositoryID!) {
+          containerRepository(id: $id) {
+            lastPublishedAt
+          }
+        }
+      GQL
+    end
+
+    context 'on Gitlab.com', :saas do
+      it 'returns the last_published_at' do
+        stub_container_registry_gitlab_api_support(supported: true) do |client|
+          stub_container_registry_gitlab_api_repository_details(
+            client,
+            path: container_repository.path,
+            sizing: :self,
+            last_published_at: '2024-04-30T06:07:36.225Z'
+          )
+        end
+
+        subject
+
+        expect(last_published_at_response).to eq('2024-04-30T06:07:36+00:00')
+      end
+
+      context 'with not supporting the gitlab api' do
+        it 'returns nil' do
+          stub_container_registry_gitlab_api_support(supported: false)
+
+          subject
+
+          expect(last_published_at_response).to eq(nil)
+        end
+      end
+
+      context 'with a network error' do
+        it 'returns an error' do
+          stub_container_registry_gitlab_api_network_error
+
+          subject
+
+          expect_graphql_errors_to_include("Can't connect to the Container Registry. If this error persists, please review the troubleshooting documentation.")
+        end
+      end
+    end
+
+    context 'when not on Gitlab.com' do
+      it 'returns nil' do
+        subject
+
+        expect(last_published_at_response).to eq(nil)
       end
     end
   end
@@ -346,13 +428,15 @@ RSpec.describe 'container repository details', feature_category: :container_regi
       }
     end
 
-    it_behaves_like 'a working graphql query' do # OK
-      before do
-        subject
-      end
+    context 'quarantine', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/439529' do
+      it_behaves_like 'a working graphql query' do # OK
+        before do
+          subject
+        end
 
-      it 'matches the JSON schema' do
-        expect(container_repository_details_response).to match_schema('graphql/container_repository_details')
+        it 'matches the JSON schema' do
+          expect(container_repository_details_response).to match_schema('graphql/container_repository_details')
+        end
       end
     end
 
@@ -475,5 +559,105 @@ RSpec.describe 'container repository details', feature_category: :container_regi
     end
 
     it_behaves_like 'handling graphql network errors with the container registry'
+  end
+
+  context 'manifest field' do
+    let(:query) do
+      <<~GQL
+        query($id: ContainerRepositoryID!, $n: String!) {
+          containerRepository(id: $id) {
+            manifest(reference: $n)
+          }
+        }
+      GQL
+    end
+
+    let(:reference) { 'latest' }
+    let(:manifest_response) { container_repository_details_response.dig('manifest') }
+    let(:variables) do
+      { id: container_repository_global_id, n: reference }
+    end
+
+    context 'without network error' do
+      before do
+        allow_next_instance_of(ContainerRegistry::Client) do |client|
+          allow(client).to receive(:repository_manifest)
+            .with(container_repository.path, reference)
+            .and_return(manifest_content)
+        end
+      end
+
+      context 'with existing manifest' do
+        let(:manifest_content) do
+          <<~JSON
+          {
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "config": {
+              "mediaType": "application/octet-stream",
+              "size": 1145,
+              "digest": "sha256:d7a513a663c1a6dcdba9ed832ca53c02ac2af0c333322cd6ca92936d1d9917ac"
+            },
+            "layers": [
+              {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 2319870,
+                "digest": "sha256:420890c9e918b6668faaedd9000e220190f2493b0693ee563ebd7b4cc754a57d"
+              }
+            ]
+          }
+          JSON
+        end
+
+        it 'fetches manifest payload' do
+          subject
+
+          expect(manifest_response).to eq(manifest_content)
+        end
+      end
+
+      context 'with nonexisting manifest' do
+        let(:reference) { 'nonexistent' }
+        let(:manifest_content) { nil }
+
+        it 'returns null' do
+          subject
+          expect(manifest_response).to be_nil
+        end
+      end
+    end
+
+    context 'with a network error' do
+      it 'returns an error' do
+        stub_container_registry_network_error(client_method: :repository_manifest)
+
+        subject
+
+        expect_graphql_errors_to_include("Can't connect to the Container Registry. If this error persists, please review the troubleshooting documentation.")
+      end
+    end
+  end
+
+  context 'migration_state field' do
+    let(:migration_state_response) { container_repository_details_response.dig('migrationState') }
+    let(:variables) do
+      { id: container_repository_global_id }
+    end
+
+    let(:query) do
+      <<~GQL
+        query($id: ContainerRepositoryID!) {
+          containerRepository(id: $id) {
+            migrationState
+          }
+        }
+      GQL
+    end
+
+    it 'returns an empty string' do
+      subject
+
+      expect(migration_state_response).to eq('')
+    end
   end
 end

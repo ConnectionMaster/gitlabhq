@@ -8,28 +8,24 @@ module Mutations
 
         include Mutations::ResolvesGroup
 
-        description <<~DESC
-          These settings can be adjusted by the group Owner or Maintainer.
-          [Issue 370471](https://gitlab.com/gitlab-org/gitlab/-/issues/370471) proposes limiting
-          this to Owners only to match the permissions level in the user interface.
-        DESC
+        description 'These settings can be adjusted only by the group Owner.'
 
         authorize :admin_dependency_proxy
 
         argument :group_path,
-                GraphQL::Types::ID,
-                required: true,
-                description: 'Group path for the group dependency proxy.'
+          GraphQL::Types::ID,
+          required: true,
+          description: 'Group path for the group dependency proxy.'
 
         argument :enabled,
-                GraphQL::Types::Boolean,
-                required: false,
-                description: copy_field_description(Types::DependencyProxy::ImageTtlGroupPolicyType, :enabled)
+          GraphQL::Types::Boolean,
+          required: false,
+          description: copy_field_description(Types::DependencyProxy::ImageTtlGroupPolicyType, :enabled)
 
         field :dependency_proxy_setting,
-              Types::DependencyProxy::GroupSettingType,
-              null: true,
-              description: 'Group dependency proxy settings after mutation.'
+          Types::DependencyProxy::GroupSettingType,
+          null: true,
+          description: 'Group dependency proxy settings after mutation.'
 
         def resolve(group_path:, **args)
           group = authorized_find!(group_path: group_path)

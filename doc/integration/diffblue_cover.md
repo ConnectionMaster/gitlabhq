@@ -42,7 +42,7 @@ To integrate Diffblue Cover into your pipeline:
 
    - Select the **Active** checkbox.
    - Enter your Diffblue Cover **License key** provided in your welcome email or by your organization.
-     If needed, select the [**Try Diffblue Cover**](https://www.diffblue.com/try-cover/gitlab) link to sign up for a free trial.
+     If needed, select the [**Try Diffblue Cover**](https://www.diffblue.com/try-cover/gitlab/) link to sign up for a free trial.
    - Enter details of your GitLab access token (**Name** and **Secret**) to allow Diffblue Cover to access your project.
      In general, use a GitLab [project access token](../user/project/settings/project_access_tokens.md) with the `Developer` role, plus `api` and `write_repository` scopes.
      If necessary you can use a [group access token](../user/group/settings/group_access_tokens.md) or a [personal access token](../user/profile/personal_access_tokens.md), again with the `Developer` role, plus `api` and `write_repository` scopes.
@@ -59,10 +59,8 @@ To integrate Diffblue Cover into your pipeline:
 Here we'll create a merge request pipeline for the project that will download the latest version of Diffblue Cover, build the project, write Java unit tests for the project, and commit the changes to the branch.
 
 1. On the left sidebar, select **Search or go to** and find your project.
-1. Select **Build > Pipeline editor**.
-1. Select **Configure pipeline** to create the `.gitlab-ci.yml` file.
-1. Select **Browse templates** and find the `Diffblue-Cover.gitlab-ci.yml` template file.
-1. Select the file and copy the contents to your project's `.gitlab-ci.yml` file.
+1. Copy the contents of the [`Diffblue-Cover.gitlab-ci.yml` template](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Diffblue-Cover.gitlab-ci.yml)
+   into your project's `.gitlab-ci.yml` file.
 
    NOTE:
    When using the Diffblue Cover pipeline template with your own project and existing pipeline file, add the Diffblue template content to your file and modify as needed.

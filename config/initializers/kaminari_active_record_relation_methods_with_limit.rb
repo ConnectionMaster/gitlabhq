@@ -10,7 +10,7 @@ module Kaminari
     # that limit the COUNT query to a configurable value to avoid query timeouts.
     # The default limit value is 10,000 records
     # rubocop: disable Gitlab/ModuleWithInstanceVariables
-    def total_count_with_limit(column_name = :all, options = {}) #:nodoc:
+    def total_count_with_limit(column_name = :all, options = {}) # :nodoc:
       return @total_count if defined?(@total_count) && @total_count
 
       # There are some cases that total count can be deduced from loaded records
@@ -18,7 +18,7 @@ module Kaminari
         # Total count has to be 0 if loaded records are 0
         return @total_count = 0 if (current_page == 1) && @records.empty?
         # Total count is calculable at the last page
-        return @total_count = (current_page - 1) * limit_value + @records.length if @records.any? && (@records.length < limit_value)
+        return @total_count = ((current_page - 1) * limit_value) + @records.length if @records.any? && (@records.length < limit_value)
       end
 
       limit = options.fetch(:limit, MAX_COUNT_LIMIT).to_i

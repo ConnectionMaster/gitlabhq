@@ -1,6 +1,7 @@
 import { GlBadge, GlLink, GlLabel, GlIcon, GlFormCheckbox, GlSprintf } from '@gitlab/ui';
 import { nextTick } from 'vue';
 import { useFakeDate } from 'helpers/fake_date';
+import { TEST_HOST } from 'helpers/test_constants';
 import { shallowMountExtended as shallowMount } from 'helpers/vue_test_utils_helper';
 import IssuableItem from '~/vue_shared/issuable/list/components/issuable_item.vue';
 import WorkItemTypeIcon from '~/work_items/components/work_item_type_icon.vue';
@@ -36,7 +37,7 @@ const createComponent = ({
     },
   });
 
-const MOCK_GITLAB_URL = 'http://0.0.0.0:3000';
+const MOCK_GITLAB_URL = TEST_HOST;
 
 describe('IssuableItem', () => {
   // The mock data is dependent that this is after our default date
@@ -51,10 +52,6 @@ describe('IssuableItem', () => {
   const findIssuableTitleLink = () => wrapper.findComponentByTestId('issuable-title-link');
   const findIssuableItemWrapper = () => wrapper.findByTestId('issuable-item-wrapper');
   const findStatusEl = () => wrapper.findByTestId('issuable-status');
-
-  beforeEach(() => {
-    gon.gitlab_url = MOCK_GITLAB_URL;
-  });
 
   describe('computed', () => {
     describe('author', () => {
@@ -227,7 +224,7 @@ describe('IssuableItem', () => {
     describe('showDiscussions', () => {
       it.each`
         userDiscussionsCount | returnValue
-        ${0}                 | ${true}
+        ${0}                 | ${false}
         ${1}                 | ${true}
         ${undefined}         | ${false}
         ${null}              | ${false}
@@ -439,7 +436,7 @@ describe('IssuableItem', () => {
         'data-username': mockAuthor.username,
         'data-name': mockAuthor.name,
         'data-avatar-url': mockAuthor.avatarUrl,
-        href: mockAuthor.webUrl,
+        href: mockAuthor.webPath,
       });
       expect(authorEl.text()).toBe(mockAuthor.name);
     });
@@ -498,7 +495,6 @@ describe('IssuableItem', () => {
         description: mockLabels[0].description,
         scoped: false,
         target: wrapper.vm.labelTarget(mockLabels[0]),
-        size: 'sm',
       });
     });
 
@@ -556,12 +552,9 @@ describe('IssuableItem', () => {
       const discussionsEl = wrapper.findByTestId('issuable-comments');
 
       expect(discussionsEl.exists()).toBe(true);
-      expect(discussionsEl.findComponent(GlLink).attributes()).toMatchObject({
-        title: 'Comments',
-        href: `${mockIssuable.webUrl}#notes`,
-      });
+
       expect(discussionsEl.findComponent(GlIcon).props('name')).toBe('comments');
-      expect(discussionsEl.findComponent(GlLink).text()).toContain('2');
+      expect(discussionsEl.text()).toBe('2');
     });
 
     it('renders issuable-assignees component', () => {

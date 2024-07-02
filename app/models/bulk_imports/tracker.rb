@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BulkImports::Tracker < ApplicationRecord
+  include AfterCommitQueue
+
   self.table_name = 'bulk_import_trackers'
 
   alias_attribute :pipeline_name, :relation
@@ -25,14 +27,14 @@ class BulkImports::Tracker < ApplicationRecord
 
   DEFAULT_PAGE_SIZE = 500
 
-  scope :next_pipeline_trackers_for, -> (entity_id) {
+  scope :next_pipeline_trackers_for, ->(entity_id) {
     entity_scope = where(bulk_import_entity_id: entity_id)
     next_stage_scope = entity_scope.with_status(:created).select('MIN(stage)')
 
     entity_scope.where(stage: next_stage_scope).with_status(:created)
   }
 
-  scope :running_trackers, -> (entity_id) {
+  scope :running_trackers, ->(entity_id) {
     where(bulk_import_entity_id: entity_id).with_status(:enqueued, :started)
   }
 
@@ -52,6 +54,7 @@ class BulkImports::Tracker < ApplicationRecord
     state :timeout, value: 4
     state :failed, value: -1
     state :skipped, value: -2
+    state :canceled, value: -3
 
     event :start do
       transition enqueued: :started
@@ -83,12 +86,22 @@ class BulkImports::Tracker < ApplicationRecord
       transition any => :failed
     end
 
+    event :cancel do
+      transition any => :canceled
+    end
+
     event :cleanup_stale do
       transition [:created, :started] => :timeout
     end
 
     after_transition any => [:finished, :failed] do |tracker|
       BulkImports::ObjectCounter.persist!(tracker)
+    end
+
+    after_transition any => [:canceled] do |tracker|
+      tracker.run_after_commit do
+        tracker.propagate_cancel
+      end
     end
   end
 
@@ -109,6 +122,10 @@ class BulkImports::Tracker < ApplicationRecord
 
   def importing_relation
     pipeline_class.relation.to_sym
+  end
+
+  def propagate_cancel
+    batches.each(&:cancel)
   end
 
   private

@@ -6,8 +6,6 @@ import {
   GlDisclosureDropdownGroup,
   GlFilteredSearchToken,
   GlTooltipDirective,
-  GlDrawer,
-  GlLink,
 } from '@gitlab/ui';
 
 import produce from 'immer';
@@ -36,9 +34,9 @@ import { fetchPolicies } from '~/lib/graphql';
 import { isPositiveInteger } from '~/lib/utils/number_utils';
 import { scrollUp } from '~/lib/utils/scroll_utils';
 import { getParameterByName, joinPaths } from '~/lib/utils/url_utility';
+import { __ } from '~/locale';
 import {
   OPERATORS_IS,
-  OPERATORS_IS_NOT,
   OPERATORS_IS_NOT_OR,
   OPERATORS_AFTER_BEFORE,
   TOKEN_TITLE_ASSIGNEE,
@@ -72,9 +70,9 @@ import IssuableList from '~/vue_shared/issuable/list/components/issuable_list_ro
 import { DEFAULT_PAGE_SIZE, issuableListTabs } from '~/vue_shared/issuable/list/constants';
 import glFeatureFlagMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import NewResourceDropdown from '~/vue_shared/components/new_resource_dropdown/new_resource_dropdown.vue';
-import WorkItemDetail from '~/work_items/components/work_item_detail.vue';
 import deleteWorkItemMutation from '~/work_items/graphql/delete_work_item.mutation.graphql';
 import { WORK_ITEM_TYPE_ENUM_OBJECTIVE } from '~/work_items/constants';
+import WorkItemDrawer from '~/work_items/components/work_item_drawer.vue';
 import GitlabExperiment from '~/experimentation/components/gitlab_experiment.vue';
 import {
   CREATED_DESC,
@@ -132,6 +130,7 @@ const CrmOrganizationToken = () =>
 const DateToken = () => import('~/vue_shared/components/filtered_search_bar/tokens/date_token.vue');
 
 export default {
+  name: 'IssuesListAppCE',
   i18n,
   issuableListTabs,
   ISSUES_VIEW_TYPE_KEY,
@@ -145,16 +144,14 @@ export default {
     EmptyStateWithoutAnyIssues,
     GlButton,
     GlButtonGroup,
-    GlDrawer,
     IssuableByEmail,
     IssuableList,
     IssueCardStatistics,
     IssueCardTimeInfo,
     NewResourceDropdown,
     LocalStorageSync,
-    WorkItemDetail,
-    GlLink,
     GitlabExperiment,
+    WorkItemDrawer,
   },
   directives: {
     GlTooltip: GlTooltipDirective,
@@ -222,12 +219,12 @@ export default {
       subscribeDropdownOptions: {
         items: [
           {
-            text: i18n.rssLabel,
+            text: __('Subscribe to RSS feed'),
             href: this.rssPath,
             extraAttrs: { 'data-testid': 'subscribe-rss' },
           },
           {
-            text: i18n.calendarLabel,
+            text: __('Subscribe to calendar'),
             href: this.calendarPath,
             extraAttrs: { 'data-testid': 'subscribe-calendar' },
           },
@@ -308,9 +305,6 @@ export default {
     typeTokenOptions() {
       return [...defaultTypeTokenOptions, ...this.eeTypeTokenOptions];
     },
-    hasOrFeature() {
-      return this.glFeatures.orIssuableQueries;
-    },
     hasSearch() {
       return Boolean(
         this.searchQuery ||
@@ -382,7 +376,7 @@ export default {
           token: UserToken,
           dataType: 'user',
           defaultUsers: [],
-          operators: this.hasOrFeature ? OPERATORS_IS_NOT_OR : OPERATORS_IS_NOT,
+          operators: OPERATORS_IS_NOT_OR,
           fullPath: this.fullPath,
           isProject: this.isProject,
           recentSuggestionsStorageKey: `${this.fullPath}-issues-recent-tokens-author`,
@@ -395,7 +389,7 @@ export default {
           icon: 'user',
           token: UserToken,
           dataType: 'user',
-          operators: this.hasOrFeature ? OPERATORS_IS_NOT_OR : OPERATORS_IS_NOT,
+          operators: OPERATORS_IS_NOT_OR,
           fullPath: this.fullPath,
           isProject: this.isProject,
           recentSuggestionsStorageKey: `${this.fullPath}-issues-recent-tokens-assignee`,
@@ -417,7 +411,7 @@ export default {
           title: TOKEN_TITLE_LABEL,
           icon: 'labels',
           token: LabelToken,
-          operators: this.hasOrFeature ? OPERATORS_IS_NOT_OR : OPERATORS_IS_NOT,
+          operators: OPERATORS_IS_NOT_OR,
           fetchLabels: this.fetchLabels,
           fetchLatestLabels: this.glFeatures.frontendCaching ? this.fetchLatestLabels : null,
           recentSuggestionsStorageKey: `${this.fullPath}-issues-recent-tokens-label`,
@@ -523,10 +517,10 @@ export default {
       return tokens;
     },
     showPaginationControls() {
-      return this.issues.length > 0 && (this.pageInfo.hasNextPage || this.pageInfo.hasPreviousPage);
+      return !this.isLoading && (this.pageInfo.hasNextPage || this.pageInfo.hasPreviousPage);
     },
-    showPageSizeControls() {
-      return this.currentTabCount > DEFAULT_PAGE_SIZE;
+    showPageSizeSelector() {
+      return this.issues.length > 0;
     },
     sortOptions() {
       return getSortOptions({
@@ -736,7 +730,7 @@ export default {
           });
         })
         .catch((error) => {
-          this.issuesError = this.$options.i18n.reorderError;
+          this.issuesError = __('An error occurred while reordering issues.');
           Sentry.captureException(error);
         });
     },
@@ -783,10 +777,9 @@ export default {
     toggleBulkEditSidebar(showBulkEditSidebar) {
       this.showBulkEditSidebar = showBulkEditSidebar;
     },
-    handlePageSizeChange(newPageSize) {
-      const pageParam = getParameterByName(PARAM_LAST_PAGE_SIZE) ? 'lastPageSize' : 'firstPageSize';
-      this.pageParams[pageParam] = newPageSize;
-      this.pageSize = newPageSize;
+    handlePageSizeChange(pageSize) {
+      this.pageSize = pageSize;
+      this.pageParams = getInitialPageParams(pageSize);
       scrollUp();
 
       this.$router.push({ query: this.urlParams });
@@ -887,7 +880,7 @@ export default {
           this.refetchIssuables();
         })
         .catch((error) => {
-          this.issuesError = this.$options.i18n.deleteError;
+          this.issuesError = __('An error occurred while deleting an issuable.');
           Sentry.captureException(error);
         });
     },
@@ -908,31 +901,17 @@ export default {
 
 <template>
   <div>
-    <gl-drawer
+    <work-item-drawer
       v-if="issuesDrawerEnabled"
       :open="isIssuableSelected"
-      header-height="calc(var(--top-bar-height) + var(--performance-bar-height))"
-      class="gl-w-full gl-sm-w-40p gl-reset-line-height"
+      :active-item="activeIssuable"
       @close="activeIssuable = null"
-    >
-      <template #title>
-        <gl-link :href="activeIssuable.webUrl" class="gl-text-black-normal">{{
-          __('Open full view')
-        }}</gl-link>
-      </template>
-      <template #default>
-        <work-item-detail
-          :key="activeIssuable.iid"
-          :work-item-iid="activeIssuable.iid"
-          class="gl-pt-0!"
-          @work-item-updated="updateIssuablesCache"
-          @work-item-emoji-updated="updateIssuableEmojis"
-          @addChild="refetchIssuables"
-          @deleteWorkItem="deleteIssuable"
-          @promotedToObjective="promoteToObjective"
-        />
-      </template>
-    </gl-drawer>
+      @work-item-updated="updateIssuablesCache"
+      @work-item-emoji-updated="updateIssuableEmojis"
+      @addChild="refetchIssuables"
+      @deleteWorkItem="deleteIssuable"
+      @promotedToObjective="promoteToObjective"
+    />
     <issuable-list
       v-if="hasAnyIssues"
       :namespace="fullPath"
@@ -954,12 +933,12 @@ export default {
       :show-bulk-edit-sidebar="showBulkEditSidebar"
       :show-pagination-controls="showPaginationControls"
       :default-page-size="pageSize"
+      show-filtered-search-friendly-text
       sync-filter-and-sort
       use-keyset-pagination
-      :show-page-size-change-controls="showPageSizeControls"
+      :show-page-size-selector="showPageSizeSelector"
       :has-next-page="pageInfo.hasNextPage"
       :has-previous-page="pageInfo.hasPreviousPage"
-      :show-filtered-search-friendly-text="hasOrFeature"
       :is-grid-view="isGridView"
       :active-issuable="activeIssuable"
       show-work-item-type-icon
@@ -989,14 +968,14 @@ export default {
                 data-testid="list-view-type"
                 @click="switchViewType($options.ISSUES_LIST_VIEW_KEY)"
               >
-                {{ $options.i18n.listLabel }}
+                {{ __('List') }}
               </gl-button>
               <gl-button
                 :variant="isGridView ? 'confirm' : 'default'"
                 data-testid="grid-view-type"
                 @click="switchViewType($options.ISSUES_GRID_VIEW_KEY)"
               >
-                {{ $options.i18n.gridLabel }}
+                {{ __('Grid') }}
               </gl-button>
             </gl-button-group>
           </local-storage-sync>
@@ -1007,7 +986,7 @@ export default {
             class="gl-flex-grow-1"
             @click="handleBulkUpdateClick"
           >
-            {{ $options.i18n.editIssues }}
+            {{ __('Bulk edit') }}
           </gl-button>
           <slot name="new-issuable-button">
             <gl-button
@@ -1016,7 +995,7 @@ export default {
               variant="confirm"
               class="gl-flex-grow-1"
             >
-              {{ $options.i18n.newIssueLabel }}
+              {{ __('New issue') }}
             </gl-button>
           </slot>
           <new-resource-dropdown
@@ -1034,6 +1013,8 @@ export default {
             :toggle-text="$options.i18n.actionsLabel"
             text-sr-only
             data-testid="issues-list-more-actions-dropdown"
+            toggle-class="!gl-m-0 gl-h-full"
+            class="!gl-w-7"
           >
             <csv-import-export-buttons
               v-if="showCsvButtons"
@@ -1067,6 +1048,10 @@ export default {
       <template #list-body>
         <slot name="list-body"></slot>
       </template>
+
+      <template #title-icons="{ issuable }">
+        <slot name="title-icons" v-bind="{ issuable, apiFilterParams }"></slot>
+      </template>
     </issuable-list>
 
     <empty-state-without-any-issues
@@ -1080,7 +1065,12 @@ export default {
 
     <gitlab-experiment v-if="showIssuableByEmail" name="issues_mrs_empty_state">
       <template #control>
-        <issuable-by-email class="gl-text-center gl-pt-5 gl-pb-7" />
+        <issuable-by-email
+          class="gl-text-center gl-pt-5 gl-pb-7"
+          data-track-action="click_email_issue_project_issues_empty_list_page"
+          data-track-label="email_issue_project_issues_empty_list"
+          data-track-experiment="issues_mrs_empty_state"
+        />
       </template>
     </gitlab-experiment>
   </div>

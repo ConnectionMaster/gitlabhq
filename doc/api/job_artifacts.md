@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Pipeline Security
+group: Pipeline Execution
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -37,7 +37,7 @@ GET /projects/:id/jobs/:job_id/artifacts
 Example request using the `PRIVATE-TOKEN` header:
 
 ```shell
-curl --location --output artifacts.zip --location --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/projects/1/jobs/42/artifacts"
+curl --location --output artifacts.zip --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/projects/1/jobs/42/artifacts"
 ```
 
 In the Premium and Ultimate tier you can authenticate with this endpoint
@@ -316,11 +316,8 @@ If the artifacts were deleted successfully, a response with status `204 No Conte
 
 ## Delete project artifacts
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/223793) in GitLab 14.7 [with a flag](../administration/feature_flags.md) named `bulk_expire_project_artifacts`. Enabled by default on GitLab self-managed. Enabled on GitLab.com.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/350609) in GitLab 14.10.
-
 Delete artifacts eligible for deletion in a project. By default, artifacts from
-[the most recent successful pipeline of each ref](../ci/jobs/job_artifacts.md#keep-artifacts-from-most-recent-successful-jobs).
+[the most recent successful pipeline of each ref](../ci/jobs/job_artifacts.md#keep-artifacts-from-most-recent-successful-jobs)
 are not deleted.
 
 Requests to this endpoint set the expiry of all artifacts that

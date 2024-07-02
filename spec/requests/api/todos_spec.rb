@@ -11,17 +11,17 @@ RSpec.describe API::Todos, feature_category: :source_code_management do
   let_it_be(:project_2) { create(:project) }
   let_it_be(:author_1) { create(:user) }
   let_it_be(:author_2) { create(:user) }
-  let_it_be(:john_doe) { create(:user, username: 'john_doe') }
+  let_it_be(:john_doe) { create(:user, username: 'john_doe', developer_of: [project_1, project_2]) }
   let_it_be(:issue) { create(:issue, project: project_1) }
   let_it_be(:work_item) { create(:work_item, :task, project: project_1) }
   let_it_be(:merge_request) { create(:merge_request, source_project: project_1) }
   let_it_be(:alert) { create(:alert_management_alert, project: project_1) }
   let_it_be(:project_request_todo) { create(:todo, author: author_1, user: john_doe, target: project_2, action: Todo::MEMBER_ACCESS_REQUESTED) }
-  let_it_be(:group_request_todo) { create(:todo, author: author_1, user: john_doe, target: group_2, action: Todo::MEMBER_ACCESS_REQUESTED) }
+  let_it_be(:group_request_todo) { create(:todo, author: author_1, user: john_doe, project: nil, group: group_2, target: group_2, action: Todo::MEMBER_ACCESS_REQUESTED) }
   let_it_be(:alert_todo) { create(:todo, project: project_1, author: john_doe, user: john_doe, target: alert) }
   let_it_be(:merge_request_todo) { create(:todo, project: project_1, author: author_2, user: john_doe, target: merge_request) }
   let_it_be(:pending_1) { create(:todo, :mentioned, project: project_1, author: author_1, user: john_doe, target: issue) }
-  let_it_be(:pending_2) { create(:todo, project: project_2, author: author_2, user: john_doe, target: issue) }
+  let_it_be(:pending_2) { create(:todo, project: project_2, author: author_2, user: john_doe, target: create(:issue, project: project_2)) }
   let_it_be(:pending_3) { create(:on_commit_todo, project: project_1, author: author_2, user: john_doe) }
   let_it_be(:pending_4) { create(:on_commit_todo, project: project_1, author: author_2, user: john_doe, commit_id: 'invalid_id') }
   let_it_be(:pending_5) { create(:todo, :mentioned, project: project_1, author: author_1, user: john_doe, target: work_item, target_type: WorkItem.name) }
@@ -29,11 +29,6 @@ RSpec.describe API::Todos, feature_category: :source_code_management do
   let_it_be(:award_emoji_1) { create(:award_emoji, awardable: merge_request, user: author_1, name: 'thumbsup') }
   let_it_be(:award_emoji_2) { create(:award_emoji, awardable: pending_1.target, user: author_1, name: 'thumbsup') }
   let_it_be(:award_emoji_3) { create(:award_emoji, awardable: pending_2.target, user: author_2, name: 'thumbsdown') }
-
-  before_all do
-    project_1.add_developer(john_doe)
-    project_2.add_developer(john_doe)
-  end
 
   describe 'GET /todos' do
     context 'when unauthenticated' do
@@ -98,7 +93,7 @@ RSpec.describe API::Todos, feature_category: :source_code_management do
         expect(json_response[2]).to include(
           'target_type' => 'Issue',
           'target' => hash_including(
-            'upvotes' => 1,
+            'upvotes' => 0,
             'downvotes' => 1,
             'merge_requests_count' => 0
           )
@@ -108,7 +103,7 @@ RSpec.describe API::Todos, feature_category: :source_code_management do
           'target_type' => 'Issue',
           'target' => hash_including(
             'upvotes' => 1,
-            'downvotes' => 1,
+            'downvotes' => 0,
             'merge_requests_count' => 0
           )
         )
@@ -259,7 +254,8 @@ RSpec.describe API::Todos, feature_category: :source_code_management do
       create(:todo, author: author_2, user: john_doe, target: project_2, action: Todo::MEMBER_ACCESS_REQUESTED)
       create(:todo, author: author_2, user: john_doe, target: group_2, action: Todo::MEMBER_ACCESS_REQUESTED)
 
-      expect { get api('/todos', john_doe) }.not_to exceed_query_limit(control1).with_threshold(5)
+      expect { get api('/todos', john_doe) }.not_to exceed_query_limit(control1).with_threshold(7)
+
       control2 = ActiveRecord::QueryRecorder.new { get api('/todos', john_doe) }
 
       create_issue_todo_for(john_doe)

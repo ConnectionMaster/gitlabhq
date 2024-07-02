@@ -10,7 +10,9 @@ RSpec.shared_context 'ProjectPolicy context' do
   let_it_be(:inherited_reporter) { create(:user) }
   let_it_be(:inherited_developer) { create(:user) }
   let_it_be(:inherited_maintainer) { create(:user) }
-  let_it_be(:owner) { create(:user) }
+  let_it_be(:organization) { create(:organization, :default) }
+  let_it_be(:owner) { create(:user, namespace: create(:user_namespace, organization: organization)) }
+  let_it_be(:organization_owner) { create(:user, :organization_owner) }
   let_it_be(:admin) { create(:admin) }
   let_it_be(:non_member) { create(:user) }
   let_it_be_with_refind(:group) { create(:group, :public) }
@@ -32,7 +34,7 @@ RSpec.shared_context 'ProjectPolicy context' do
 
   let(:base_reporter_permissions) do
     %i[
-      admin_issue admin_issue_link admin_label admin_milestone admin_issue_board_list
+      admin_issue admin_label admin_milestone admin_issue_board_list
       create_snippet create_incident daily_statistics create_merge_request_in download_code
       download_wiki_code fork_project metrics_dashboard read_build
       read_commit_status read_confidential_issues read_container_image
@@ -64,11 +66,12 @@ RSpec.shared_context 'ProjectPolicy context' do
   let(:base_maintainer_permissions) do
     %i[
       add_cluster admin_build admin_commit_status admin_container_image
-      admin_deployment admin_environment admin_note admin_pipeline
-      admin_project admin_project_member admin_snippet admin_terraform_state
-      admin_wiki create_deploy_token destroy_deploy_token
+      admin_cicd_variables admin_deployment admin_environment admin_note admin_pipeline
+      admin_project admin_project_member admin_push_rules admin_runner admin_snippet admin_terraform_state
+      admin_wiki create_deploy_token destroy_deploy_token manage_deploy_tokens
       push_to_delete_protected_branch read_deploy_token update_snippet
-      destroy_upload admin_member_access_request rename_project
+      destroy_upload admin_member_access_request rename_project manage_merge_request_settings
+      admin_integrations
     ]
   end
 
@@ -93,6 +96,12 @@ RSpec.shared_context 'ProjectPolicy context' do
     %i[
       read_project_for_iids update_max_artifacts_size read_storage_disk_path
       owner_access admin_remote_mirror read_internal_note
+    ]
+  end
+
+  let(:organization_owner_permissions) do
+    %i[
+      owner_access admin_remote_mirror
     ]
   end
 

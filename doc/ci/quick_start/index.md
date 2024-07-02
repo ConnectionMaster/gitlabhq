@@ -69,9 +69,10 @@ In this file, you define:
 - The structure and order of jobs that the runner should execute.
 - The decisions the runner should make when specific conditions are encountered.
 
-To create a `.gitlab-ci.yml` file:
+To create a `.gitlab-ci.yml` file in your project:
 
-1. On the left sidebar, select **Code > Repository**.
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Code > Repository**.
 1. Above the file list, select the branch you want to commit to.
    If you're not sure, leave `master` or `main`.
    Then select the plus icon (**{plus}**) and **New file**:
@@ -162,7 +163,20 @@ For the complete `.gitlab-ci.yml` syntax, see the full [CI/CD YAML syntax refere
 
 ## Related topics
 
-- [Migrate from CircleCI](../migration/circleci.md)
-- [Migrate from Jenkins](../migration/jenkins.md)
-- <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>&nbsp;Watch [First time GitLab & CI/CD](https://www.youtube.com/watch?v=kTNfi5z6Uvk&t=553s). This includes a quick introduction to GitLab, the first steps with CI/CD, building a Go project, running tests, using the CI/CD pipeline editor, detecting secrets and security vulnerabilities and offers more exercises for asynchronous practice.
-- <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>&nbsp;Watch [Intro to GitLab CI](https://www.youtube.com/watch?v=l5705U8s_nQ&t=358s). This workshop uses the Web IDE to quickly get going with building source code using CI/CD, and run unit tests.
+Migrate from:
+
+- [Bamboo](../migration/bamboo.md)
+- [CircleCI](../migration/circleci.md)
+- [GitHub Actions](../migration/github_actions.md)
+- [Jenkins](../migration/jenkins.md)
+- [TeamCity](../migration/teamcity.md)
+
+Watch:
+
+- <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>&nbsp;[First time GitLab & CI/CD](https://www.youtube.com/watch?v=kTNfi5z6Uvk&t=553s).
+  This includes a quick introduction to GitLab, the first steps with CI/CD, building a Go project,
+  running tests, using the CI/CD pipeline editor, detecting secrets and security vulnerabilities
+  and offers more exercises for asynchronous practice.
+- <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>&nbsp;[Intro to GitLab CI](https://www.youtube.com/watch?v=l5705U8s_nQ&t=358s).
+  This workshop uses the Web IDE to quickly get going with building source code using CI/CD,
+  and run unit tests.

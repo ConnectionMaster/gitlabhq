@@ -2,7 +2,6 @@
 
 module QA
   RSpec.describe 'Verify', :runner, product_group: :pipeline_security,
-    feature_flag: { name: 'ci_prevent_file_var_expansion_downstream_pipeline', scope: :project },
     only: { subdomain: 'staging-canary' } do
     # Runs this test only in staging-canary to debug flakiness https://gitlab.com/gitlab-org/gitlab/-/issues/424903
     # We need to collect failure data, please don't quarantine for the time being
@@ -13,19 +12,17 @@ module QA
       let!(:downstream_project) { create(:project, name: 'downstream-project') }
 
       let!(:upstream_project_runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = upstream_project
-          runner.name = executor
-          runner.tags = [executor]
-        end
+        create(:project_runner,
+          project: upstream_project,
+          name: executor,
+          tags: [executor])
       end
 
       let!(:downstream_project_runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = downstream_project
-          runner.name = "#{executor}-downstream"
-          runner.tags = [executor]
-        end
+        create(:project_runner,
+          project: downstream_project,
+          name: "#{executor}-downstream",
+          tags: [executor])
       end
 
       let(:upstream_project_files) do
@@ -102,12 +99,6 @@ module QA
             YAML
           }
         ]
-      end
-
-      around do |example|
-        Runtime::Feature.enable(:ci_prevent_file_var_expansion_downstream_pipeline, project: upstream_project)
-        example.run
-        Runtime::Feature.disable(:ci_prevent_file_var_expansion_downstream_pipeline, project: upstream_project)
       end
 
       before do

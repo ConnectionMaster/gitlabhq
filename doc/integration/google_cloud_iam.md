@@ -11,17 +11,13 @@ DETAILS:
 **Offering:** GitLab.com
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/141127) in GitLab 16.10 [with a flag](../administration/feature_flags.md) named `google_cloud_support_feature_flag`. This feature is in [Beta](../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/141127) in GitLab 16.10 [with a flag](../administration/feature_flags.md) named `google_cloud_support_feature_flag`. This feature is in [beta](../policy/experiment-beta-support.md).
+> - [Enabled on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/150472) in GitLab 17.1. Feature flag `google_cloud_support_feature_flag` removed.
 
-FLAG:
-On GitLab.com, this feature is available for a subset of users. On GitLab Dedicated, this feature is not available.
-
-This feature is in [Beta](../policy/experiment-beta-support.md). To join the
-list of users testing this feature, join the
-[waitlist](https://forms.gle/XdxdTxC7DXj4NSaz9).
+This feature is in [beta](../policy/experiment-beta-support.md).
 
 To use Google Cloud integrations like the
-[Google Artifact Registry](../user/project/integrations/google_artifact_registry.md),
+[Google Artifact Management integration](../user/project/integrations/google_artifact_management.md),
 you must create and configure a
 [workload identity pool and provider](https://cloud.google.com/iam/docs/workload-identity-federation).
 The Google Cloud integration uses the workload identity federation to
@@ -79,7 +75,7 @@ Prerequisites:
    ```
 
 1. Add an OIDC provider to the workload identity pool with the following
-  command. Replace these values:
+   command. Replace these values:
 
    - `<your_identity_provider_id>` with the ID to use for the provider, which
      must be 4 to 32 lowercase letters, digits, or hyphens. To avoid
@@ -122,9 +118,11 @@ Prerequisites:
 - The `attribute-mapping` parameter must include the mapping between OIDC custom
   claims included in the JWT ID token to the corresponding identity attributes
   that are used in Identity and Access Management (IAM) policies to grant access.
-  Refer to the list of [supported OIDC custom claims](google_cloud_iam.md#oidc-custom-claims)
-  for configuring the attribute mapping. For more information on mapping claims
-  to IAM policies, see [Control access to Google Cloud](https://cloud.google.com/developer-ecosystem/docs/gitlab/access-control#control-access-google).
+  For more information, see the [supported OIDC custom claims](google_cloud_iam.md#oidc-custom-claims) that you can use
+  to [control access to Google Cloud](https://cloud.google.com/docs/gitlab/access-control#control-access-google).
+
+To restrict [identity token access](https://cloud.google.com/iam/docs/workload-identity-federation#mapping) to a specific GitLab project or group, use an attribute condition. Use the attribute `assertion.project_id` for a project and the attribute `assertion.namespace_id` for a group.
+For more information, see the Google Cloud documentation about how to [define an attribute condition](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines#gitlab-saas_2). After you define the attribute condition, you can [update the workload identity provider](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines#update_attribute_condition_on_a_workload_identity_provider).
 
 After you create the workload identity pool and provider, to complete the setup in GitLab:
 
@@ -134,10 +132,10 @@ After you create the workload identity pool and provider, to complete the setup 
 1. Select **Manual setup**
 1. Complete the fields.
    - **[Project ID](https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects)**
-   for the Google Cloud project in which you created the workload identity.
-   pool and provider. Example: `my-sample-project-191923`.
+     for the Google Cloud project in which you created the workload identity.
+     pool and provider. Example: `my-sample-project-191923`.
    - **[Project number](https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects)**
-   for the same Google Cloud project. Example: `314053285323`.
+     for the same Google Cloud project. Example: `314053285323`.
    - **Pool ID** of the workload identity pool you created for this integration.
    - **Provider ID** of the workload identity provider you created for this integration.
 

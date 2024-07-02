@@ -10,9 +10,10 @@ class MemberEntity < Grape::Entity
     member.expires_at&.to_time
   end
   expose :requested_at
+  expose :request_accepted_at
 
   expose :created_by,
-    if: -> (member) { member.created_by.present? && member.is_source_accessible_to_current_user } do |member|
+    if: ->(member) { member.created_by.present? && member.is_source_accessible_to_current_user } do |member|
     UserEntity.represent(member.created_by, only: [:name, :web_url])
   end
 
@@ -37,9 +38,7 @@ class MemberEntity < Grape::Entity
     expose :member_role_description, as: :description
   end
 
-  expose :custom_permissions
-
-  expose :source, if: -> (member) { member.is_source_accessible_to_current_user } do |member|
+  expose :source, if: ->(member) { member.is_source_accessible_to_current_user } do |member|
     GroupEntity.represent(member.source, only: [:id, :full_name, :web_url])
   end
 
@@ -53,13 +52,13 @@ class MemberEntity < Grape::Entity
 
   expose :valid_member_roles, as: :custom_roles
 
-  expose :user, if: -> (member) { member.user.present? } do |member, options|
+  expose :user, if: ->(member) { member.user.present? } do |member, options|
     MemberUserEntity.represent(member.user, options)
   end
 
   expose :state
 
-  expose :invite, if: -> (member) { member.invite? } do
+  expose :invite, if: ->(member) { member.invite? } do
     expose :email do |member|
       member.invite_email
     end

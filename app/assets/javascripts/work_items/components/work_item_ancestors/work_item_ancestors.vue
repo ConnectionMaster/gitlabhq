@@ -7,6 +7,7 @@ import TimeAgoTooltip from '~/vue_shared/components/time_ago_tooltip.vue';
 
 import { formatAncestors } from '../../utils';
 import workItemAncestorsQuery from '../../graphql/work_item_ancestors.query.graphql';
+import workItemAncestorsUpdatedSubscription from '../../graphql/work_item_ancestors.subscription.graphql';
 import WorkItemStateBadge from '../work_item_state_badge.vue';
 import DisclosureHierarchy from './disclosure_hierarchy.vue';
 
@@ -56,6 +57,17 @@ export default {
           error,
         });
       },
+      subscribeToMore: {
+        document: workItemAncestorsUpdatedSubscription,
+        variables() {
+          return {
+            id: this.workItem.id,
+          };
+        },
+        skip() {
+          return !this.workItem?.id;
+        },
+      },
     },
   },
 };
@@ -71,7 +83,7 @@ export default {
     <template #default="{ item, itemId }">
       <gl-popover triggers="hover focus" placement="bottom" :target="itemId">
         <template #title>
-          <gl-badge variant="muted" size="sm">{{ $options.i18n.ancestorLabel }}</gl-badge>
+          <gl-badge variant="muted">{{ $options.i18n.ancestorLabel }}</gl-badge>
           <div class="gl-pt-3">
             {{ item.title }}
           </div>
@@ -81,7 +93,7 @@ export default {
           {{ item.reference }}
         </div>
         <work-item-state-badge v-if="item.state" :work-item-state="item.state" />
-        <span class="gl-vertical-align-middle gl-text-secondary">
+        <span class="gl-align-middle gl-text-secondary">
           <gl-sprintf v-if="item.createdAt" :message="__('Created %{timeAgo}')">
             <template #timeAgo>
               <time-ago-tooltip :time="item.createdAt" />

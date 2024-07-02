@@ -21,6 +21,8 @@ import { joinPaths, visitUrl } from '~/lib/utils/url_utility';
 import { parseBoolean } from '~/lib/utils/common_utils';
 import HighlightWorker from '~/vue_shared/components/source_viewer/workers/highlight_worker?worker';
 import initAmbiguousRefModal from '~/ref/init_ambiguous_ref_modal';
+import { InternalEvents } from '~/tracking';
+import { initFindFileShortcut } from '~/projects/behaviors';
 
 Vue.use(Vuex);
 Vue.use(VueApollo);
@@ -53,6 +55,7 @@ const initRefSwitcher = () => {
         },
         on: {
           input(selectedRef) {
+            InternalEvents.trackEvent('click_ref_selector_on_blob_page');
             visitUrl(generateRefDestinationPath(projectRootPath, ref, selectedRef));
           },
         },
@@ -63,6 +66,7 @@ const initRefSwitcher = () => {
 
 initRefSwitcher();
 initAmbiguousRefModal();
+initFindFileShortcut();
 
 if (viewBlobEl) {
   const {
@@ -74,6 +78,7 @@ if (viewBlobEl) {
     userId,
     explainCodeAvailable,
     refType,
+    canDownloadCode,
     ...dataset
   } = viewBlobEl.dataset;
 
@@ -90,6 +95,7 @@ if (viewBlobEl) {
       resourceId,
       userId,
       explainCodeAvailable: parseBoolean(explainCodeAvailable),
+      canDownloadCode: parseBoolean(canDownloadCode),
       ...provideWebIdeLink(dataset),
     },
     render(createElement) {

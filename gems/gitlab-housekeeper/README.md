@@ -4,6 +4,10 @@ Check out [the original
 blueprint](https://docs.gitlab.com/ee/architecture/blueprints/gitlab_housekeeper/)
 for the motivation behind the `gitlab-housekeeper`.
 
+Also watch [this walkthrough video](https://youtu.be/KNJPVx8izAc) for an
+overview on how to create your first Keep as well as the philosophy behind
+`gitlab-housekeeper`.
+
 This is a gem which can be run locally or in CI to do static and dynamic
 analysis of the GitLab codebase and, using a list of predefined "keeps", it will
 automatically create merge requests for things that developers would have
@@ -39,6 +43,27 @@ The object describes the files that should be commited and other metadata
 should be added to the merge request. Before yielding the `Change` the keep
 should also edit the files locally.
 
+### Setting up the `change` object
+
+You can set multiple properties on a `change` object so that it reflects on the created merge request. Some of these are
+mandatory, while others are optional.
+
+
+| Property                          | Type    | Required | Description                                                                                                     | Example usage                                                                                       |
+| ------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `description`          | String  | Yes      | Sets the description of the MR                                                                                  | `change.description = 'Description for my awesome MR'`                                            |
+| `title`                | String  | Yes      | Sets the title of the MR                                                                                        | `change.title  = 'My awesome MR'`                                                                 |
+| `identifiers`          | Array   | Yes      | Decides the name of the source branch name of the  MR                                                    | `change.identifiers = [[self.class.name](http://self.class.name).demodulize, changed_files.last]` |
+| `changed_files`        | Array   | Yes      | Array containing the path to files that are changed and needs to be committed                                  | `change.changed_files = [file_1_path, file_2_path]`                                              |
+| `labels`               | Array   | No       | Default is `[]`. Array of labels that needs to be assigned to the MR upon creation                           | `change.labels = ['database', 'maintenance::scalability']`                                       |
+| `assignees`            | Array   | No       | Default is `[]`. Array of usernames to which the MR should be assigned upon creation                           | `change.assignees = ['gitlab-bot', 'gitlab-qa']`                                                  |
+| `reviewers`            | Array   | No       | Default is `[]`. Array of usernames to which the MR should be assigned for review upon creation                | `change.reviewers = ['gitlab-bot', 'gitlab-qa']`                                                  |
+| `changelog_type`       | String  | No       | Default is `other`. Used to set a changelog type in the commit message                                       | `change.changelog_type = 'fixed'`                                                                 |
+| `changelog_ee`         | Boolean | No       | Default is `false`. Setting to `true` adds the `EE:true` trailer in the commit message                       | `change.changelog_ee = true`                                                                 |
+| `push_options.ci_skip` | Boolean | No       | Default is `false`. Setting to `true` creates an MR without kicking off a new pipeline | `change.push_options.ci_skip = true ` |
+
+### Example
+
 Here is an example of a very simple keep that creates 3 new files called
 `new_file1.txt`, `new_file2.txt` and `new_file3.txt`:
 
@@ -69,6 +94,9 @@ module Keeps
 
         change.changed_files = [file_name]
 
+        # to push changes without triggering a pipeline.
+        change.push_options.ci_skip = true
+
         yield(change)
       end
     end
@@ -89,7 +117,6 @@ variables described below.
 Note: By default all `.rb` files in the `./keeps/` directory (not recursively)
 will be loaded by the `gitlab-housekeeper` command. So it is assumed you place
 the keeps in there.
-
 
 ## Running for real
 
@@ -146,3 +173,19 @@ Some best practices to consider when using a once-off keep:
 1. Consider adding a link back to this MR in the description of your generated
    MRs. This allows reviewers to understand where this work comes from and can
    also help if they want to contribute improvements to an ongoing group of MRs.
+
+## Using Housekeeper in other projects
+
+Right now we do not publish housekeeper to RubyGems. We have published it once
+to hold the name but it's not up to date.
+
+In order to use Housekeeper in another project you would need to add the
+following to your `Gemfile` and run `bundle install`:
+
+```
+gem 'gitlab-housekeeper', git: 'https://gitlab.com/gitlab-org/gitlab.git', branch: 'master', glob: 'gems/gitlab-housekeeper/*.gemspec'
+```
+
+After that you can just run `bundle exec gitlab-housekeeper`. Housekeeper
+defaults to loading all keeps in the `./keeps` directory so you would also
+create that directory in your project and put your keeps there.

@@ -12,13 +12,23 @@ import FakeSearchInput from '~/super_sidebar/components/global_search/command_pa
 import CommandPaletteItems from '~/super_sidebar/components/global_search/command_palette/command_palette_items.vue';
 import CommandsOverviewDropdown from '~/super_sidebar/components/global_search/command_palette/command_overview_dropdown.vue';
 import ScrollScrim from '~/super_sidebar/components/scroll_scrim.vue';
+import { useMockInternalEventsTracking } from 'helpers/tracking_internal_events_helper';
+import { useMockLocationHelper } from 'helpers/mock_window_location_helper';
 import {
   SEARCH_OR_COMMAND_MODE_PLACEHOLDER,
   COMMON_HANDLES,
+  COMMAND_HANDLE,
+  USER_HANDLE,
+  PROJECT_HANDLE,
+  PATH_HANDLE,
+  MODAL_CLOSE_ESC,
+  MODAL_CLOSE_BACKGROUND,
+  MODAL_CLOSE_HEADERCLOSE,
 } from '~/super_sidebar/components/global_search/command_palette/constants';
 import {
   SEARCH_INPUT_DESCRIPTION,
   SEARCH_RESULTS_DESCRIPTION,
+  KEY_K,
 } from '~/super_sidebar/components/global_search/constants';
 import { visitUrl } from '~/lib/utils/url_utility';
 import {
@@ -43,10 +53,32 @@ Vue.use(Vuex);
 
 jest.mock('~/lib/utils/url_utility', () => ({
   visitUrl: jest.fn(),
+  queryToObject: jest.fn(),
+  objectToQuery: jest.fn(() => 'search=test'),
+  isRootRelative: jest.fn(),
+  getBaseURL: jest.fn(() => 'https://gdk.test:3000'),
 }));
+
+jest.mock('~/search/store/utils.js', () => ({
+  injectRegexSearch: jest.fn(() => '/search?search=test'),
+}));
+
+const triggerKeydownEvent = (target, code, metaKey = false) => {
+  const event = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    code,
+    metaKey,
+  });
+  target.dispatchEvent(event);
+  return event;
+};
 
 describe('GlobalSearchModal', () => {
   let wrapper;
+  let store;
+  let handleClosingSpy;
+  let onKeyComboDownSpy;
 
   const actionSpies = {
     setSearch: jest.fn(),
@@ -76,7 +108,7 @@ describe('GlobalSearchModal', () => {
     stubs,
     ...mountOptions
   } = {}) => {
-    const store = new Vuex.Store({
+    store = new Vuex.Store({
       state: {
         ...defaultMockState,
         ...initialState,
@@ -100,6 +132,16 @@ describe('GlobalSearchModal', () => {
     });
   };
 
+  beforeEach(() => {
+    handleClosingSpy = jest.spyOn(GlobalSearchModal.methods, 'handleClosing');
+    onKeyComboDownSpy = jest.spyOn(GlobalSearchModal.methods, 'onKeyComboDown');
+  });
+
+  afterEach(() => {
+    handleClosingSpy.mockRestore();
+    onKeyComboDownSpy.mockRestore();
+  });
+
   const findGlobalSearchModal = () => wrapper.findComponent(GlModal);
 
   const findGlobalSearchInput = () => wrapper.findComponent(GlSearchBoxByType);
@@ -115,6 +157,9 @@ describe('GlobalSearchModal', () => {
   const findCommandPaletteDropdown = () => wrapper.findComponent(CommandsOverviewDropdown);
 
   describe('template', () => {
+    beforeEach(() => {
+      useMockLocationHelper();
+    });
     describe('always renders', () => {
       beforeEach(() => {
         createComponent();
@@ -200,9 +245,9 @@ describe('GlobalSearchModal', () => {
     );
 
     describe('Command palette', () => {
-      const possibleHandles = ['', ...COMMON_HANDLES];
+      const possibleHandles = [...COMMON_HANDLES];
 
-      describe.each(possibleHandles)('when search handle is %s', (handle) => {
+      describe.each(possibleHandles)('when search handle is "%s"', (handle) => {
         beforeEach(() => {
           createComponent({
             initialState: { search: handle, commandChar: handle },
@@ -225,7 +270,7 @@ describe('GlobalSearchModal', () => {
         });
       });
 
-      describe.each(possibleHandles)('when search handle is %s', (handle) => {
+      describe.each(possibleHandles)('when search handle is "%s"', (handle) => {
         beforeEach(() => {
           createComponent({
             initialState: { search: '', commandChar: handle },
@@ -242,10 +287,10 @@ describe('GlobalSearchModal', () => {
           findGlobalSearchInput().vm.$emit('click');
         });
 
-        it.each(possibleHandles)('should handle command selection', async (selected) => {
-          await findCommandPaletteDropdown().vm.$emit('selected', selected);
+        it('should handle command selection', async () => {
+          await findCommandPaletteDropdown().vm.$emit('selected', handle);
 
-          expect(actionSpies.setCommand).toHaveBeenCalledWith(expect.any(Object), selected);
+          expect(actionSpies.setCommand).toHaveBeenCalledWith(expect.any(Object), handle);
         });
       });
     });
@@ -304,7 +349,7 @@ describe('GlobalSearchModal', () => {
         const submitSearch = () =>
           findGlobalSearchInput().vm.$emit(
             'keydown',
-            new KeyboardEvent('keydown', { key: ENTER_KEY }),
+            new KeyboardEvent('keydown', { code: ENTER_KEY }),
           );
 
         describe.each`
@@ -349,6 +394,20 @@ describe('GlobalSearchModal', () => {
         );
 
         describe('in search mode', () => {
+          let getFocusableOptionsSpy;
+
+          beforeEach(() => {
+            getFocusableOptionsSpy = jest.spyOn(GlobalSearchModal.methods, 'getFocusableOptions');
+            getFocusableOptionsSpy.mockReturnValue([
+              document.createElement('li'),
+              document.createElement('li'),
+            ]);
+          });
+
+          afterEach(() => {
+            getFocusableOptionsSpy.mockRestore();
+          });
+
           it('will NOT submit a search with less than min characters', () => {
             createComponent({ initialState: { search: 'x' } });
             submitSearch();
@@ -357,6 +416,8 @@ describe('GlobalSearchModal', () => {
 
           it('will submit a search with the sufficient number of characters', () => {
             createComponent();
+            findGlobalSearchInput().vm.$emit('input', MOCK_SEARCH);
+
             submitSearch();
             expect(visitUrl).toHaveBeenCalledWith(MOCK_SEARCH_QUERY);
           });
@@ -366,7 +427,55 @@ describe('GlobalSearchModal', () => {
 
     describe('Modal events', () => {
       beforeEach(() => {
-        createComponent({ initialState: { search: 'searchQuery' } });
+        createComponent({
+          initialState: { search: '', commandChar: '' },
+          mockGetters: {
+            ...defaultMockGetters,
+            isCommandMode: () => Boolean(''),
+          },
+          stubs: {
+            GlModal,
+            GlSearchBoxByType,
+          },
+        });
+      });
+
+      describe('when combination shortcut is pressed', () => {
+        it('calls handleClosing when hidden event is emitted', () => {
+          findCommandPaletteDropdown().vm.$emit('hidden');
+          expect(handleClosingSpy).toHaveBeenCalled();
+        });
+
+        it('key combination triggers correctly', async () => {
+          const openSpy = jest.fn();
+          const closeSpy = jest.fn();
+
+          wrapper.vm.$refs.commandDropdown.open = openSpy;
+          wrapper.vm.$refs.commandDropdown.close = closeSpy;
+
+          await findGlobalSearchModal().vm.$emit('shown');
+          await triggerKeydownEvent(window, KEY_K, true);
+          await triggerKeydownEvent(window, KEY_K, true);
+
+          expect(openSpy).toHaveBeenCalledTimes(1);
+          expect(closeSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('opens correctly after esc dismiss of open dropdown', async () => {
+          const openSpy = jest.fn();
+          const closeSpy = jest.fn();
+
+          wrapper.vm.$refs.commandDropdown.open = openSpy;
+          wrapper.vm.$refs.commandDropdown.close = closeSpy;
+
+          await findGlobalSearchModal().vm.$emit('shown');
+          await triggerKeydownEvent(window, KEY_K, true);
+          findCommandPaletteDropdown().vm.$emit('hidden');
+          await triggerKeydownEvent(window, KEY_K, true);
+
+          expect(openSpy).toHaveBeenCalledTimes(2);
+          expect(closeSpy).toHaveBeenCalledTimes(0);
+        });
       });
 
       it('should emit `shown` event when modal shown`', () => {
@@ -382,13 +491,83 @@ describe('GlobalSearchModal', () => {
     });
   });
 
+  describe('Track events', () => {
+    let getFocusableOptionsSpy;
+
+    beforeEach(() => {
+      getFocusableOptionsSpy = jest.spyOn(GlobalSearchModal.methods, 'getFocusableOptions');
+      getFocusableOptionsSpy.mockReturnValue([
+        document.createElement('li'),
+        document.createElement('li'),
+      ]);
+
+      createComponent({
+        initialState: { search: '', commandChar: '' },
+        mockGetters: {
+          ...defaultMockGetters,
+          isCommandMode: () => Boolean(''),
+        },
+        stubs: {
+          GlModal,
+          GlSearchBoxByType,
+        },
+      });
+    });
+
+    afterEach(() => {
+      getFocusableOptionsSpy.mockRestore();
+    });
+
+    const { bindInternalEventDocument } = useMockInternalEventsTracking();
+
+    it.each`
+      dropdownEvent     | trackingEvent
+      ${COMMAND_HANDLE} | ${'press_greater_than_in_command_palette'}
+      ${USER_HANDLE}    | ${'press_at_symbol_in_command_palette'}
+      ${PROJECT_HANDLE} | ${'press_colon_in_command_palette'}
+      ${PATH_HANDLE}    | ${'press_forward_slash_in_command_palette'}
+    `('triggers and tracks command dropdown $dropdownEvent', ({ dropdownEvent, trackingEvent }) => {
+      const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
+      findCommandPaletteDropdown().vm.$emit('selected', dropdownEvent);
+
+      expect(trackEventSpy).toHaveBeenCalledWith(trackingEvent, {}, undefined);
+    });
+
+    it.each`
+      modalEvent                 | trackingEvent
+      ${MODAL_CLOSE_ESC}         | ${'press_escape_in_command_palette'}
+      ${MODAL_CLOSE_BACKGROUND}  | ${'click_outside_of_command_palette'}
+      ${MODAL_CLOSE_HEADERCLOSE} | ${'press_escape_in_command_palette'}
+    `('triggers and tracks modal event $modalEvent', async ({ modalEvent, trackingEvent }) => {
+      const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
+
+      await findGlobalSearchModal().vm.$emit('hide', { trigger: modalEvent });
+
+      expect(trackEventSpy).toHaveBeenCalledWith(trackingEvent, {}, undefined);
+    });
+
+    it('triggers and tracks key event', () => {
+      const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
+
+      const event = {
+        code: ENTER_KEY,
+        target: '',
+        stopPropagation: jest.fn(),
+        preventDefault: jest.fn(),
+      };
+
+      findGlobalSearchInput().vm.$emit('keydown', event);
+
+      expect(trackEventSpy).toHaveBeenCalledWith(
+        'press_enter_to_advanced_search',
+        { label: 'command_palette' },
+        undefined,
+      );
+    });
+  });
+
   describe('Navigating results', () => {
     const findSearchInput = () => wrapper.findByRole('searchbox');
-    const triggerKeydownEvent = (target, code) => {
-      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code });
-      target.dispatchEvent(event);
-      return event;
-    };
 
     beforeEach(() => {
       createComponent({
@@ -445,8 +624,28 @@ describe('GlobalSearchModal', () => {
     });
 
     describe('when search result item has focus', () => {
+      let getFocusableOptionsSpy;
+      let submitSearchSpy;
+      let dispatchEventSpy;
+
       beforeEach(() => {
+        getFocusableOptionsSpy = jest.spyOn(GlobalSearchModal.methods, 'getFocusableOptions');
+        submitSearchSpy = jest.spyOn(GlobalSearchModal.methods, 'submitSearch');
+        dispatchEventSpy = jest.spyOn(
+          wrapper.findByTestId('test-result-2').element,
+          'dispatchEvent',
+        );
+
+        getFocusableOptionsSpy.mockReturnValue([
+          document.createElement('li'),
+          document.createElement('li'),
+        ]);
+
         wrapper.findByTestId('test-result-2').element.focus();
+      });
+
+      afterEach(() => {
+        getFocusableOptionsSpy.mockRestore();
       });
 
       it('Home key focuses first item', () => {
@@ -478,15 +677,9 @@ describe('GlobalSearchModal', () => {
       });
 
       it('NumpadEnter clicks the current item child', () => {
-        const focusedElement = document.activeElement;
-        const focusedElementChild = focusedElement.firstChild;
-
-        const clickMock = jest.fn();
-        focusedElementChild.click = clickMock;
-
-        const event = triggerKeydownEvent(focusedElement, NUMPAD_ENTER_KEY);
-        expect(clickMock).toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(true);
+        triggerKeydownEvent(document.activeElement, NUMPAD_ENTER_KEY);
+        expect(submitSearchSpy).not.toHaveBeenCalled();
+        expect(dispatchEventSpy).toHaveBeenCalled();
       });
     });
   });

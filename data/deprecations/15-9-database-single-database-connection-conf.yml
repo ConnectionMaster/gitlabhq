@@ -1,6 +1,6 @@
 - title: "Single database connection is deprecated"
   announcement_milestone: "15.9"
-  removal_milestone: "17.0"
+  removal_milestone: "19.0"
   breaking_change: true
   reporter: tkuah
   stage: Enablement

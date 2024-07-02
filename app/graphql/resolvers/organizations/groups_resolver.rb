@@ -13,10 +13,9 @@ module Resolvers
 
       alias_method :organization, :object
 
-      def finder_params(args)
-        extra_args = { organization: organization, include_ancestors: false, all_available: false }
-
-        super.merge(extra_args)
+      def resolve_groups(**args)
+        finder_params = args.merge(organization: organization)
+        ::Organizations::GroupsFinder.new(context[:current_user], finder_params).execute
       end
     end
   end

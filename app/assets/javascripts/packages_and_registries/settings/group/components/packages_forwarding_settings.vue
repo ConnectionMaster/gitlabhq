@@ -152,7 +152,10 @@ export default {
       }
     },
     updateWorkingCopy(type, value) {
-      this.$set(this.workingCopy, type, value);
+      this.workingCopy = {
+        ...this.workingCopy,
+        [type]: value,
+      };
     },
   },
   links: {
@@ -165,7 +168,7 @@ export default {
   <settings-block>
     <template #title> {{ $options.i18n.PACKAGE_FORWARDING_SETTINGS_HEADER }}</template>
     <template #description>
-      <span class="gl-display-block gl-mb-2" data-testid="description">
+      <span class="gl-block gl-mb-2" data-testid="description">
         {{ $options.i18n.PACKAGE_FORWARDING_SETTINGS_DESCRIPTION }}
       </span>
       <gl-sprintf :message="$options.i18n.PACKAGE_FORWARDING_SECURITY_DESCRIPTION">

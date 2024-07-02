@@ -4,7 +4,9 @@ import { GlButton, GlIcon, GlTooltipDirective, GlSkeletonLoader } from '@gitlab/
 import permissionsQuery from 'shared_queries/design_management/design_permissions.query.graphql';
 import { isLoggedIn } from '~/lib/utils/common_utils';
 import { __, s__, sprintf } from '~/locale';
+import { TYPE_DESIGN } from '~/import/constants';
 import timeagoMixin from '~/vue_shared/mixins/timeago';
+import ImportedBadge from '~/vue_shared/components/imported_badge.vue';
 import { DESIGNS_ROUTE_NAME } from '../../router/constants';
 import DeleteButton from '../delete_button.vue';
 import DesignTodoButton from '../design_todo_button.vue';
@@ -25,6 +27,7 @@ export default {
     DeleteButton,
     DesignTodoButton,
     CloseButton,
+    ImportedBadge,
   },
   directives: {
     GlTooltip: GlTooltipDirective,
@@ -117,6 +120,9 @@ export default {
     issueTitle() {
       return this.design.issue.title;
     },
+    isImported() {
+      return this.design.imported;
+    },
     toggleCommentsButtonLabel() {
       return this.isSidebarOpen
         ? this.$options.i18n.hideCommentsButtonLabel
@@ -124,6 +130,7 @@ export default {
     },
   },
   DESIGNS_ROUTE_NAME,
+  TYPE_DESIGN,
 };
 </script>
 
@@ -136,26 +143,36 @@ export default {
     >
       <div class="gl-overflow-hidden gl-display-flex gl-mr-3">
         <gl-skeleton-loader v-if="isLoading" :lines="1" />
-        <h2 v-else class="gl-display-flex gl-overflow-hidden gl-m-0 gl-font-base">
+        <h2
+          v-else
+          class="gl-display-flex gl-align-items-center gl-overflow-hidden gl-m-0 gl-font-base"
+        >
           <span class="gl-text-truncate gl-text-gray-900 gl-text-decoration-none">
             {{ issueTitle }}
           </span>
           <gl-icon name="chevron-right" class="gl-text-gray-200 gl-flex-shrink-0" />
-          <span class="gl-text-truncate gl-font-weight-normal">{{ filename }}</span>
+          <span class="gl-text-truncate gl-font-normal">{{ filename }}</span>
+          <imported-badge
+            v-if="isImported"
+            :importable-type="$options.TYPE_DESIGN"
+            class="gl-ml-2"
+          />
         </h2>
         <small v-if="updatedAt" class="gl-text-gray-500">{{ updatedText }}</small>
       </div>
-      <close-button class="gl-md-display-none gl-ml-auto" />
+      <close-button class="md:gl-hidden gl-ml-auto" />
     </div>
     <div class="gl-display-flex gl-md-flex-direction-row gl-flex-shrink-0 gl-md-ml-auto gl-mr-5">
       <design-todo-button
         v-if="isLoggedIn"
         :design="design"
-        class="gl-mr-3 gl-ml-0 gl-md-ml-3"
+        class="gl-ml-0 gl-md-ml-3"
         @error="$emit('todoError', $event)"
       />
       <gl-button
         v-gl-tooltip.bottom
+        category="tertiary"
+        class="gl-ml-2"
         :href="image"
         icon="download"
         :title="$options.i18n.downloadButtonLabel"
@@ -164,25 +181,26 @@ export default {
       <delete-button
         v-if="isLatestVersion && canDeleteDesign"
         v-gl-tooltip.bottom
-        class="gl-ml-3"
+        class="gl-ml-2"
         :is-deleting="isDeleting"
         button-variant="default"
         button-icon="archive"
-        button-category="secondary"
+        button-category="tertiary"
         :title="s__('DesignManagement|Archive design')"
         @delete-selected-designs="$emit('delete')"
       />
       <gl-button
         v-gl-tooltip.bottom
+        category="tertiary"
         icon="comments"
         :title="toggleCommentsButtonLabel"
         :aria-label="toggleCommentsButtonLabel"
-        class="gl-ml-3 gl-mr-6"
+        class="gl-ml-2 gl-mr-6"
         data-testid="toggle-design-sidebar"
         @click="$emit('toggle-sidebar')"
       />
       <design-navigation :id="id" class="gl-ml-auto" />
     </div>
-    <close-button class="gl-display-none gl-md-display-flex" />
+    <close-button class="gl-hidden md:gl-flex" />
   </header>
 </template>

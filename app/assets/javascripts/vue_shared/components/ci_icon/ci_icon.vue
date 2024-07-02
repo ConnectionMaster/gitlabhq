@@ -31,7 +31,7 @@ export default {
       required: true,
       validator(status) {
         const { icon } = status;
-        return typeof icon === 'string' && icon.startsWith('status_');
+        return typeof icon === 'string' && icon.startsWith('status');
       },
     },
     showStatusText: {
@@ -96,19 +96,18 @@ export default {
 </script>
 <template>
   <gl-badge
-    v-gl-tooltip
-    class="ci-icon gl-p-2"
+    v-gl-tooltip.viewport.left
+    class="ci-icon !gl-p-2"
     :class="`ci-icon-variant-${variant}`"
     :variant="variant"
     :title="title"
     :aria-label="ariaLabel"
     :href="href"
-    size="md"
     data-testid="ci-icon"
     @click="$emit('ciStatusBadgeClick')"
   >
     <span class="ci-icon-gl-icon-wrapper"><gl-icon :name="icon" /></span
-    ><span v-if="showStatusText" class="gl-mx-2 gl-white-space-nowrap" data-testid="ci-icon-text">{{
+    ><span v-if="showStatusText" class="gl-mx-2 gl-whitespace-nowrap" data-testid="ci-icon-text">{{
       status.text
     }}</span>
   </gl-badge>

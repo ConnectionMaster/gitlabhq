@@ -34,7 +34,7 @@ module Gitlab
         @sha = sha || project&.repository&.commit&.sha
       end
 
-      def validate(content, dry_run: false, ref: @project&.default_branch)
+      def validate(content, dry_run: false, ref: project&.default_branch)
         if dry_run
           simulate_pipeline_creation(content, ref)
         else
@@ -43,6 +43,8 @@ module Gitlab
       end
 
       private
+
+      attr_accessor :project, :sha, :verify_project_sha, :current_user
 
       def simulate_pipeline_creation(content, ref)
         pipeline = ::Ci::CreatePipelineService
@@ -77,11 +79,12 @@ module Gitlab
 
       def yaml_processor_result(content, logger)
         logger.instrument(:yaml_process, once: true) do
-          Gitlab::Ci::YamlProcessor.new(content, project: @project,
-                                                 user: @current_user,
-                                                 sha: @sha,
-                                                 verify_project_sha: @verify_project_sha,
-                                                 logger: logger).execute
+          Gitlab::Ci::YamlProcessor.new(content, project: project,
+            user: current_user,
+            ref: RefFinder.new(project).find_by_sha(sha),
+            sha: sha,
+            verify_project_sha: verify_project_sha,
+            logger: logger).execute
         end
       end
 
@@ -132,7 +135,7 @@ module Gitlab
       end
 
       def build_logger
-        Gitlab::Ci::Pipeline::Logger.new(project: @project) do |l|
+        Gitlab::Ci::Pipeline::Logger.new(project: project) do |l|
           l.log_when do |observations|
             duration = observations['yaml_process_duration_s']
             next false unless duration

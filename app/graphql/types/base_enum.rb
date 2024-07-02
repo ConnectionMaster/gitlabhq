@@ -39,8 +39,8 @@ module Types
       def from_rails_enum(enum, description:)
         enum.each_key do |name|
           value name.to_s.upcase,
-                value: name,
-                description: format(description, name: name)
+            value: name,
+            description: format(description, name: name)
         end
       end
 
@@ -65,7 +65,7 @@ module Types
       end
 
       def authorized?(object, context)
-        authorization.ok?(object, context[:current_user])
+        authorization.ok?(object, context[:current_user], scope_validator: context[:scope_validator])
       end
     end
   end

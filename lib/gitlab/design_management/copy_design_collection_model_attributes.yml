@@ -33,11 +33,14 @@ ignore_design_attributes:
   - iid
   - description_html
   - cached_markdown_version
+  - namespace_id
+  - imported_from
 
 ignore_version_attributes:
   - id
   - issue_id
   - sha
+  - namespace_id
 
 ignore_action_attributes:
   - id

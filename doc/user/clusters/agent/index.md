@@ -6,12 +6,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Connecting a Kubernetes cluster with GitLab
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/223061) in GitLab 13.4.
-> - Support for `grpcs` [introduced](https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/issues/7) in GitLab 13.6.
-> - Agent server [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/300960) on GitLab.com under `wss://kas.gitlab.com` through an Early Adopter Program in GitLab 13.10.
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/3834) in GitLab 13.11, the GitLab agent became available on GitLab.com.
-> - [Moved](https://gitlab.com/groups/gitlab-org/-/epics/6290) from GitLab Premium to GitLab Free in 14.5.
-> - `GitLab Kubernetes agent` [renamed](https://gitlab.com/groups/gitlab-org/-/epics/7167) to `GitLab agent for Kubernetes` in GitLab 14.6.
 > - Flux [recommended](https://gitlab.com/gitlab-org/gitlab/-/issues/357947#note_1253489000) as GitOps solution in GitLab 15.10.
 
 You can connect your Kubernetes cluster with GitLab to deploy, manage,
@@ -63,9 +57,9 @@ GitLab in a Kubernetes cluster, you might need a different version of Kubernetes
 You can upgrade your
 Kubernetes version to a supported version at any time:
 
+- 1.30 (support ends when GitLab version 18.2 is released or when 1.33 becomes supported)
 - 1.29 (support ends when GitLab version 17.10 is released or when 1.32 becomes supported)
 - 1.28 (support ends when GitLab version 17.5 is released or when 1.31 becomes supported)
-- 1.27 (support ends when GitLab version 17.2 is released or when 1.30 becomes supported)
 
 GitLab aims to support a new minor Kubernetes version three months after its initial release. GitLab supports at least three production-ready Kubernetes minor
 versions at any given time.

@@ -26,7 +26,7 @@ RSpec.describe ApplicationWorker, feature_category: :shared do
   before do
     # Set up Sidekiq.default_configuration's Thread.current[:sidekiq_redis_pool].
     # Creating a RedisConnection during spec's runtime will perform Sidekiq.info which messes with our spec expectations.
-    Sidekiq.redis(&:ping)
+    Gitlab::SidekiqSharding::Validator.allow_unrouted_sidekiq_calls { Sidekiq.redis(&:ping) }
 
     allow(Feature).to receive(:enabled?).and_call_original
     allow(Feature).to receive(:enabled?).with(:route_to_main, type: :ops).and_return(true)
@@ -509,6 +509,37 @@ RSpec.describe ApplicationWorker, feature_category: :shared do
     end
   end
 
+  describe '.deferred' do
+    around do |example|
+      Sidekiq::Testing.fake!(&example)
+    end
+
+    context 'when the worker is not marked as deferred' do
+      it 'all deferred-related keys are nil' do
+        worker.perform_async
+        expect(Sidekiq::Queues[worker.queue].first['deferred']).to eq nil
+        expect(Sidekiq::Queues[worker.queue].first['deferred_by']).to eq nil
+        expect(Sidekiq::Queues[worker.queue].first['deferred_count']).to eq nil
+      end
+    end
+
+    context 'when the worker is marked as deferred' do
+      it 'correctly sets options' do
+        worker.deferred(1, :feature_flag).perform_async
+        expect(Sidekiq::Queues[worker.queue].first['deferred']).to eq true
+        expect(Sidekiq::Queues[worker.queue].first['deferred_by']).to eq "feature_flag"
+        expect(Sidekiq::Queues[worker.queue].first['deferred_count']).to eq 1
+      end
+
+      it 'sets defaults if no arguments are passed' do
+        worker.deferred.perform_async
+        expect(Sidekiq::Queues[worker.queue].first['deferred']).to eq true
+        expect(Sidekiq::Queues[worker.queue].first['deferred_by']).to eq nil
+        expect(Sidekiq::Queues[worker.queue].first['deferred_count']).to eq 0
+      end
+    end
+  end
+
   describe '.with_status' do
     around do |example|
       Sidekiq::Testing.fake!(&example)
@@ -553,6 +584,23 @@ RSpec.describe ApplicationWorker, feature_category: :shared do
     end
   end
 
+  describe '.with_ip_address_state' do
+    around do |example|
+      Sidekiq::Testing.fake!(&example)
+    end
+
+    let(:ip_address) { '1.1.1.1' }
+
+    it 'sets IP state' do
+      allow(::Gitlab::IpAddressState).to receive(:current).and_return(ip_address)
+
+      worker.with_ip_address_state.perform_async
+
+      expect(Sidekiq::Queues[worker.queue].first).to include('ip_address_state' => ip_address)
+      expect(Sidekiq::Queues[worker.queue].length).to eq(1)
+    end
+  end
+
   context 'when using perform_async/in/at' do
     let(:shard_pool) { 'dummy_pool' }
     let(:shard_name) { 'shard_name' }
@@ -584,6 +632,24 @@ RSpec.describe ApplicationWorker, feature_category: :shared do
           operation
         end
       end
+    end
+
+    context 'when calling perform_async with setter' do
+      subject(:operation) { worker.set(testing: true).perform_async }
+
+      it_behaves_like 'uses shard router'
+    end
+
+    context 'when calling perform_in with setter' do
+      subject(:operation) { worker.set(testing: true).perform_in(1) }
+
+      it_behaves_like 'uses shard router'
+    end
+
+    context 'when calling perform_at with setter' do
+      subject(:operation) { worker.set(testing: true).perform_at(1) }
+
+      it_behaves_like 'uses shard router'
     end
 
     context 'when calling perform_async' do

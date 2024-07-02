@@ -16,13 +16,13 @@ module Gitlab
           link :buy_compute_minutes
           div :plan_compute_minutes
           div :additional_compute_minutes
-          div :ci_purchase_successful_alert, text: /You have successfully purchased CI minutes/
+          div :ci_purchase_successful_alert, text: /You have successfully purchased compute minutes/
 
           # Storage section
           link :storage_tab
           link :purchase_more_storage
           div :namespace_usage_total
-          div :group_usage_message
+          span :group_usage_message
           span :dependency_proxy_size
           div :storage_purchased
           div :storage_purchase_successful_alert, text: /You have successfully purchased a storage/
@@ -32,8 +32,6 @@ module Gitlab
           span :project_containers_registry_size
 
           # Pending members
-          button :view_pending_approvals, text: /View pending approvals/
-          div :pending_members_alert
           div :pending_members
           button :approve_member
           button :confirm_member_approval, text: /^OK$/

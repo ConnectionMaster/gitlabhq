@@ -1,15 +1,21 @@
 <script>
-import { GlLoadingIcon, GlEmptyState, GlKeysetPagination } from '@gitlab/ui';
+import { GlLoadingIcon, GlKeysetPagination } from '@gitlab/ui';
 import { createAlert } from '~/alert';
 import { s__, __ } from '~/locale';
 import GroupsList from '~/vue_shared/components/groups_list/groups_list.vue';
 import { ACTION_DELETE } from '~/vue_shared/components/list_actions/constants';
 import { DEFAULT_PER_PAGE } from '~/api';
-import { deleteGroup } from '~/rest_api';
+import axios from '~/lib/utils/axios_utils';
+import {
+  renderDeleteSuccessToast,
+  deleteParams,
+  formatGroups,
+  timestampType,
+} from 'ee_else_ce/organizations/shared/utils';
 import groupsQuery from '../graphql/queries/groups.query.graphql';
 import { SORT_ITEM_NAME, SORT_DIRECTION_ASC } from '../constants';
-import { formatGroups } from '../utils';
 import NewGroupButton from './new_group_button.vue';
+import GroupsAndProjectsEmptyState from './groups_and_projects_empty_state.vue';
 
 export default {
   i18n: {
@@ -25,13 +31,19 @@ export default {
         'Organization|A group is a collection of several projects. If you organize your projects under a group, it works like a folder.',
       ),
     },
-    prev: __('Prev'),
-    next: __('Next'),
+    group: __('Group'),
   },
-  components: { GlLoadingIcon, GlEmptyState, GlKeysetPagination, GroupsList, NewGroupButton },
+  components: {
+    GlLoadingIcon,
+    GlKeysetPagination,
+    GroupsList,
+    NewGroupButton,
+    GroupsAndProjectsEmptyState,
+  },
   inject: {
     organizationGid: {},
     groupsEmptyStateSvgPath: {},
+    groupsPath: {},
   },
   props: {
     shouldShowEmptyStateButtons: {
@@ -136,15 +148,8 @@ export default {
     isLoading() {
       return this.$apollo.queries.groups.loading;
     },
-    emptyStateProps() {
-      const baseProps = {
-        svgHeight: 144,
-        svgPath: this.groupsEmptyStateSvgPath,
-        title: this.$options.i18n.emptyState.title,
-        description: this.$options.i18n.emptyState.description,
-      };
-
-      return baseProps;
+    timestampType() {
+      return timestampType(this.sortName);
     },
   },
   methods: {
@@ -168,8 +173,11 @@ export default {
 
       try {
         this.setGroupIsDeleting(nodeIndex, true);
-        await deleteGroup(group.id);
+        await axios.delete(this.groupsPath, {
+          params: { id: group.fullPath, ...deleteParams(group) },
+        });
         this.$apollo.queries.groups.refetch();
+        renderDeleteSuccessToast(group, this.$options.i18n.group);
       } catch (error) {
         createAlert({ message: this.$options.i18n.deleteErrorMessage, error, captureError: true });
       } finally {
@@ -187,22 +195,23 @@ export default {
       :groups="nodes"
       show-group-icon
       :list-item-class="listItemClass"
+      :timestamp-type="timestampType"
       @delete="deleteGroup"
     />
 
     <div v-if="pageInfo.hasNextPage || pageInfo.hasPreviousPage" class="gl-text-center gl-mt-5">
-      <gl-keyset-pagination
-        v-bind="pageInfo"
-        :prev-text="$options.i18n.prev"
-        :next-text="$options.i18n.next"
-        @prev="onPrev"
-        @next="onNext"
-      />
+      <gl-keyset-pagination v-bind="pageInfo" @prev="onPrev" @next="onNext" />
     </div>
   </div>
-  <gl-empty-state v-else v-bind="emptyStateProps">
+  <groups-and-projects-empty-state
+    v-else
+    :svg-path="groupsEmptyStateSvgPath"
+    :title="$options.i18n.emptyState.title"
+    :description="$options.i18n.emptyState.description"
+    :search="search"
+  >
     <template v-if="shouldShowEmptyStateButtons" #actions>
       <new-group-button />
     </template>
-  </gl-empty-state>
+  </groups-and-projects-empty-state>
 </template>

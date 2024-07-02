@@ -133,7 +133,7 @@ module Projects
 
           project.old_path_with_namespace = @old_path
 
-          update_repository_configuration(@new_path)
+          update_repository_configuration
 
           remove_issue_contacts
 
@@ -196,8 +196,7 @@ module Projects
       project.visibility_level = to_namespace.visibility_level unless project.visibility_level_allowed_by_group?
     end
 
-    def update_repository_configuration(full_path)
-      project.set_full_path(gl_full_path: full_path)
+    def update_repository_configuration
       project.track_project_repository
     end
 
@@ -233,7 +232,7 @@ module Projects
     def rollback_side_effects
       project.reset
       update_namespace_and_visibility(@old_namespace)
-      update_repository_configuration(@old_path)
+      update_repository_configuration
     end
 
     def execute_system_hooks
@@ -268,7 +267,7 @@ module Projects
 
     def update_integrations
       project.integrations.with_default_settings.delete_all
-      Integration.create_from_active_default_integrations(project, :project_id)
+      Integration.create_from_default_integrations(project, :project_id)
     end
 
     def update_pending_builds
@@ -276,10 +275,7 @@ module Projects
     end
 
     def pending_builds_params
-      {
-        namespace_id: new_namespace.id,
-        namespace_traversal_ids: new_namespace.traversal_ids
-      }
+      ::Ci::PendingBuild.namespace_transfer_params(new_namespace)
     end
 
     def remove_issue_contacts

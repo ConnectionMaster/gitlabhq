@@ -33,7 +33,7 @@ and is labeled as `merge request`.
 
 To use merged results pipelines:
 
-- Your project's [`.gitlab-ci.yml` file](../index.md#the-gitlab-ciyml-file) must be configured to
+- Your project's `.gitlab-ci.yml` file must be configured to
   [run jobs in merge request pipelines](merge_request_pipelines.md#prerequisites).
 - Your repository must be a GitLab repository, not an
   [external repository](../ci_cd_for_external_repos/index.md).
@@ -55,6 +55,12 @@ unresolved state or your pipelines may be dropped.
 
 ## Troubleshooting
 
+### Jobs or pipelines run unexpectedly with `rules:changes:compare_to`
+
+You might have jobs or pipelines that run unexpectedly when using `rules:changes:compare_to` with merge request pipelines.
+
+With merged results pipelines, the internal commit that GitLab creates is used as a base to compare against. This commit likely contains more changes than the tip of the MR branch, which causes unexpected outcomes.
+
 ### Merged results pipelines are not created
 
 In GitLab 13.7 and earlier, merged results pipelines might not be created due
@@ -67,6 +73,6 @@ on your GitLab instance.
 ### Successful merged results pipeline overrides a failed branch pipeline
 
 A failed branch pipeline is sometimes ignored when the
-[**Pipelines must succeed** setting](../../user/project/merge_requests/merge_when_pipeline_succeeds.md#require-a-successful-pipeline-for-merge)
+[**Pipelines must succeed** setting](../../user/project/merge_requests/auto_merge.md#require-a-successful-pipeline-for-merge)
 is activated.
 [Issue 385841](https://gitlab.com/gitlab-org/gitlab/-/issues/385841) is open to track this.

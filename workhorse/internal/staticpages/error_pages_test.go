@@ -8,15 +8,20 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab/workhorse/internal/testhelper"
 )
 
+const (
+	errorPage   = "ERROR"
+	serverError = "Interesting Server Error"
+)
+
 func TestIfErrorPageIsPresented(t *testing.T) {
 	dir := t.TempDir()
 
-	errorPage := "ERROR"
 	os.WriteFile(filepath.Join(dir, "404.html"), []byte(errorPage), 0o600)
 
 	w := httptest.NewRecorder()
@@ -24,8 +29,8 @@ func TestIfErrorPageIsPresented(t *testing.T) {
 		w.WriteHeader(404)
 		upstreamBody := "Not Found"
 		n, err := fmt.Fprint(w, upstreamBody)
-		require.NoError(t, err)
-		require.Equal(t, len(upstreamBody), n, "bytes written")
+		assert.NoError(t, err)
+		assert.Len(t, upstreamBody, n, "bytes written")
 	})
 	st := &Static{DocumentRoot: dir}
 	st.ErrorPagesUnless(false, ErrorFormatHTML, h).ServeHTTP(w, nil)
@@ -40,27 +45,24 @@ func TestIfErrorPassedIfNoErrorPageIsFound(t *testing.T) {
 	dir := t.TempDir()
 
 	w := httptest.NewRecorder()
-	errorResponse := "ERROR"
 	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(404)
-		fmt.Fprint(w, errorResponse)
+		fmt.Fprint(w, errorPage)
 	})
 	st := &Static{DocumentRoot: dir}
 	st.ErrorPagesUnless(false, ErrorFormatHTML, h).ServeHTTP(w, nil)
 	w.Flush()
 
 	require.Equal(t, 404, w.Code)
-	testhelper.RequireResponseBody(t, w, errorResponse)
+	testhelper.RequireResponseBody(t, w, errorPage)
 }
 
 func TestIfErrorPageIsIgnoredInDevelopment(t *testing.T) {
 	dir := t.TempDir()
 
-	errorPage := "ERROR"
 	os.WriteFile(filepath.Join(dir, "500.html"), []byte(errorPage), 0o600)
 
 	w := httptest.NewRecorder()
-	serverError := "Interesting Server Error"
 	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(500)
 		fmt.Fprint(w, serverError)
@@ -75,11 +77,9 @@ func TestIfErrorPageIsIgnoredInDevelopment(t *testing.T) {
 func TestIfErrorPageIsIgnoredIfCustomError(t *testing.T) {
 	dir := t.TempDir()
 
-	errorPage := "ERROR"
 	os.WriteFile(filepath.Join(dir, "500.html"), []byte(errorPage), 0o600)
 
 	w := httptest.NewRecorder()
-	serverError := "Interesting Server Error"
 	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("X-GitLab-Custom-Error", "1")
 		w.WriteHeader(500)
@@ -106,11 +106,9 @@ func TestErrorPageInterceptedByContentType(t *testing.T) {
 	for _, tc := range testCases {
 		dir := t.TempDir()
 
-		errorPage := "ERROR"
 		os.WriteFile(filepath.Join(dir, "500.html"), []byte(errorPage), 0o600)
 
 		w := httptest.NewRecorder()
-		serverError := "Interesting Server Error"
 		h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Add("Content-Type", tc.contentType)
 			w.WriteHeader(500)
@@ -137,8 +135,8 @@ func TestIfErrorPageIsPresentedJSON(t *testing.T) {
 		w.WriteHeader(404)
 		upstreamBody := "This string is ignored"
 		n, err := fmt.Fprint(w, upstreamBody)
-		require.NoError(t, err)
-		require.Equal(t, len(upstreamBody), n, "bytes written")
+		assert.NoError(t, err)
+		assert.Len(t, upstreamBody, n, "bytes written")
 	})
 	st := &Static{}
 	st.ErrorPagesUnless(false, ErrorFormatJSON, h).ServeHTTP(w, nil)
@@ -157,8 +155,8 @@ func TestIfErrorPageIsPresentedText(t *testing.T) {
 		w.WriteHeader(404)
 		upstreamBody := "This string is ignored"
 		n, err := fmt.Fprint(w, upstreamBody)
-		require.NoError(t, err)
-		require.Equal(t, len(upstreamBody), n, "bytes written")
+		assert.NoError(t, err)
+		assert.Len(t, upstreamBody, n, "bytes written")
 	})
 	st := &Static{}
 	st.ErrorPagesUnless(false, ErrorFormatText, h).ServeHTTP(w, nil)
@@ -172,7 +170,7 @@ func TestIfErrorPageIsPresentedText(t *testing.T) {
 func TestErrorPageResponseWriterFlushable(t *testing.T) {
 	rw := httptest.NewRecorder()
 	eprw := errorPageResponseWriter{rw: rw}
-	rc := http.NewResponseController(&eprw)
+	rc := http.NewResponseController(&eprw) //nolint:bodyclose // false-positive https://github.com/timakin/bodyclose/issues/52
 
 	err := rc.Flush()
 	require.NoError(t, err, "the underlying response writer is not flushable")

@@ -23,12 +23,19 @@ export default {
       required: true,
     },
   },
+  data() {
+    return {
+      overrideStatus: null,
+    };
+  },
   computed: {
     available() {
       return this.feature.available;
     },
     enabled() {
-      return this.available && this.feature.configured;
+      return !(this.overrideStatus === null)
+        ? this.overrideStatus
+        : this.available && this.feature.configured;
     },
     shortName() {
       return this.feature.shortName ?? this.feature.name;
@@ -99,6 +106,9 @@ export default {
   methods: {
     onError(message) {
       this.$emit('error', message);
+    },
+    onOverrideStatus(status) {
+      this.overrideStatus = status;
     },
   },
   i18n: {
@@ -218,5 +228,12 @@ export default {
         {{ $options.i18n.configurationGuide }}
       </gl-button>
     </div>
+
+    <component
+      :is="feature.slotComponent"
+      v-if="feature.slotComponent"
+      :feature="feature"
+      @overrideStatus="onOverrideStatus"
+    />
   </gl-card>
 </template>

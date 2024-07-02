@@ -7,7 +7,10 @@ module API
     project_hooks_tags = %w[project_hooks]
 
     before { authenticate! }
-    before { authorize_admin_project }
+    before do
+      ability = route.request_method == 'GET' ? :read_web_hook : :admin_web_hook
+      authorize! ability, user_project
+    end
 
     feature_category :webhooks
 
@@ -19,6 +22,8 @@ module API
       end
 
       params :common_hook_parameters do
+        optional :name, type: String, desc: 'Name of the hook'
+        optional :description, type: String, desc: 'Description of the hook'
         optional :push_events, type: Boolean, desc: "Trigger hook on push events"
         optional :issues_events, type: Boolean, desc: "Trigger hook on issues events"
         optional :confidential_issues_events, type: Boolean, desc: "Trigger hook on confidential issues events"
@@ -37,7 +42,10 @@ module API
         optional :token, type: String, desc: "Secret token to validate received payloads; this will not be returned in the response"
         optional :push_events_branch_filter, type: String, desc: "Trigger hook on specified branch only"
         optional :custom_webhook_template, type: String, desc: "Custom template for the request payload"
+        optional :branch_filter_strategy, type: String, values: WebHook.branch_filter_strategies.keys,
+          desc: "Filter push events by branch. Possible values are `wildcard` (default), `regex`, and `all_branches`"
         use :url_variables
+        use :custom_headers
       end
     end
 
@@ -47,6 +55,7 @@ module API
     resource :projects, requirements: API::NAMESPACE_OR_PROJECT_REQUIREMENTS do
       namespace ':id/hooks' do
         mount ::API::Hooks::UrlVariables
+        mount ::API::Hooks::CustomHeaders
       end
 
       desc 'List project hooks' do
@@ -59,7 +68,7 @@ module API
         use :pagination
       end
       get ":id/hooks" do
-        present paginate(user_project.hooks), with: Entities::ProjectHook, with_url_variables: false
+        present paginate(user_project.hooks), with: Entities::ProjectHook, with_url_variables: false, with_custom_headers: false
       end
 
       desc 'Get project hook' do
@@ -94,9 +103,14 @@ module API
       end
       post ":id/hooks" do
         hook_params = create_hook_params
-        hook = user_project.hooks.new(hook_params)
 
-        save_hook(hook, Entities::ProjectHook)
+        result = WebHooks::CreateService.new(current_user).execute(hook_params, hook_scope)
+
+        if result[:status] == :success
+          present result[:hook], with: Entities::ProjectHook
+        else
+          error!(result.message, result.http_status || 422)
+        end
       end
 
       desc 'Edit project hook' do
@@ -135,6 +149,12 @@ module API
         destroy_conditionally!(hook) do
           WebHooks::DestroyService.new(current_user).execute(hook)
         end
+      end
+
+      namespace ':id/hooks/' do
+        mount ::API::Hooks::TriggerTest, with: {
+          entity: ProjectHook
+        }
       end
     end
   end

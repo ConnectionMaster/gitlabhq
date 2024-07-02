@@ -2,6 +2,7 @@
 stage: Create
 group: Source Code
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Troubleshooting problems with repository mirroring for GitLab projects."
 ---
 
 # Troubleshooting repository mirroring
@@ -41,7 +42,7 @@ One of these issues might be occurring:
 When upgrading GitLab, a change in how usernames are represented means that you
 must update your mirroring username and password to ensure that `%40` characters are replaced with `@`.
 
-## Connection blocked because server only allows public key authentication
+## Connection blocked: server only allows public key authentication
 
 The connection between GitLab and the remote repository is blocked. Even if a
 [TCP Check](../../../../administration/raketasks/maintenance.md#check-tcp-connectivity-to-a-remote-site)
@@ -97,8 +98,6 @@ In some cases, pull mirroring does not transfer LFS files. This issue occurs whe
 
 - You use an SSH repository URL. The workaround is to use an HTTPS repository URL instead.
   An issue exists [to fix this problem for SSH URLs](https://gitlab.com/gitlab-org/gitlab/-/issues/11997).
-- You're using GitLab 14.0 or older, and the source repository is a public Bitbucket URL.
-  [Fixed](https://gitlab.com/gitlab-org/gitlab/-/issues/335123) in GitLab 14.0.6.
 - You mirror an external repository using object storage.
   An issue exists [to fix this problem](https://gitlab.com/gitlab-org/gitlab/-/issues/335495).
 
@@ -154,10 +153,10 @@ fail nor succeed. They also do not leave a clear log. To check for this problem:
 
 If you receive this error while setting up mirroring over [SSH](index.md#ssh-authentication), make sure the URL is in a valid format.
 
-Mirroring does not support the short version of SSH clone URLs (`git@gitlab.com:gitlab-org/gitlab.git`)
-and requires the full version including the protocol (`ssh://git@gitlab.com/gitlab-org/gitlab.git`).
-
-Make sure that host and project path are separated using `/` instead of `:`.
+Mirroring **does not** support SCP-like clone URLs in the form of
+`git@gitlab.com:gitlab-org/gitlab.git`, with host and project path separated using `:`.
+It requires a [standard URL](https://git-scm.com/docs/git-clone#_git_urls)
+that includes the `ssh://` protocol, like `ssh://git@gitlab.com/gitlab-org/gitlab.git`.
 
 ## Host key verification failed
 
@@ -182,7 +181,7 @@ To resolve the issue:
 
 - Select **Mirror repository**.
 
-## Transfer mirror users and tokens to a single service account in Rails console
+## Transfer mirror users and tokens to a single service account
 
 This requires access to the [GitLab Rails console](../../../../administration/operations/rails_console.md#starting-a-rails-console-session).
 
@@ -230,7 +229,7 @@ HTTP redirects are not followed and omitting `.git` can result in a 301 error:
 13:fetch remote: "fatal: unable to access 'https://gitlab.com/group/project': The requested URL returned error: 301\n": exit status 128.
 ```
 
-## Push mirror from GitLab instance to Geo secondary fails: `The requested URL returned error: 302`
+## Push mirror from GitLab instance to Geo secondary fails
 
 Push mirroring of a GitLab repository using the HTTP or HTTPS protocols fails when the destination
 is a Geo secondary node due to the proxying of the push request to the Geo primary node,
@@ -249,3 +248,29 @@ The error can be avoided by:
 - Using a reverse proxy to direct all requests from the source instance to the primary Geo node.
 - Adding a local `hosts` file entry on the source to force the target host name to resolve to the Geo primary node's IP address.
 - Configuring a pull mirror on the target instead.
+
+## Pull or push mirror fails to update: `The project is not mirrored`
+
+Pull and push mirrors fail to update when [GitLab Silent Mode](../../../../administration/silent_mode/index.md) is enabled.
+When this happens, the option to allow mirroring on the UI is disabled.
+
+An administrator can check to confirm that GitLab Silent Mode is disabled.
+
+When mirroring fails due to Silent Mode the following are the debug steps:
+
+- [Triggering the mirror using the API](pull.md#trigger-pipelines-for-mirror-updates) shows: `The project is not mirrored`.
+
+- If pull or push mirror was already set up but there are no further updates on the mirrored repository,
+  confirm the [project's pull and push mirror details ans status](../../../../api/projects.md#get-a-projects-pull-mirror-details) are not recent as shown below. This indicates mirroring was paused and disabling GitLab Silent Mode restarts it automatically.
+
+For example, if Silent Mode is what is impeding your imports, the output is similar to the following:
+
+```json
+"id": 1,
+"update_status": "finished",
+"url": "https://test.git"
+"last_error": null,
+"last_update_at": null,
+"last_update_started_at": "2023-12-12T00:01:02.222Z",
+"last_successful_update_at": null
+```

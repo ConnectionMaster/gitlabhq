@@ -6,15 +6,7 @@ info: Any user with at least the Maintainer role can merge updates to this conte
 
 # GitHub importer developer documentation
 
-The GitHub importer offers two different types of importers:
-
-- A sequential importer. Used by the `import:github` Rake task.
-- A parallel importer. Used by everything else.
-
-The difference between these two importers is:
-
-- The sequential importer does all the work in a single thread, so it's more suited for debugging purposes or Rake tasks.
-- The parallel importer uses Sidekiq.
+The GitHub importer is a parallel importer that uses Sidekiq.
 
 ## Prerequisites
 
@@ -354,11 +346,6 @@ The code for this resides in:
 - `lib/gitlab/cache/import/caching.rb`
 
 ## Logs
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/48512/diffs) in GitLab 13.7.
-> - Number of imported objects [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/64256) in GitLab 14.1.
-> - `Gitlab::GithubImport::Logger` [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/65968) in GitLab 14.2.
-> - `import_source` [renamed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/67726) to `import_type` in GitLab 14.2.
 
 The import progress can be checked in the `logs/importer.log` file. Each relevant import is logged
 with `"import_type": "github"` and the `"project_id"`.

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/v16/proto/go/gitalypb"
 
@@ -18,6 +19,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab/workhorse/internal/secret"
 	"gitlab.com/gitlab-org/gitlab/workhorse/internal/testhelper"
 	"gitlab.com/gitlab-org/gitlab/workhorse/internal/upstream/roundtripper"
+)
+
+const (
+	customPath = "/my/api/path"
 )
 
 func TestGetGeoProxyDataForResponses(t *testing.T) {
@@ -57,7 +62,7 @@ func TestPreAuthorizeFixedPath_OK(t *testing.T) {
 	)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/my/api/path" {
+		if r.URL.Path != customPath {
 			return
 		}
 
@@ -74,7 +79,7 @@ func TestPreAuthorizeFixedPath_OK(t *testing.T) {
 	req.Header.Set("key1", "value1")
 
 	api := NewAPI(helper.URLMustParse(ts.URL), "123", http.DefaultTransport)
-	resp, err := api.PreAuthorizeFixedPath(req, "POST", "/my/api/path")
+	resp, err := api.PreAuthorizeFixedPath(req, "POST", customPath)
 	require.NoError(t, err)
 
 	require.Equal(t, "value1", upstreamHeaders.Get("key1"), "original headers must propagate")
@@ -85,7 +90,7 @@ func TestPreAuthorizeFixedPath_OK(t *testing.T) {
 
 func TestPreAuthorizeFixedPath_Unauthorized(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/my/api/path" {
+		if r.URL.Path != customPath {
 			return
 		}
 
@@ -103,9 +108,9 @@ func TestPreAuthorizeFixedPath_Unauthorized(t *testing.T) {
 	require.ErrorAs(t, err, &preAuthError)
 }
 
-func getGeoProxyDataGivenResponse(t *testing.T, givenInternalApiResponse string) (*GeoProxyData, error) {
+func getGeoProxyDataGivenResponse(t *testing.T, givenInternalAPIResponse string) (*GeoProxyData, error) {
 	t.Helper()
-	ts := testRailsServer(regexp.MustCompile(`/api/v4/geo/proxy`), 200, givenInternalApiResponse)
+	ts := testRailsServer(regexp.MustCompile(`/api/v4/geo/proxy`), 200, givenInternalAPIResponse)
 	defer ts.Close()
 	backend := helper.URLMustParse(ts.URL)
 	version := "123"
@@ -174,7 +179,7 @@ func TestSendGitAuditEvent(t *testing.T) {
 		requestBody    GitAuditEventRequest
 	)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v4/internal/shellhorse/git_audit_event" {
 			return
 		}
@@ -182,9 +187,9 @@ func TestSendGitAuditEvent(t *testing.T) {
 		requestHeaders = r.Header
 		defer r.Body.Close()
 		b, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		err = json.Unmarshal(b, &requestBody)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer ts.Close()
 

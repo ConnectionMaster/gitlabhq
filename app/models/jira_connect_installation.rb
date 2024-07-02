@@ -15,7 +15,7 @@ class JiraConnectInstallation < ApplicationRecord
   validates :base_url, presence: true, public_url: true
   validates :instance_url, public_url: true, allow_blank: true
 
-  scope :for_project, -> (project) {
+  scope :for_project, ->(project) {
     distinct
       .joins(:subscriptions)
       .where(jira_connect_subscriptions: {
@@ -52,6 +52,12 @@ class JiraConnectInstallation < ApplicationRecord
     return unless proxy?
 
     Gitlab::Utils.append_path(instance_url, jira_connect_events_uninstalled_path)
+  end
+
+  def create_branch_url
+    return unless proxy?
+
+    Gitlab::Utils.append_path(instance_url, new_jira_connect_branch_path)
   end
 
   def proxy?

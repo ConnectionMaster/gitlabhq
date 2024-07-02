@@ -72,10 +72,15 @@ git config http.postBuffer 52428800
 The value is specified in bytes, so in the above case the buffer size has been
 set to 50 MB. The default is 1 MB.
 
-### RPC failed; curl 92 HTTP/2 stream 0 was not closed cleanly: INTERNAL_ERROR (err 2)
+### Stream 0 was not closed cleanly
 
-This problem may be caused by a slow internet connection. If you use Git over HTTP
-instead of SSH, try one of these fixes:
+If you see this error, it may be caused by a slow internet connection:
+
+```plaintext
+RPC failed; curl 92 HTTP/2 stream 0 was not closed cleanly: INTERNAL_ERROR (err 2)
+```
+
+If you use Git over HTTP instead of SSH, try one of these fixes:
 
 - Increase the POST buffer size in the Git configuration with `git config http.postBuffer 52428800`.
 - Switch to the `HTTP/1.1` protocol with `git config http.version HTTP/1.1`.
@@ -163,7 +168,21 @@ This error usually indicates that SSH daemon's `MaxStartups` value is throttling
 SSH connections. This setting specifies the maximum number of concurrent, unauthenticated
 connections to the SSH daemon. This affects users with proper authentication
 credentials (SSH keys) because every connection is 'unauthenticated' in the
-beginning. The default value is `10`.
+beginning. The [default value](https://man.openbsd.org/sshd_config#MaxStartups) is `10`.
+
+This can be verified by examining the host's [`sshd`](https://en.wikibooks.org/wiki/OpenSSH/Logging_and_Troubleshooting#Server_Logs)
+logs. For systems in the Debian family, refer to `/var/log/auth.log`, and for RHEL derivatives,
+check `/var/log/secure` for the following errors:
+
+```plaintext
+sshd[17242]: error: beginning MaxStartups throttling
+sshd[17242]: drop connection #1 from [CLIENT_IP]:52114 on [CLIENT_IP]:22 past MaxStartups
+```
+
+The absence of this error suggests that the SSH daemon is not limiting connections,
+indicating that the underlying issue may be network-related.
+
+### Increase the number of unauthenticated concurrent SSH connections
 
 Increase `MaxStartups` on the GitLab server
 by adding or modifying the value in `/etc/ssh/sshd_config`:

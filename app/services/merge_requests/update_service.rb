@@ -169,7 +169,18 @@ module MergeRequests
       )
 
       delete_approvals_on_target_branch_change(merge_request)
-      refresh_pipelines_on_merge_requests(merge_request, allow_duplicate: true)
+
+      # `target_branch_was_deleted` is set to true when MR gets re-targeted due to
+      # deleted target branch. In this case we don't want to create a new pipeline
+      # on behalf of MR author.
+      # We nullify head_pipeline_id to force that a new pipeline is explicitly
+      # created in order to pass mergeability checks.
+      if target_branch_was_deleted
+        merge_request.head_pipeline_id = nil
+        merge_request.retargeted = true
+      else
+        refresh_pipelines_on_merge_requests(merge_request, allow_duplicate: true)
+      end
 
       abort_auto_merge(merge_request, 'target branch was changed')
     end
@@ -186,7 +197,7 @@ module MergeRequests
         # email template itself, see `change_in_merge_request_draft_status_email` template.
         notify_draft_status_changed(merge_request)
         trigger_merge_request_status_updated(merge_request)
-        publish_draft_change_event(merge_request) if Feature.enabled?(:additional_merge_when_checks_ready, project)
+        publish_draft_change_event(merge_request) if Feature.enabled?(:merge_when_checks_pass, project)
       end
 
       if !old_title_draft && new_title_draft

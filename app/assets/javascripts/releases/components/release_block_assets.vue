@@ -98,22 +98,21 @@ export default {
 </script>
 
 <template>
-  <div class="card-text gl-mt-3">
+  <div>
     <gl-button
       data-testid="accordion-button"
       variant="link"
-      class="gl-font-weight-bold gl-text-black-normal!"
+      class="gl-text-black-normal!"
+      button-text-classes="gl-heading-5"
       @click="toggleAssetsExpansion"
     >
       <gl-icon
         name="chevron-right"
-        class="gl-transition-medium"
+        class="gl-transition-all"
         :class="{ 'gl-rotate-90': isAssetsExpanded }"
       />
       {{ __('Assets') }}
-      <gl-badge size="sm" variant="neutral" class="gl-display-inline-block">{{
-        assets.count
-      }}</gl-badge>
+      <gl-badge variant="neutral" class="gl-display-inline-block">{{ assets.count }}</gl-badge>
     </gl-button>
     <gl-collapse v-model="isAssetsExpanded">
       <div class="gl-pl-6 gl-pt-3 js-assets-list">
@@ -125,7 +124,7 @@ export default {
             <li v-for="link in section.links" :key="link.url" class="gl-display-flex">
               <gl-link
                 :href="link.directAssetUrl || link.url"
-                class="gl-display-flex gl-align-items-center gl-line-height-24"
+                class="gl-display-flex gl-align-items-center gl-leading-24"
               >
                 <gl-icon :name="section.iconName" class="gl-mr-2 gl-flex-shrink-0 gl-flex-grow-0" />
                 {{ link.name }}

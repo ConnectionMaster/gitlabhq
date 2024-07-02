@@ -28,6 +28,8 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
       # Begin of the /-/ scope.
       # Use this scope for all new project routes.
       scope '-' do
+        post :preview_markdown
+
         get 'archive/*id', format: true, constraints: { format: Gitlab::PathRegex.archive_formats_regex, id: /.+?/ }, to: 'repositories#archive', as: 'archive'
 
         namespace :security do
@@ -45,7 +47,8 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
           end
         end
 
-        resources :infrastructure_registry, only: [:index, :show], module: :packages
+        resources :terraform_module_registry, only: [:index, :show], module: :packages, as: :infrastructure_registry, controller: 'infrastructure_registry'
+        get :infrastructure_registry, to: redirect('%{namespace_id}/%{project_id}/-/terraform_module_registry')
 
         resources :jobs, only: [:index, :show], constraints: { id: /\d+/ } do
           collection do
@@ -67,6 +70,7 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
             post :erase
             get :trace, defaults: { format: 'json' }
             get :raw
+            get :viewer
             get :terminal
             get :proxy
             get :test_report_summary
@@ -250,7 +254,7 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
 
         resource :mattermost, only: [:new, :create]
         resource :variables, only: [:show, :update]
-        resources :triggers, only: [:index, :create, :edit, :update, :destroy]
+        resources :triggers, only: [:index, :create, :update, :destroy]
 
         resource :mirror, only: [:show, :update] do
           member do
@@ -323,6 +327,7 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
             post :stop
             post :cancel_auto_stop
             get :terminal
+            get '/k8s(/*vueroute)', to: 'environments#k8s', as: :k8s_subroute
 
             # This route is also defined in gitlab-workhorse. Make sure to update accordingly.
             get '/terminal.ws/authorize', to: 'environments#terminal_websocket_authorize', format: false
@@ -355,6 +360,10 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
           collection do
             post :import_csv
             post 'import_csv/authorize', to: 'work_items#authorize'
+          end
+
+          member do
+            get '/designs(/*vueroute)', to: 'work_items#show', as: :designs, format: false
           end
         end
 
@@ -389,9 +398,9 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
         end
 
         namespace :design_management do
-          namespace :designs, path: 'designs/:design_id(/:sha)', constraints: -> (params) { params[:sha].nil? || Gitlab::Git.commit_id?(params[:sha]) } do
+          namespace :designs, path: 'designs/:design_id(/:sha)', constraints: ->(params) { params[:sha].nil? || Gitlab::Git.commit_id?(params[:sha]) } do
             resource :raw_image, only: :show
-            resources :resized_image, only: :show, constraints: -> (params) { ::DesignManagement::DESIGN_IMAGE_SIZES.include?(params[:id]) }
+            resources :resized_image, only: :show, constraints: ->(params) { ::DesignManagement::DESIGN_IMAGE_SIZES.include?(params[:id]) }
           end
         end
 
@@ -661,7 +670,7 @@ constraints(::Constraints::ProjectUrlConstrainer.new) do
         post :unarchive
         post :housekeeping
         post :toggle_star
-        post :preview_markdown
+        post :preview_markdown, as: :preview_markdown_deprecated
         post :export
         post :remove_export
         post :generate_new_export

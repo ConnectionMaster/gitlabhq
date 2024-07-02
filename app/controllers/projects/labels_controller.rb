@@ -8,13 +8,9 @@ class Projects::LabelsController < Projects::ApplicationController
   before_action :find_labels, only: [:index, :set_priorities, :remove_priority, :toggle_subscription]
   before_action :authorize_read_label!
   before_action :authorize_admin_labels!, only: [:new, :create, :edit, :update,
-                                                 :generate, :destroy, :remove_priority,
-                                                 :set_priorities]
+    :generate, :destroy, :remove_priority,
+    :set_priorities]
   before_action :authorize_admin_group_labels!, only: [:promote]
-
-  before_action only: :index do
-    push_frontend_feature_flag(:label_similarity_sort, project)
-  end
 
   respond_to :js, :html
 
@@ -189,10 +185,10 @@ class Projects::LabelsController < Projects::ApplicationController
   end
 
   def authorize_admin_labels!
-    return render_404 unless can?(current_user, :admin_label, @project)
+    render_404 unless can?(current_user, :admin_label, @project)
   end
 
   def authorize_admin_group_labels!
-    return render_404 unless can?(current_user, :admin_label, @project.group)
+    render_404 unless can?(current_user, :admin_label, @project.group)
   end
 end

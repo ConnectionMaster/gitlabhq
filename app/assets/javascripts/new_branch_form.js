@@ -1,4 +1,7 @@
 /* eslint-disable func-names, no-return-assign, @gitlab/require-i18n-strings */
+
+const NAME_ERROR_CLASS = 'gl-border-red-500';
+
 export default class NewBranchForm {
   constructor(form) {
     this.validate = this.validate.bind(this);
@@ -23,22 +26,22 @@ export default class NewBranchForm {
   setupRestrictions() {
     const startsWith = {
       pattern: /^(\/|\.)/g,
-      prefix: "can't start with",
+      prefix: 'Branch name cannot start with',
       conjunction: 'or',
     };
     const endsWith = {
       pattern: /(\/|\.|\.lock)$/g,
-      prefix: "can't end in",
+      prefix: 'Branch name cannot end in',
       conjunction: 'or',
     };
     const invalid = {
       pattern: /(\s|~|\^|:|\?|\*|\[|\\|\.\.|@\{|\/{2,}){1}/g,
-      prefix: "can't contain",
-      conjunction: ', ',
+      prefix: 'Branch name cannot contain',
+      conjunction: ' or ',
     };
     const single = {
       pattern: /^@+$/g,
-      prefix: "can't be",
+      prefix: 'Branch name cannot be',
       conjunction: 'or',
     };
     return (this.restrictions = [startsWith, invalid, endsWith, single]);
@@ -76,8 +79,11 @@ export default class NewBranchForm {
     };
     const errors = this.restrictions.reduce(validator, []);
     if (errors.length > 0) {
-      this.branchNameError.textContent = errors.join(', ');
+      this.branchNameError.textContent = errors.join('. ');
+      this.name.classList.add(NAME_ERROR_CLASS);
       this.name.focus();
+    } else {
+      this.name.classList.remove(NAME_ERROR_CLASS);
     }
   }
 }

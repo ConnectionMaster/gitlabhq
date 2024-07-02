@@ -18,6 +18,7 @@ RSpec.describe 'Project > Settings > Packages and registries > Container registr
 
     sign_in(user)
     stub_container_registry_config(enabled: container_registry_enabled)
+    allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(true)
   end
 
   context 'as owner', :js do
@@ -33,7 +34,7 @@ RSpec.describe 'Project > Settings > Packages and registries > Container registr
     it 'shows available section' do
       subject
 
-      expect(find('.breadcrumbs')).to have_content('Cleanup policies')
+      expect(find_by_testid('breadcrumb-links')).to have_content('Cleanup policies')
 
       section = find_by_testid('container-expiration-policy-project-settings')
       expect(section).to have_text 'Cleanup policies'
@@ -45,7 +46,7 @@ RSpec.describe 'Project > Settings > Packages and registries > Container registr
       wait_for_requests
 
       expect(page).to be_axe_clean.within('[data-testid="container-expiration-policy-project-settings"]') # rubocop:todo Capybara/TestidFinders -- Doesn't cover use case, see https://gitlab.com/gitlab-org/gitlab/-/issues/442224
-                                  .skipping :'link-in-text-block', :'heading-order'
+                                  .skipping :'link-in-text-block'
     end
 
     it 'saves cleanup policy submit the form' do

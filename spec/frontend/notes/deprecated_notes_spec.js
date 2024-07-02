@@ -264,7 +264,6 @@ describe.skip('Old Notes (~/deprecated_notes.js)', () => {
       notes = {
         setupNewNote: jest.fn(),
         refresh: jest.fn(),
-        collapseLongCommitList: jest.fn(),
         updateNotesCount: jest.fn(),
         putConflictEditWarningInPlace: jest.fn(),
       };
@@ -934,9 +933,9 @@ describe.skip('Old Notes (~/deprecated_notes.js)', () => {
 
       expect($tempNote.find('.timeline-icon .avatar').attr('src')).toEqual(currentUserAvatar);
       expect($tempNote.find('.timeline-content').hasClass('discussion')).toBe(false);
-      expect(
-        $tempNoteHeader.find('.gl-display-none.gl-sm-display-inline-block').text().trim(),
-      ).toEqual(currentUserFullname);
+      expect($tempNoteHeader.find('.gl-hidden.sm:gl-inline-block').text().trim()).toEqual(
+        currentUserFullname,
+      );
 
       expect($tempNoteHeader.find('.note-headline-light').text().trim()).toEqual(
         `@${currentUsername}`,
@@ -970,9 +969,9 @@ describe.skip('Old Notes (~/deprecated_notes.js)', () => {
       });
       const $tempNoteHeader = $tempNote.find('.note-header');
 
-      expect(
-        $tempNoteHeader.find('.gl-display-none.gl-sm-display-inline-block').text().trim(),
-      ).toEqual('Foo &lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;');
+      expect($tempNoteHeader.find('.gl-hidden.sm:gl-inline-block').text().trim()).toEqual(
+        'Foo &lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;',
+      );
     });
   });
 

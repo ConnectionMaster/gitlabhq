@@ -12,15 +12,29 @@ module Gitlab
       attr_reader :attributes
 
       class << self
-        def paths
-          @paths ||= [Rails.root.join('config', 'events', '*.yml'), Rails.root.join('ee', 'config', 'events', '*.yml')]
-        end
+        include Gitlab::Utils::StrongMemoize
 
         def definitions
-          paths.flat_map { |glob_path| load_all_from_path(glob_path) }
+          @definitions ||= paths.flat_map { |glob_path| load_all_from_path(glob_path) }
+        end
+
+        def internal_event_exists?(event_name)
+          definitions
+            .any? { |event| event.attributes[:internal_events] && event.attributes[:action] == event_name } ||
+            Gitlab::UsageDataCounters::HLLRedisCounter.legacy_event?(event_name)
+        end
+
+        def find(event_name)
+          strong_memoize_with(:find, event_name) do
+            definitions.find { |definition| definition.attributes[:action] == event_name }
+          end
         end
 
         private
+
+        def paths
+          @paths ||= [Rails.root.join('config', 'events', '*.yml'), Rails.root.join('ee', 'config', 'events', '*.yml')]
+        end
 
         def load_from_file(path)
           definition = File.read(path)
@@ -52,15 +66,36 @@ module Gitlab
       end
 
       def validation_errors
-        SCHEMA.validate(attributes.stringify_keys).map do |error|
+        SCHEMA.validate(attributes.deep_stringify_keys).map do |error|
           <<~ERROR_MSG
             --------------- VALIDATION ERROR ---------------
             Definition file: #{path}
             Error type: #{error['type']}
             Data: #{error['data']}
             Path: #{error['data_pointer']}
+            Details: #{error['details']}
           ERROR_MSG
         end
+      end
+
+      def event_selection_rules
+        @event_selection_rules ||= find_event_selection_rules
+      end
+
+      private
+
+      def find_event_selection_rules
+        result = [
+          Gitlab::Usage::EventSelectionRule.new(name: attributes[:action], time_framed: false),
+          Gitlab::Usage::EventSelectionRule.new(name: attributes[:action], time_framed: true)
+        ]
+        Gitlab::Usage::MetricDefinition.definitions.each_value do |metric_definition|
+          matching_event_selection_rules = metric_definition.event_selection_rules.select do |event_selection_rule|
+            event_selection_rule.name == attributes[:action]
+          end
+          result.concat(matching_event_selection_rules)
+        end
+        result.uniq
       end
     end
   end

@@ -2,6 +2,7 @@
 stage: Create
 group: Source Code
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "To speed up project creation in your group, build custom project templates and share them with your group."
 ---
 
 # Custom group-level project templates
@@ -9,8 +10,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/6861) in GitLab 11.6.
 
 When you create a project, you can [choose from a list of templates](../project/index.md).
 These templates, for things like GitLab Pages or Ruby, populate the new project with a copy of the files contained in the

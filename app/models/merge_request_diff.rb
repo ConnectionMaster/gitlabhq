@@ -19,7 +19,7 @@ class MergeRequestDiff < ApplicationRecord
 
   # The files_count column is a 2-byte signed integer. Look up the true value
   # from the database if this sentinel is seen
-  FILES_COUNT_SENTINEL = 2**15 - 1
+  FILES_COUNT_SENTINEL = (2**15) - 1
 
   # External diff cache key used by diffs export
   EXTERNAL_DIFFS_CACHE_TMPDIR = 'project-%{project_id}-external-mr-%{mr_id}-diff-%{id}-cache'
@@ -78,11 +78,11 @@ class MergeRequestDiff < ApplicationRecord
     joins(:merge_request_diff_commits).where(merge_request_diff_commits: { sha: sha }).reorder(nil)
   end
 
-  scope :by_project_id, -> (project_id) do
+  scope :by_project_id, ->(project_id) do
     joins(:merge_request).where(merge_requests: { target_project_id: project_id })
   end
 
-  scope :recent, -> (limit = 100) { order(id: :desc).limit(limit) }
+  scope :recent, ->(limit = 100) { order(id: :desc).limit(limit) }
 
   scope :files_in_database, -> do
     where(stored_externally: [false, nil]).where(arel_table[:files_count].gt(0))
@@ -100,7 +100,7 @@ class MergeRequestDiff < ApplicationRecord
     joins(arel_join.join_sources)
   end
 
-  scope :old_merged_diffs, -> (before) do
+  scope :old_merged_diffs, ->(before) do
     merge_requests = MergeRequest.arel_table
     mr_metrics = MergeRequest::Metrics.arel_table
     mr_diffs = arel_table
@@ -122,7 +122,7 @@ class MergeRequestDiff < ApplicationRecord
     joins(metrics_join.join_sources, mr_join.join_sources).where(condition)
   end
 
-  scope :old_closed_diffs, -> (before) do
+  scope :old_closed_diffs, ->(before) do
     condition = MergeRequest.arel_table[:state_id].eq(MergeRequest.available_states[:closed])
       .and(MergeRequest::Metrics.arel_table[:latest_closed_at].lteq(before))
 
@@ -135,7 +135,7 @@ class MergeRequestDiff < ApplicationRecord
   # SELECT ...
   # FROM (VALUES (MR_ID_1),(MR_ID_2)) merge_requests (id)
   # INNER JOIN LATERAL (...)
-  scope :latest_diff_for_merge_requests, -> (merge_requests) do
+  scope :latest_diff_for_merge_requests, ->(merge_requests) do
     mrs = Array(merge_requests)
     return MergeRequestDiff.none if mrs.empty?
 
@@ -454,7 +454,7 @@ class MergeRequestDiff < ApplicationRecord
           )
         end
 
-        diff_options[:generated_files] = comparison.generated_files if diff_options[:collapse_generated]
+        diff_options[:generated_files] = comparison.generated_files
 
         Gitlab::Metrics.measure(:diffs_comparison) do
           comparison.diffs(diff_options)
@@ -469,25 +469,19 @@ class MergeRequestDiff < ApplicationRecord
     fetching_repository_diffs({}) do |comparison|
       reorder_diff_files!
 
-      collapse_generated = Feature.enabled?(:collapse_generated_diff_files, project)
-      diff_options = { collapse_generated: collapse_generated }
-
       collection = Gitlab::Diff::FileCollection::PaginatedMergeRequestDiff.new(
         self,
         page,
-        per_page,
-        diff_options
+        per_page
       )
 
       if comparison
-        diff_options[:generated_files] = comparison.generated_files if collapse_generated
-
         comparison.diffs(
-          diff_options.merge(
-            paths: collection.diff_paths,
-            page: collection.current_page,
-            per_page: collection.limit_value,
-            count: collection.total_count)
+          generated_files: comparison.generated_files,
+          paths: collection.diff_paths,
+          page: collection.current_page,
+          per_page: collection.limit_value,
+          count: collection.total_count
         )
       else
         collection
@@ -832,7 +826,7 @@ class MergeRequestDiff < ApplicationRecord
       new_attributes[:state] = :empty
     else
       options = Commit.max_diff_options
-      options[:generated_files] = compare.generated_files if Feature.enabled?(:collapse_generated_diff_files, project)
+      options[:generated_files] = compare.generated_files
 
       diff_collection = compare.diffs(options)
       new_attributes[:real_size] = diff_collection.real_size

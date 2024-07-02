@@ -21,30 +21,34 @@ module Mutations
             GraphQL::Types::String,
             required: false,
             validates: { allow_blank: false },
-            description:
-            'Container\'s repository path pattern of the protection rule. ' \
-            'For example, `my-scope/my-project/container-dev-*`. ' \
-            'Wildcard character `*` allowed.'
+            alpha: { milestone: '16.7' },
+            description: copy_field_description(
+              Types::ContainerRegistry::Protection::RuleType,
+              :repository_path_pattern
+            )
 
-          argument :delete_protected_up_to_access_level,
+          argument :minimum_access_level_for_delete,
             Types::ContainerRegistry::Protection::RuleAccessLevelEnum,
             required: false,
-            validates: { allow_blank: false },
-            description:
-            'Maximum GitLab access level prevented from deleting a container. ' \
-            'For example, `DEVELOPER`, `MAINTAINER`, `OWNER`.'
+            alpha: { milestone: '16.7' },
+            description: copy_field_description(
+              Types::ContainerRegistry::Protection::RuleType,
+              :minimum_access_level_for_delete
+            )
 
-          argument :push_protected_up_to_access_level,
+          argument :minimum_access_level_for_push,
             Types::ContainerRegistry::Protection::RuleAccessLevelEnum,
             required: false,
-            validates: { allow_blank: false },
-            description:
-              'Maximum GitLab access level prevented from pushing a container. ' \
-              'For example, `DEVELOPER`, `MAINTAINER`, `OWNER`.'
+            alpha: { milestone: '16.7' },
+            description: copy_field_description(
+              Types::ContainerRegistry::Protection::RuleType,
+              :minimum_access_level_for_push
+            )
 
           field :container_registry_protection_rule,
             Types::ContainerRegistry::Protection::RuleType,
             null: true,
+            alpha: { milestone: '16.7' },
             description: 'Container registry protection rule after mutation.'
 
           def resolve(id:, **kwargs)

@@ -95,12 +95,15 @@ export const catalogResponseBody = {
           name: 'Project-42 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-42/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-42',
+          fullPath: 'namespace/frontend-fixtures/project-42',
           __typename: 'CiCatalogResource',
         },
         {
@@ -109,12 +112,15 @@ export const catalogResponseBody = {
           name: 'Project-41 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-41/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-41',
+          fullPath: 'namespace/frontend-fixtures/project-41',
           __typename: 'CiCatalogResource',
         },
         {
@@ -123,12 +129,15 @@ export const catalogResponseBody = {
           name: 'Project-40 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-40/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-42',
+          fullPath: 'namespace/frontend-fixtures/project-42',
           __typename: 'CiCatalogResource',
         },
         {
@@ -137,12 +146,15 @@ export const catalogResponseBody = {
           name: 'Project-39 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-39/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-39',
+          fullPath: 'namespace/frontend-fixtures/project-39',
           __typename: 'CiCatalogResource',
         },
         {
@@ -151,12 +163,15 @@ export const catalogResponseBody = {
           name: 'Project-38 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-38/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-38',
+          fullPath: 'namespace/frontend-fixtures/project-38',
           __typename: 'CiCatalogResource',
         },
         {
@@ -165,12 +180,15 @@ export const catalogResponseBody = {
           name: 'Project-37 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-37/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-37',
+          fullPath: 'namespace/frontend-fixtures/project-37',
           __typename: 'CiCatalogResource',
         },
         {
@@ -179,12 +197,15 @@ export const catalogResponseBody = {
           name: 'Project-36 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-36/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-36',
+          fullPath: 'namespace/frontend-fixtures/project-36',
           __typename: 'CiCatalogResource',
         },
         {
@@ -193,12 +214,15 @@ export const catalogResponseBody = {
           name: 'Project-35 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-35/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-35',
+          fullPath: 'namespace/frontend-fixtures/project-35',
           __typename: 'CiCatalogResource',
         },
         {
@@ -207,12 +231,15 @@ export const catalogResponseBody = {
           name: 'Project-34 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-34/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-34',
+          fullPath: 'namespace/frontend-fixtures/project-34',
           __typename: 'CiCatalogResource',
         },
         {
@@ -221,12 +248,15 @@ export const catalogResponseBody = {
           name: 'Project-33 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-33/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-33',
+          fullPath: 'namespace/frontend-fixtures/project-33',
           __typename: 'CiCatalogResource',
         },
         {
@@ -235,12 +265,15 @@ export const catalogResponseBody = {
           name: 'Project-32 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-32/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-32',
+          fullPath: 'namespace/frontend-fixtures/project-32',
           __typename: 'CiCatalogResource',
         },
         {
@@ -249,12 +282,15 @@ export const catalogResponseBody = {
           name: 'Project-31 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-31/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-31',
+          fullPath: 'namespace/frontend-fixtures/project-31',
           __typename: 'CiCatalogResource',
         },
         {
@@ -263,12 +299,15 @@ export const catalogResponseBody = {
           name: 'Project-30 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-30/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-30',
+          fullPath: 'namespace/frontend-fixtures/project-30',
           __typename: 'CiCatalogResource',
         },
         {
@@ -277,12 +316,15 @@ export const catalogResponseBody = {
           name: 'Project-29 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-29/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-29',
+          fullPath: 'namespace/frontend-fixtures/project-29',
           __typename: 'CiCatalogResource',
         },
         {
@@ -291,12 +333,15 @@ export const catalogResponseBody = {
           name: 'Project-28 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-28/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-28',
+          fullPath: 'namespace/frontend-fixtures/project-28',
           __typename: 'CiCatalogResource',
         },
         {
@@ -305,12 +350,15 @@ export const catalogResponseBody = {
           name: 'Project-27 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-27/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-27',
+          fullPath: 'namespace/frontend-fixtures/project-27',
           __typename: 'CiCatalogResource',
         },
         {
@@ -319,12 +367,15 @@ export const catalogResponseBody = {
           name: 'Project-26 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-26/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-26',
+          fullPath: 'namespace/frontend-fixtures/project-26',
           __typename: 'CiCatalogResource',
         },
         {
@@ -333,12 +384,15 @@ export const catalogResponseBody = {
           name: 'Project-25 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-25/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-25',
+          fullPath: 'namespace/frontend-fixtures/project-25',
           __typename: 'CiCatalogResource',
         },
         {
@@ -347,12 +401,15 @@ export const catalogResponseBody = {
           name: 'Project-24 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-24/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-24',
+          fullPath: 'namespace/frontend-fixtures/project-24',
           __typename: 'CiCatalogResource',
         },
         {
@@ -361,12 +418,15 @@ export const catalogResponseBody = {
           name: 'Project-23 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 0,
           starrersPath: '/frontend-fixtures/project-23/-/starrers',
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-23',
+          fullPath: 'namespace/frontend-fixtures/project-23',
           __typename: 'CiCatalogResource',
         },
       ],
@@ -394,6 +454,8 @@ export const catalogSinglePageResponse = {
           name: 'Project-45 Name',
           description: 'A simple component',
           starCount: 0,
+          last30DayUsageCount: 4,
+          verificationLevel: 'UNVERIFIED',
           versions: {
             __typename: 'CiCatalogResourceVersionConnection',
             nodes: [
@@ -416,6 +478,7 @@ export const catalogSinglePageResponse = {
             ],
           },
           webPath: '/frontend-fixtures/project-45',
+          fullPath: 'namespace/frontend-fixtures/project-45',
           __typename: 'CiCatalogResource',
         },
         {
@@ -424,11 +487,13 @@ export const catalogSinglePageResponse = {
           name: 'Project-44 Name',
           description: 'A simple component',
           starCount: 0,
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-44',
+          fullPath: 'namespace/frontend-fixtures/project-44',
           __typename: 'CiCatalogResource',
         },
         {
@@ -437,11 +502,13 @@ export const catalogSinglePageResponse = {
           name: 'Project-43 Name',
           description: 'A simple component',
           starCount: 0,
+          verificationLevel: 'UNVERIFIED',
           versions: {
             nodes: [],
             __typename: 'CiCatalogResourceVersionConnection',
           },
           webPath: '/frontend-fixtures/project-43',
+          fullPath: 'namespace/frontend-fixtures/project-43',
           __typename: 'CiCatalogResource',
         },
       ],
@@ -459,7 +526,9 @@ export const catalogSharedDataMock = {
       description: 'This is the description of the repo',
       name: 'Ruby',
       starCount: 1,
+      last30DayUsageCount: 4,
       starrersPath: '/path/to/project/-/starrers',
+      verificationLevel: 'UNVERIFIED',
       versions: {
         __typename: 'CiCatalogResourceVersionConnection',
         nodes: [
@@ -481,53 +550,7 @@ export const catalogSharedDataMock = {
         ],
       },
       webPath: '/path/to/project',
-    },
-  },
-};
-
-export const catalogAdditionalDetailsMock = {
-  data: {
-    ciCatalogResource: {
-      __typename: 'CiCatalogResource',
-      id: `gid://gitlab/CiCatalogResource/1`,
-      webPath: '/twitter/project',
-      openIssuesCount: 4,
-      openMergeRequestsCount: 10,
-      readmeHtml: '<h1>Hello world</h1>',
-      versions: {
-        __typename: 'CiCatalogResourceVersionConnection',
-        nodes: [
-          {
-            __typename: 'CiCatalogResourceVersion',
-            id: 'gid://gitlab/Release/3',
-            commit: {
-              __typename: 'Commit',
-              id: 'gid://gitlab/CommitPresenter/afa936495f20e08c26ed4a67130ee2166f94fa6e',
-              pipelines: {
-                __typename: 'PipelineConnection',
-                nodes: [
-                  {
-                    __typename: 'Pipeline',
-                    id: 'gid://gitlab/Ci::Pipeline/583',
-                    detailedStatus: {
-                      __typename: 'DetailedStatus',
-                      id: 'success-583-583',
-                      detailsPath: '/root/cicd-circular/-/pipelines/583',
-                      icon: 'status_success',
-                      text: 'passed',
-                      group: 'success',
-                    },
-                  },
-                ],
-              },
-            },
-            name: '1.0.2',
-            path: '/path/to/release',
-            author: { __typename: 'UserCore', id: 1, webUrl: 'profile/1', name: 'username' },
-            createdAt: '2022-08-23T17:19:09Z',
-          },
-        ],
-      },
+      fullPath: 'namespace/path/to/project',
     },
   },
 };
@@ -542,6 +565,7 @@ const generateResourcesNodes = (count = 20, startId = 0) => {
       icon: 'my-icon',
       name: `My component #${i}`,
       starCount: 10,
+      last30DayUsageCount: 4,
       versions: {
         __typename: 'CiCatalogResourceVersionConnection',
         nodes: [
@@ -564,6 +588,7 @@ const generateResourcesNodes = (count = 20, startId = 0) => {
         ],
       },
       webPath: 'path/to/project',
+      fullPath: 'namespace/path/to/project',
     });
   }
 

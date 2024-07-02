@@ -22,7 +22,20 @@ module Issuables
       label_names_from_params
     end
 
+    # rubocop: disable CodeReuse/ActiveRecord
+    def label_link_query(issuables, label_ids: nil, label_names: nil)
+      target_model = issuables.base_class
+
+      relation = target_label_links_query(target_model, label_ids)
+      relation = relation.joins(:label).where(labels: { name: label_names }) if label_names
+
+      relation
+    end
+    # rubocop: enable CodeReuse/ActiveRecord
+
     private
+
+    attr_reader :project, :group
 
     # rubocop: disable CodeReuse/ActiveRecord
     def by_label(issuables)
@@ -40,7 +53,7 @@ module Issuables
 
     # rubocop: disable CodeReuse/ActiveRecord
     def by_label_union(issuables)
-      return issuables unless or_filters_enabled? && label_names_from_or_params.present?
+      return issuables unless label_names_from_or_params.present?
 
       if root_namespace
         all_label_ids = find_label_ids(label_names_from_or_params).flatten
@@ -141,16 +154,9 @@ module Issuables
     end
     # rubocop: enable CodeReuse/ActiveRecord
 
-    # rubocop: disable CodeReuse/ActiveRecord
-    def label_link_query(issuables, label_ids: nil, label_names: nil)
-      target_model = issuables.base_class
-
-      relation = LabelLink.by_target_for_exists_query(target_model.name, target_model.arel_table['id'], label_ids)
-      relation = relation.joins(:label).where(labels: { name: label_names }) if label_names
-
-      relation
+    def target_label_links_query(target_model, label_ids)
+      LabelLink.by_target_for_exists_query(target_model.name, target_model.arel_table['id'], label_ids)
     end
-    # rubocop: enable CodeReuse/ActiveRecord
 
     def label_names_from_params
       return if params[:label_name].blank?

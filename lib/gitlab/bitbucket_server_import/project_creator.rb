@@ -17,19 +17,28 @@ module Gitlab
       end
 
       def execute
+        bitbucket_server_notes_separate_worker_enabled =
+          Feature.enabled?(:bitbucket_server_notes_separate_worker, current_user)
+
         ::Projects::CreateService.new(
           current_user,
           name: name,
           path: name,
           description: repo.description,
           namespace_id: namespace.id,
+          organization_id: namespace.organization_id,
           visibility_level: repo.visibility_level,
           import_type: 'bitbucket_server',
           import_source: repo.browse_url,
           import_url: repo.clone_url,
           import_data: {
             credentials: session_data,
-            data: { project_key: project_key, repo_slug: repo_slug, timeout_strategy: timeout_strategy }
+            data: {
+              project_key: project_key,
+              repo_slug: repo_slug,
+              timeout_strategy: timeout_strategy,
+              bitbucket_server_notes_separate_worker: bitbucket_server_notes_separate_worker_enabled
+            }
           },
           skip_wiki: true
         ).execute

@@ -11,12 +11,22 @@ module Ci
     include BatchNullifyDependentAssociations
     include Gitlab::Utils::StrongMemoize
 
-    VALID_REF_REGEX = %r{\A(#{Gitlab::Git::TAG_REF_PREFIX}|#{Gitlab::Git::BRANCH_REF_PREFIX}).+}
+    VALID_REF_FORMAT_REGEX = %r{\A(#{Gitlab::Git::TAG_REF_PREFIX}|#{Gitlab::Git::BRANCH_REF_PREFIX}).[^\/]+}
 
-    # The only way that ref can be unexpanded after #expand_short_ref runs is if the ref
-    # is ambiguous because both a branch and a tag with the name exist, or it is
-    # ambiguous because neither exists.
-    INVALID_REF_MESSAGE = 'is ambiguous'
+    SORT_ORDERS = {
+      id_asc: { order_by: 'id', sort: 'asc' },
+      id_desc: { order_by: 'id', sort: 'desc' },
+      description_asc: { order_by: 'description', sort: 'asc' },
+      description_desc: { order_by: 'description', sort: 'desc' },
+      ref_asc: { order_by: 'ref', sort: 'asc' },
+      ref_desc: { order_by: 'ref', sort: 'desc' },
+      next_run_at_asc: { order_by: 'next_run_at', sort: 'asc' },
+      next_run_at_desc: { order_by: 'next_run_at', sort: 'desc' },
+      created_at_asc: { order_by: 'created_at', sort: 'asc' },
+      created_at_desc: { order_by: 'created_at', sort: 'desc' },
+      updated_at_asc: { order_by: 'updated_at', sort: 'asc' },
+      updated_at_desc: { order_by: 'updated_at', sort: 'desc' }
+    }.freeze
 
     self.limit_name = 'ci_pipeline_schedules'
     self.limit_scope = :project
@@ -29,13 +39,7 @@ module Ci
 
     validates :cron, unless: :importing?, cron: true, presence: { unless: :importing? }
     validates :cron_timezone, cron_timezone: true, presence: { unless: :importing? }
-    validates :ref, presence: { unless: :importing? },
-      format: { with: VALID_REF_REGEX,
-                allow_nil: true,
-                message: INVALID_REF_MESSAGE,
-                unless: ->(schedule) do
-                  schedule.importing || Feature.disabled?(:enforce_full_refs_for_pipeline_schedules, schedule.project)
-                end }
+    validates :ref, presence: { unless: :importing? }
     validates :description, presence: true
     validates :variables, nested_attributes_duplicates: true
 
@@ -47,11 +51,16 @@ module Ci
     scope :owned_by, ->(user) { where(owner: user) }
     scope :for_project, ->(project_id) { where(project_id: project_id) }
 
-    before_validation :expand_short_ref
-
     accepts_nested_attributes_for :variables, allow_destroy: true
 
     alias_attribute :real_next_run, :next_run_at
+
+    def self.sort_by_attribute(method)
+      sort_order = SORT_ORDERS[method]
+      raise ArgumentError, "order undefined" unless sort_order
+
+      reorder(sort_order[:order_by] => sort_order[:sort])
+    end
 
     def owned_by?(current_user)
       owner == current_user
@@ -74,6 +83,7 @@ module Ci
     end
 
     override :set_next_run_at
+
     def set_next_run_at
       self.next_run_at = ::Ci::PipelineSchedules::CalculateNextRunService # rubocop: disable CodeReuse/ServiceClass
                            .new(project)
@@ -108,15 +118,14 @@ module Ci
       super
     end
 
-    private
-
     def expand_short_ref
-      return if Feature.disabled?(:enforce_full_refs_for_pipeline_schedules, project)
-      return if ref.blank? || VALID_REF_REGEX.match?(ref) || ambiguous_ref?
+      return if ref.blank? || VALID_REF_FORMAT_REGEX.match?(ref) || ambiguous_ref?
 
       # In case the ref doesn't exist default to the initial value
       self.ref = project.repository.expand_ref(ref) || ref
     end
+
+    private
 
     def ambiguous_ref?
       strong_memoize_with(:ambiguous_ref, ref) do

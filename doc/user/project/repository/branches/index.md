@@ -171,6 +171,84 @@ To view the **Branch rules overview** list:
         - [Approval rules](../../merge_requests/approvals/rules.md).
         - [Status checks](../../merge_requests/status_checks.md).
 
+#### Create a branch rule
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) in GitLab 16.8 with a flag named `add_branch_rules`. Disabled by default.
+> - Feature flag `add_branch_rules` [renamed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) to `edit_branch_rules` in GitLab 16.11. Disabled by default.
+> - **All branches** and **All protected branches** options [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/388129) in GitLab 17.0.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+This feature is available for testing, but not ready for production use.
+
+Prerequisites:
+
+- You must have at least the Maintainer role for the project.
+
+To create a branch rule:
+
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Settings > Repository**.
+1. Expand **Branch rules**.
+1. Then:
+   - To enter a specific branch name or pattern:
+     1. In the **Add branch rule** dropdown list, select **Branch name or pattern**.
+     1. On the dialog, from the **Create branch rule** dropdown list, select a branch name or create a wildcard by typing `*`.
+   - To protect all branches in the project:
+     1. In the **Add branch rule** dropdown list, select **All branches**.
+     1. On the rule's details page, under **Merge request approvals**, enter the required number of approvals for the rule.
+   - To protect all branches in the project that are already specified as protected:
+     1. In the **Add branch rule** dropdown list, select **All protected branches**.
+     1. On the rule's details page, under **Merge request approvals**, enter the required number of approvals for the rule.
+
+#### Edit a branch rule
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) in GitLab 16.8 with a flag named `add_branch_rules`. Disabled by default.
+> - Feature flag `add_branch_rules` [renamed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) to `edit_branch_rules` in GitLab 16.11. Disabled by default.
+
+FLAG:
+On self-managed GitLab, by default this feature is not available. To make it available per project or for your entire instance, an administrator can [enable the feature flag](../../../../administration/feature_flags.md) named `edit_branch_rules`.
+On GitLab.com and GitLab Dedicated, this feature is not available.
+This feature is not ready for production use.
+
+Prerequisites:
+
+- You must have at least the Maintainer role for the project.
+
+To edit a branch rule:
+
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Settings > Repository**.
+1. Expand **Branch rules**.
+1. Next to a rule you want to edit, select **View details**.
+1. In the upper-right corner, select **Edit**.
+1. In the dialog, from the **Create branch rule** dropdown list, select a branch name or create a wildcard by typing `*`.
+1. Select **Update**.
+
+#### Delete a branch rule
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) in GitLab 16.8 with a flag named `add_branch_rules`. Disabled by default.
+> - Feature flag `add_branch_rules` [renamed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/88279) to `edit_branch_rules` in GitLab 16.11. Disabled by default.
+
+FLAG:
+On self-managed GitLab, by default this feature is not available. To make it available per project or for your entire instance, an administrator can [enable the feature flag](../../../../administration/feature_flags.md) named `edit_branch_rules`.
+On GitLab.com and GitLab Dedicated, this feature is not available.
+This feature is not ready for production use.
+
+Prerequisites:
+
+- You must have at least the Maintainer role for the project.
+
+To delete a branch rule:
+
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Settings > Repository**.
+1. Expand **Branch rules**.
+1. Next to a rule you want to delete, select **View details**.
+1. In the upper-right corner, select **Delete rule**.
+1. On the confirmation dialog, select **Delete branch rule**.
+
 ## Name your branch
 
 Git enforces [branch name rules](https://git-scm.com/docs/git-check-ref-format)
@@ -240,7 +318,8 @@ GitLab uses the issue number to import data into the merge request:
   [default closing pattern](../../issues/managing_issues.md#default-closing-pattern),
   merging the merge request [also closes](../../issues/managing_issues.md#closing-issues-automatically)
   the related issue.
-- Issue milestone and labels are copied to the merge request.
+- If the merge request is in the same project, and not a fork, the issue milestone
+  and labels are copied to the merge request.
 
 ## Compare branches
 
@@ -380,7 +459,10 @@ commits. In this example, branches `B` and `C` both start from the same commit (
 on branch `A`:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 gitGraph
+    accTitle: Diagram of multiple branches with the same commit
+    accDescr: Branches A and B contain the same commit, but branch B also contains other commits. Merging branch B makes branch A appear as merged, because all its commits are merged.
     commit id:"a"
     branch "branch A"
     commit id:"b"

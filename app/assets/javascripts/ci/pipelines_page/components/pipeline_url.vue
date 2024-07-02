@@ -77,7 +77,7 @@ export default {
           commitAuthorInformation = pipelineCommitAuthor;
 
           // 3. If GitLab user does not have avatar, they might have a Gravatar
-        } else if (pipelineCommit.author_gravatar_url) {
+        } else if (pipelineCommit?.author_gravatar_url) {
           commitAuthorInformation = {
             ...pipelineCommitAuthor,
             avatar_url: pipelineCommit.author_gravatar_url,
@@ -86,8 +86,8 @@ export default {
         // 4. If committer is not a GitLab User, they can have a Gravatar
       } else {
         commitAuthorInformation = {
-          avatar_url: pipelineCommit.author_gravatar_url,
-          path: `mailto:${pipelineCommit.author_email}`,
+          avatar_url: pipelineCommit?.author_gravatar_url,
+          path: `mailto:${pipelineCommit?.author_email}`,
           username: pipelineCommit.author_name,
         };
       }
@@ -153,7 +153,7 @@ export default {
       <span v-if="commitTitle" class="gl-display-flex">
         <tooltip-on-truncate
           :title="commitTitle"
-          class="gl-flex-grow-1 gl-text-truncate gl-p-3 gl-ml-n3 gl-mr-n3 gl-mt-n3 gl-mb-n3"
+          class="gl-flex-grow-1 gl-text-truncate gl-p-3 -gl-ml-3 -gl-mr-3 -gl-mt-3 -gl-mb-3"
         >
           <gl-link
             :href="commitUrl"
@@ -177,7 +177,7 @@ export default {
         >#{{ pipeline[pipelineIdType] }}</gl-link
       >
       <!--Commit row-->
-      <div class="gl-display-inline-flex gl-rounded-base gl-px-2 gl-bg-gray-50 gl-text-gray-700">
+      <div class="gl-inline-flex gl-rounded-base gl-px-2 gl-bg-gray-50 gl-text-gray-700">
         <tooltip-on-truncate :title="tooltipTitle" truncate-target="child" placement="top">
           <gl-icon
             v-gl-tooltip

@@ -172,6 +172,11 @@ module Gitlab
       "%#{bytes.first.to_s(16).upcase}"
     end
 
+    # Escapes characters to unicode
+    def escape_unicode(char)
+      "\\u#{char.bytes.map { |i| i.to_s(16).rjust(4, '0') }.join}"
+    end
+
     def clean(message, replace: "")
       message.encode(
         "UTF-16BE",

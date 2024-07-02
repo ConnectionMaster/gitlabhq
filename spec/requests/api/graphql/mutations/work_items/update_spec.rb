@@ -7,10 +7,10 @@ RSpec.describe 'Update a work item', feature_category: :team_planning do
 
   let_it_be(:group) { create(:group) }
   let_it_be(:project) { create(:project, group: group) }
-  let_it_be(:author) { create(:user).tap { |user| group.add_reporter(user) } }
-  let_it_be(:developer) { create(:user).tap { |user| group.add_developer(user) } }
-  let_it_be(:reporter) { create(:user).tap { |user| group.add_reporter(user) } }
-  let_it_be(:guest) { create(:user).tap { |user| group.add_guest(user) } }
+  let_it_be(:author) { create(:user, reporter_of: group) }
+  let_it_be(:developer) { create(:user, developer_of: group) }
+  let_it_be(:reporter) { create(:user, reporter_of: group) }
+  let_it_be(:guest) { create(:user, guest_of: group) }
   let_it_be(:work_item, refind: true) { create(:work_item, project: project, author: author) }
 
   let(:input) { { 'stateEvent' => 'CLOSE', 'title' => 'updated title' } }
@@ -561,7 +561,10 @@ RSpec.describe 'Update a work item', feature_category: :team_planning do
         let_it_be(:invalid_parent) { create(:work_item, :task, project: project) }
 
         context 'when parent work item type is invalid' do
-          let(:error) { "#{work_item.to_reference} cannot be added: is not allowed to add this type of parent" }
+          let(:error) do
+            "#{invalid_parent.to_reference} cannot be added: it's not allowed to add this type of parent item"
+          end
+
           let(:input) do
             { 'hierarchyWidget' => { 'parentId' => invalid_parent.to_global_id.to_s }, 'title' => 'new title' }
           end
@@ -720,7 +723,7 @@ RSpec.describe 'Update a work item', feature_category: :team_planning do
 
         let(:input) { { 'hierarchyWidget' => { 'childrenIds' => children_ids } } }
         let(:error) do
-          "#{invalid_child.to_reference} cannot be added: is not allowed to add this type of parent"
+          "#{invalid_child.to_reference} cannot be added: it's not allowed to add this type of parent item"
         end
 
         context 'when child work item type is invalid' do
@@ -893,7 +896,7 @@ RSpec.describe 'Update a work item', feature_category: :team_planning do
               expect(mutation_response['workItem']['title']).to eq('Foo')
               expect(mutation_response['workItem']['widgets']).to include(
                 'type' => 'START_AND_DUE_DATE',
-                'dueDate' => Date.tomorrow.strftime('%Y-%m-%d'),
+                'dueDate' => Date.tomorrow.iso8601,
                 'startDate' => nil
               )
             end

@@ -33,7 +33,7 @@ To instrument an audit event, the following attributes should be provided:
 |:-------------|:------------------------------------|:----------|:------------------------------------------------------------------|
 | `name`       | String                              | false     | Action name to be audited. Represents the [type of the event](#event-type-definitions). Used for error tracking |
 | `author`     | User                                | true      | User who authors the change. Can be an [internal user](../internal_users.md). For example, [inactive project deletion](../../administration/inactive_project_deletion.md) audit events are authored by `GitLab-Admin-Bot`. |
-| `scope`      | User, Project, Group, or InstanceScope | true      | Scope which the audit event belongs to                            |
+| `scope`      | User, Project, Group, or Instance | true      | Scope which the audit event belongs to                            |
 | `target`     | Object                              | true      | Target object being audited                                       |
 | `message`    | String                              | true      | Message describing the action ([not translated](#i18n-and-the-audit-event-message-attribute)) |
 | `created_at` | DateTime                            | false     | The time when the action occurred. Defaults to `DateTime.current` |
@@ -224,10 +224,11 @@ To add a new audit event type:
 | `milestone` | yes | Milestone in which this type was added |
 | `saved_to_database` | yes | Indicate whether to persist events to database and JSON logs |
 | `streamed` | yes | Indicate that events should be streamed to external services (if configured) |
+| `scope` | yes | List of scopes that this audit event type is available for. Should be an Array containing one or more of `Project`, `User`, `Group` or `Instance` |
 
 ### Generate documentation
 
-Audit event types documentation is automatically generated and [published](../../administration/audit_event_streaming/audit_event_types.md)
+Audit event types documentation is automatically generated and [published](../../user/compliance/audit_event_types.md)
 to the GitLab documentation site.
 
 If you add a new audit event type, run the
@@ -239,7 +240,11 @@ bundle exec rake gitlab:audit_event_types:compile_docs
 ```
 
 Run the [`gitlab:audit_event_types:check_docs` Rake task](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/tasks/gitlab/audit_event_types/audit_event_types.rake)
-to check if the documentation is up-to-date.
+to check if the documentation is up-to-date:
+
+```shell
+bundle exec rake gitlab:audit_event_types:check_docs
+```
 
 ## Event streaming
 

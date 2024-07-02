@@ -32,7 +32,8 @@ RSpec.describe Groups::GroupMembersHelper do
         access_requests: present_members(access_requests),
         banned: [],
         include_relations: [:inherited, :direct],
-        search: nil
+        search: nil,
+        pending_members: []
       )
     end
 
@@ -52,7 +53,8 @@ RSpec.describe Groups::GroupMembersHelper do
         can_manage_members: be_in([true, false]),
         can_manage_access_requests: be_in([true, false]),
         group_name: shared_group.name,
-        group_path: shared_group.full_path
+        group_path: shared_group.full_path,
+        can_approve_access_requests: true
       }
 
       expect(subject).to include(expected)
@@ -107,7 +109,8 @@ RSpec.describe Groups::GroupMembersHelper do
             access_requests: present_members(access_requests),
             banned: [],
             include_relations: include_relations,
-            search: nil
+            search: nil,
+            pending_members: []
           )
         end
 

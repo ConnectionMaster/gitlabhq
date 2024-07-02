@@ -112,7 +112,7 @@ To configure the connection to the external read-replica database:
 
    # note this is shared between both databases,
    # make sure you define the same password in both
-   gitlab_rails['db_password'] = '<your_password_here>'
+   gitlab_rails['db_password'] = '<your_db_password_here>'
 
    gitlab_rails['db_username'] = 'gitlab'
    gitlab_rails['db_host'] = '<database_read_replica_host>'
@@ -323,7 +323,7 @@ secondary site is a read-only copy.
       match exactly.
    1. Optional. In **Internal URL (optional)**, enter an internal URL for the primary site.
    1. Optional. Select which groups or storage shards should be replicated by the
-      secondary site. To replicate all, leave the field blank. See [selective synchronization](../replication/configuration.md#selective-synchronization).
+      secondary site. To replicate all, leave the field blank. See [selective synchronization](../replication/selective_synchronization.md).
    1. Select **Save changes**.
 1. SSH into each Rails and Sidekiq node on your secondary site and restart the services:
 
@@ -459,7 +459,7 @@ Configure GitLab to use this database. These steps are for Linux package and Doc
 
    ```ruby
    geo_secondary['db_username'] = 'gitlab_geo'
-   geo_secondary['db_password'] = '<your_password_here>'
+   geo_secondary['db_password'] = '<your_tracking_db_password_here>'
 
    geo_secondary['db_host'] = '<tracking_database_host>'
    geo_secondary['db_port'] = <tracking_database_port>      # change to the correct port

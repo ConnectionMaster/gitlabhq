@@ -8,9 +8,10 @@ import {
   GlLoadingIcon,
   GlSprintf,
   GlToggle,
+  GlTooltipDirective,
 } from '@gitlab/ui';
 import { createAlert } from '~/alert';
-import { __, s__ } from '~/locale';
+import { __, s__, n__, sprintf } from '~/locale';
 import { helpPagePath } from '~/helpers/help_page_helper';
 import glFeatureFlagMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import addProjectCIJobTokenScopeMutation from '../graphql/mutations/add_project_ci_job_token_scope.mutation.graphql';
@@ -18,7 +19,7 @@ import removeProjectCIJobTokenScopeMutation from '../graphql/mutations/remove_pr
 import updateCIJobTokenScopeMutation from '../graphql/mutations/update_ci_job_token_scope.mutation.graphql';
 import getCIJobTokenScopeQuery from '../graphql/queries/get_ci_job_token_scope.query.graphql';
 import getProjectsWithCIJobTokenScopeQuery from '../graphql/queries/get_projects_with_ci_job_token_scope.query.graphql';
-import TokenProjectsTable from './token_projects_table.vue';
+import TokenAccessTable from './token_access_table.vue';
 
 // Note: This component will be removed in 17.0, as the outbound access token is getting deprecated
 export default {
@@ -46,19 +47,6 @@ export default {
   deprecationDocumentationLink: helpPagePath('ci/jobs/ci_job_token', {
     anchor: 'limit-your-projects-job-token-access',
   }),
-  fields: [
-    {
-      key: 'project',
-      label: __('Project that can be accessed'),
-      thClass: 'gl-border-t-none!',
-    },
-    {
-      key: 'actions',
-      label: '',
-      tdClass: 'gl-text-right',
-      thClass: 'gl-border-t-none!',
-    },
-  ],
   components: {
     GlAlert,
     GlButton,
@@ -68,7 +56,10 @@ export default {
     GlLoadingIcon,
     GlSprintf,
     GlToggle,
-    TokenProjectsTable,
+    TokenAccessTable,
+  },
+  directives: {
+    GlTooltip: GlTooltipDirective,
   },
   mixins: [glFeatureFlagMixin()],
   inject: {
@@ -123,6 +114,14 @@ export default {
     disableTokenToggle() {
       return !this.jobTokenScopeEnabled;
     },
+    projectCountTooltip() {
+      return sprintf(
+        n__('%{count} project has access', '%{count} projects have access', this.projects.length),
+        {
+          count: this.projects.length,
+        },
+      );
+    },
   },
   methods: {
     async updateCIJobTokenScope() {
@@ -174,7 +173,7 @@ export default {
         this.getProjects();
       }
     },
-    async removeProject(removeTargetPath) {
+    async removeProject(project) {
       try {
         const {
           data: {
@@ -185,7 +184,7 @@ export default {
           variables: {
             input: {
               projectPath: this.fullPath,
-              targetProjectPath: removeTargetPath,
+              targetProjectPath: project.fullPath,
             },
           },
         });
@@ -267,13 +266,13 @@ export default {
       <div>
         <gl-card
           class="gl-new-card"
-          header-class="gl-new-card-header"
+          header-class="gl-new-card-header gl-border-b-0"
           body-class="gl-new-card-body gl-px-0"
         >
           <template #header>
             <div class="gl-new-card-title-wrapper">
               <h5 class="gl-new-card-title">{{ $options.i18n.cardHeaderTitle }}</h5>
-              <span class="gl-new-card-count">
+              <span v-gl-tooltip :title="projectCountTooltip" class="gl-new-card-count">
                 <gl-icon name="project" class="gl-mr-2" />
                 {{ projects.length }}
               </span>
@@ -282,11 +281,7 @@ export default {
               <gl-button size="small" disabled>{{ $options.i18n.addProject }}</gl-button>
             </div>
           </template>
-          <token-projects-table
-            :projects="projects"
-            :table-fields="$options.fields"
-            @removeProject="removeProject"
-          />
+          <token-access-table :items="projects" @removeItem="removeProject" />
         </gl-card>
       </div>
     </template>

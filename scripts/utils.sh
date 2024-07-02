@@ -97,7 +97,6 @@ function bundle_install_script() {
 
   gem --version
   bundle --version
-  gem install bundler --no-document --conservative --version 2.4.11
   test -d jh && bundle config set --local gemfile 'jh/Gemfile'
   bundle config set path "$(pwd)/vendor"
   bundle config set clean 'true'
@@ -122,9 +121,15 @@ function yarn_install_script() {
 
   retry yarn install --frozen-lockfile
 
+  section_end "yarn-install"
+}
+
+function yarn_install_script_storybook() {
+  section_start "yarn-install-storybook" "Installing Yarn packages for Storybook"
+
   retry yarn storybook:install --frozen-lockfile
 
-  section_end "yarn-install"
+  section_end "yarn-install-storybook"
 }
 
 function assets_compile_script() {

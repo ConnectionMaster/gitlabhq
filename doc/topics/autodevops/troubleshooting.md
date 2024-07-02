@@ -21,7 +21,7 @@ You can resolve some problems with Auto DevOps deployment by changing advanced A
 
 ## Unable to select a buildpack
 
-Auto Build and Auto Test may fail to detect your language or framework with the
+Auto Test may fail to detect your language or framework with the
 following error:
 
 ```plaintext
@@ -93,7 +93,7 @@ with Auto DevOps:
 ```plaintext
 Detected an existing PostgreSQL database installed on the
 deprecated channel 1, but the current channel is set to 2. The default
-channel changed to 2 in of GitLab 13.0.
+channel changed to 2 in GitLab 13.0.
 [...]
 ```
 
@@ -182,11 +182,16 @@ that works for this problem. Follow these steps to use the tool in Auto DevOps:
 
 1. Continue the deployments as usual.
 
-## `Error: error initializing: Looks like "https://kubernetes-charts.storage.googleapis.com" is not a valid chart repository or cannot be reached`
+## `Error: not a valid chart repository or cannot be reached`
 
 As [announced in the official CNCF blog post](https://www.cncf.io/blog/2020/10/07/important-reminder-for-all-helm-users-stable-incubator-repos-are-deprecated-and-all-images-are-changing-location/),
 the stable Helm chart repository was deprecated and removed on November 13th, 2020.
-You may encounter this error after that date.
+You may encounter this error after that date:
+
+```plaintext
+Error: error initializing: Looks like "https://kubernetes-charts.storage.googleapis.com"
+is not a valid chart repository or cannot be reached
+```
 
 Some GitLab features had dependencies on the stable chart. To mitigate the impact, we changed them
 to use new official repositories or the [Helm Stable Archive repository maintained by GitLab](https://gitlab.com/gitlab-org/cluster-integration/helm-stable-archive).

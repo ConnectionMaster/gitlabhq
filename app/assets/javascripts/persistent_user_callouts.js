@@ -17,6 +17,7 @@ const PERSISTENT_USER_CALLOUTS = [
   '.js-namespace-storage-alert',
   '.js-web-hook-disabled-callout',
   '.js-merge-request-settings-callout',
+  '.js-compliance-framework-settings-callout',
   '.js-geo-enable-hashed-storage-callout',
   '.js-geo-migrate-hashed-storage-callout',
   '.js-unlimited-members-during-trial-alert',
@@ -24,7 +25,8 @@ const PERSISTENT_USER_CALLOUTS = [
   '.js-new-nav-for-everyone-callout',
   '.js-namespace-over-storage-users-combined-alert',
   '.js-joining-a-project-alert',
-  '.js-duo-pro-trial-alert',
+  '.js-all-seats-used',
+  '.js-period-in-terraform-state-name-alert',
 ];
 
 const initCallouts = () => {

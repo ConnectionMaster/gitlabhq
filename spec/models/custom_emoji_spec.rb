@@ -25,7 +25,7 @@ RSpec.describe CustomEmoji do
     end
 
     it 'disallows very long invalid emoji name without regular expression backtracking issues' do
-      new_emoji = build(:custom_emoji, name: 'a' * 10000 + '!', group: group)
+      new_emoji = build(:custom_emoji, name: ('a' * 10000) + '!', group: group)
 
       Timeout.timeout(1) do
         expect(new_emoji).not_to be_valid
@@ -79,6 +79,22 @@ RSpec.describe CustomEmoji do
       let_it_be(:subgroup_emoji) { create(:custom_emoji, namespace: subgroup, name: 'parrot') }
 
       it { expect(described_class.for_namespaces([subgroup.id, group.id])).to eq([subgroup_emoji]) }
+    end
+  end
+
+  describe '#url' do
+    before do
+      stub_asset_proxy_setting(
+        enabled: true,
+        secret_key: 'shared-secret',
+        url: 'https://assets.example.com'
+      )
+    end
+
+    it 'uses the asset proxy' do
+      emoji = build(:custom_emoji, name: 'gitlab', file: "http://example.com/test.png")
+
+      expect(emoji.url).to eq("https://assets.example.com/08df250eeeef1a8cf2c761475ac74c5065105612/687474703a2f2f6578616d706c652e636f6d2f746573742e706e67")
     end
   end
 end

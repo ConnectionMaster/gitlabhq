@@ -6,7 +6,12 @@ import { extendedWrapper } from 'helpers/vue_test_utils_helper';
 import { createAlert, VARIANT_DANGER } from '~/alert';
 import IntegrationView from '~/profile/preferences/components/integration_view.vue';
 import ProfilePreferences from '~/profile/preferences/components/profile_preferences.vue';
-import { i18n } from '~/profile/preferences/constants';
+import ExtensionsMarketplaceWarning from '~/profile/preferences/components/extensions_marketplace_warning.vue';
+import {
+  i18n,
+  INTEGRATION_EXTENSIONS_MARKETPLACE,
+  INTEGRATION_VIEW_CONFIGS,
+} from '~/profile/preferences/constants';
 import {
   integrationViews,
   userFields,
@@ -14,6 +19,7 @@ import {
   colorModes,
   lightColorModeId,
   darkColorModeId,
+  autoColorModeId,
   themes,
   themeId1,
 } from '../mock_data';
@@ -241,6 +247,63 @@ describe('ProfilePreferences component', () => {
       await nextTick();
 
       expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads the page when switching from auto to light mode', async () => {
+      selectColorModeId(autoColorModeId);
+      setupWrapper();
+
+      selectColorModeId(lightColorModeId);
+      dispatchBeforeSendEvent();
+      await nextTick();
+
+      dispatchSuccessEvent();
+      await nextTick();
+
+      expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('with extensions marketplace integration view', () => {
+    beforeEach(() => {
+      wrapper = createComponent({
+        provide: {
+          integrationViews: [
+            {
+              name: INTEGRATION_EXTENSIONS_MARKETPLACE,
+              help_link: 'http://foo.com/help-extensions-marketplace',
+              message: 'Click %{linkStart}Foo%{linkEnd}!',
+              message_url: 'http://foo.com',
+            },
+          ],
+        },
+      });
+    });
+
+    it('renders view with 2-way-bound value', async () => {
+      const integrationView = wrapper.findComponent(IntegrationView);
+
+      expect(integrationView.props()).toMatchObject({
+        value: false,
+        config: INTEGRATION_VIEW_CONFIGS[INTEGRATION_EXTENSIONS_MARKETPLACE],
+      });
+
+      await integrationView.vm.$emit('input', true);
+
+      expect(integrationView.props('value')).toBe(true);
+    });
+
+    it('renders extensions marketplace warning with 2-way-bound value', async () => {
+      const warning = wrapper.findComponent(ExtensionsMarketplaceWarning);
+
+      expect(warning.props()).toEqual({
+        helpUrl: 'http://foo.com/help-extensions-marketplace',
+        value: false,
+      });
+
+      await warning.vm.$emit('input', true);
+
+      expect(warning.props('value')).toBe(true);
     });
   });
 });

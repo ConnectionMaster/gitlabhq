@@ -37,14 +37,14 @@ For example:
 ```markdown
 ## Feature name
 
-> - [Introduced](<link-to-issue>) in GitLab 11.3.
+> - [Introduced](https://issue-link) in GitLab 11.3.
 
 This feature does something.
 ```
 
 The item text must include these words in order. Capitalization doesn't matter.
 
-- `introduced`, `enabled`, `deprecated`, `changed`, `moved`, `recommended`, `removed`, or `renamed`
+- `introduced`, `added`, `enabled`, `deprecated`, `changed`, `moved`, `recommended`, `removed`, or `renamed`
 - `in` or `to`
 - `GitLab` (or, for external projects, the name of the project)
 
@@ -67,15 +67,24 @@ Start the sentence with the feature name or a gerund.
 For example, on the issue boards page:
 
 ```markdown
-> - [Introduced](<link-to-issue>) in GitLab 13.1.
-> - Creating an issue from an issue board [introduced](<link-to-issue>) in GitLab 14.1.
+> - [Introduced](https://issue-link) in GitLab 13.1.
+> - Creating an issue from an issue board [introduced](https://issue-link) in GitLab 14.1.
 ```
 
 Or on email notifications page:
 
 ```markdown
-> - [Introduced](<link-to-issue>) in GitLab 13.1.
-> - Notifications for expiring tokens [introduced](<link-to-issue>) in GitLab 14.3.
+> - [Introduced](https://issue-link) in GitLab 13.1.
+> - Notifications for expiring tokens [introduced](https://issue-link) in GitLab 14.3.
+```
+
+#### Making features available as part of a program
+
+When a feature is made available to users as a part of a program, add a new list item.
+
+```markdown
+> - [Introduced](https://issue-link) in GitLab 15.1.
+> - Merged results pipelines [added](https://issue-link) to the [Registration Features Program](https://page-link) in GitLab 16.7.
 ```
 
 #### Moving subscription tiers
@@ -83,18 +92,23 @@ Or on email notifications page:
 If a feature is moved to another subscription tier, use `moved`:
 
 ```markdown
-> - [Moved](<link-to-issue>) from GitLab Ultimate to GitLab Premium in 11.8.
-> - [Moved](<link-to-issue>) from GitLab Premium to GitLab Free in 12.0.
+> - [Moved](https://issue-link) from GitLab Ultimate to GitLab Premium in 11.8.
+> - [Moved](https://issue-link) from GitLab Premium to GitLab Free in 12.0.
 ```
 
 #### Changing the feature status
 
-If the feature status changes, use `changed`:
+If the feature status changes to experiment or beta, use `changed`:
 
 ```markdown
-> - [Introduced](<link-to-issue>) as an [Experiment](../../policy/experiment-beta-support.md) in GitLab 15.7.
-> - [Changed](<link-to-issue>) to Beta in GitLab 16.0.
-> - [Changed](<link-to-issue>) to Generally Available in GitLab 16.3.
+> - [Introduced](https://issue-link) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 15.7.
+> - [Changed](https://issue-link) to beta in GitLab 16.0.
+```
+
+For a change to generally available, use:
+
+```markdown
+> - [Generally available](https://issue-link) in GitLab 16.10.
 ```
 
 #### Features introduced behind feature flags
@@ -109,7 +123,7 @@ inline with the existing text. If possible, include a link to the related issue,
 merge request, or epic. For example:
 
 ```markdown
-The voting strategy [in GitLab 13.4 and later](<link-to-issue>) requires the primary and secondary
+The voting strategy [in GitLab 13.4 and later](https://issue-link) requires the primary and secondary
 voters to agree.
 ```
 
@@ -136,8 +150,8 @@ To deprecate a page or topic:
    **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
    WARNING:
-   This feature was [deprecated](<link-to-issue>) in GitLab 14.8
-   and is planned for removal in 15.4. Use [feature X](<link-to-docs>) instead.
+   This feature was [deprecated](https://issue-link) in GitLab 14.8
+   and is planned for removal in 15.4. Use [feature X](link-to-docs.md) instead.
    ```
 
    If you're not sure when the feature will be removed or no
@@ -164,8 +178,8 @@ To deprecate a page or topic:
    **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
    WARNING:
-   This feature was [deprecated](<link-to-issue>) in GitLab 14.8
-   and is planned for removal in 15.4. Use [feature X](<link-to-docs>) instead.
+   This feature was [deprecated](https://issue-link) in GitLab 14.8
+   and is planned for removal in 15.4. Use [feature X](link-to-docs.md) instead.
 
    <!--- end_remove -->
    ```
@@ -202,9 +216,9 @@ To remove a page:
    **Tier:** Premium, Ultimate
    **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-   This feature was [deprecated](<link-to-issue>) in GitLab X.Y
-   and [removed](<link-to-issue>) in X.Y.
-   Use [feature X](<link-to-docs>) instead.
+   This feature was [deprecated](https://issue-link) in GitLab X.Y
+   and [removed](https://issue-link) in X.Y.
+   Use [feature X](link-to-docs.md) instead.
    ```
 
 1. Remove the page's entry from the global navigation by editing [`navigation.yaml`](https://gitlab.com/gitlab-org/gitlab-docs/blob/main/content/_data/navigation.yaml) in `gitlab-docs`.
@@ -231,9 +245,9 @@ To remove a topic:
    **Tier:** Premium, Ultimate
    **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-   This feature was [deprecated](<link-to-issue>) in GitLab X.Y
-   and [removed](<link-to-issue>) in X.Y.
-   Use [feature X](<link-to-docs>) instead.
+   This feature was [deprecated](https://issue-link) in GitLab X.Y
+   and [removed](https://issue-link) in X.Y.
+   Use [feature X](link-to-docs.md) instead.
 
    <!--- end_remove -->
    ```
@@ -258,6 +272,41 @@ If the flag hasn't been removed, readers should know when it was introduced.
 Historical feature information is available in [release posts](https://about.gitlab.com/releases/)
 or by searching for the issue or merge request where the work was done.
 
+### Timing of removals
+
+When a new major version is about to be released, you can start creating merge
+requests to remove any mentions of the last unsupported version, but only merge
+them during the milestone of the new major release.
+
+For example, if GitLab 17.0 is the new major upcoming release:
+
+- The supported versions are 16, 15, and 14.
+- When GitLab 17.0 is released, GitLab 14 is no longer supported.
+
+You can then create merge requests to remove any mentions to GitLab 14, but only
+merge them during the 17.0 milestone, which is after 16.11 is released.
+
+### Exception for upgrade pages
+
+The [version-specific pages](../../update/index.md#version-specific-upgrading-instructions) are the only exception to the previous guideline.
+For example, `doc/update/versions/14_changes.md` should
+be removed during the `.3` milestone. In this example, the changes would be removed in 17.3.
+
+We don't remove those pages immediately so that users have time to upgrade
+from older versions.
+
+Instead of removing the unsupported page,
+[add a note](#remove-a-topic) with a date three months in the future.
+This note ensures the page is cleaned up as part of the
+[monthly maintenance tasks](https://handbook.gitlab.com/handbook/product/ux/technical-writing/#regularly-scheduled-tasks).
+
+Also, if the `X_changes.md` page contains relative links to other sections
+that are removed as part of the versions cleanup, the `docs-lint links`
+job will likely fail. You can replace those relative links with an archived
+version. Be sure to pick the latest minor version of the
+unsupported version to be removed as shown in
+<https://archives.docs.gitlab.com/>.
+
 ## Promising features in future versions
 
 Do not promise to deliver features in a future release. For example, avoid phrases like,
@@ -267,8 +316,8 @@ We cannot guarantee future feature work, and promises
 like these can raise legal issues. Instead, say that an issue exists.
 For example:
 
-- Support for improvements is proposed in `[issue <issue_number>](LINK-TO-ISSUE)`.
-- You cannot do this thing, but `[issue 12345](LINK-TO-ISSUE)` proposes to change this behavior.
+- Support for improvements is proposed in `[issue <issue_number>](https://link-to-issue)`.
+- You cannot do this thing, but `[issue 12345](https://link-to-issue)` proposes to change this behavior.
 
 You can say that we plan to remove a feature.
 
@@ -281,8 +330,7 @@ DISCLAIMER:
 This page contains information related to upcoming products, features, and functionality.
 It is important to note that the information presented is for informational purposes only.
 Please do not rely on this information for purchasing or planning purposes.
-As with all projects, the items mentioned on this page are subject to change or delay.
-The development, release, and timing of any products, features, or functionality remain at the
+The development, release, and timing of any products, features, or functionality may be subject to change or delay and remain at the
 sole discretion of GitLab Inc.
 ```
 
@@ -292,8 +340,7 @@ DISCLAIMER:
 This page contains information related to upcoming products, features, and functionality.
 It is important to note that the information presented is for informational purposes only.
 Please do not rely on this information for purchasing or planning purposes.
-As with all projects, the items mentioned on this page are subject to change or delay.
-The development, release, and timing of any products, features, or functionality remain at the
+The development, release, and timing of any products, features, or functionality may be subject to change or delay and remain at the
 sole discretion of GitLab Inc.
 
 If all of the content on the page is not available, use the disclaimer about forward-looking statements once at the top of the page.

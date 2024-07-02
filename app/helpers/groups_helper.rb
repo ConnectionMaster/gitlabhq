@@ -21,6 +21,13 @@ module GroupsHelper
     can?(current_user, :set_emails_disabled, group) && !group.parent&.emails_disabled?
   end
 
+  def can_set_group_diff_preview_in_email?(group)
+    return false unless Feature.enabled?(:diff_preview_in_email, group)
+    return false if group.parent&.show_diff_preview_in_email?.equal?(false)
+
+    can?(current_user, :set_show_diff_preview_in_email, group)
+  end
+
   def can_admin_group_member?(group)
     Ability.allowed?(current_user, :admin_group_member, group)
   end
@@ -47,18 +54,21 @@ module GroupsHelper
 
     sorted_ancestors(group).with_route.reverse_each.with_index do |parent, index|
       if index > 0
-        add_to_breadcrumb_collapsed_links(group_title_link(parent), location: :before)
+        add_to_breadcrumb_collapsed_links(
+          { text: simple_sanitize(parent.name), href: group_path(parent), avatar_url: parent.try(:avatar_url) },
+          location: :before
+        )
       else
         full_title << breadcrumb_list_item(group_title_link(parent, hidable: false))
       end
 
-      push_to_schema_breadcrumb(simple_sanitize(parent.name), group_path(parent))
+      push_to_schema_breadcrumb(simple_sanitize(parent.name), group_path(parent), parent.try(:avatar_url))
     end
 
     full_title << render("layouts/nav/breadcrumbs/collapsed_inline_list", location: :before, title: _("Show all breadcrumbs"))
 
     full_title << breadcrumb_list_item(group_title_link(group))
-    push_to_schema_breadcrumb(simple_sanitize(group.name), group_path(group))
+    push_to_schema_breadcrumb(simple_sanitize(group.name), group_path(group), group.try(:avatar_url))
 
     full_title.join.html_safe
   end
@@ -92,7 +102,7 @@ module GroupsHelper
   def remove_group_message(group)
     content_tag :div do
       content = ''.html_safe
-      content << content_tag(:span, _("You are about to remove the group %{group_name}.") % { group_name: group.name })
+      content << content_tag(:span, _("You are about to delete the group %{group_name}.") % { group_name: group.name })
 
       additional_content = additional_removed_items(group)
       content << additional_content if additional_content.present?
@@ -102,24 +112,27 @@ module GroupsHelper
   end
 
   def additional_removed_items(group)
-    list_content = ''.html_safe
+    relations = {
+      _('subgroup') => group.children,
+      _('active project') => group.all_projects.non_archived,
+      _('archived project') => group.all_projects.archived
+    }
 
-    list_content << content_tag(:li, pluralize(group.subgroup_count, _('subgroup'))) if group.subgroup_count > 0
-    list_content << content_tag(:li, pluralize(group.all_projects.non_archived.count, _('active project'))) if group.all_projects.non_archived.count > 0
-    list_content << content_tag(:li, pluralize(group.all_projects.archived.count, _('archived project'))) if group.all_projects.archived.count > 0
+    counts = relations.filter_map do |singular, relation|
+      count = limited_counter_with_delimiter(relation, limit: 100, include_zero: false)
+      content_tag(:li, pluralize(count, singular)) if count
+    end.join.html_safe
 
-    if list_content.present?
-      content_tag(:span, _(" This action will also remove:")) +
-        content_tag(:ul) do
-          list_content
-        end
+    if counts.present?
+      content_tag(:span, _(" This action will also delete:")) +
+        content_tag(:ul, counts)
     else
       ''.html_safe
     end
   end
 
   def remove_group_warning
-    message = _('After you remove a group, you %{strongOpen}cannot%{strongClose} restore it or its components.')
+    message = _('After you delete a group, you %{strongOpen}cannot%{strongClose} restore it or its components.')
     content_tag(:p, class: 'gl-mb-0') do
       ERB::Util.html_escape(message) % {
         strongOpen: '<strong>'.html_safe,
@@ -240,9 +253,9 @@ module GroupsHelper
     new_group_custom_emoji_path(group)
   end
 
-  def access_level_roles_user_can_assign(group)
+  def access_level_roles_user_can_assign(group, roles)
     max_access_level = group.max_member_access_for_user(current_user)
-    group.access_level_roles.select do |_name, access_level|
+    roles.select do |_name, access_level|
       access_level <= max_access_level
     end
   end
@@ -278,6 +291,15 @@ module GroupsHelper
     end
 
     dropdown_data
+  end
+
+  def groups_explore_app_data
+    {
+      endpoint: explore_groups_path(format: :json),
+      empty_search_illustration: image_path('illustrations/empty-state/empty-search-md.svg'),
+      groups_empty_state_illustration: image_path('illustrations/empty-state/empty-groups-md.svg'),
+      initial_sort: project_list_sort_by
+    }.to_json
   end
 
   private

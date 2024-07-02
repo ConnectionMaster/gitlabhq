@@ -8,6 +8,7 @@ export const ACCESS_LEVEL_REPORTER_INTEGER = 20;
 export const ACCESS_LEVEL_DEVELOPER_INTEGER = 30;
 export const ACCESS_LEVEL_MAINTAINER_INTEGER = 40;
 export const ACCESS_LEVEL_OWNER_INTEGER = 50;
+export const ACCESS_LEVEL_ADMIN_INTEGER = 60;
 
 const ACCESS_LEVEL_NO_ACCESS = __('No access');
 const ACCESS_LEVEL_MINIMAL_ACCESS = __('Minimal Access');
@@ -23,6 +24,11 @@ export const BASE_ROLES = [
   { value: 'DEVELOPER', text: ACCESS_LEVEL_DEVELOPER },
   { value: 'MAINTAINER', text: ACCESS_LEVEL_MAINTAINER },
   { value: 'OWNER', text: ACCESS_LEVEL_OWNER },
+];
+
+export const BASE_ROLES_INC_MINIMAL_ACCESS = [
+  { value: 'MINIMAL_ACCESS', text: ACCESS_LEVEL_MINIMAL_ACCESS },
+  ...BASE_ROLES,
 ];
 
 export const ACCESS_LEVEL_LABELS = {

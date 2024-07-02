@@ -16,6 +16,7 @@ FactoryBot.define do
     has_external_wiki { false }
 
     # Associations
+    organization { namespace&.organization }
     namespace
     creator { group ? association(:user) : namespace&.owner }
 
@@ -63,6 +64,14 @@ FactoryBot.define do
       runners_token { nil }
       runner_token_expiration_interval { nil }
       runner_token_expiration_interval_human_readable { nil }
+
+      # rubocop:disable Lint/EmptyBlock -- block is required by factorybot
+      guests {}
+      reporters {}
+      developers {}
+      maintainers {}
+      owners {}
+      # rubocop:enable Lint/EmptyBlock
     end
 
     after(:build) do |project, evaluator|
@@ -91,6 +100,7 @@ FactoryBot.define do
         name: evaluator.name,
         path: evaluator.path,
         parent: evaluator.namespace,
+        organization: evaluator.organization,
         shared_runners_enabled: evaluator.shared_runners_enabled,
         visibility_level: evaluator.visibility_level
       }
@@ -144,6 +154,12 @@ FactoryBot.define do
 
       # simulating ::Projects::ProcessSyncEventsWorker because most tests don't run Sidekiq inline
       project.create_ci_project_mirror!(namespace_id: project.namespace_id) unless project.ci_project_mirror
+
+      project.add_members(Array.wrap(evaluator.guests), :guest)
+      project.add_members(Array.wrap(evaluator.reporters), :reporter)
+      project.add_members(Array.wrap(evaluator.developers), :developer)
+      project.add_members(Array.wrap(evaluator.maintainers), :maintainer)
+      project.add_members(Array.wrap(evaluator.owners), :owner)
     end
 
     trait :public do
@@ -410,6 +426,14 @@ FactoryBot.define do
       end
     end
 
+    trait :fork_repository do
+      after(:create) do |project|
+        project.repository.raw.gitaly_repository_client.fork_repository(
+          project.forked_from_project.repository.raw
+        )
+      end
+    end
+
     trait :design_repo do
       after(:create) do |project|
         raise 'Failed to create design repository!' unless project.design_repository.create_if_not_exists
@@ -611,11 +635,8 @@ FactoryBot.define do
 
   trait :allow_runner_registration_token do
     after :create do |project|
-      if project.namespace.namespace_settings.nil?
-        project.namespace.namespace_settings = create(:namespace_settings, namespace: project.namespace)
-      end
-
-      project.namespace.allow_runner_registration_token = true
+      create(:namespace_settings, namespace: project.namespace) unless project.namespace.namespace_settings
+      project.namespace.namespace_settings.update!(allow_runner_registration_token: true)
     end
   end
 end

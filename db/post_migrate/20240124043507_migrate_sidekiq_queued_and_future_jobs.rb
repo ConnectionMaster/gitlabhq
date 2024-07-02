@@ -2,6 +2,7 @@
 
 class MigrateSidekiqQueuedAndFutureJobs < Gitlab::Database::Migration[2.2]
   milestone '16.10'
+  disable_ddl_transaction!
 
   class SidekiqMigrateJobs
     LOG_FREQUENCY_QUEUES = 10
@@ -130,8 +131,12 @@ class MigrateSidekiqQueuedAndFutureJobs < Gitlab::Database::Migration[2.2]
     mappings = Gitlab::SidekiqConfig.worker_queue_mappings
     logger = ::Gitlab::BackgroundMigration::Logger.build
     migrator = SidekiqMigrateJobs.new(mappings, logger: logger)
-    migrator.migrate_queues
-    %w[schedule retry].each { |set| migrator.migrate_set(set) }
+
+    # TODO: make shard-aware. See https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/3430
+    Gitlab::SidekiqSharding::Validator.allow_unrouted_sidekiq_calls do
+      migrator.migrate_queues
+      %w[schedule retry].each { |set| migrator.migrate_set(set) }
+    end
   end
 
   def down

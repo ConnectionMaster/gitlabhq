@@ -100,20 +100,7 @@ RSpec.describe Import::GithubController, feature_category: :importers do
   end
 
   describe "POST personal_access_token" do
-    let(:experiment) { instance_double(ApplicationExperiment) }
-
     it_behaves_like 'a GitHub-ish import controller: POST personal_access_token'
-
-    it 'tracks default_to_import_tab experiment' do
-      allow(controller)
-        .to receive(:experiment)
-        .with(:default_to_import_tab, actor: user)
-        .and_return(experiment)
-
-      expect(experiment).to receive(:track).with(:authentication, property: :github)
-
-      post :personal_access_token
-    end
   end
 
   describe "GET status" do
@@ -202,7 +189,7 @@ RSpec.describe Import::GithubController, feature_category: :importers do
       let(:client_scope_error) { true }
       let(:docs_link) do
         ActionController::Base.helpers.link_to(
-          'documentation',
+          'Learn More',
           help_page_url(
             'user/project/import/github', anchor: 'use-a-github-personal-access-token'
           ),
@@ -216,8 +203,8 @@ RSpec.describe Import::GithubController, feature_category: :importers do
 
         expect(session[:"#{provider}_access_token"]).to be_nil
         expect(controller).to redirect_to(new_import_url)
-        expect(flash[:alert]).to eq("Your GitHub personal access token does not have the required scope or permission to import. " \
-                                    "Please see our #{docs_link} for more information about GitHub access tokens.")
+        expect(flash[:alert]).to eq("Your GitHub personal access token does not have the required scope to import. " \
+                                    "#{docs_link}.")
       end
     end
 

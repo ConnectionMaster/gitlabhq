@@ -1,13 +1,15 @@
-import { isEqual, orderBy } from 'lodash';
+import { isEqual, orderBy, isEmpty } from 'lodash';
 import AccessorUtilities from '~/lib/utils/accessor';
 import { formatNumber } from '~/locale';
-import { joinPaths } from '~/lib/utils/url_utility';
+import { joinPaths, queryToObject, objectToQuery, getBaseURL } from '~/lib/utils/url_utility';
 import { languageFilterData } from '~/search/sidebar/components/language_filter/data';
 import {
   MAX_FREQUENT_ITEMS,
   MAX_FREQUENCY,
   SIDEBAR_PARAMS,
   NUMBER_FORMATING_OPTIONS,
+  REGEX_PARAM,
+  LS_REGEX_HANDLE,
 } from './constants';
 
 const LANGUAGE_AGGREGATION_NAME = languageFilterData.filterParam;
@@ -18,15 +20,30 @@ function extractKeys(object, keyList) {
 
 export const loadDataFromLS = (key) => {
   if (!AccessorUtilities.canUseLocalStorage()) {
-    return [];
+    return null;
   }
 
   try {
-    return JSON.parse(localStorage.getItem(key)) || [];
+    return JSON.parse(localStorage.getItem(key)) || null;
   } catch {
     // The LS got in a bad state, let's wipe it
     localStorage.removeItem(key);
-    return [];
+    return null;
+  }
+};
+
+export const setDataToLS = (key, value) => {
+  if (!AccessorUtilities.canUseLocalStorage()) {
+    return null;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return value;
+  } catch {
+    // The LS got in a bad state, let's wipe it
+    localStorage.removeItem(key);
+    return null;
   }
 };
 
@@ -148,4 +165,17 @@ export const prepareSearchAggregations = (state, aggregationData) =>
 
 export const addCountOverLimit = (count = '') => {
   return count.includes('+') ? '+' : '';
+};
+
+/** @param { string } link */
+export const injectRegexSearch = (link) => {
+  const urlObject = new URL(link, getBaseURL());
+  const queryObject = queryToObject(urlObject.search);
+  if (loadDataFromLS(LS_REGEX_HANDLE) && (queryObject.project_id || queryObject.group_id)) {
+    queryObject[REGEX_PARAM] = true;
+  }
+  if (isEmpty(queryObject)) {
+    return urlObject.pathname;
+  }
+  return `${urlObject.pathname}?${objectToQuery(queryObject)}`;
 };

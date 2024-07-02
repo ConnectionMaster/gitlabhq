@@ -5,7 +5,8 @@ class IssuableBaseService < ::BaseContainerService
 
   def available_callbacks
     [
-      Issuable::Callbacks::Milestone
+      Issuable::Callbacks::Milestone,
+      Issuable::Callbacks::TimeTracking
     ].freeze
   end
 
@@ -253,6 +254,7 @@ class IssuableBaseService < ::BaseContainerService
     before_create(issuable)
 
     issuable_saved = issuable.with_transaction_returning_status do
+      @callbacks.each(&:before_create)
       transaction_create(issuable)
     end
 
@@ -349,12 +351,7 @@ class IssuableBaseService < ::BaseContainerService
 
         issuable.updated_by = current_user if should_touch
 
-        # `issuable` could create a ghost user when updating `last_edited_by`.
-        # Users::Internal.ghost will obtain an ExclusiveLease within this transaction.
-        # See issue: https://gitlab.com/gitlab-org/gitlab/-/issues/441526
-        Gitlab::ExclusiveLease.skipping_transaction_check do
-          transaction_update(issuable, { save_with_touch: should_touch })
-        end
+        transaction_update(issuable, { save_with_touch: should_touch })
       end
 
       if issuable_saved
@@ -408,7 +405,7 @@ class IssuableBaseService < ::BaseContainerService
 
       before_update(issuable, skip_spam_check: true)
 
-      if issuable.with_transaction_returning_status { issuable.save }
+      if issuable.with_transaction_returning_status { transaction_update_task(issuable) }
         create_system_notes(issuable, old_labels: nil)
 
         handle_task_changes(issuable)
@@ -425,6 +422,10 @@ class IssuableBaseService < ::BaseContainerService
     end
 
     issuable
+  end
+
+  def transaction_update_task(issuable)
+    issuable.save
   end
 
   # Handle the `update_task` event sent from UI.  Attempts to update a specific
@@ -558,6 +559,7 @@ class IssuableBaseService < ::BaseContainerService
     associations[:description] = issuable.description
     associations[:reviewers] = issuable.reviewers.to_a if issuable.allows_reviewers?
     associations[:severity] = issuable.severity if issuable.supports_severity?
+    associations[:target_branch] = issuable.target_branch if issuable.is_a?(MergeRequest)
 
     if issuable.supports_escalation? && issuable.escalation_status
       associations[:escalation_status] = issuable.escalation_status.status_name

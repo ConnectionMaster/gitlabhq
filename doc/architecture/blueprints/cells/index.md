@@ -21,9 +21,9 @@ For more information about Cells, see also:
 ## Cells Iterations
 
 - The [Cells 1.0](iterations/cells-1.0.md) target is to deliver a solution
-  for new enterprise customers using the SaaS GitLab.com offering.
+  for internal customers using the SaaS GitLab.com offering, and foundational work for Cells.
 - The [Cells 1.5](iterations/cells-1.5.md) target is to deliver a migration solution
-  for existing enterprise customers using the SaaS GitLab.com offering, built on top of architecture
+  for existing and new enterprise customers using the SaaS GitLab.com offering, built on top of architecture
   of Cells 1.0.
 - The [Cells 2.0](iterations/cells-2.0.md) target is to support a public and open source contribution
   model in a cellular architecture.
@@ -38,7 +38,7 @@ We can't ship the entire Cells architecture in one go - it is too large.
 Instead, we are defining key workstreams required by the project.
 For each workstream, we need to define the effort necessary to make features compliant with Cell 1.0, Cell 1.5, and Cell 2.0, respectively.
 
-It is expected that some objectives will not be completed for General Availability (GA), but will be enough to run Cells in production.
+It is expected that some objectives will not be completed for general availability (GA), but will be enough to run Cells in production.
 
 ### 1. Data access layer
 
@@ -66,7 +66,7 @@ Under this objective the following steps are expected:
 
 1. **Cluster-wide deletions**
 
-    If entities deleted in Cell 2 are cross-referenced, they are properly deleted or nullified across clusters. We will likely re-use existing [loose foreign keys](../../../development/database/loose_foreign_keys.md) to extend it with cross-Cells data removal.
+    If entities deleted in Cell 2 are cross-referenced, they are properly deleted or nullified across clusters. We will likely reuse existing [loose foreign keys](../../../development/database/loose_foreign_keys.md) to extend it with cross-Cells data removal.
 
 1. **Data access layer**
 
@@ -79,13 +79,13 @@ Under this objective the following steps are expected:
 ### 2. Workflows
 
 To make Cells viable we require to define and support essential workflows before we can consider the Cells to be of Beta quality.
-Workflows are meant to cover the majority of application functionality that makes the product mostly useable, but with some caveats.
+Workflows are meant to cover the majority of application functionality that makes the product mostly usable, but with some caveats.
 
 The current approach is to define workflows from top to bottom.
 The order defines the presumed priority of the items.
 This list is not exhaustive as we would be expecting other teams to help and fix their workflows after the initial phase, in which we fix the fundamental ones.
 
-To consider a project ready for the Beta phase, it is expected that all features defined below are supported by Cells.
+To consider a project ready for the beta phase, it is expected that all features defined below are supported by Cells.
 In the cases listed below, the workflows define a set of tables to be properly attributed to the feature.
 In some cases, a table with an ambiguous usage has to be broken down.
 For example: `uploads` are used to store user avatars, as well as uploaded attachments for comments.
@@ -186,7 +186,9 @@ flowchart TD
 
 ### 3. Routing layer
 
-See [Cells: Routing Service](routing-service.md).
+See [Cells: Routing Service](http_routing_service.md) for HTTP Routing.
+
+See [Cells: SSH Routing Service](ssh_routing_service.md) for SSH Routing.
 
 ### 4. Infrastructure
 
@@ -212,13 +214,13 @@ When we reach production and are able to store new Organizations on new Cells, w
 
 ## Availability of the feature
 
-We are following the [Support for Experiment, Beta, and Generally Available features](../../../policy/experiment-beta-support.md).
+We are following the [Support for experiment, beta, and generally available features](../../../policy/experiment-beta-support.md).
 
 ### 1. Experiment
 
 Expectations:
 
-- We can deploy a Cell on staging or another testing environment by using a separate domain (for example `cell2.staging.gitlab.com`) using [infrastucture](#4-infrastructure) tooling.
+- We can deploy a Cell on staging or another testing environment by using a separate domain (for example `cell2.staging.gitlab.com`) using [infrastructure](#4-infrastructure) tooling.
 - User can create Organization, Group and Project, and run some of the [workflows](#2-workflows).
 - It is not expected to be able to run a router to serve all requests under a single domain.
 - We expect data loss of data stored on additional Cells.
@@ -252,8 +254,13 @@ Expectations:
 The Cells architecture has long lasting implications to data processing, location, scalability and the GitLab architecture.
 This section links all different technical proposals that are being evaluated.
 
-- [Routing Service](routing-service.md)
+- Cells Services:
+  - [HTTP Routing Service](http_routing_service.md)
+  - [SSH Routing Service](ssh_routing_service.md)
+  - [Topology Service](topology_service.md)
+  - Planned: Indexing Service
 - [Feature Flags](feature_flags.md)
+- [Cluster wide unique sequences](unique_sequences.md)
 
 ## Impacted features
 
@@ -266,7 +273,6 @@ Below is a list of known affected features with preliminary proposed solutions.
 - [Cells: CI Runners](impacted_features/ci-runners.md)
 - [Cells: Container Registry](impacted_features/container-registry.md)
 - [Cells: Contributions: Forks](impacted_features/contributions-forks.md)
-- [Cells: Database Sequences](impacted_features/database-sequences.md)
 - [Cells: Data Migration](impacted_features/data-migration.md)
 - [Cells: Explore](impacted_features/explore.md)
 - [Cells: Git Access](impacted_features/git-access.md)
@@ -317,14 +323,13 @@ For example, users on GitLab Dedicated don't have to have a different and unique
 
 ### Can different Cells communicate with each other?
 
-Up until iteration 3, Cells communicate with each other only via a shared database that contains common data.
-In iteration 4 we are going to evaluate the option of Cells calling each other via API to provide more isolation and reliability.
+Not directly, our goal is to keep them isolated and only communicate using global services.
 
 ### How are Cells provisioned?
 
-The GitLab.com cluster of Cells will use GitLab Dedicated instances.
-Once a GitLab Dedicated instance gets provisioned it could join the GitLab.com cluster and become a Cell.
-One requirement will be that the GitLab Dedicated instance does not contain any prior data.
+The GitLab.com cluster of Cells will use GitLab Dedicated tooling to create instances.
+Once this instance gets provisioned it could join the GitLab.com cluster and become a Cell.
+One requirement will be that the instance does not contain any prior data.
 
 To reach shared resources, Cells will use [Private Service Connect](https://cloud.google.com/vpc/docs/private-service-connect).
 
@@ -371,7 +376,7 @@ Cluster-wide features are strongly discouraged because:
   Services that might initially be cluster-wide are still expected to be split in the future to achieve full service isolation.
   No feature should be built to depend on such a service (like Elasticsearch).
 
-### Will Cells use the [reference architecture for 50,000 users](../../../administration/reference_architectures/50k_users.md)?
+### Will Cells use the [reference architecture for up to 1000 RPS or 50,000 users](../../../administration/reference_architectures/50k_users.md)?
 
 The infrastructure team will properly size Cells depending on the load.
 The Tenant Scale team sees an opportunity to use GitLab Dedicated as a base for Cells deployment.
@@ -380,6 +385,13 @@ The Tenant Scale team sees an opportunity to use GitLab Dedicated as a base for 
 
 - [ADR-001: Routing Technology using Cloudflare Workers](decisions/001_routing_technology.md)
 - [ADR-002: One GCP Project per Cell](decisions/002_gcp_project_boundary.md)
+- [ADR-003: One GKE Cluster per Cell](decisions/003_num_gke_clusters_per_cell.md)
+- [ADR-004: One VPC per Cell, with Private Service Connect for internal communication between Cells](decisions/004_vpc_subnet_design.md)
+- [ADR-005: Cells use Flexible Reference Architectures](decisions/005_flexible_reference_architectures.md)
+- [ADR-006: Use Geo for Disaster Recovery](decisions/006_disaster_recovery_geo.md)
+- [ADR-007: Cells 1.0 for internal customers only](decisions/007_internal_customers.md)
+- [ADR-008: Cluster wide unique database sequences](decisions/008_database_sequences.md)
+- [ADR-009: Initial Cell Sizes](decisions/009_cell_initial_sizing.md)
 
 ## Links
 

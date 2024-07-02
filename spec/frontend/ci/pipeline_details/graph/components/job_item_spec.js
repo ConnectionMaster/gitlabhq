@@ -8,6 +8,7 @@ import ActionComponent from '~/ci/common/private/job_action_component.vue';
 import CiIcon from '~/vue_shared/components/ci_icon/ci_icon.vue';
 
 import { mountExtended, shallowMountExtended } from 'helpers/vue_test_utils_helper';
+import { stubComponent } from 'helpers/stub_component';
 import {
   delayedJob,
   mockJob,
@@ -16,6 +17,7 @@ import {
   mockFailedJob,
   triggerJob,
   triggerJobWithRetryAction,
+  triggerManualJob,
 } from '../mock_data';
 
 describe('pipeline graph job item', () => {
@@ -25,12 +27,10 @@ describe('pipeline graph job item', () => {
   let wrapper;
   let mockAxios;
 
-  const findJobWithoutLink = () => wrapper.findByTestId('job-without-link');
-  const findJobWithLink = () => wrapper.findByTestId('job-with-link');
   const findActionVueComponent = () => wrapper.findComponent(ActionComponent);
   const findActionComponent = () => wrapper.findByTestId('ci-action-button');
+  const findJobItemContent = () => wrapper.findByTestId('ci-job-item-content');
   const findBadge = () => wrapper.findByTestId('job-bridge-badge');
-  const findJobLink = () => wrapper.findByTestId('job-with-link');
   const findJobCiIcon = () => wrapper.findComponent(CiIcon);
   const findModal = () => wrapper.findComponent(GlModal);
 
@@ -41,27 +41,17 @@ describe('pipeline graph job item', () => {
   const myCustomClass1 = 'my-class-1';
   const myCustomClass2 = 'my-class-2';
 
-  const defaultProps = {
-    job: mockJob,
-  };
-
-  const createWrapper = ({ props, data, mountFn = mountExtended, mocks = {} } = {}) => {
+  const createWrapper = ({ mountFn = mountExtended, props, ...options } = {}) => {
     wrapper = mountFn(JobItem, {
-      data() {
-        return {
-          ...data,
-        };
-      },
       propsData: {
-        ...defaultProps,
+        job: mockJob,
         ...props,
-      },
-      mocks: {
-        ...mocks,
       },
       stubs: {
         CiIcon,
+        GlModal: stubComponent(GlModal),
       },
+      ...options,
     });
   };
 
@@ -80,11 +70,12 @@ describe('pipeline graph job item', () => {
       createWrapper();
 
       await nextTick();
-      const link = findJobLink();
+      const link = findJobItemContent();
 
+      expect(link.element.tagName).toBe('A');
       expect(link.attributes('href')).toBe(mockJob.status.detailsPath);
 
-      expect(link.attributes('title')).toBe(`${mockJob.name} - ${mockJob.status.label}`);
+      expect(link.attributes('title')).toBe('passed');
 
       expect(findJobCiIcon().exists()).toBe(true);
       expect(findJobCiIcon().find('[data-testid="status_success_borderless-icon"]').exists()).toBe(
@@ -111,13 +102,32 @@ describe('pipeline graph job item', () => {
       expect(findJobCiIcon().find('[data-testid="status_success_borderless-icon"]').exists()).toBe(
         true,
       );
-      expect(findJobLink().exists()).toBe(false);
 
+      expect(findJobItemContent().element.tagName).toBe('DIV');
       expect(wrapper.text()).toBe(mockJobWithoutDetails.name);
     });
 
     it('should apply hover class and provided class name', () => {
-      expect(findJobWithoutLink().classes()).toContain('css-class-job-name');
+      expect(wrapper.find('.css-class-job-name').exists()).toBe(true);
+    });
+  });
+
+  describe('name when is-link is false', () => {
+    beforeEach(() => {
+      createWrapper({
+        props: {
+          isLink: false,
+        },
+      });
+    });
+
+    it('should render status and name', () => {
+      expect(findJobCiIcon().exists()).toBe(true);
+      expect(findJobCiIcon().find('[data-testid="status_success_borderless-icon"]').exists()).toBe(
+        true,
+      );
+
+      expect(wrapper.text()).toBe(mockJob.name);
     });
   });
 
@@ -179,7 +189,7 @@ describe('pipeline graph job item', () => {
     });
 
     it('should render provided class name', () => {
-      expect(findJobLink().classes()).toContain('css-class-job-name');
+      expect(findJobItemContent().classes()).toContain('css-class-job-name');
     });
 
     it('does not show a badge on the job item', () => {
@@ -187,7 +197,7 @@ describe('pipeline graph job item', () => {
     });
 
     it('does not apply the trigger job class', () => {
-      expect(findJobWithLink().classes()).not.toContain('gl-rounded-lg');
+      expect(findJobItemContent().classes()).not.toContain('gl-rounded-lg');
     });
   });
 
@@ -205,10 +215,10 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      expect(findJobWithoutLink().attributes('title')).toBe('test');
+      expect(findJobItemContent().attributes('title')).toBe(undefined);
     });
 
-    it('should not render status label when it is  provided', () => {
+    it('should render status label when it is provided', () => {
       createWrapper({
         props: {
           job: {
@@ -223,7 +233,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      expect(findJobWithoutLink().attributes('title')).toBe('test - success');
+      expect(findJobItemContent().attributes('title')).toBe('success');
     });
   });
 
@@ -235,9 +245,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      expect(findJobWithLink().attributes('title')).toBe(
-        `delayed job - delayed manual action (00:00:00)`,
-      );
+      expect(findJobItemContent().attributes('title')).toBe(`delayed manual action (00:00:00)`);
     });
   });
 
@@ -257,7 +265,7 @@ describe('pipeline graph job item', () => {
       });
 
       it('applies a rounded corner style instead of the usual pill shape', () => {
-        expect(findJobWithoutLink().classes()).toContain('gl-rounded-lg');
+        expect(findJobItemContent().classes()).toContain('gl-rounded-lg');
       });
     });
 
@@ -289,40 +297,36 @@ describe('pipeline graph job item', () => {
 
     describe('highlighting', () => {
       it.each`
-        job                      | jobName                       | expanded | link
-        ${mockJob}               | ${mockJob.name}               | ${true}  | ${true}
-        ${mockJobWithoutDetails} | ${mockJobWithoutDetails.name} | ${true}  | ${false}
+        job                      | jobName                       | expanded
+        ${mockJob}               | ${mockJob.name}               | ${true}
+        ${mockJobWithoutDetails} | ${mockJobWithoutDetails.name} | ${true}
       `(
         `trigger job should stay highlighted when downstream is expanded`,
-        ({ job, jobName, expanded, link }) => {
+        ({ job, jobName, expanded }) => {
           createWrapper({
             props: {
               job,
               pipelineExpanded: { jobName, expanded },
             },
           });
-          const findJobEl = link ? findJobWithLink : findJobWithoutLink;
-
-          expect(findJobEl().classes()).toContain(triggerActiveClass);
+          expect(findJobItemContent().classes()).toContain(triggerActiveClass);
         },
       );
 
       it.each`
-        job                      | jobName                       | expanded | link
-        ${mockJob}               | ${mockJob.name}               | ${false} | ${true}
-        ${mockJobWithoutDetails} | ${mockJobWithoutDetails.name} | ${false} | ${false}
+        job                      | jobName                       | expanded
+        ${mockJob}               | ${mockJob.name}               | ${false}
+        ${mockJobWithoutDetails} | ${mockJobWithoutDetails.name} | ${false}
       `(
         `trigger job should not be highlighted when downstream is not expanded`,
-        ({ job, jobName, expanded, link }) => {
+        ({ job, jobName, expanded }) => {
           createWrapper({
             props: {
               job,
               pipelineExpanded: { jobName, expanded },
             },
           });
-          const findJobEl = link ? findJobWithLink : findJobWithoutLink;
-
-          expect(findJobEl().classes()).not.toContain(triggerActiveClass);
+          expect(findJobItemContent().classes()).not.toContain(triggerActiveClass);
         },
       );
     });
@@ -337,7 +341,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      const jobLinkEl = findJobLink();
+      const jobLinkEl = findJobItemContent();
 
       expect(jobLinkEl.classes()).toContain('my-class');
 
@@ -353,7 +357,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      const jobLinkEl = findJobLink();
+      const jobLinkEl = findJobItemContent();
 
       expect(jobLinkEl.classes()).toContain('my-class');
       expect(jobLinkEl.classes()).toContain(triggerActiveClass);
@@ -367,7 +371,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      const jobLinkEl = findJobLink();
+      const jobLinkEl = findJobItemContent();
 
       expect(jobLinkEl.classes()).toContain(myCustomClass1);
       expect(jobLinkEl.classes()).toContain(myCustomClass2);
@@ -383,7 +387,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      const jobLinkEl = findJobLink();
+      const jobLinkEl = findJobItemContent();
 
       expect(jobLinkEl.classes()).toContain(myCustomClass1);
       expect(jobLinkEl.classes()).toContain(myCustomClass2);
@@ -400,7 +404,7 @@ describe('pipeline graph job item', () => {
         },
       });
 
-      const jobLinkEl = findJobLink();
+      const jobLinkEl = findJobItemContent();
 
       expect(jobLinkEl.classes()).toContain(myCustomClass1);
       expect(jobLinkEl.classes()).toContain(myCustomClass2);
@@ -421,6 +425,25 @@ describe('pipeline graph job item', () => {
             props: {
               skipRetryModal,
               job: triggerJobWithRetryAction,
+            },
+          });
+          await findActionComponent().trigger('click');
+
+          expect(findModal().exists()).toBe(exists);
+        },
+      );
+      it.each`
+        confirmationMessage | exists   | visibilityText
+        ${'exist'}          | ${true}  | ${'shows'}
+        ${null}             | ${false} | ${'hides'}
+      `(
+        '$visibilityText the modal when `confirmationMessage` is $confirmationMessage',
+        async ({ exists, confirmationMessage }) => {
+          const triggerJobWithConfirmationMessage = JSON.parse(JSON.stringify(triggerManualJob));
+          triggerJobWithConfirmationMessage.status.action.confirmationMessage = confirmationMessage;
+          createWrapper({
+            props: {
+              job: triggerJobWithConfirmationMessage,
             },
           });
           await findActionComponent().trigger('click');
@@ -452,6 +475,28 @@ describe('pipeline graph job item', () => {
           expect(findActionComponent().props().shouldTriggerClick).toBe(shouldTriggerActionClick);
         },
       );
+
+      it('show manual confirmation message when job is manual and manual confirmation message is presented', async () => {
+        const triggerJobWithConfirmationMessage = {
+          ...triggerManualJob,
+        };
+        const confirmationMessage = 'Are you sure you want to run this job?';
+        triggerJobWithConfirmationMessage.status.action.confirmationMessage = confirmationMessage;
+
+        createWrapper({
+          props: {
+            job: triggerJobWithConfirmationMessage,
+          },
+        });
+        await findActionComponent().trigger('click');
+
+        const modal = findModal();
+        expect(modal.props().title).toBe(
+          `Are you sure you want to run ${triggerJobWithConfirmationMessage.name}?`,
+        );
+        expect(modal.props().actionPrimary.text).toBe('Yes, run trigger');
+        expect(modal.html()).toContain(confirmationMessage);
+      });
     });
 
     describe('when not checking the "do not show this again" checkbox', () => {
@@ -492,8 +537,10 @@ describe('pipeline graph job item', () => {
           // or emit an event directly. We therefore set the data property
           // as it would be if the box was checked.
           createWrapper({
-            data: {
-              currentSkipModalValue: true,
+            data() {
+              return {
+                currentSkipModalValue: true,
+              };
             },
             props: {
               skipRetryModal: false,

@@ -6,7 +6,7 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
   include GraphqlHelpers
 
   let_it_be(:user) { create(:user) }
-  let_it_be(:namespace) { create(:group) }
+  let_it_be(:namespace) { create(:group, developers: user) }
   let_it_be(:project2) { create(:project, namespace: namespace) }
 
   let_it_be(:project1) do
@@ -30,7 +30,8 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
   end
 
   let_it_be(:resource1) do
-    create(:ci_catalog_resource, :published, project: project1, latest_released_at: '2023-01-01T00:00:00Z')
+    create(:ci_catalog_resource, :published, project: project1, latest_released_at: '2023-01-01T00:00:00Z',
+      last_30_day_usage_count: 15)
   end
 
   let_it_be(:public_resource) { create(:ci_catalog_resource, :published, project: public_project) }
@@ -50,6 +51,7 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
             latestReleasedAt
             starCount
             starrersPath
+            last30DayUsageCount
           }
         }
       }
@@ -57,10 +59,6 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
   end
 
   subject(:post_query) { post_graphql(query, current_user: user) }
-
-  before_all do
-    namespace.add_developer(user)
-  end
 
   shared_examples 'avoids N+1 queries' do
     it do
@@ -92,7 +90,8 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
         starrersPath: Gitlab::Routing.url_helpers.project_starrers_path(project1),
         verificationLevel: 'UNVERIFIED',
         fullPath: project1.full_path,
-        webPath: "/#{project1.full_path}"
+        webPath: "/#{project1.full_path}",
+        last30DayUsageCount: resource1.last_30_day_usage_count
       ),
       a_graphql_entity_for(public_resource)
     )
@@ -127,14 +126,14 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
   end
 
   describe 'versions' do
-    let!(:resource1_v1) { create(:ci_catalog_resource_version, version: '1.0.0', catalog_resource: resource1) }
-    let!(:resource1_v2) { create(:ci_catalog_resource_version, version: '2.0.0', catalog_resource: resource1) }
+    let!(:resource1_v1) { create(:ci_catalog_resource_version, semver: '1.0.0', catalog_resource: resource1) }
+    let!(:resource1_v2) { create(:ci_catalog_resource_version, semver: '2.0.0', catalog_resource: resource1) }
     let!(:public_resource_v1) do
-      create(:ci_catalog_resource_version, version: '1.0.0', catalog_resource: public_resource)
+      create(:ci_catalog_resource_version, semver: '1.0.0', catalog_resource: public_resource)
     end
 
     let!(:public_resource_v2) do
-      create(:ci_catalog_resource_version, version: '2.0.0', catalog_resource: public_resource)
+      create(:ci_catalog_resource_version, semver: '2.0.0', catalog_resource: public_resource)
     end
 
     let(:query) do
@@ -183,72 +182,6 @@ RSpec.describe 'Query.ciCatalogResources', feature_category: :pipeline_compositi
             ]
           }
         )
-      )
-    end
-
-    it_behaves_like 'avoids N+1 queries'
-  end
-
-  describe 'openIssuesCount' do
-    before_all do
-      create(:issue, :opened, project: project1)
-      create(:issue, :opened, project: project1)
-
-      create(:issue, :opened, project: public_project)
-    end
-
-    let(:query) do
-      <<~GQL
-        query {
-          ciCatalogResources {
-            nodes {
-              openIssuesCount
-            }
-          }
-        }
-      GQL
-    end
-
-    it 'returns the correct count' do
-      post_query
-
-      expect(graphql_data_at(:ciCatalogResources, :nodes)).to contain_exactly(
-        a_graphql_entity_for(openIssuesCount: 2),
-        a_graphql_entity_for(openIssuesCount: 1)
-      )
-    end
-
-    it_behaves_like 'avoids N+1 queries'
-  end
-
-  describe 'openMergeRequestsCount' do
-    before_all do
-      namespace.add_developer(user)
-    end
-
-    before_all do
-      create(:merge_request, :opened, source_project: project1)
-      create(:merge_request, :opened, source_project: public_project)
-    end
-
-    let(:query) do
-      <<~GQL
-        query {
-          ciCatalogResources {
-            nodes {
-              openMergeRequestsCount
-            }
-          }
-        }
-      GQL
-    end
-
-    it 'returns the correct count' do
-      post_query
-
-      expect(graphql_data_at(:ciCatalogResources, :nodes)).to contain_exactly(
-        a_graphql_entity_for(openMergeRequestsCount: 1),
-        a_graphql_entity_for(openMergeRequestsCount: 1)
       )
     end
 

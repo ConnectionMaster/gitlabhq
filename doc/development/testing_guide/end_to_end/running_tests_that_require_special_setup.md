@@ -185,7 +185,7 @@ WEBDRIVER_HEADLESS=false bundle exec bin/qa QA::EE::Scenario::Test::Geo --primar
 
 You can use [GitLab-QA Orchestrator](https://gitlab.com/gitlab-org/gitlab-qa) to orchestrate two GitLab containers and configure them as a Geo setup.
 
-Geo requires an EE license. To visit the Geo sites in your browser, you need a reverse proxy server (for example, [NGINX](https://www.nginx.com/)).
+Geo requires an EE license. To visit the Geo sites in your browser, you need a reverse proxy server (for example, [NGINX](https://www.f5.com/go/product/welcome-to-nginx)).
 
 1. Export your EE license
 
@@ -572,10 +572,18 @@ In order to run Product Analytics services, devkit can be used. Instructions to 
 
 Additionally, the following setup is required on the GDK:
 
+- Set environment variables for product analytics configuration. The following variables are default for running devkit locally.
+
+  ```shell
+  export PA_CONFIGURATOR_URL=http://test:test@localhost:4567
+  export PA_COLLECTOR_HOST=http://localhost:9091
+  export PA_CUBE_API_URL=http://localhost:4000
+  export PA_CUBE_API_KEY=thisisnotarealkey43ff15165ce01e4ff47d75092e3b25b2c0b20dc27f6cd5a8aed7b7bd855df88c9e0748d7afd37adda6d981c16177b086acf496bbdc62dbb
+  ```
+
 - Ultimate license applied.
   - [How to request the license](https://handbook.gitlab.com/handbook/developer-onboarding/#working-on-gitlab-ee-developer-licenses).
   - [How to activate GitLab EE with a license file or key](https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/administration/license_file.md#activate-gitlab-ee-with-a-license-file-or-key).
-- Product Analytics feature flags enabled. The list of feature flags can be [found here](https://gitlab.com/gitlab-org/gitlab/-/tree/master/doc/user/product_analytics#enable-product-analytics).
 - Simulate SaaS enabled. Instructions can be [found here](https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/development/ee_features.md#simulate-a-saas-instance).
 
 Once Product Analytics services are running and are connected to your GDK, the tests can be executed with:

@@ -1,7 +1,7 @@
+// Package artifacts_test provides test cases for the artifacts package.
 package artifacts
 
 import (
-	"os"
 	"testing"
 
 	"gitlab.com/gitlab-org/labkit/log"
@@ -14,6 +14,5 @@ func TestMain(m *testing.M) {
 		log.WithError(err).Fatal()
 	}
 
-	os.Exit(m.Run())
-
+	testhelper.VerifyNoGoroutines(m)
 }

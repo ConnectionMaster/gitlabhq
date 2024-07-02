@@ -65,6 +65,14 @@ RSpec.describe Projects::MergeRequests::DraftsController, feature_category: :cod
       expect { create_draft_note }.to change { DraftNote.count }.by(1)
     end
 
+    it 'creates an internal draft note' do
+      create_draft_note(draft_overrides: { internal: true })
+
+      draft_note = DraftNote.find_by(author: user)
+
+      expect(draft_note.internal).to eq(true)
+    end
+
     it 'creates draft note with position' do
       diff_refs = project.commit(sample_commit.id).try(:diff_refs)
 
@@ -200,6 +208,16 @@ RSpec.describe Projects::MergeRequests::DraftsController, feature_category: :cod
 
         expect(response).to have_gitlab_http_status(:unprocessable_entity)
         expect(response.body).to eq('{"errors":"Error 1 and Error 2"}')
+      end
+    end
+
+    context 'when type is present in draft note params' do
+      it 'assign note_type to draft note' do
+        create_draft_note(draft_overrides: { type: 'DiscussionNote' })
+
+        draft_note = DraftNote.find_by(author: user)
+
+        expect(draft_note.note_type).to eq('DiscussionNote')
       end
     end
   end

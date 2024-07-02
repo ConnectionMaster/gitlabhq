@@ -1,9 +1,19 @@
 <script>
 import { GlPopover, GlSprintf, GlLink } from '@gitlab/ui';
 import { convertObjectPropsToCamelCase } from '~/lib/utils/common_utils';
+import { s__ } from '~/locale';
 
 export default {
   name: 'LockPopovers',
+  i18n: {
+    popoverTitle: s__('CascadingSettings|Setting cannot be changed'),
+    applicationSettingMessage: s__(
+      'CascadingSettings|An administrator selected this setting for the instance and you cannot change it.',
+    ),
+    ancestorSettingMessage: s__(
+      'CascadingSettings|This setting has been enforced by an owner of %{link}.',
+    ),
+  },
   components: {
     GlPopover,
     GlSprintf,
@@ -21,11 +31,8 @@ export default {
           dataset: { popoverData },
         } = el;
 
-        const {
-          lockedByAncestor,
-          lockedByApplicationSetting,
-          ancestorNamespace,
-        } = convertObjectPropsToCamelCase(JSON.parse(popoverData || '{}'), { deep: true });
+        const { lockedByAncestor, lockedByApplicationSetting, ancestorNamespace } =
+          convertObjectPropsToCamelCase(JSON.parse(popoverData || '{}'), { deep: true });
 
         return {
           el,
@@ -52,17 +59,14 @@ export default {
         :target="el"
         placement="top"
       >
-        <template #title>{{ s__('CascadingSettings|Setting enforced') }}</template>
-        <p data-testid="cascading-settings-lock-popover">
+        <template #title>{{ $options.i18n.popoverTitle }}</template>
+        <span data-testid="cascading-settings-lock-popover">
           <template v-if="lockedByApplicationSetting">{{
-            s__('CascadingSettings|This setting has been enforced by an instance admin.')
+            $options.i18n.applicationSettingMessage
           }}</template>
-
           <gl-sprintf
             v-else-if="lockedByAncestor && ancestorNamespace"
-            :message="
-              s__('CascadingSettings|This setting has been enforced by an owner of %{link}.')
-            "
+            :message="$options.i18n.ancestorSettingMessage"
           >
             <template #link>
               <gl-link :href="ancestorNamespace.path" class="gl-font-sm">{{
@@ -70,7 +74,7 @@ export default {
               }}</gl-link>
             </template>
           </gl-sprintf>
-        </p>
+        </span>
       </gl-popover>
     </template>
   </div>

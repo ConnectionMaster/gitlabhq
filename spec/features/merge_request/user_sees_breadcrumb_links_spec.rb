@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe 'New merge request breadcrumb', feature_category: :code_review_workflow do
+RSpec.describe 'New merge request breadcrumb', :js, feature_category: :code_review_workflow do
   let(:project) { create(:project, :repository) }
   let(:user) { project.creator }
 
@@ -12,7 +12,7 @@ RSpec.describe 'New merge request breadcrumb', feature_category: :code_review_wo
   end
 
   it 'displays link to project merge requests and new merge request' do
-    page.within '.breadcrumbs' do
+    within_testid 'breadcrumb-links' do
       expect(find_link('Merge requests')[:href]).to end_with(project_merge_requests_path(project))
       expect(find_link('New')[:href]).to end_with(project_new_merge_request_path(project))
     end

@@ -51,6 +51,8 @@ Prerequisites:
 
    This service account is associated only with your top-level group.
 
+1. [List all service account users](../../api/groups.md#list-service-account-users).
+
 1. [Create a personal access token](../../api/groups.md#create-personal-access-token-for-service-account-user)
    for the service account user.
 
@@ -73,6 +75,8 @@ Prerequisites:
 
    This service account is associated with the entire instance, not a specific group
    or project in the instance.
+
+1. [List all service account users](../../api/users.md#list-service-account-users).
 
 1. [Create a personal access token](../../api/users.md#create-a-personal-access-token)
    for the service account user.
@@ -135,9 +139,42 @@ Prerequisites:
 
 Use the groups API to [rotate the personal access token](../../api/groups.md#rotate-a-personal-access-token-for-service-account-user) for a service account user.
 
+### Revoke a personal access token
+
+Prerequisites:
+
+- You must be signed in as the service account user.
+
+To revoke a personal access token, use the [personal access tokens API](../../api/personal_access_tokens.md#revoke-a-personal-access-token). You can use either of the following methods:
+
+- Use a [personal access token ID](../../api/personal_access_tokens.md#using-a-personal-access-token-id-1). The token used to perform the revocation must have the [`admin_mode`](personal_access_tokens.md#personal-access-token-scopes) scope.
+- Use a [request header](../../api/personal_access_tokens.md#using-a-request-header-1). The token used to perform the request is revoked.
+
+### Delete a service account
+
+#### GitLab.com
+
+Prerequisites:
+
+- You must have the Owner role in a top-level group.
+
+To delete a service account, [use the groups API to delete the service account user](../../api/groups.md#delete-service-account-user).
+
+#### Self-managed GitLab
+
+Prerequisites:
+
+- You must be an administrator for the instance the service account is associated with.
+
+To delete a service account, [use the users API to delete the service account user](../../api/users.md#user-deletion).
+
 ### Disable a service account
 
-You cannot directly disable or delete a service account. Instead, you must:
+Prerequisites:
+
+- You must have the Owner role for the group the service account is associated with.
+
+If you are not an administrator for the instance or group a service account is associated with, you cannot directly delete that service account. Instead:
 
 1. Remove the service account as a member of all subgroups and projects:
 
@@ -146,8 +183,6 @@ You cannot directly disable or delete a service account. Instead, you must:
    ```
 
    For more information, see the [API documentation on removing a member from a group or project](../../api/members.md#remove-a-member-from-a-group-or-project).
-
-1. Revoke the personal access token using the [UI](personal_access_tokens.md#revoke-a-personal-access-token) or the [API](../../api/personal_access_tokens.md#revoke-a-personal-access-token).
 
 ## Related topics
 

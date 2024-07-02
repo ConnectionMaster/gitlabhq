@@ -213,7 +213,10 @@ let shouldExcludeFromCompliling = (modulePath) =>
 // between Vue.js 2 and Vue.js 3 while using built gitlab-ui by default
 if (EXPLICIT_VUE_VERSION) {
   Object.assign(alias, {
-    '@gitlab/ui/dist/tokens/js': path.join(ROOT_PATH, 'node_modules/@gitlab/ui/dist/tokens/js'),
+    '@gitlab/ui/src/tokens/build/js': path.join(
+      ROOT_PATH,
+      'node_modules/@gitlab/ui/src/tokens/build/js',
+    ),
     '@gitlab/ui/dist': '@gitlab/ui/src',
     '@gitlab/ui': '@gitlab/ui/src',
   });
@@ -245,6 +248,11 @@ const entriesState = {
 const defaultEntries = ['./main'];
 
 module.exports = {
+  /*
+    If there is a compilation error in production, we want to exit immediately
+    https://v4.webpack.js.org/configuration/other-options/#bail
+   */
+  bail: !IS_DEV_SERVER,
   mode: IS_PRODUCTION ? 'production' : 'development',
 
   context: path.join(ROOT_PATH, 'app/assets/javascripts'),
@@ -261,9 +269,8 @@ module.exports = {
      */
     return {
       default: defaultEntries,
-      legacy_sentry: './sentry/legacy_index.js',
       sentry: './sentry/index.js',
-      performance_bar: './performance_bar/index.js',
+      performance_bar: './entrypoints/performance_bar.js',
       jira_connect_app: './jira_connect/subscriptions/index.js',
       sandboxed_mermaid: './lib/mermaid.js',
       redirect_listbox: './entrypoints/behaviors/redirect_listbox.js',
@@ -299,12 +306,22 @@ module.exports = {
         use: [],
       },
       {
+        test: /(@gitlab\/web-ide).*\.js?$/,
+        include: /node_modules/,
+        loader: 'babel-loader',
+      },
+      {
         test: /(@cubejs-client\/(vue|core)).*\.(js)?$/,
         include: /node_modules/,
         loader: 'babel-loader',
       },
       {
         test: /gridstack\/.*\.js$/,
+        include: /node_modules/,
+        loader: 'babel-loader',
+      },
+      {
+        test: /jsonc-parser\/.*\.js$/,
         include: /node_modules/,
         loader: 'babel-loader',
       },
@@ -338,6 +355,18 @@ module.exports = {
         loader: 'babel-loader',
         options: {
           plugins: ['@babel/plugin-transform-logical-assignment-operators'],
+          ...defaultJsOptions,
+        },
+      },
+      {
+        test: /@swagger-api\/apidom-.*\.[mc]?js$/,
+        include: /node_modules/,
+        loader: 'babel-loader',
+        options: {
+          plugins: [
+            '@babel/plugin-transform-class-properties',
+            '@babel/plugin-transform-logical-assignment-operators',
+          ],
           ...defaultJsOptions,
         },
       },
@@ -645,6 +674,42 @@ module.exports = {
     new webpack.NormalModuleReplacementPlugin(/markdown-it/, (resource) => {
       // eslint-disable-next-line no-param-reassign
       resource.request = path.join(ROOT_PATH, 'app/assets/javascripts/lib/markdown_it.js');
+    }),
+
+    /*
+     The following `NormalModuleReplacementPlugin` adds support for exports field in `package.json`.
+     It might not necessarily be needed for all packages which expose it, but some packages
+     need it because they use the exports internally.
+
+     Webpack 4 doesn't have support for it, while vite does.
+     See also: https://github.com/webpack/webpack/issues/9509
+     */
+    ...['@swagger-api/apidom-reference'].map((packageName) => {
+      const packageJSON = fs.readFileSync(
+        path.join(ROOT_PATH, 'node_modules', packageName, 'package.json'),
+        'utf-8',
+      );
+      const { exports } = JSON.parse(packageJSON);
+      const regex = new RegExp(`^${packageName}`);
+      return new webpack.NormalModuleReplacementPlugin(regex, (resource) => {
+        const { request } = resource;
+        if (!request.endsWith('.js') && !request.endsWith('.mjs') && !request.endsWith('.cjs')) {
+          const relative = `./${path.relative(packageName, request)}`;
+          if (exports[relative]?.browser?.import || exports[relative]?.import) {
+            const newRequest = path.join(
+              packageName,
+              exports[relative]?.browser?.import || exports[relative]?.import,
+            );
+            console.log(`[exports-replacer]: ${request} => ${newRequest}`);
+            // eslint-disable-next-line no-param-reassign
+            resource.request = newRequest;
+          } else {
+            console.warn(
+              `[exports-replacer]: Could not find import field for ${relative} in exports of [${packageName}]`,
+            );
+          }
+        }
+      });
     }),
 
     !IS_JH &&

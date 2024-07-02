@@ -14,7 +14,6 @@ import {
 } from '@gitlab/ui';
 import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import { createAlert, VARIANT_SUCCESS, VARIANT_WARNING } from '~/alert';
-import { NEXT, PREV } from '~/vue_shared/components/pagination/constants';
 import { numberToHumanSize } from '~/lib/utils/number_utils';
 import { scrollToElement } from '~/lib/utils/common_utils';
 import { __, s__ } from '~/locale';
@@ -72,6 +71,11 @@ export default {
   },
   props: {
     canDelete: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    deleteAllFiles: {
       type: Boolean,
       required: false,
       default: false,
@@ -138,6 +142,9 @@ export default {
     },
     isLoading() {
       return this.$apollo.queries.packageFiles.loading || this.mutationLoading;
+    },
+    isLastPage() {
+      return !this.pageInfo.hasPreviousPage && !this.pageInfo.hasNextPage;
     },
     filesTableHeaderFields() {
       return [
@@ -263,7 +270,7 @@ export default {
     },
     handleFileDelete(files) {
       this.track(REQUEST_DELETE_PACKAGE_FILE_TRACKING_ACTION);
-      if (files.length === this.packageFiles.length && !this.pageInfo.hasNextPage) {
+      if (!this.deleteAllFiles && files.length === this.packageFiles.length && this.isLastPage) {
         this.$emit(
           'delete-all-files',
           this.hasOneItem(files)
@@ -321,6 +328,9 @@ export default {
         focusable.focus();
       }
     },
+    refetchPackageFiles() {
+      this.$apollo.getClient().refetchQueries({ include: [getPackageFilesQuery] });
+    },
   },
   i18n: {
     deleteFile: s__('PackageRegistry|Delete asset'),
@@ -335,8 +345,6 @@ export default {
     deleteSelected: s__('PackageRegistry|Delete selected'),
     moreActionsText: __('More actions'),
     fetchPackageFilesErrorMessage: FETCH_PACKAGE_FILES_ERROR_MESSAGE,
-    prev: PREV,
-    next: NEXT,
   },
   modal: {
     fileDeletePrimaryAction: {
@@ -407,6 +415,7 @@ export default {
           <gl-form-checkbox
             v-if="canDelete"
             :checked="rowSelected"
+            class="gl-min-h-0"
             data-testid="package-files-checkbox"
             @change="rowSelected ? unselectRow() : selectRow()"
           />
@@ -419,7 +428,7 @@ export default {
             :aria-label="detailsShowing ? __('Collapse') : __('Expand')"
             data-testid="toggle-details-button"
             category="tertiary"
-            class="gl-mt-n2!"
+            class="!-gl-mt-2"
             size="small"
             @click="
               toggleDetails();
@@ -428,7 +437,7 @@ export default {
           />
           <gl-link
             :href="item.downloadPath"
-            class="gl-text-gray-500"
+            class="gl-text-secondary"
             data-testid="download-link"
             @click="track($options.trackingActions.DOWNLOAD_PACKAGE_ASSET_TRACKING_ACTION)"
           >
@@ -449,7 +458,8 @@ export default {
           <gl-disclosure-dropdown
             category="tertiary"
             icon="ellipsis_v"
-            placement="right"
+            placement="bottom-end"
+            class="!-gl-my-3"
             :toggle-text="$options.i18n.moreActionsText"
             text-sr-only
             no-caret
@@ -459,7 +469,7 @@ export default {
               @action="handleFileDelete([item])"
             >
               <template #list-item>
-                {{ $options.i18n.deleteFile }}
+                <span class="gl-text-red-500">{{ $options.i18n.deleteFile }}</span>
               </template>
             </gl-disclosure-dropdown-item>
           </gl-disclosure-dropdown>
@@ -467,7 +477,7 @@ export default {
 
         <template #row-details="{ item }">
           <div
-            class="gl-display-flex gl-flex-direction-column gl-flex-grow-1 gl-bg-gray-10 gl-rounded-base gl-inset-border-1-gray-100"
+            class="gl-display-flex gl-flex-direction-column gl-flex-grow-1 gl-bg-gray-10 gl-rounded-base gl-shadow-inner-1-gray-100"
           >
             <file-sha
               v-if="item.fileSha256"
@@ -484,13 +494,12 @@ export default {
         <gl-keyset-pagination
           :disabled="isLoading"
           v-bind="pageInfo"
-          :prev-text="$options.i18n.prev"
-          :next-text="$options.i18n.next"
           class="gl-mt-3"
           @prev="fetchPreviousFilesPage"
           @next="fetchNextFilesPage"
         />
       </div>
+      <slot name="upload" :refetch="refetchPackageFiles"></slot>
     </template>
 
     <gl-modal

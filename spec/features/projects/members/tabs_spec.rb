@@ -27,16 +27,19 @@ RSpec.describe 'Projects > Members > Tabs', :js, feature_category: :groups_and_p
 
   context 'tabs' do
     where(:tab, :count) do
-      'Members'         | 3
-      'Invited'         | 2
-      'Groups'          | 2
-      'Access requests' | 2
+      'Members'             | 3
+      'Pending invitations' | 2
+      'Groups'              | 2
     end
 
     with_them do
       it "renders #{params[:tab]} tab" do
         expect(page).to have_selector('.nav-link', text: "#{tab} #{count}")
       end
+    end
+
+    it "renders Access requests tab", quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/448572' do
+      expect(page).to have_selector('.nav-link', text: "Access requests 2")
     end
 
     context 'displays "Members" tab by default' do
@@ -51,7 +54,7 @@ RSpec.describe 'Projects > Members > Tabs', :js, feature_category: :groups_and_p
       fill_in_filtered_search 'Search groups', with: 'group'
     end
 
-    it 'displays "Groups" tab' do
+    it 'displays "Groups" tab', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/448573' do
       expect(page).to have_selector('.nav-link.active', text: 'Groups')
     end
 

@@ -124,7 +124,6 @@ RSpec.describe 'admin/application_settings/general.html.haml' do
 
     shared_examples 'does not render the form' do
       it 'does not render the form' do
-        expect(rendered).not_to have_field('application_setting_instance_level_code_suggestions_enabled')
         expect(rendered).not_to have_field('application_setting_instance_level_ai_beta_features_enabled')
       end
     end
@@ -139,6 +138,14 @@ RSpec.describe 'admin/application_settings/general.html.haml' do
       let(:gitlab_org_or_com?) { false }
 
       it_behaves_like 'does not render the form'
+    end
+  end
+
+  describe 'private profile restrictions', feature_category: :user_management do
+    it 'renders correct ce partial' do
+      render
+
+      expect(rendered).to render_template('admin/application_settings/_private_profile_restrictions')
     end
   end
 end

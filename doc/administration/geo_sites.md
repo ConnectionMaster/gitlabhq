@@ -37,7 +37,7 @@ the **primary** node is listed first as `Primary site`.
 
 | Setting                   | Description |
 |---------------------------|-------------|
-| Selective synchronization | Enable Geo [selective sync](../administration/geo/replication/configuration.md#selective-synchronization) for this **secondary** site. |
+| Selective synchronization | Enable Geo [selective sync](../administration/geo/replication/selective_synchronization.md) for this **secondary** site. |
 | Repository sync capacity  | Number of concurrent requests this **secondary** site makes to the **primary** site when backfilling repositories. |
 | File sync capacity        | Number of concurrent requests this **secondary** site makes to the **primary** site when backfilling files. |
 
@@ -60,8 +60,6 @@ under heavy load and backfill reduces its availability for standard requests,
 you can decrease them.
 
 ## Set up the internal URLs
-
-> - Setting up internal URLs in secondary sites was [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/77179) in GitLab 14.7.
 
 You can set up a different URL for synchronization between the primary and secondary site.
 
@@ -89,12 +87,6 @@ We recommend using an HTTPS connection while configuring the Geo sites. To avoid
 breaking communication between **primary** and **secondary** sites when using
 HTTPS, customize your Internal URL to point to a load balancer with TLS
 terminated at the load balancer.
-
-WARNING:
-Starting with GitLab 13.3 and [until 13.11](https://gitlab.com/gitlab-org/gitlab/-/issues/325522),
-if you use an internal URL that is not accessible to the users, the
-OAuth authorization flow does not work properly, because users are redirected
-to the internal URL instead of the external one.
 
 ## Multiple secondary sites behind a load balancer
 

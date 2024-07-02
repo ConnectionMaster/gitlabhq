@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples 'renders usage overview metrics' do
+RSpec.shared_examples 'renders usage overview metrics' do |has_data: true|
   let(:usage_overview) { find_by_testid('panel-usage-overview') }
 
   it 'renders the metrics panel' do
     expect(usage_overview).to be_visible
-    expect(usage_overview).to have_content format(_("Usage overview for %{name} group"), name: group.name)
+    expect(usage_overview).to have_content format(_("Usage overview for %{title}"), title: panel_title)
   end
 
   it 'renders each of the available metrics' do
     within usage_overview do
       [
-        ['groups', _('Groups'), '5'],
-        ['projects', _('Projects'), '10'],
-        ['users', _('Users'), '100'],
-        ['issues', _('Issues'), '1,500'],
-        ['merge_requests', _('Merge requests'), '1,000'],
-        ['pipelines', _('Pipelines'), '2,000']
+        ['groups', _('Groups'), has_data ? '5' : '-'],
+        ['projects', _('Projects'), has_data ? '10' : '-'],
+        ['users', _('Users'), has_data ? '100' : '-'],
+        ['issues', _('Issues'), has_data ? '1,500' : '-'],
+        ['merge_requests', _('Merge requests'), has_data ? '1,000' : '-'],
+        ['pipelines', _('Pipelines'), has_data ? '2,000' : '-']
       ].each do |id, name, value|
         stat = find_by_testid("usage-overview-metric-#{id}")
         expect(stat).to be_visible
@@ -40,7 +40,7 @@ RSpec.shared_examples 'renders metrics comparison table' do
 
   it 'renders the metrics comparison visualization' do
     expect(metric_table).to be_visible
-    expect(metric_table).to have_content format(_("Metrics comparison for %{name} group"), name: group_name)
+    expect(metric_table).to have_content format(_("Metrics comparison for %{title}"), title: panel_title)
   end
 
   it "renders the available metrics" do
@@ -55,6 +55,7 @@ RSpec.shared_examples 'renders metrics comparison table' do
       ['issues-completed', _('Issues closed'), '- 10 50.0% 20 33.3%'],
       ['deploys', _('Deploys'), '- 5 50.0% 10 25.0%'],
       ['merge-request-throughput', _('Merge request throughput'), '- 5 28.6% 7 16.7%'],
+      ['median-time-to-merge', _('Median time to merge'), '- - -'],
       ['vulnerability-critical', _('Critical vulnerabilities over time'), '- 3 5'],
       ['vulnerability-high', _('High vulnerabilities over time'), '- 2 4'],
 
@@ -104,12 +105,9 @@ RSpec.shared_examples 'renders link to the feedback survey' do
 end
 
 RSpec.shared_examples 'VSD renders as an analytics dashboard' do
-  let(:legacy_vsd_testid) { "[data-testid='legacy-vsd']" }
   let(:dashboard_list_item_testid) { "[data-testid='dashboard-list-item']" }
 
   it 'renders as an analytics dashboard' do
-    expect(page).not_to have_selector legacy_vsd_testid
-
     expect(find_by_testid('gridstack-grid')).to be_visible
   end
 

@@ -50,15 +50,15 @@ export default {
     <template #list-item>
       <span class="gl-display-flex gl-flex-direction-column">
         <span>
-          <span class="gl-font-weight-bold">
+          <span class="gl-font-bold">
             {{ user.name }}
           </span>
-          <gl-badge v-if="user.status.busy" size="sm" variant="warning">
+          <gl-badge v-if="user.status.busy" variant="warning">
             {{ $options.i18n.user.busy }}
           </gl-badge>
         </span>
 
-        <span class="gl-text-gray-500 gl-word-break-all">@{{ user.username }}</span>
+        <span class="gl-text-gray-500 gl-break-all">@{{ user.username }}</span>
 
         <span
           v-if="user.status.customized"

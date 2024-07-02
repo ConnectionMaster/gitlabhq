@@ -302,6 +302,41 @@ RSpec.describe Label, feature_category: :team_planning do
     end
   end
 
+  describe '#hook_attrs' do
+    let_it_be(:label) { build_stubbed(:label) }
+
+    subject(:attrs) { label.hook_attrs }
+
+    it 'has the expected attributes' do
+      is_expected.to match(
+        {
+          id: label.id,
+          title: label.title,
+          color: label.color,
+          project_id: label.project.id,
+          created_at: be_like_time(label.created_at),
+          updated_at: be_like_time(label.updated_at),
+          template: label.template,
+          description: label.description,
+          type: label.type,
+          group_id: nil
+        }
+      )
+    end
+
+    context 'when label has a group' do
+      let_it_be(:group) { build_stubbed(:group) }
+
+      before do
+        label.group_id = group.id
+      end
+
+      it 'has the group ID' do
+        is_expected.to include(group_id: group.id)
+      end
+    end
+  end
+
   describe 'priorization' do
     subject(:label) { create(:label, project: project) }
 
@@ -359,10 +394,11 @@ RSpec.describe Label, feature_category: :team_planning do
   end
 
   describe '.search' do
-    let(:label) { create(:label, title: 'bug', description: 'incorrect behavior') }
+    let_it_be(:label) { create(:label, title: 'bug', description: 'incorrect behavior') }
+    let_it_be(:other_label) { create(:label, title: 'test', description: 'bug') }
 
     it 'returns labels with a partially matching title' do
-      expect(described_class.search(label.title[0..2])).to eq([label])
+      expect(described_class.search(label.title[0..2])).to match_array([label, other_label])
     end
 
     it 'returns labels with a partially matching description' do
@@ -371,6 +407,38 @@ RSpec.describe Label, feature_category: :team_planning do
 
     it 'returns nothing' do
       expect(described_class.search('feature')).to be_empty
+    end
+
+    context 'when search within unknown fields' do
+      it 'falls back to search in title and description' do
+        labels = described_class.search('bug', search_in: [:created_at])
+
+        expect(labels).to match_array([label, other_label])
+      end
+
+      context 'when search known field but as string' do
+        it 'falls back to search in title and description' do
+          labels = described_class.search('bug', search_in: ['title'])
+
+          expect(labels).to match_array([label, other_label])
+        end
+      end
+    end
+
+    context 'when searching title only' do
+      it 'returns only title matches' do
+        labels = described_class.search('bug', search_in: [:title])
+
+        expect(labels).to match_array([label])
+      end
+    end
+
+    context 'when searching description only' do
+      it 'returns only description matches' do
+        labels = described_class.search('bug', search_in: [:description])
+
+        expect(labels).to match_array([other_label])
+      end
     end
   end
 

@@ -26,12 +26,13 @@ module Integrations
       attributes[:api_only] = api_only
       attributes[:if] = attributes.fetch(:if, true)
       attributes[:is_secret] = is_secret
+      attributes[:description] ||= attributes[:help]
       @attributes = attributes.freeze
 
       invalid_attributes = attributes.keys - ATTRIBUTES
       if invalid_attributes.present?
         raise ArgumentError, "Invalid attributes #{invalid_attributes.inspect}"
-      elsif !TYPES.include?(self[:type])
+      elsif TYPES.exclude?(self[:type])
         raise ArgumentError, "Invalid type #{self[:type].inspect}"
       end
     end

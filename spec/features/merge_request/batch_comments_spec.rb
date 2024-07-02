@@ -112,8 +112,8 @@ RSpec.describe 'Merge request > Batch comments', :js, feature_category: :code_re
       visit_overview
     end
 
-    it 'at first does not show `Add to review` and `Add comment now` buttons' do
-      expect(page).to have_no_button('Add to review')
+    it 'at first does not show `Add comment to review` and `Add comment now` buttons' do
+      expect(page).to have_no_button('Add comment to review')
       expect(page).to have_no_button('Add comment now')
     end
 
@@ -127,7 +127,7 @@ RSpec.describe 'Merge request > Batch comments', :js, feature_category: :code_re
       end
 
       it 'can add comment to review' do
-        write_comment(selector: '.js-main-target-form', field: 'note-body', text: 'Its a draft comment', button_text: 'Add to review')
+        write_comment(selector: '.js-main-target-form', field: 'note-body', text: 'Its a draft comment', button_text: 'Add comment to review')
 
         expect(page).to have_selector('.draft-note-component', text: 'Its a draft comment')
 
@@ -151,8 +151,7 @@ RSpec.describe 'Merge request > Batch comments', :js, feature_category: :code_re
   context 'in parallel diff' do
     before do
       find('.js-show-diff-settings').click
-      click_button 'Side-by-side'
-      find('.js-show-diff-settings').click
+      find_by_testid('listbox-item-parallel').click
     end
 
     it 'adds draft comments to both sides' do

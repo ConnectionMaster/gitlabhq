@@ -125,9 +125,9 @@ class GroupSeeder
   def create_user
     # rubocop:disable Style/SymbolProc -- Incorrect rubocop advice.
     User.create!(
-      username: FFaker::Internet.user_name,
+      username: FFaker::Internet.unique.user_name,
       name: FFaker::Name.name,
-      email: FFaker::Internet.email,
+      email: FFaker::Internet.unique.email,
       confirmed_at: DateTime.now,
       password: Devise.friendly_token
     ) do |user|
@@ -147,14 +147,15 @@ class GroupSeeder
       @resource_count.times do |_|
         group = Group.find(group_id)
 
+        author = group.group_members.non_invite.sample.user
         epic_params = {
           title: FFaker::Lorem.sentence(6),
           description: FFaker::Lorem.paragraphs(3).join("\n\n"),
-          author: group.group_members.non_invite.sample.user,
+          author: author,
           group: group
         }
 
-        Epic.create!(epic_params)
+        ::Epics::CreateService.new(group: group, current_user: author, params: epic_params).execute
       end
     end
   end
@@ -165,7 +166,7 @@ class GroupSeeder
         group = Group.find(group_id)
         label_title = FFaker::Product.brand
 
-        Labels::CreateService.new(title: label_title, color: "#{::Gitlab::Color.color_for(label_title)}").execute(group: group)
+        Labels::CreateService.new(title: label_title, color: ::Gitlab::Color.color_for(label_title).to_s).execute(group: group)
       end
     end
   end

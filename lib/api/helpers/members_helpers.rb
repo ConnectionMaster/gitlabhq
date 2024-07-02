@@ -80,14 +80,16 @@ module API
         present invitations, with: Entities::Invitation, current_user: current_user
       end
 
-      def add_single_member_by_user_id(create_service_params)
-        source = create_service_params[:source]
-        user_id = create_service_params[:user_id]
-        user = User.find_by(id: user_id) # rubocop: disable CodeReuse/ActiveRecord
+      def present_members_with_invited_private_group_accessibility(members, source)
+        ::Members::InvitedPrivateGroupAccessibilityAssigner
+          .new(members, source: source, current_user: current_user)
+          .execute
 
-        not_found!('User') unless user
+        present_members members
+      end
 
-        conflict!('Member already exists') if member_already_exists?(source, user_id)
+      def add_single_member(create_service_params)
+        check_existing_membership(create_service_params)
 
         instance = ::Members::CreateService.new(current_user, create_service_params)
         result = instance.execute
@@ -112,12 +114,15 @@ module API
         end
       end
 
-      def add_multiple_members?(user_id)
-        user_id.include?(',')
+      def check_existing_membership(create_service_params)
+        user_id = User.get_ids_by_ids_or_usernames(create_service_params[:user_id], create_service_params[:username]).first
+
+        not_found!('User') unless user_id
+        conflict!('Member already exists') if member_already_exists?(create_service_params[:source], user_id)
       end
 
-      def add_single_member?(user_id)
-        user_id.present?
+      def add_multiple_members?(user_id, username)
+        user_id&.include?(',') || username&.include?(',')
       end
 
       def self.member_access_levels

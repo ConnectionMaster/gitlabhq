@@ -27,7 +27,7 @@ endpoint. New features can be added to the API in the same
 version number.
 
 New features and bug fixes are released in tandem with GitLab. Apart
-from incidental patch and security releases, new minor versions of GitLab are released every
+from incidental patch releases, new minor versions of GitLab are released every
 month. Major API version changes, and removal of entire API versions, are done in tandem
 with major GitLab releases.
 
@@ -36,6 +36,13 @@ All deprecations and changes between versions are in the documentation.
 ### Current status
 
 Only API version v4 is available.
+
+### Breaking change exemptions
+
+Elements labeled as [experimental or beta](../../policy/experiment-beta-support.md) in the [REST API resources](../api_resources.md) are exempt from the deprecation process.
+These parts can be removed or changed at any time without notice.
+
+Fields behind a feature flag and disabled by default do not follow the deprecation and removal process. These fields can be removed at any time without notice.
 
 ## How to use the API
 
@@ -389,6 +396,7 @@ For large collections, you should use keyset pagination
 ### Offset-based pagination
 
 > - The `users` endpoint was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/426547) for offset-based pagination in GitLab 16.5 and is planned for removal in 17.0. This change is a breaking change. Use keyset-based pagination for this endpoint instead.
+> - The `users` endpoint enforces keyset-based pagination when the number of requested records is greater than 50,000 in GitLab 17.0.
 
 Sometimes, the returned result spans many pages. When listing resources, you can
 pass the following parameters:
@@ -518,10 +526,9 @@ The type of filter depends on the
 `order_by` option used, and we can have more than one additional filter.
 
 WARNING:
-The `Links` header was removed in GitLab 14.0 to be aligned with the
+The `Links` header was removed to be aligned with the
 [W3C `Link` specification](https://www.w3.org/wiki/LinkHeader). The `Link`
-header was [added in GitLab 13.1](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/33714)
-and should be used instead.
+header should be used instead.
 
 When the end of the collection is reached and there are no additional
 records to retrieve, the `Link` header is absent and the resulting array is
@@ -547,6 +554,7 @@ options:
 | [Projects](../projects.md)                                                     | `order_by=id` only               | Authenticated and unauthenticated users. |
 | [Users](../users.md)                                                           | `order_by=id`, `order_by=name`, `order_by=username`               | Authenticated and unauthenticated users.  [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/419556) in GitLab 16.5. |
 | [Registry Repository Tags](../container_registry.md) | `order_by=name`, `sort=asc`, or `sort=desc` only. | Authenticated users only. |
+| [List repository tree](../repositories.md#list-repository-tree) |   |  Authenticated and unauthenticated users. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/154897) in GitLab 17.1. |
 
 ### Pagination response headers
 
@@ -804,6 +812,9 @@ Report bugs and feature proposals to the respective projects.
 
 For questions about these integrations, use the [GitLab community forum](https://forum.gitlab.com/).
 
+Administrators can monitor usage of these API clients by
+[parsing logs](../../administration/logs/log_parsing.md#print-top-api-user-agents).
+
 ### `C#`
 
 - [`GitLabApiClient`](https://github.com/nmklotas/GitLabApiClient)
@@ -848,7 +859,7 @@ For questions about these integrations, use the [GitLab community forum](https:/
 
 ### Rust
 
-- [`gitlab` crate](https://crates.io/crates/gitlab)
+- [`gitlab` crate](https://crates.io/crates/gitlab/)
 
 ### Swift
 
@@ -866,12 +877,9 @@ specifically used by GitLab.com, see
 The GitLab API supports the `application/json` content type by default, though
 some API endpoints also support `text/plain`.
 
-In [GitLab 13.10 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/250342),
 API endpoints do not support `text/plain` by default, unless it's explicitly documented.
 
 ## Resolve requests detected as spam
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/352913) in GitLab 14.9.
 
 REST API requests can be detected as spam. If a request is detected as spam and:
 

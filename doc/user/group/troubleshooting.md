@@ -8,8 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 ## Validation errors on namespaces and groups
 
-[GitLab 14.4 and later](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/70365) performs
-the following checks when creating or updating namespaces or groups:
+Performs the following checks when creating or updating namespaces or groups:
 
 - Namespaces must not have parents.
 - Group parents must be groups and not namespaces.
@@ -100,3 +99,11 @@ This error typically occurs when the user you're trying to remove is part of an 
 - Recommended. Remove the user directly from the invited group, if you have access to the group.
 
 The feature request to **Update `billable_members` endpoint to include invited group** is currently being worked on. For more information, see [issue 386583](https://gitlab.com/gitlab-org/gitlab/-/issues/386583)
+
+## Missing or insufficient permission, delete button disabled
+
+This error typically occurs when a user attempts to remove the `container_registry` images from the archived projects during group transfer. To solve this error:
+
+1. Unarchive the project.
+1. Delete the `container_registry` images.
+1. Archive the project.

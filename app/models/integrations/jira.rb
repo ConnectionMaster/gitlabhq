@@ -5,6 +5,7 @@ module Integrations
   class Jira < BaseIssueTracker
     include Gitlab::Routing
     include ApplicationHelper
+    include SafeFormatHelper
     include ActionView::Helpers::AssetUrlHelper
     include Gitlab::Utils::StrongMemoize
     include HasAvatar
@@ -24,7 +25,8 @@ module Integrations
       server_info: "/rest/api/2/serverInfo",
       transition_issue: "/rest/api/2/issue/%s/transitions",
       issue_comments: "/rest/api/2/issue/%s/comment",
-      link_remote_issue: "/rest/api/2/issue/%s/remotelink"
+      link_remote_issue: "/rest/api/2/issue/%s/remotelink",
+      client_info: "/rest/api/2/myself"
     }.freeze
 
     SECTION_TYPE_JIRA_TRIGGER = 'jira_trigger'
@@ -60,10 +62,7 @@ module Integrations
     # We should use username/password for Jira Server and email/api_token for Jira Cloud,
     # for more information check: https://gitlab.com/gitlab-org/gitlab-foss/issues/49936.
 
-    before_save :copy_project_key_to_project_keys,
-      if: -> {
-        Feature.disabled?(:jira_multiple_project_keys, group || project&.group)
-      }
+    before_save :format_project_keys, if: :project_keys_changed?
     after_commit :update_deployment_type, on: [:create, :update], if: :update_deployment_type?
 
     enum comment_detail: {
@@ -136,6 +135,10 @@ module Integrations
 
     field :jira_issue_transition_id, api_only: true
 
+    field :issues_enabled,
+      required: false,
+      api_only: true
+
     field :project_keys,
       required: false,
       api_only: true
@@ -145,7 +148,6 @@ module Integrations
     # These fields are API only, so no field definition is required.
     data_field :jira_issue_transition_automatic
     data_field :project_key
-    data_field :issues_enabled
     data_field :vulnerabilities_enabled
     data_field :vulnerabilities_issuetype
 
@@ -255,28 +257,20 @@ module Integrations
 
       # Currently, Jira issues are only configurable at the project and group levels.
       unless instance_level?
-        issues_title = if Feature.enabled?(:jira_multiple_project_keys, group || project&.group)
-                         s_('JiraService|View Jira issues (optional)')
-                       else
-                         _('Issues')
-                       end
-
         sections.push({
           type: SECTION_TYPE_JIRA_ISSUES,
-          title: issues_title,
+          title: s_('JiraService|Jira issues (optional)'),
           description: jira_issues_section_description,
           plan: 'premium'
         })
 
-        if Feature.enabled?(:jira_multiple_project_keys, group || project&.group)
-          sections.push({
-            type: SECTION_TYPE_JIRA_ISSUE_CREATION,
-            title: s_('JiraService|Jira issue creation from vulnerabilities (optional)'),
-            description: s_('JiraService|Create a Jira issue for a vulnerability to track any action taken ' \
-                            'to resolve or mitigate a vulnerability.'),
-            plan: 'ultimate'
-          })
-        end
+        sections.push({
+          type: SECTION_TYPE_JIRA_ISSUE_CREATION,
+          title: s_('JiraService|Jira issues for vulnerabilities (optional)'),
+          description: s_('JiraService|Create Jira issues from GitLab to track any action taken ' \
+                          'to resolve or mitigate vulnerabilities.'),
+          plan: 'ultimate'
+        })
       end
 
       sections
@@ -326,7 +320,7 @@ module Integrations
     end
 
     def find_issue(issue_key, rendered_fields: false, transitions: false, restrict_project_key: false)
-      return if restrict_project_key && parse_project_from_issue_key(issue_key) != project_key
+      return if restrict_project_key && !issue_key_allowed?(issue_key)
 
       expands = []
       expands << 'renderedFields' if rendered_fields
@@ -405,10 +399,10 @@ module Integrations
     end
 
     def test(_)
-      result = server_info
-      success = result.present?
-      result = @error&.message unless success
+      result = {}.merge!(server_info, client_info) if server_info && client_info
 
+      success = server_info.present? && client_info.present?
+      result = @error&.message unless success
       { success: success, result: result }
     end
 
@@ -450,9 +444,18 @@ module Integrations
       issue_key.gsub(Gitlab::Regex.jira_issue_key_project_key_extraction_regex, '')
     end
 
+    def issue_key_allowed?(issue_key)
+      project_keys.blank? || project_keys.include?(parse_project_from_issue_key(issue_key))
+    end
+
     def branch_name(commit)
       commit.first_ref_by_oid(project.repository)
     end
+
+    def client_info
+      client_url.present? ? jira_request(API_ENDPOINTS[:client_info]) { client.User.myself.attrs } : nil
+    end
+    strong_memoize_attr :client_info
 
     def server_info
       client_url.present? ? jira_request(API_ENDPOINTS[:server_info]) { client.ServerInfo.all.attrs } : nil
@@ -720,8 +723,8 @@ module Integrations
       end
     end
 
-    def copy_project_key_to_project_keys
-      data_fields.project_keys = [project_key]
+    def format_project_keys
+      data_fields.project_keys = project_keys.compact_blank.map(&:strip).uniq
     end
 
     def jira_cloud?
@@ -745,24 +748,21 @@ module Integrations
     end
 
     def jira_issues_section_description
-      jira_issues_link_start = format('<a href="%{url}" target="_blank" rel="noopener noreferrer">'.html_safe,
-        url: help_page_path('integration/jira/issues'))
-      description = format(
-        s_('JiraService|Work on Jira issues without leaving GitLab. Add a Jira menu to access a read-only list of ' \
-           'your Jira issues. %{jira_issues_link_start}Learn more.%{link_end}'),
-        jira_issues_link_start: jira_issues_link_start,
-        link_end: '</a>'.html_safe
-      )
+      description = s_('JiraService|View issues from multiple Jira projects in this GitLab project. ' \
+                       'Access a read-only list of your Jira issues.')
 
       if project&.issues_enabled?
-        gitlab_issues_link_start = format('<a href="%{url}">'.html_safe, url: edit_project_path(project,
-          anchor: 'js-shared-permissions'))
         description += '<br><br>'.html_safe
-        description += format(
-          s_("JiraService|Displaying Jira issues while leaving GitLab issues also enabled might be confusing. " \
-             "Consider %{gitlab_issues_link_start}disabling GitLab issues%{link_end} if they won't otherwise be used."),
-          gitlab_issues_link_start: gitlab_issues_link_start,
-          link_end: '</a>'.html_safe
+
+        gitlab_issues_link = ActionController::Base.helpers.link_to(
+          '',
+          edit_project_path(project, anchor: 'js-shared-permissions')
+        )
+        tag_pair_gitlab_issues = tag_pair(gitlab_issues_link, :link_start, :link_end)
+        description += safe_format(
+          s_('JiraService|If you access Jira issues in GitLab, you might want to ' \
+             '%{link_start}disable GitLab issues%{link_end}.'),
+          tag_pair_gitlab_issues
         )
       end
 

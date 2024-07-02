@@ -137,6 +137,7 @@ describe('HeaderActions component', () => {
   const findReportAbuseButton = () => wrapper.findByTestId('report-abuse-item');
   const findCopyRefenceDropdownItem = () => wrapper.findByTestId('copy-reference');
   const findCopyEmailItem = () => wrapper.findByTestId('copy-email');
+  const findPromoteToEpicButton = () => wrapper.findByTestId('promote-button');
 
   const findModal = () => wrapper.findComponent(GlModal);
 
@@ -257,19 +258,19 @@ describe('HeaderActions component', () => {
       ${'desktop dropdown'} | ${findDesktopDropdownItems}
     `('$description', ({ findDropdownItems }) => {
       describe.each`
-        description                               | itemText                           | isItemVisible | canUpdateIssue | canCreateIssue | isIssueAuthor | canReportSpam | canPromoteToEpic | canDestroyIssue
-        ${`when user can update ${issueType}`}    | ${`Close ${issueType}`}            | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${`when user cannot update ${issueType}`} | ${`Close ${issueType}`}            | ${false}      | ${false}       | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${`when user can create ${issueType}`}    | ${`New related ${issueType}`}      | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${`when user cannot create ${issueType}`} | ${`New related ${issueType}`}      | ${false}      | ${true}        | ${false}       | ${true}       | ${true}       | ${true}          | ${true}
-        ${'when user can promote to epic'}        | ${'Promote to epic'}               | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${'when user cannot promote to epic'}     | ${'Promote to epic'}               | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${false}         | ${true}
-        ${'when user can report abuse'}           | ${'Report abuse to administrator'} | ${true}       | ${true}        | ${true}        | ${false}      | ${true}       | ${true}          | ${true}
-        ${'when user cannot report abuse'}        | ${'Report abuse to administrator'} | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${'when user can submit as spam'}         | ${'Submit as spam'}                | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${'when user cannot submit as spam'}      | ${'Submit as spam'}                | ${false}      | ${true}        | ${true}        | ${true}       | ${false}      | ${true}          | ${true}
-        ${`when user can delete ${issueType}`}    | ${`Delete ${issueType}`}           | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
-        ${`when user cannot delete ${issueType}`} | ${`Delete ${issueType}`}           | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${false}
+        description                               | itemText                      | isItemVisible | canUpdateIssue | canCreateIssue | isIssueAuthor | canReportSpam | canPromoteToEpic | canDestroyIssue
+        ${`when user can update ${issueType}`}    | ${`Close ${issueType}`}       | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${`when user cannot update ${issueType}`} | ${`Close ${issueType}`}       | ${false}      | ${false}       | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${`when user can create ${issueType}`}    | ${`New related ${issueType}`} | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${`when user cannot create ${issueType}`} | ${`New related ${issueType}`} | ${false}      | ${true}        | ${false}       | ${true}       | ${true}       | ${true}          | ${true}
+        ${'when user can promote to epic'}        | ${'Promote to epic'}          | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${'when user cannot promote to epic'}     | ${'Promote to epic'}          | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${false}         | ${true}
+        ${'when user can report abuse'}           | ${'Report abuse'}             | ${true}       | ${true}        | ${true}        | ${false}      | ${true}       | ${true}          | ${true}
+        ${'when user cannot report abuse'}        | ${'Report abuse'}             | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${'when user can submit as spam'}         | ${'Submit as spam'}           | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${'when user cannot submit as spam'}      | ${'Submit as spam'}           | ${false}      | ${true}        | ${true}        | ${true}       | ${false}      | ${true}          | ${true}
+        ${`when user can delete ${issueType}`}    | ${`Delete ${issueType}`}      | ${true}       | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${true}
+        ${`when user cannot delete ${issueType}`} | ${`Delete ${issueType}`}      | ${false}      | ${true}        | ${true}        | ${true}       | ${true}       | ${true}          | ${false}
       `(
         '$description',
         ({
@@ -359,7 +360,35 @@ describe('HeaderActions component', () => {
     });
   });
 
-  describe('when "Promote to epic" button is clicked', () => {
+  describe('"Promote to epic" button behavior', () => {
+    describe('default', () => {
+      it('the button is enabled when the user can promote to epic', () => {
+        wrapper = mountComponent();
+
+        expect(findPromoteToEpicButton().props('item')).toMatchObject({
+          extraAttrs: { disabled: false },
+          text: 'Promote to epic',
+        });
+      });
+    });
+
+    describe('when request is in flight', () => {
+      it('disables the promote option', async () => {
+        wrapper = mountComponent({
+          promoteToEpicHandler: promoteToEpicMutationSuccessResponseHandler,
+        });
+
+        findPromoteToEpicButton().vm.$emit('action');
+
+        await nextTick();
+
+        expect(findPromoteToEpicButton().props('item')).toMatchObject({
+          extraAttrs: { disabled: true },
+          text: 'Promote to epic',
+        });
+      });
+    });
+
     describe('when response is successful', () => {
       beforeEach(async () => {
         visitUrlSpy = jest.spyOn(urlUtility, 'visitUrl').mockReturnValue({});

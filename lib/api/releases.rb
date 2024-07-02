@@ -105,14 +105,14 @@ module API
         # Since the cached result could contain sensitive information,
         # it will expire in a short interval.
         present_cached paginate(releases),
-                        with: Entities::Release,
-                        # `current_user` could be absent if the releases are publicly accesible.
-                        # We should not use `cache_key` for the user because the version/updated_at
-                        # context is unnecessary here.
-                        cache_context: -> (_) { "user:{#{current_user&.id}}" },
-                        expires_in: 5.minutes,
-                        current_user: current_user,
-                        include_html_description: declared_params[:include_html_description]
+          with: Entities::Release,
+          # `current_user` could be absent if the releases are publicly accesible.
+          # We should not use `cache_key` for the user because the version/updated_at
+          # context is unnecessary here.
+          cache_context: ->(_) { "user:{#{current_user&.id}}" },
+          expires_in: 5.minutes,
+          current_user: current_user,
+          include_html_description: declared_params[:include_html_description]
       end
 
       desc 'Get a release by a tag name' do
@@ -253,9 +253,9 @@ module API
           desc: 'The title of each milestone the release is associated with. GitLab Premium customers can specify group milestones. Cannot be combined with `milestone_ids` parameter.'
 
         optional :milestone_ids,
-           type: Array[String, Integer],
-           coerce_with: ::API::Validations::Types::CommaSeparatedToIntegerArray.coerce,
-           desc: 'The ID of each milestone the release is associated with. GitLab Premium customers can specify group milestones. Cannot be combined with `milestones` parameter.'
+          type: Array[String, Integer],
+          coerce_with: ::API::Validations::Types::CommaSeparatedToIntegerArray.coerce,
+          desc: 'The ID of each milestone the release is associated with. GitLab Premium customers can specify group milestones. Cannot be combined with `milestones` parameter.'
 
         mutually_exclusive :milestones, :milestone_ids, message: 'Cannot specify milestones and milestone_ids at the same time'
 
@@ -263,6 +263,13 @@ module API
           type: DateTime,
           desc: 'Date and time for the release. Defaults to the current time. Expected in ISO 8601 format (`2019-03-15T08:00:00Z`). ' \
                 'Only provide this field if creating an upcoming or historical release.'
+
+        optional :legacy_catalog_publish,
+          type: Boolean,
+          desc: 'If true, the release will be published to the CI catalog. ' \
+                'This parameter is for internal use only and will be removed in a future release. ' \
+                'If the feature flag ci_release_cli_catalog_publish_option is disabled, this parameter will be ignored ' \
+                'and the release will published to the CI catalog as it was before this parameter was introduced.'
       end
       route_setting :authentication, job_token_allowed: true
       post ':id/releases' do

@@ -100,9 +100,10 @@ IPv6 address. If you don't have IPv6, you can omit the `AAAA` record.
 #### For namespace in URL path, without wildcard DNS
 
 DETAILS:
-**Status:** Experiment
+**Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) in GitLab 16.7. This feature is an [Experiment](../../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
+> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 
 FLAG:
 On self-managed GitLab, by default this feature is available.
@@ -112,28 +113,31 @@ This feature is not ready for production use.
 Prerequisites:
 
 - Your instance must use the Linux package installation method.
+- Your installation must use the default `auth_redirect_uri`.
 
 If you need support for namespace in the URL path to remove the requirement for wildcard DNS:
 
 1. Enable the GitLab Pages flag for this feature by adding
    `gitlab_pages["namespace_in_path"] = true` to `/etc/gitlab/gitlab.rb`.
-1. In your DNS provider, add entries for `example.com` and `projects.example.com`.
-   In both lines, replace `example.com` with your domain name, and `192.0.0.0` with
+1. In your DNS provider, add entries for `example.io`.
+   Replace `example.io` with your domain name, and `192.0.0.0` with
    the IPv4 version of your IP address. The entries look like this:
 
    ```plaintext
-   example.com          1800 IN A    192.0.0.0
-   projects.example.com 1800 IN A    192.0.0.0
+   example.io          1800 IN A    192.0.0.0
    ```
 
 1. Optional. If your GitLab instance has an IPv6 address, add entries for it.
-   In both lines, replace `example.com` with your domain name, and `2001:db8::1` with
+   Replace `example.io` with your domain name, and `2001:db8::1` with
    the IPv6 version of your IP address. The entries look like this:
 
    ```plaintext
-   example.com          1800 IN AAAA 2001:db8::1
-   projects.example.com 1800 IN AAAA 2001:db8::1
+   example.io          1800 IN AAAA 2001:db8::1
    ```
+
+This example contains the following:
+
+- `example.io`: The domain GitLab Pages is served from.
 
 #### DNS configuration for custom domains
 
@@ -194,9 +198,10 @@ Watch the [video tutorial](https://youtu.be/dD8c7WNcc6s) for this configuration.
 ### Pages domain without wildcard DNS
 
 DETAILS:
-**Status:** Experiment
+**Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) in GitLab 16.7. This feature is an [Experiment](../../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
+> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 
 FLAG:
 On self-managed GitLab, by default this feature is available.
@@ -283,9 +288,10 @@ then run `gitlab-ctl reconfigure`. For more information, read
 ### Pages domain with TLS support, without wildcard DNS
 
 DETAILS:
-**Status:** Experiment
+**Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) in GitLab 16.7. This feature is an [Experiment](../../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
+> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 
 FLAG:
 On self-managed GitLab, by default this feature is available.
@@ -297,8 +303,7 @@ Prerequisites:
 - Your instance must use the Linux package installation method.
 - You have configured DNS setup
   [without a wildcard](#for-namespace-in-url-path-without-wildcard-dns).
-- You have a single TLS certificate that covers your domain (like `example.com`)
-  and the `projects.*` version of your domain, like `projects.example.com`.
+- You have a TLS certificate that covers your domain (like `example.io`).
 
 In this configuration, NGINX proxies all requests to the daemon. The GitLab Pages
 daemon doesn't listen to the outside world:
@@ -328,17 +333,18 @@ daemon doesn't listen to the outside world:
    pages_nginx['ssl_certificate_key'] = "/etc/gitlab/ssl/pages-nginx.key"
    ```
 
-1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation).
+1. If you're using [Pages Access Control](#access-control), update the redirect URI in the GitLab Pages
+   [System OAuth application](../../integration/oauth_provider.md#create-an-instance-wide-application)
+   to use the HTTPS protocol.
 
    WARNING:
-   GitLab Pages does not update the OAuth application if changes are made to the redirect URI.
+   GitLab Pages does not update the OAuth application, and
+   the default `auth_redirect_uri` is updated to `https://example.io/projects/auth`.
    Before you reconfigure, remove the `gitlab_pages` section from `/etc/gitlab/gitlab-secrets.json`,
    then run `gitlab-ctl reconfigure`. For more information, see
    [GitLab Pages does not regenerate OAuth](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/3947).
 
-1. If you're using [Pages Access Control](#access-control), update the redirect URI in the GitLab Pages
-   [System OAuth application](../../integration/oauth_provider.md#create-an-instance-wide-application)
-   to use the HTTPS protocol.
+1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation).
 
 NGINX uses the custom proxy header `X-Gitlab-Namespace-In-Path`
 to send the namespace to the GitLab Pages daemon.
@@ -389,8 +395,11 @@ control over how the Pages daemon runs and serves content in your environment.
 | `artifacts_server`                      | Enable viewing [artifacts](../job_artifacts.md) in GitLab Pages.                                                                                                                                                                                                                                           |
 | `artifacts_server_timeout`              | Timeout (in seconds) for a proxied request to the artifacts server.                                                                                                                                                                                                                                        |
 | `artifacts_server_url`                  | API URL to proxy artifact requests to. Defaults to GitLab `external URL` + `/api/v4`, for example `https://gitlab.com/api/v4`. When running a [separate Pages server](#running-gitlab-pages-on-a-separate-server), this URL must point to the main GitLab server's API.                                    |
-| `auth_redirect_uri`                     | Callback URL for authenticating with GitLab. Defaults to project's subdomain of `pages_external_url` + `/auth`.                                                                                                                                                                                            |
+| `auth_redirect_uri`                     | Callback URL for authenticating with GitLab. Defaults to project's subdomain of `pages_external_url` + `/auth`, for example `https://projects.example.io/auth`. When `namespace_in_path` is enabled, defaults to `pages_external_url` + `/projects/auth`, for example `https://example.io/projects/auth`.   |
 | `auth_secret`                           | Secret key for signing authentication requests. Leave blank to pull automatically from GitLab during OAuth registration.                                                                                                                                                                                   |
+| `client_cert`                           | Client certificate used for mutual TLS with the GitLab API. See [Support mutual TLS when calling the GitLab API](#support-mutual-tls-when-calling-the-gitlab-api) for details.                                                                                                                             |
+| `client_key`                            | Client key used for mutual TLS with the GitLab API. See [Support mutual TLS when calling the GitLab API](#support-mutual-tls-when-calling-the-gitlab-api) for details.                                                                                                                                     |
+| `client_ca_certs`                       | Root CA certificates used to sign client certificate used for mutual TLS with the GitLab API. See [Support mutual TLS when calling the GitLab API](#support-mutual-tls-when-calling-the-gitlab-api) for details.                                                                                           |
 | `dir`                                   | Working directory for configuration and secrets files.                                                                                                                                                                                                                                                     |
 | `enable`                                | Enable or disable GitLab Pages on the current system.                                                                                                                                                                                                                                                      |
 | `external_http`                         | Configure Pages to bind to one or more secondary IP addresses, serving HTTP requests. Multiple addresses can be given as an array, along with exact ports, for example `['1.2.3.4', '1.2.3.5:8063']`. Sets value for `listen_http`.                                                                        |
@@ -408,7 +417,7 @@ control over how the Pages daemon runs and serves content in your environment.
 | `gitlab_id`                             | The OAuth application public ID. Leave blank to automatically fill when Pages authenticates with GitLab.                                                                                                                                                                                                   |
 | `gitlab_secret`                         | The OAuth application secret. Leave blank to automatically fill when Pages authenticates with GitLab.                                                                                                                                                                                                      |
 | `auth_scope`                            | The OAuth application scope to use for authentication. Must match GitLab Pages OAuth application settings. Leave blank to use `api` scope by default.                                                                                                                                                      |
-| `auth_timeout`                          | GitLab application client timeout for authentication in seconds (default: `5s`). A value of `0` means no timeout.                                                                                                                                                                                                                                     |
+| `auth_timeout`                          | GitLab application client timeout for authentication in seconds (default: `5s`). A value of `0` means no timeout.                                                                                                                                                                                          |
 | `auth_cookie_session_timeout`           | Authentication cookie session timeout in seconds (default: `10m`). A value of `0` means the cookie is deleted after the browser session ends.                                                                                                                                                              |
 | `gitlab_server`                         | Server to use for authentication when access control is enabled; defaults to GitLab `external_url`.                                                                                                                                                                                                        |
 | `headers`                               | Specify any additional http headers that should be sent to the client with each response. Multiple headers can be given as an array, header and value as one string, for example `['my-header: myvalue', 'my-other-header: my-other-value']`                                                               |
@@ -419,10 +428,10 @@ control over how the Pages daemon runs and serves content in your environment.
 | `log_directory`                         | Absolute path to a log directory.                                                                                                                                                                                                                                                                          |
 | `log_format`                            | The log output format: `text` or `json`.                                                                                                                                                                                                                                                                   |
 | `log_verbose`                           | Verbose logging, true/false.                                                                                                                                                                                                                                                                               |
-| `namespace_in_path`                     | (Experimental) Enable or disable namespace in the URL path. This requires `pages_nginx[enable] = true`. Sets `rewrite` configuration in NGINX to support [without wildcard DNS setup](#for-namespace-in-url-path-without-wildcard-dns). Default: `false`                    |
+| `namespace_in_path`                     | (Beta) Enable or disable namespace in the URL path. This requires `pages_nginx[enable] = true`. Sets `rewrite` configuration in NGINX to support [without wildcard DNS setup](#for-namespace-in-url-path-without-wildcard-dns). Default: `false`.                                                       |
 | `propagate_correlation_id`              | Set to true (false by default) to re-use existing Correlation ID from the incoming request header `X-Request-ID` if present. If a reverse proxy sets this header, the value is propagated in the request chain.                                                                                            |
 | `max_connections`                       | Limit on the number of concurrent connections to the HTTP, HTTPS or proxy listeners.                                                                                                                                                                                                                       |
-| `max_uri_length`                        | The maximum length of URIs accepted by GitLab Pages. Set to 0 for unlimited length. [Introduced](https://gitlab.com/gitlab-org/omnibus-gitlab/-/merge_requests/5729) in GitLab 14.5. |
+| `max_uri_length`                        | The maximum length of URIs accepted by GitLab Pages. Set to 0 for unlimited length.                                                                                                                                                                                                                        |
 | `metrics_address`                       | The address to listen on for metrics requests.                                                                                                                                                                                                                                                             |
 | `redirect_http`                         | Redirect pages from HTTP to HTTPS, true/false.                                                                                                                                                                                                                                                             |
 | `redirects_max_config_size`             | The maximum size of the `_redirects` file, in bytes (default: 65536).                                                                                                                                                                                                                                      |
@@ -446,7 +455,6 @@ control over how the Pages daemon runs and serves content in your environment.
 | `enable`                                | Include a virtual host `server{}` block for Pages inside NGINX. Needed for NGINX to proxy traffic back to the Pages daemon. Set to `false` if the Pages daemon should directly receive all requests, for example, when using [custom domains](index.md#custom-domains).                                    |
 | `FF_CONFIGURABLE_ROOT_DIR`              | Feature flag to [customize the default folder](../../user/project/pages/introduction.md#customize-the-default-folder) (enabled by default).                                                                                                                                                                |
 | `FF_ENABLE_PLACEHOLDERS`                | Feature flag for rewrites (enabled by default). See [Rewrites](../../user/project/pages/redirects.md#rewrites) for more information.                                                                                                                                                                       |
-| `use_legacy_storage`                    | Temporarily-introduced parameter allowing to use legacy domain configuration source and storage. [Removed in 14.3](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/6166).                                                                                                                            |
 | `rate_limit_source_ip`                  | Rate limit per source IP in number of requests per second. Set to `0` to disable this feature.                                                                                                                                                                                                             |
 | `rate_limit_source_ip_burst`            | Rate limit per source IP maximum burst allowed per second.                                                                                                                                                                                                                                                 |
 | `rate_limit_domain`                     | Rate limit per domain in number of requests per second. Set to `0` to disable this feature.                                                                                                                                                                                                                |
@@ -566,8 +574,6 @@ verification requirement:
 
 ### Let's Encrypt integration
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-foss/-/issues/28996) in GitLab 12.1.
-
 [GitLab Pages' Let's Encrypt integration](../../user/project/pages/custom_domains_ssl_tls_certification/lets_encrypt_integration.md)
 allows users to add Let's Encrypt SSL certificates for GitLab Pages
 sites served under a custom domain.
@@ -614,8 +620,6 @@ all the App nodes and Sidekiq nodes.
 
 #### Using Pages with reduced authentication scope
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/423) in GitLab 13.10.
-
 By default, the Pages daemon uses the `api` scope to authenticate. You can configure this. For
 example, this reduces the scope to `read_api` in `/etc/gitlab/gitlab.rb`:
 
@@ -636,8 +640,6 @@ this:
 1. Select **Save changes**.
 
 #### Disable public access to all Pages sites
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/32095) in GitLab 12.7.
 
 You can enforce [Access Control](#access-control) for all GitLab Pages websites hosted
 on your GitLab instance. By doing so, only authenticated users have access to them.
@@ -683,9 +685,56 @@ For Linux package installations, this is fixed by [installing a custom CA](https
 For self-compiled installations, this can be fixed by installing the custom Certificate
 Authority (CA) in the system certificate store.
 
-### ZIP serving and cache configuration
+### Support mutual TLS when calling the GitLab API
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/392) in GitLab 13.7.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/548) in GitLab 17.1.
+
+Prerequisites:
+
+- Your instance must use the Linux package installation method.
+
+If GitLab is [configured to require mutual TLS](https://docs.gitlab.com/omnibus/settings/ssl/#enable-2-way-ssl-client-authentication),
+you must add client certificates to your GitLab Pages configuration.
+
+Certificates have these requirements:
+
+- The certificate must specify the hostname or IP address as a Subject Alternative Name.
+- The full certificate chain is required, including the end-user certificate, intermediate certificates,
+  and the root certificate, in that order.
+
+The certificate's Common Name field is ignored.
+
+To configure the certificates in your GitLab Pages server:
+
+1. On the GitLab Pages nodes, create the `/etc/gitlab/ssl` directory and copy your key and full certificate chain there:
+
+   ```shell
+   sudo mkdir -p /etc/gitlab/ssl
+   sudo chmod 755 /etc/gitlab/ssl
+   sudo cp key.pem cert.pem /etc/gitlab/ssl/
+   sudo chmod 644 key.pem cert.pem
+   ```
+
+1. Edit `/etc/gitlab/gitlab.rb`:
+
+   ```ruby
+   gitlab_pages['client_cert'] = ['/etc/gitlab/ssl/cert.pem']
+   gitlab_pages['client_key'] = ['/etc/gitlab/ssl/key.pem']
+   ```
+
+1. If you used a custom Certificate Authority (CA), you must copy the root CA certificate to `/etc/gitlab/ssl`
+   and edit `/etc/gitlab/gitlab.rb`:
+
+   ```ruby
+   gitlab_pages['client_ca_certs'] = ['/etc/gitlab/ssl/ca.pem']
+   ```
+
+   File paths for multiple custom Certificate Authority (CA)s are separated by commas.
+
+1. If you have a multi-node GitLab Pages installation, repeat these steps in all the nodes.
+1. Save a copy of the full certificate chain files in the `/etc/gitlab/trusted-certs` directory on all your GitLab Nodes.
+
+### ZIP serving and cache configuration
 
 WARNING:
 These instructions deal with some advanced settings of your GitLab instance. The recommended default values are set inside GitLab Pages. You should
@@ -777,8 +826,6 @@ Follow the steps below to configure verbose logging of GitLab Pages daemon.
 1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation).
 
 ## Propagating the correlation ID
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/438) in GitLab 13.10.
 
 Setting the `propagate_correlation_id` to true allows installations behind a reverse proxy to generate
 and set a correlation ID to requests sent to GitLab Pages. When a reverse proxy sets the header value `X-Request-ID`,
@@ -1006,23 +1053,15 @@ Pages server.
 When GitLab Pages daemon serves pages requests it firstly needs to identify which project should be used to
 serve the requested URL and how its content is stored.
 
-Before GitLab 13.3, all pages content was extracted to the special shared directory,
-and each project had a special configuration file.
-The Pages daemon was reading these configuration files and storing their content in memory.
-
-This approach had several disadvantages and was replaced with GitLab Pages using the internal GitLab API
-every time a new domain is requested.
+By default, GitLab Pages uses the internal GitLab API every time a new domain is requested.
+Pages fails to start if it can't connect to the API.
 The domain information is also cached by the Pages daemon to speed up subsequent requests.
 
-Starting from [GitLab 14.0](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/5993) GitLab Pages uses API
-by default and fails to start if it can't connect to it.
 For common issues, see [troubleshooting](troubleshooting.md#failed-to-connect-to-the-internal-gitlab-api).
 
 For more details see this [blog post](https://about.gitlab.com/blog/2020/08/03/how-gitlab-pages-uses-the-gitlab-api-to-serve-content/).
 
 ### GitLab API cache configuration
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/520) in GitLab 13.10.
 
 API-based configuration uses a caching mechanism to improve performance and reliability of serving Pages.
 The cache behavior can be modified by changing the cache settings, however, the recommended values are set for you and should only be modified if needed.
@@ -1068,71 +1107,13 @@ The following [object storage](../object_storage.md) settings are:
 
 NOTE:
 If you want to stop using and disconnect the NFS server, you need to
-[explicitly disable local storage](#disable-pages-local-storage), and it's only possible after upgrading to GitLab 13.11.
+[explicitly disable local storage](#disable-pages-local-storage).
 
 ### S3-compatible connection settings
 
-In GitLab 13.2 and later, you should use the
-[consolidated object storage settings](../object_storage.md#configure-a-single-storage-connection-for-all-object-types-consolidated-form).
-This section describes the earlier configuration format.
+You should use the [consolidated object storage settings](../object_storage.md#configure-a-single-storage-connection-for-all-object-types-consolidated-form).
 
 See [the available connection settings for different providers](../object_storage.md#configure-the-connection-settings).
-
-::Tabs
-
-:::TabTitle Linux package (Omnibus)
-
-1. Add the following lines to `/etc/gitlab/gitlab.rb` and replace the values with the ones you want:
-
-   ```ruby
-   gitlab_rails['pages_object_store_enabled'] = true
-   gitlab_rails['pages_object_store_remote_directory'] = "pages"
-   gitlab_rails['pages_object_store_connection'] = {
-     'provider' => 'AWS',
-     'region' => 'eu-central-1',
-     'aws_access_key_id' => 'AWS_ACCESS_KEY_ID',
-     'aws_secret_access_key' => 'AWS_SECRET_ACCESS_KEY'
-   }
-   ```
-
-   If you use AWS IAM profiles, be sure to omit the AWS access key and secret access key/value
-   pairs:
-
-   ```ruby
-   gitlab_rails['pages_object_store_connection'] = {
-     'provider' => 'AWS',
-     'region' => 'eu-central-1',
-     'use_iam_profile' => true
-   }
-   ```
-
-1. Save the file and [reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation)
-   for the changes to take effect.
-
-1. [Migrate existing Pages deployments to object storage.](#migrate-pages-deployments-to-object-storage)
-
-:::TabTitle Self-compiled (source)
-
-1. Edit `/home/git/gitlab/config/gitlab.yml` and add or amend the following lines:
-
-   ```yaml
-   pages:
-     object_store:
-       enabled: true
-       remote_directory: "pages" # The bucket name
-       connection:
-         provider: AWS # Only AWS supported at the moment
-         aws_access_key_id: AWS_ACCESS_KEY_ID
-         aws_secret_access_key: AWS_SECRET_ACCESS_KEY
-         region: eu-central-1
-   ```
-
-1. Save the file and [restart GitLab](../restart_gitlab.md#self-compiled-installations)
-   for the changes to take effect.
-
-1. [Migrate existing Pages deployments to object storage.](#migrate-pages-deployments-to-object-storage)
-
-::EndTabs
 
 ### Migrate Pages deployments to object storage
 
@@ -1150,8 +1131,7 @@ sudo gitlab-rake gitlab:pages:deployments:migrate_to_object_storage
 You can track progress and verify that all Pages deployments migrated successfully using the
 [PostgreSQL console](https://docs.gitlab.com/omnibus/settings/database.html#connecting-to-the-bundled-postgresql-database):
 
-- `sudo gitlab-rails dbconsole` for Linux package installations running GitLab 14.1 and earlier.
-- `sudo gitlab-rails dbconsole --database main` for Linux package installations running 14.2 and later.
+- `sudo gitlab-rails dbconsole --database main` for Linux package installations.
 - `sudo -u git -H psql -d gitlabhq_production` for self-compiled installations.
 
 Verify `objectstg` below (where `store=2`) has count of all Pages deployments:
@@ -1176,8 +1156,6 @@ sudo gitlab-rake gitlab:pages:deployments:migrate_to_local
 ```
 
 ### Disable Pages local storage
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/301159) in GitLab 13.11.
 
 If you use [object storage](#object-storage-settings), you can disable local storage to avoid unnecessary disk usage/writes:
 
@@ -1212,12 +1190,11 @@ mounted on your primary server, in case you must migrate back to a single-node e
 
 ## ZIP storage
 
-In GitLab 14.0 the underlying storage format of GitLab Pages changed from
-files stored directly in disk to a single ZIP archive per project.
+The underlying storage format of GitLab Pages is a single ZIP archive per project.
 
 These ZIP archives can be stored either locally on disk storage or on [object storage](#object-storage-settings) if it is configured.
 
-[Starting from GitLab 13.5](https://gitlab.com/gitlab-org/gitlab/-/issues/245308) ZIP archives are stored every time pages site is updated.
+The ZIP archives are stored every time pages site is updated.
 
 ## Backup
 
@@ -1259,8 +1236,6 @@ An IPv6 address receives a large prefix in the 128-bit address space. The prefix
 
 #### Enable HTTP requests rate limits by source-IP
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/631) in GitLab 14.5.
-
 1. Set rate limits in `/etc/gitlab/gitlab.rb`:
 
    ```ruby
@@ -1271,8 +1246,6 @@ An IPv6 address receives a large prefix in the 128-bit address space. The prefix
 1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation).
 
 #### Enable HTTP requests rate limits by domain
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/630) in GitLab 14.7.
 
 1. Set rate limits in `/etc/gitlab/gitlab.rb`:
 
@@ -1285,8 +1258,6 @@ An IPv6 address receives a large prefix in the 128-bit address space. The prefix
 
 #### Enable TLS connections rate limits by source-IP
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/632) in GitLab 14.9.
-
 1. Set rate limits in `/etc/gitlab/gitlab.rb`:
 
    ```ruby
@@ -1297,8 +1268,6 @@ An IPv6 address receives a large prefix in the 128-bit address space. The prefix
 1. [Reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation).
 
 #### Enable TLS connections rate limits by domain
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/632) in GitLab 14.9.
 
 1. Set rate limits in `/etc/gitlab/gitlab.rb`:
 

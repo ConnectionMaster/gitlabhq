@@ -45,7 +45,7 @@ you need to manually authorize GitLab Mattermost for access to GitLab using the 
 
 ## Configuring Mattermost
 
-Starting in GitLab 11.0, Mattermost can be configured using the Mattermost System Console. An extensive list of
+Mattermost can be configured using the Mattermost System Console. An extensive list of
 Mattermost settings and where they can be set is available [in the Mattermost documentation](https://docs.mattermost.com/administration/config-settings.html).
 
 While using the System Console is recommended, you can also configure Mattermost using one of the following options:
@@ -356,12 +356,16 @@ If this is not the case, there are two options:
 
 For a complete list of upgrade notices and special considerations for older versions, see the [Mattermost documentation](https://docs.mattermost.com/administration/important-upgrade-notes.html).
 
-### GitLab Mattermost versions shipped with the Linux package
+### GitLab Mattermost versions and edition shipped with the Linux package
 
-Below is a list of Mattermost version changes for GitLab 14.0 and later:
+Below is a list of Mattermost version changes for GitLab 15.0 and later:
 
 | GitLab version | Mattermost version | Notes                                                                                    |
 | :------------- | :----------------- | ---------------------------------------------------------------------------------------- |
+| 17.2           | 9.9                |                                                                                          |
+| 17.1           | 9.8                |                                                                                          |
+| 17.0           | 9.7                |                                                                                          |
+| 16.11          | 9.6                |                                                                                          |
 | 16.10          | 9.5                |                                                                                          |
 | 16.9           | 9.4                |                                                                                          |
 | 16.7           | 9.3                |                                                                                          |
@@ -381,23 +385,12 @@ Below is a list of Mattermost version changes for GitLab 14.0 and later:
 | 15.2           | 7.0                |                                                                                          |
 | 15.1           | 6.7                |                                                                                          |
 | 15.0           | 6.6                |                                                                                          |
-| 14.10          | 6.5                |                                                                                          |
-| 14.9           | 6.4                |                                                                                          |
-| 14.8           | 6.3                |                                                                                          |
-| 14.7           | 6.2                |                                                                                          |
-| 14.6           | 6.1                | Updates to 6.1 instead of 6.0. [See upgrade notes](#upgrading-gitlab-mattermost-to-146). |
-| 14.4           | 5.39               |                                                                                          |
-| 14.3           | 5.38               |                                                                                          |
-| 14.2           | 5.37               |                                                                                          |
-| 14.1           | 5.36               |                                                                                          |
-| 14.0           | 5.35               |                                                                                          |
-
-### Upgrading GitLab Mattermost to 14.6
-
-GitLab 14.6 ships with Mattermost 6.1 including potentially long running database migrations for Mattermost 6.0. For information about upgrading and for ways to reduce the downtime caused by those migrations, read the [Important Upgrade Notes](https://docs.mattermost.com/administration/important-upgrade-notes.html) for both versions. If you need to perform any manual migrations, [connect to the bundled PostgreSQL database](#connecting-to-the-bundled-postgresql-database).
 
 NOTE:
 The Mattermost upgrade notes refer to different impacts when used with a PostgreSQL versus a MySQL database. The GitLab Mattermost included with the Linux package uses a PostgreSQL database.
+
+The Linux package bundles the [Mattermost Team Edition](https://docs.mattermost.com/about/editions-and-offerings.html#mattermost-team-edition), which is a free and open source edition and does not include its commercial features.
+To upgrade to the [Mattermost Enterprise Edition](https://docs.mattermost.com/about/editions-and-offerings.html#mattermost-enterprise-edition) see the Mattermost [documentation on upgrading](https://docs.mattermost.com/install/enterprise-install-upgrade.html#upgrading-to-enterprise-edition-in-gitlab-omnibus).
 
 ## OAuth 2.0 sequence diagram
 
@@ -406,7 +399,11 @@ provider for Mattermost. You can use this to troubleshoot errors
 in getting the integration to work:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 sequenceDiagram
+accTitle: GitLab as OAuth 2.0 provider
+accDescr: Sequence of actions that happen when a user authenticates to GitLab through Mattermost.
+
     User->>Mattermost: GET https://mm.domain.com
     Note over Mattermost, GitLab: Obtain access code
     Mattermost->>GitLab: GET https://gitlab.domain.com/oauth/authorize
@@ -432,4 +429,4 @@ sequenceDiagram
 For help and support around your GitLab Mattermost deployment, see:
 
 - [Troubleshooting Mattermost issues](https://docs.mattermost.com/install/troubleshooting.html).
-- [Mattermost GitLab Issues Support Handbook](https://docs.mattermost.com/process/support.html?highlight=omnibus#gitlab-issues).
+- [Mattermost forum](https://forum.mattermost.com/search?q=gitlab).

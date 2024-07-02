@@ -22,9 +22,9 @@ RSpec.describe Banzai::Filter::References::ProjectReferenceFilter, feature_categ
   it_behaves_like 'user reference or project reference'
 
   it 'ignores invalid projects' do
-    exp = act = "Hey #{invalidate_reference(reference)}"
+    act = "Hey #{invalidate_reference(reference)}"
 
-    expect(reference_filter(act).to_html).to eq(CGI.escapeHTML(exp))
+    expect(reference_filter(act).to_html).to include(CGI.escapeHTML(act))
   end
 
   context 'when invalid reference strings are very long' do
@@ -49,8 +49,8 @@ RSpec.describe Banzai::Filter::References::ProjectReferenceFilter, feature_categ
 
   %w[pre code a style].each do |elem|
     it "ignores valid references contained inside '#{elem}' element" do
-      exp = act = "<#{elem}>Hey #{CGI.escapeHTML(reference)}</#{elem}>"
-      expect(reference_filter(act).to_html).to eq exp
+      act = "<#{elem}>Hey #{CGI.escapeHTML(reference)}</#{elem}>"
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -119,7 +119,7 @@ RSpec.describe Banzai::Filter::References::ProjectReferenceFilter, feature_categ
         reference_filter(markdown)
       end
 
-      expect(control.count).to eq 2
+      expect(control.count).to eq 1
 
       markdown = "#{normal_project_reference} #{invalidate_reference(normal_project_reference)} #{group_project_reference} #{nested_project_reference}"
 

@@ -13,13 +13,16 @@ class Snippet < ApplicationRecord
   include Editable
   include Gitlab::SQL::Pattern
   include FromUnion
-  include IgnorableColumns
   include HasRepository
   include CanMoveRepositoryStorage
   include AfterCommitQueue
   extend ::Gitlab::Utils::Override
   include CreatedAtFilterable
   include EachBatch
+  include Import::HasImportSource
+  include IgnorableColumns
+
+  ignore_column :imported, remove_with: '17.2', remove_after: '2024-07-22'
 
   MAX_FILE_COUNT = 10
 
@@ -44,6 +47,7 @@ class Snippet < ApplicationRecord
 
   belongs_to :author, class_name: 'User'
   belongs_to :project
+  belongs_to :organization, class_name: 'Organizations::Organization'
   alias_method :resource_parent, :project
 
   has_many :notes, as: :noteable, dependent: :destroy # rubocop:disable Cop/ActiveRecordDependent
@@ -247,7 +251,20 @@ class Snippet < ApplicationRecord
   end
 
   def hook_attrs
-    attributes.merge('url' => Gitlab::UrlBuilder.build(self))
+    {
+      id: id,
+      title: title,
+      description: description,
+      content: content,
+      author_id: author_id,
+      project_id: project_id,
+      created_at: created_at,
+      updated_at: updated_at,
+      file_name: file_name,
+      type: type,
+      visibility_level: visibility_level,
+      url: Gitlab::UrlBuilder.build(self)
+    }
   end
 
   def file_name

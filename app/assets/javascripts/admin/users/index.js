@@ -1,12 +1,15 @@
 import Vue from 'vue';
 import VueApollo from 'vue-apollo';
+import Translate from '~/vue_shared/translate';
 import createDefaultClient from '~/lib/graphql';
 import { convertObjectPropsToCamelCase } from '~/lib/utils/common_utils';
 import csrf from '~/lib/utils/csrf';
 import AdminUsersApp from './components/app.vue';
+import AdminUsersFilterApp from './components/admin_users_filter_app.vue';
 import DeleteUserModal from './components/modals/delete_user_modal.vue';
 import UserActions from './components/user_actions.vue';
 
+Vue.use(Translate);
 Vue.use(VueApollo);
 
 const apolloProvider = new VueApollo({
@@ -34,11 +37,18 @@ const initApp = (el, component, userPropKey, props = {}) => {
   });
 };
 
-export const initAdminUsersApp = (el = document.querySelector('#js-admin-users-app')) =>
-  initApp(el, AdminUsersApp, 'users');
+export const initAdminUsersFilterApp = () => {
+  return new Vue({
+    el: document.querySelector('#js-admin-users-filter-app'),
+    render: (createElement) => createElement(AdminUsersFilterApp),
+  });
+};
 
 export const initAdminUserActions = (el = document.querySelector('#js-admin-user-actions')) =>
   initApp(el, UserActions, 'user', { showButtonLabels: true });
+
+export const initAdminUsersApp = (el = document.querySelector('#js-admin-users-app')) =>
+  initApp(el, AdminUsersApp, 'users');
 
 export const initDeleteUserModals = () => {
   return new Vue({

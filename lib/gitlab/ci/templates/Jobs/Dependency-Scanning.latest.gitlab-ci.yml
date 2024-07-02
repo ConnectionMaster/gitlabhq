@@ -14,7 +14,7 @@ variables:
   SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/security-products"
   DS_EXCLUDED_ANALYZERS: ""
   DS_EXCLUDED_PATHS: "spec, test, tests, tmp"
-  DS_MAJOR_VERSION: 4
+  DS_MAJOR_VERSION: 5
   DS_SCHEMA_MODEL: 15
 
 dependency_scanning:
@@ -23,6 +23,7 @@ dependency_scanning:
     - echo "$CI_JOB_NAME is used for configuration only, and its script should not be executed"
     - exit 1
   artifacts:
+    access: 'developer'
     reports:
       dependency_scanning: gl-dependency-scanning-report.json
   dependencies: []
@@ -49,6 +50,7 @@ dependency_scanning:
 
 .cyclonedx-reports:
   artifacts:
+    access: 'developer'
     paths:
       - "**/gl-sbom-*.cdx.json"
     reports:
@@ -56,16 +58,7 @@ dependency_scanning:
 
 .gemnasium-shared-rule:
   exists:
-    - '**/Gemfile.lock'
-    - '**/composer.lock'
-    - '**/gems.locked'
-    - '**/go.sum'
-    - '**/npm-shrinkwrap.json'
-    - '**/package-lock.json'
-    - '**/yarn.lock'
-    - '**/pnpm-lock.yaml'
-    - '**/packages.lock.json'
-    - '**/conan.lock'
+    - '**/{Gemfile.lock,composer.lock,gems.locked,go.sum,npm-shrinkwrap.json,package-lock.json,yarn.lock,pnpm-lock.yaml,packages.lock.json,conan.lock}'
 
 gemnasium-dependency_scanning:
   extends:
@@ -110,10 +103,7 @@ gemnasium-dependency_scanning:
 
 .gemnasium-maven-shared-rule:
   exists:
-    - '**/build.gradle'
-    - '**/build.gradle.kts'
-    - '**/build.sbt'
-    - '**/pom.xml'
+    - '**/{build.gradle,build.gradle.kts,build.sbt,pom.xml}'
 
 gemnasium-maven-dependency_scanning:
   extends:
@@ -156,13 +146,7 @@ gemnasium-maven-dependency_scanning:
 
 .gemnasium-python-shared-rule:
   exists:
-    - '**/requirements.txt'
-    - '**/requirements.pip'
-    - '**/Pipfile'
-    - '**/Pipfile.lock'
-    - '**/requires.txt'
-    - '**/setup.py'
-    - '**/poetry.lock'
+    - '**/{requirements.txt,requirements.pip,Pipfile,Pipfile.lock,requires.txt,setup.py,poetry.lock}'
 
 gemnasium-python-dependency_scanning:
   extends:

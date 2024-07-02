@@ -7,7 +7,6 @@ import {
   GlTooltip,
   GlTooltipDirective,
 } from '@gitlab/ui';
-import glFeatureFlagMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import { TYPENAME_CI_PIPELINE } from '~/graphql_shared/constants';
 import { convertToGraphQLId } from '~/graphql_shared/utils';
 import { BV_HIDE_TOOLTIP } from '~/lib/utils/constants';
@@ -30,7 +29,6 @@ export default {
     GlLoadingIcon,
     GlTooltip,
   },
-  mixins: [glFeatureFlagMixin()],
   styles: {
     actionSizeClasses: ['gl-h-7 gl-w-7'],
     flatLeftBorder: ['gl-rounded-bottom-left-none!', 'gl-rounded-top-left-none!'],
@@ -92,7 +90,7 @@ export default {
         : ['gl-border-l-0!', ...this.$options.styles.flatLeftBorder];
     },
     buttonShadowClass() {
-      return this.isExpandBtnFocus ? '' : 'gl-shadow-none!';
+      return this.isExpandBtnFocus ? '' : '!gl-shadow-none';
     },
     buttonId() {
       return `js-linked-pipeline-${this.pipeline.id}`;
@@ -175,9 +173,6 @@ export default {
       return `${this.downstreamTitle} #${this.pipeline.id} - ${this.pipelineStatus.label} -
       ${this.sourceJobInfo}`;
     },
-    isNewPipelineGraph() {
-      return this.glFeatures.newPipelineGraph;
-    },
   },
   errorCaptured(err, _vm, info) {
     reportToSentry('linked_pipeline', `error: ${err}, info: ${info}`);
@@ -233,12 +228,10 @@ export default {
 <template>
   <div
     ref="linkedPipeline"
-    class="linked-pipeline-container gl-h-full gl-display-flex!"
+    class="linked-pipeline-container gl-h-full !gl-flex gl-w-full sm:gl-w-auto"
     :class="{
       'gl-flex-direction-row-reverse': isUpstream,
       'gl-flex-direction-row': !isUpstream,
-      'gl-px-2': !isNewPipelineGraph,
-      'gl-w-full gl-sm-w-auto': isNewPipelineGraph,
     }"
     data-testid="linked-pipeline-container"
     :aria-expanded="expanded"
@@ -249,7 +242,7 @@ export default {
       {{ cardTooltipText }}
     </gl-tooltip>
     <div class="gl-bg-white gl-border gl-p-3 gl-rounded-lg gl-w-full" :class="cardClasses">
-      <div class="gl-display-flex gl-gap-x-3">
+      <div class="gl-flex gl-gap-x-3">
         <ci-icon
           v-if="!pipelineIsLoading"
           :status="pipelineStatus"
@@ -257,13 +250,11 @@ export default {
           class="gl-align-self-start"
         />
         <div v-else class="gl-pr-3"><gl-loading-icon size="sm" inline /></div>
-        <div
-          class="gl-display-flex gl-flex-direction-column gl-line-height-normal gl-downstream-pipeline-job-width"
-        >
-          <span class="gl-text-truncate" data-testid="downstream-title-content">
+        <div class="gl-flex gl-flex-col gl-leading-normal gl-downstream-pipeline-job-width">
+          <span class="gl-truncate" data-testid="downstream-title-content">
             {{ downstreamTitle }}
           </span>
-          <div class="gl-text-truncate">
+          <div class="gl-truncate gl-p-2 -gl-m-2">
             <gl-link
               class="gl-text-blue-500! gl-font-sm"
               :href="pipeline.path"
@@ -288,12 +279,12 @@ export default {
         <div v-else :class="$options.styles.actionSizeClasses"></div>
       </div>
       <div class="gl-pt-2 gl-ml-7">
-        <gl-badge size="sm" variant="info" data-testid="downstream-pipeline-label">
+        <gl-badge variant="info" data-testid="downstream-pipeline-label">
           {{ label }}
         </gl-badge>
       </div>
     </div>
-    <div class="gl-display-flex">
+    <div class="gl-flex">
       <gl-button
         :id="buttonId"
         v-gl-tooltip

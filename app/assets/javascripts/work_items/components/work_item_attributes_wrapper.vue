@@ -15,54 +15,33 @@ import {
   WIDGET_TYPE_ROLLEDUP_DATES,
   WIDGET_TYPE_WEIGHT,
   WIDGET_TYPE_COLOR,
+  WIDGET_TYPE_DEVELOPMENT,
   WORK_ITEM_TYPE_VALUE_EPIC,
 } from '../constants';
-import WorkItemAssigneesInline from './work_item_assignees_inline.vue';
-import WorkItemAssigneesWithEdit from './work_item_assignees_with_edit.vue';
-import WorkItemDueDateInline from './work_item_due_date_inline.vue';
-import WorkItemDueDateWithEdit from './work_item_due_date_with_edit.vue';
-import WorkItemLabelsInline from './work_item_labels_inline.vue';
-import WorkItemLabelsWithEdit from './work_item_labels_with_edit.vue';
-import WorkItemMilestoneInline from './work_item_milestone_inline.vue';
-import WorkItemMilestoneWithEdit from './work_item_milestone_with_edit.vue';
-import WorkItemParentInline from './work_item_parent_inline.vue';
-import WorkItemParent from './work_item_parent_with_edit.vue';
+import WorkItemAssignees from './work_item_assignees.vue';
+import WorkItemDueDate from './work_item_due_date.vue';
+import WorkItemLabels from './work_item_labels.vue';
+import WorkItemMilestone from './work_item_milestone.vue';
+import WorkItemParent from './work_item_parent.vue';
 import WorkItemTimeTracking from './work_item_time_tracking.vue';
+import WorkItemDevelopment from './work_item_development/work_item_development.vue';
 
 export default {
   components: {
     Participants,
-    WorkItemLabelsInline,
-    WorkItemLabelsWithEdit,
-    WorkItemMilestoneInline,
-    WorkItemMilestoneWithEdit,
-    WorkItemAssigneesInline,
-    WorkItemAssigneesWithEdit,
-    WorkItemDueDateInline,
-    WorkItemDueDateWithEdit,
+    WorkItemLabels,
+    WorkItemMilestone,
+    WorkItemAssignees,
+    WorkItemDueDate,
     WorkItemParent,
-    WorkItemParentInline,
     WorkItemTimeTracking,
-    WorkItemWeightInline: () =>
-      import('ee_component/work_items/components/work_item_weight_inline.vue'),
-    WorkItemWeight: () =>
-      import('ee_component/work_items/components/work_item_weight_with_edit.vue'),
-    WorkItemProgressInline: () =>
-      import('ee_component/work_items/components/work_item_progress_inline.vue'),
-    WorkItemProgressWithEdit: () =>
-      import('ee_component/work_items/components/work_item_progress_with_edit.vue'),
-    WorkItemIterationInline: () =>
-      import('ee_component/work_items/components/work_item_iteration_inline.vue'),
-    WorkItemIteration: () =>
-      import('ee_component/work_items/components/work_item_iteration_with_edit.vue'),
+    WorkItemDevelopment,
+    WorkItemWeight: () => import('ee_component/work_items/components/work_item_weight.vue'),
+    WorkItemProgress: () => import('ee_component/work_items/components/work_item_progress.vue'),
+    WorkItemIteration: () => import('ee_component/work_items/components/work_item_iteration.vue'),
     WorkItemHealthStatus: () =>
-      import('ee_component/work_items/components/work_item_health_status_with_edit.vue'),
-    WorkItemHealthStatusInline: () =>
-      import('ee_component/work_items/components/work_item_health_status_inline.vue'),
-    WorkItemColorInline: () =>
-      import('ee_component/work_items/components/work_item_color_inline.vue'),
-    WorkItemColorWithEdit: () =>
-      import('ee_component/work_items/components/work_item_color_with_edit.vue'),
+      import('ee_component/work_items/components/work_item_health_status.vue'),
+    WorkItemColor: () => import('ee_component/work_items/components/work_item_color.vue'),
     WorkItemRolledupDates: () =>
       import('ee_component/work_items/components/work_item_rolledup_dates.vue'),
   },
@@ -75,6 +54,11 @@ export default {
     workItem: {
       type: Object,
       required: true,
+    },
+    groupPath: {
+      type: String,
+      required: false,
+      default: '',
     },
   },
   computed: {
@@ -140,8 +124,8 @@ export default {
     workItemAuthor() {
       return this.workItem?.author;
     },
-    workItemsBetaFeaturesEnabled() {
-      return this.glFeatures.workItemsBeta;
+    workItemDevelopment() {
+      return this.isWidgetPresent(WIDGET_TYPE_DEVELOPMENT) && this.glFeatures.workItemsAlpha;
     },
   },
   methods: {
@@ -155,9 +139,8 @@ export default {
 <template>
   <div class="work-item-attributes-wrapper">
     <template v-if="workItemAssignees">
-      <work-item-assignees-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
+      <work-item-assignees
+        class="gl-mb-5 js-assignee"
         :can-update="canUpdate"
         :full-path="fullPath"
         :work-item-id="workItem.id"
@@ -169,51 +152,20 @@ export default {
         :can-invite-members="workItemAssignees.canInviteMembers"
         @error="$emit('error', $event)"
       />
-      <work-item-assignees-inline
-        v-else
-        :can-update="canUpdate"
-        :full-path="fullPath"
-        :work-item-id="workItem.id"
-        :assignees="workItemAssignees.assignees.nodes"
-        :allows-multiple-assignees="workItemAssignees.allowsMultipleAssignees"
-        :work-item-type="workItemType"
-        :can-invite-members="workItemAssignees.canInviteMembers"
-        @error="$emit('error', $event)"
-      />
     </template>
     <template v-if="workItemLabels">
-      <work-item-labels-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
+      <work-item-labels
+        class="gl-mb-5 js-labels"
         :can-update="canUpdate"
         :full-path="fullPath"
         :work-item-id="workItem.id"
         :work-item-iid="workItem.iid"
         :work-item-type="workItemType"
-        @error="$emit('error', $event)"
-      />
-      <work-item-labels-inline
-        v-else
-        :can-update="canUpdate"
-        :full-path="fullPath"
-        :work-item-id="workItem.id"
-        :work-item-iid="workItem.iid"
         @error="$emit('error', $event)"
       />
     </template>
     <template v-if="workItemWeight">
       <work-item-weight
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
-        :can-update="canUpdate"
-        :weight="workItemWeight.weight"
-        :work-item-id="workItem.id"
-        :work-item-iid="workItem.iid"
-        :work-item-type="workItemType"
-        @error="$emit('error', $event)"
-      />
-      <work-item-weight-inline
-        v-else
         class="gl-mb-5"
         :can-update="canUpdate"
         :weight="workItemWeight.weight"
@@ -238,19 +190,8 @@ export default {
       />
     </template>
     <template v-if="workItemMilestone">
-      <work-item-milestone-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
-        :full-path="fullPath"
-        :work-item-id="workItem.id"
-        :work-item-milestone="workItemMilestone.milestone"
-        :work-item-type="workItemType"
-        :can-update="canUpdate"
-        @error="$emit('error', $event)"
-      />
-      <work-item-milestone-inline
-        v-else
-        class="gl-mb-5"
+      <work-item-milestone
+        class="gl-mb-5 js-milestone"
         :full-path="fullPath"
         :work-item-id="workItem.id"
         :work-item-milestone="workItemMilestone.milestone"
@@ -261,18 +202,6 @@ export default {
     </template>
     <template v-if="workItemIteration">
       <work-item-iteration
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
-        :full-path="fullPath"
-        :iteration="workItemIteration.iteration"
-        :can-update="canUpdate"
-        :work-item-id="workItem.id"
-        :work-item-iid="workItem.iid"
-        :work-item-type="workItemType"
-        @error="$emit('error', $event)"
-      />
-      <work-item-iteration-inline
-        v-else
         class="gl-mb-5"
         :full-path="fullPath"
         :iteration="workItemIteration.iteration"
@@ -284,37 +213,18 @@ export default {
       />
     </template>
     <template v-if="workItemDueDate && !showRolledupDates">
-      <work-item-due-date-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
+      <work-item-due-date
         :can-update="canUpdate"
         :due-date="workItemDueDate.dueDate"
         :start-date="workItemDueDate.startDate"
         :work-item-type="workItemType"
+        :full-path="fullPath"
         :work-item="workItem"
-        @error="$emit('error', $event)"
-      />
-      <work-item-due-date-inline
-        v-else
-        :can-update="canUpdate"
-        :due-date="workItemDueDate.dueDate"
-        :start-date="workItemDueDate.startDate"
-        :work-item-id="workItem.id"
-        :work-item-type="workItemType"
         @error="$emit('error', $event)"
       />
     </template>
     <template v-if="workItemProgress">
-      <work-item-progress-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
-        class="gl-mb-5"
-        :can-update="canUpdate"
-        :progress="workItemProgress.progress"
-        :work-item-id="workItem.id"
-        :work-item-type="workItemType"
-        @error="$emit('error', $event)"
-      />
-      <work-item-progress-inline
-        v-else
+      <work-item-progress
         class="gl-mb-5"
         :can-update="canUpdate"
         :progress="workItemProgress.progress"
@@ -325,70 +235,57 @@ export default {
     </template>
     <template v-if="workItemHealthStatus">
       <work-item-health-status
-        v-if="workItemsBetaFeaturesEnabled"
         class="gl-mb-5"
         :health-status="workItemHealthStatus.healthStatus"
         :can-update="canUpdate"
         :work-item-id="workItem.id"
         :work-item-iid="workItem.iid"
         :work-item-type="workItemType"
-        @error="$emit('error', $event)"
-      />
-      <work-item-health-status-inline
-        v-else
-        class="gl-mb-5"
-        :health-status="workItemHealthStatus.healthStatus"
-        :can-update="canUpdate"
-        :work-item-id="workItem.id"
-        :work-item-iid="workItem.iid"
-        :work-item-type="workItemType"
+        :full-path="fullPath"
         @error="$emit('error', $event)"
       />
     </template>
     <template v-if="workItemColor">
-      <work-item-color-with-edit
-        v-if="workItemsBetaFeaturesEnabled"
+      <work-item-color
         class="gl-mb-5"
         :work-item="workItem"
-        :can-update="canUpdate"
-        @error="$emit('error', $event)"
-      />
-      <work-item-color-inline
-        v-else
-        class="gl-mb-5"
-        :work-item="workItem"
+        :full-path="fullPath"
         :can-update="canUpdate"
         @error="$emit('error', $event)"
       />
     </template>
     <template v-if="workItemHierarchy">
       <work-item-parent
-        v-if="workItemsBetaFeaturesEnabled"
         class="gl-mb-5 gl-pt-5 gl-border-t gl-border-gray-50"
         :can-update="canUpdate"
         :work-item-id="workItem.id"
         :work-item-type="workItemType"
         :parent="workItemParent"
-        @error="$emit('error', $event)"
-      />
-      <work-item-parent-inline
-        v-else
-        class="gl-mb-5"
-        :can-update="canUpdate"
-        :work-item-id="workItem.id"
-        :work-item-type="workItemType"
-        :parent="workItemParent"
+        :group-path="groupPath"
         @error="$emit('error', $event)"
       />
     </template>
-    <work-item-time-tracking
-      v-if="workItemTimeTracking && workItemsBetaFeaturesEnabled"
+    <work-item-development
+      v-if="workItemDevelopment"
       class="gl-mb-5 gl-pt-5 gl-border-t gl-border-gray-50"
+      :can-update="canUpdate"
+      :work-item-iid="workItem.iid"
+      :work-item-full-path="fullPath"
+      @error="$emit('error', $event)"
+    />
+    <work-item-time-tracking
+      v-if="workItemTimeTracking"
+      class="gl-mb-5 gl-pt-5 gl-border-t gl-border-gray-50"
+      :can-update="canUpdate"
       :time-estimate="workItemTimeTracking.timeEstimate"
+      :timelogs="workItemTimeTracking.timelogs.nodes"
       :total-time-spent="workItemTimeTracking.totalTimeSpent"
+      :work-item-id="workItem.id"
+      :work-item-iid="workItem.iid"
+      :work-item-type="workItemType"
     />
     <participants
-      v-if="workItemParticipants && workItemsBetaFeaturesEnabled"
+      v-if="workItemParticipants"
       class="gl-mb-5 gl-pt-5 gl-border-t gl-border-gray-50"
       :number-of-less-participants="10"
       :participants="workItemParticipants.participants.nodes"

@@ -52,7 +52,7 @@ class Label < ApplicationRecord
   scope :subscribed_by, ->(user_id) { joins(:subscriptions).where(subscriptions: { user_id: user_id, subscribed: true }) }
   scope :with_preloaded_container, -> { preload(parent_container: :route) }
 
-  scope :top_labels_by_target, -> (target_relation) {
+  scope :top_labels_by_target, ->(target_relation) {
     label_id_column = arel_table[:id]
 
     # Window aggregation to count labels
@@ -71,11 +71,11 @@ class Label < ApplicationRecord
   scope :for_targets, ->(target_relation) do
     joins(:label_links)
       .merge(LabelLink.where(target: target_relation))
-      .select(arel_table[Arel.star], LabelLink.arel_table[:target_id])
+      .select(arel_table[Arel.star], LabelLink.arel_table[:target_id], LabelLink.arel_table[:target_type])
       .with_preloaded_container
   end
 
-  scope :sorted_by_similarity_desc, -> (search) do
+  scope :sorted_by_similarity_desc, ->(search) do
     order_expression = Gitlab::Database::SimilarityScore.build_expression(
       search: search,
       rules: [
@@ -90,7 +90,6 @@ class Label < ApplicationRecord
           column_expression: order_expression,
           order_expression: order_expression.desc,
           order_direction: :desc,
-          distinct: false,
           add_to_projections: true
         ),
         Gitlab::Pagination::Keyset::ColumnOrderDefinition.new(
@@ -191,7 +190,17 @@ class Label < ApplicationRecord
   #
   # Returns an ActiveRecord::Relation.
   def self.search(query, **options)
-    fuzzy_search(query, [:title, :description])
+    # make sure we prevent passing in disallowed columns
+    search_in = case options[:search_in]
+                when [:title]
+                  [:title]
+                when [:description]
+                  [:description]
+                else
+                  [:title, :description]
+                end
+
+    fuzzy_search(query, search_in)
   end
 
   # Override Gitlab::SQL::Pattern.min_chars_for_partial_matching as
@@ -308,7 +317,18 @@ class Label < ApplicationRecord
   end
 
   def hook_attrs
-    attributes
+    {
+      id: id,
+      title: title,
+      color: color,
+      project_id: project_id,
+      created_at: created_at,
+      updated_at: updated_at,
+      template: template,
+      description: description,
+      type: type,
+      group_id: group_id
+    }
   end
 
   def present(attributes = {})
@@ -335,7 +355,7 @@ class Label < ApplicationRecord
   def label_format_reference(format = :id)
     raise StandardError, 'Unknown format' unless [:id, :name].include?(format)
 
-    if format == :name && !name.include?('"')
+    if format == :name && name.exclude?('"')
       %("#{name}")
     else
       id

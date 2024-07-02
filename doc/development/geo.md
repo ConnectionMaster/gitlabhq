@@ -199,7 +199,7 @@ sequenceDiagram
   S->>TDB: Insert to `job_artifact_registry`
 ```
 
-- [Sidekiq-cron](https://github.com/ondrejbartas/sidekiq-cron) enqueues a `Geo::Secondary::RegistryConsistencyWorker` job every minute. As long as it is actively doing work (creating and deleting rows), this job immediately re-enqueues itself. This job uses an exclusive lease to prevent multiple instances of itself from running simultaneously.
+- [Sidekiq-cron](https://github.com/sidekiq-cron/sidekiq-cron) enqueues a `Geo::Secondary::RegistryConsistencyWorker` job every minute. As long as it is actively doing work (creating and deleting rows), this job immediately re-enqueues itself. This job uses an exclusive lease to prevent multiple instances of itself from running simultaneously.
 - [Sidekiq](architecture.md#sidekiq) picks up `Geo::Secondary::RegistryConsistencyWorker` job
   - Sidekiq queries `ci_job_artifacts` table for up to 10000 rows
   - Sidekiq queries `job_artifact_registry` table for up to 10000 rows
@@ -344,7 +344,7 @@ payload looks like:
 ```
 
 If the requested file matches the requested SHA256 sum, then the Geo
-**primary** site sends data via the [X-Sendfile](https://www.nginx.com/resources/wiki/start/topics/examples/xsendfile/)
+**primary** site sends data via the X-Sendfile
 feature, which allows NGINX to handle the file transfer without tying
 up Rails or Workhorse.
 
@@ -634,44 +634,6 @@ If a new feature introduces a new kind of data which is not a Git repository, or
 
 As an example, container registry data does not easily fit into the above categories. It is backed by a registry service which owns the data, and GitLab interacts with the registry service's API. So a one off approach is required for Geo support of container registry. Still, we are able to reuse much of the glue code of [the Geo self-service framework](geo/framework.md#repository-replicator-strategy).
 
-## History of communication channel
-
-The communication channel has changed since first iteration, you can
-check here historic decisions and why we moved to new implementations.
-
-### Custom code (GitLab 8.6 and earlier)
-
-In GitLab versions before 8.6, custom code is used to handle
-notification from **primary** site to **secondary** sites by HTTP
-requests.
-
-### System hooks (GitLab 8.7 to 9.5)
-
-Later, it was decided to move away from custom code and begin using
-system hooks. More people were using them, so
-many would benefit from improvements made to this communication layer.
-
-There is a specific **internal** endpoint in our API code (Grape),
-that receives all requests from this System Hooks:
-`/api/v4/geo/receive_events`.
-
-We switch and filter from each event by the `event_name` field.
-
-### Geo Log Cursor (GitLab 10.0 and up)
-
-In GitLab 10.0 and later, [System Webhooks](#system-hooks-gitlab-87-to-95) are no longer
-used and [Geo Log Cursor](#geo-log-cursor-daemon) is used instead. The Log Cursor traverses the
-`Geo::EventLog` rows to see if there are changes since the last time
-the log was checked and will handle repository updates, deletes,
-changes, and renames.
-
-The table is within the replicated database. This has two advantages over the
-old method:
-
-- Replication is synchronous and we preserve the order of events.
-- Replication of the events happen at the same time as the changes in the
-  database.
-
 ## Self-service framework
 
 If you want to add easy Geo replication of a resource you're working
@@ -685,11 +647,12 @@ After triggering a successful [e2e:package-and-test-ee](testing_guide/end_to_end
 
 1. In the [GitLab project](https://gitlab.com/gitlab-org/gitlab), select the **Pipelines** tab of a merge request.
 1. Select the `Stage: qa` stage on the latest pipeline to expand and list all the related jobs.
+1. Select trigger job `e2e:package-and-test` to navigate inside child pipeline.
 1. Select `trigger-omnibus` to view the [Omnibus GitLab Mirror](https://gitlab.com/gitlab-org/build/omnibus-gitlab-mirror) pipeline corresponding to the merge request.
 1. The `GET:Geo` job can be found and triggered under the `trigger-qa` stage.
 
 This pipeline uses [GET](https://gitlab.com/gitlab-org/gitlab-environment-toolkit) to spin up a
-[1k](../administration/reference_architectures/1k_users.md) Geo installation,
+[20 RPS / 1k users](../administration/reference_architectures/1k_users.md) Geo installation,
 and run the [`gitlab-qa`](https://gitlab.com/gitlab-org/gitlab-qa) Geo scenario against the instance.
 When working on Geo features, it is a good idea to ensure the `qa-geo` job passes in a triggered `GET:Geo pipeline`.
 

@@ -11,7 +11,7 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/390769) in GitLab 16.1, with [flags](../../administration/feature_flags.md) named `environment_settings_to_graphql`, `kas_user_access`, `kas_user_access_project`, and `expose_authorized_cluster_agents`. This feature is in [Beta](../../policy/experiment-beta-support.md#beta).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/390769) in GitLab 16.1, with [flags](../../administration/feature_flags.md) named `environment_settings_to_graphql`, `kas_user_access`, `kas_user_access_project`, and `expose_authorized_cluster_agents`. This feature is in [beta](../../policy/experiment-beta-support.md#beta).
 > - Feature flag `environment_settings_to_graphql` [removed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/124177) in GitLab 16.2.
 > - Feature flags `kas_user_access`, `kas_user_access_project`, and `expose_authorized_cluster_agents` [removed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/125835) in GitLab 16.2.
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/431746) to the environment details page in 16.10.
@@ -20,7 +20,7 @@ Use the Dashboard for Kubernetes to understand the status of your clusters with 
 The dashboard works with every connected Kubernetes cluster, whether you deployed them
 with CI/CD or GitOps.
 
-![Kubernetes summary UI](img/kubernetes_summary_ui_v16_10.png)
+![Kubernetes summary UI](img/kubernetes_summary_ui_v17_2.png)
 
 ## Configure a dashboard
 
@@ -67,6 +67,7 @@ Prerequisites:
 
 > - Kubernetes watch API integration [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/422945) in GitLab 16.6 [with a flag](../../administration/feature_flags.md) named `k8s_watch_api`. Disabled by default.
 > - Kubernetes watch API integration [enabled by default](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/136831) in GitLab 16.7.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/427762) in GitLab 17.1. Feature flag `k8s_watch_api` removed.
 
 View a dashboard to see the status of any connected clusters.
 If the `k8s_watch_api` feature flag is enabled, the status of your
@@ -102,6 +103,86 @@ A dashboard displays one of the following status badges:
 | **Unknown** | The sync status of the deployment couldn't be retrieved. |
 | **Unavailable** | The `Kustomization` or `HelmRelease` resource couldn't be retrieved. |
 
+## View pod logs
+
+> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/13793) in GitLab 17.2.
+
+View pod logs when you want to quickly understand and troubleshoot issues across your environments from a configured dashboard. You can view logs for each container in a pod.
+
+To view your pod logs:
+
+::Tabs
+
+:::TabTitle From the pods list
+
+- Select **View logs**, then select the container you want to view logs for.
+
+:::TabTitle From the pods details view
+
+1. Select a pod from the pod list to view its details.
+1. Select the container you want to view logs for, then select **View logs**.
+
+::EndTabs
+
+## Detailed dashboard
+
+> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/11351) in GitLab 16.4, [with a flag](../../administration/feature_flags.md) named `k8s_dashboard`. Disabled by default.
+> - [Enabled on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/424237) in GitLab 16.7 for a subset of users.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+This feature is available for testing, but not ready for production use.
+
+The detailed dashboard provides information about the following Kubernetes resources:
+
+- Pods
+- Services
+- Deployments
+- ReplicaSets
+- StatefulSets
+- DaemonSets
+- Jobs
+- CronJobs
+
+Each dashboard displays a list of resources with their statuses, namespaces, and age.
+You can select a resource to open a drawer with more information, including labels
+and YAML-formatted status, annotations, and spec.
+
+![Kubernetes dashboard UI](img/kubernetes_dashboard_deployments_v16_9.png)
+
+Because of the focus shift described in [this issue](https://gitlab.com/gitlab-org/ci-cd/deploy-stage/environments-group/general/-/issues/53#note_1720060812), work on the detailed dashboard is paused.
+
+To provide feedback on the detailed dashboard, see [issue 460279](https://gitlab.com/gitlab-org/gitlab/-/issues/460279).
+
+### View a detailed dashboard
+
+Prerequisites:
+
+- A GitLab agent for Kubernetes is [configured](../../user/clusters/agent/install/index.md) and shared with the environment's project, or its parent group, using the [`user_access`](../../user/clusters/agent/user_access.md) keyword.
+
+The detailed dashboard is not linked from the sidebar navigation.
+To view a detailed dashboard:
+
+1. Find your agent for Kubernetes ID:
+   1. On the left sidebar, select **Search or go to** and find your project.
+   1. Select **Operate > Kubernetes clusters**.
+   1. Copy the numerical ID of the agent you want to access.
+1. Go to one of the following URLs, replacing `<agent_id>` with your agent ID:
+
+   | Resource type | URL |
+   | --- | --- |
+   | Pods | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/pods`|
+   | Services | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/services` |
+   | Deployments | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/deployments` |
+   | ReplicaSets | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/replicaSets` |
+   | StatefulSets | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/statefulSets` |
+   | DaemonSets | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/daemonSets` |
+   | Jobs | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/jobs` |
+   | CronJobs | `https://myinstance.gitlab.com/-/kubernetes/<agent_id>/cronJobs` |
+
+The detailed dashboard is displayed.
+
 ## Troubleshooting
 
 When working with the Dashboard for Kubernetes, you might encounter the following issues.
@@ -113,3 +194,9 @@ You might get an error that states `Error: services is forbidden: User "gitlab:u
 This error happens when a user is not allowed to do the specified operation in the [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
 
 To resolve, check your [RBAC configuration](../../user/clusters/agent/user_access.md#configure-kubernetes-access). If the RBAC is properly configured, contact your Kubernetes administrator.
+
+### GitLab agent dropdown list is empty
+
+When you configure a new environment, the **GitLab agent** dropdown list might be empty, even if you have configured Kubernetes clusters.
+
+To populate the **GitLab agent** dropdown list, grant an agent Kubernetes access with the [`user_access`](../../user/clusters/agent/user_access.md) keyword.

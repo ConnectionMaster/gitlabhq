@@ -13,6 +13,58 @@ DETAILS:
 Most work in GitLab is done in a [project](../../user/project/index.md). Files and
 code are saved in projects, and most features are in the scope of projects.
 
+## Project overview
+
+> - Project creation date [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/19452) in GitLab 16.10.
+
+When you select a project, the **Project overview** page shows the project contents:
+
+- Files in the repository
+- Project information (description)
+- Topics
+- Badges
+- Number of stars, forks, commits, branches, tags, releases, and environments in the project
+- Project storage size
+- Optional files and configurations
+- `README` or index file
+  - Wiki page
+  - License
+  - Changelog
+  - Contributing guidelines
+  - Kubernetes cluster
+  - CI/CD configuration
+  - Integrations
+  - GitLab Pages
+- Creation date
+
+For public projects, and members of internal and private projects
+with [permissions to view the project's code](../permissions.md#project-members-permissions),
+the project overview page shows:
+
+- A [`README` or index file](repository/files/index.md#readme-and-index-files).
+- A list of directories in the project's repository.
+
+For users without permission to view the project's code, the overview page shows:
+
+- The wiki homepage.
+- The list of issues in the project.
+
+### Access a project by using the project ID
+
+> - Project ID [moved](https://gitlab.com/gitlab-org/gitlab/-/issues/431539) to the Actions menu in GitLab 16.7.
+
+You can access a project by using its ID instead of its name at `https://gitlab.example.com/projects/<id>`.
+For example, if in your personal namespace `alex` you have a project `my-project` with the ID `123456`,
+you can access the project either at `https://gitlab.example.com/alex/my-project` or `https://gitlab.example.com/projects/123456`.
+
+You might also need the project ID if you want to interact with the project using the [GitLab API](../../api/index.md).
+
+To copy the project ID:
+
+1. On the left sidebar, select **Search or go to** and find your project.
+1. On the project overview page, in the upper-right corner, select **Actions** (**{ellipsis_v}**).
+1. Select **Copy project ID**.
+
 ## View all projects for the instance
 
 To view all projects for the GitLab instance:
@@ -54,7 +106,7 @@ To view projects you have [starred](#star-a-project):
 1. On the left sidebar, select your avatar and then your username.
 1. On the left sidebar, select **Starred projects**.
 
-## Edit project name and description
+## Edit project name, description, and avatar
 
 Use the project general settings to edit your project details.
 
@@ -65,8 +117,9 @@ Prerequisites:
 1. On the left sidebar, select **Search or go to** and find your project.
 1. Select **Settings > General**.
 1. In the **Project name** text box, enter your project name. See the [limitations on project names](../../user/reserved_names.md).
-1. In the **Project description** text box, enter your project description. The description is limited to 2,000 characters.
-1. Under **Project avatar**, to change your project avatar, select **Choose file**.
+1. Optional. In the **Project description** text box, enter your project description. The description is limited to 2,000 characters.
+1. Optional. Under **Project avatar**, to change your project avatar, select **Choose file**. The ideal image size is 192 x 192 pixels, and the maximum file size allowed is 200 KB.
+1. Select **Save changes**.
 
 ## Star a project
 
@@ -79,8 +132,6 @@ To add a star to a project:
 
 ## Delete a project
 
-> - Default deletion behavior for projects changed to [delayed project deletion](https://gitlab.com/gitlab-org/gitlab/-/issues/32935) in GitLab 12.6.
-> - Default deletion behavior for projects changed to [immediate deletion](https://gitlab.com/gitlab-org/gitlab/-/issues/220382) in GitLab 13.2.
 > - Default deletion behavior for projects on the Premium and Ultimate tier changed to [delayed project deletion](https://gitlab.com/gitlab-org/gitlab/-/issues/389557) in GitLab 16.0.
 > - Default deletion behavior changed to delayed deletion on the Premium and Ultimate tier [on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/393622) and [on self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/119606) in GitLab 16.0.
 
@@ -135,7 +186,6 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/191367) in GitLab 14.1.
 > - Option to delete projects immediately from the Admin Area and as a group setting removed [on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/393622) and [on self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/119606) in GitLab 16.0.
 
 Prerequisites:
@@ -162,18 +212,11 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/37014) in GitLab 13.3 for Administrators.
-> - [Tab renamed](https://gitlab.com/gitlab-org/gitlab/-/issues/347468) from **Deleted projects** in GitLab 14.6.
-> - [Available to all users](https://gitlab.com/gitlab-org/gitlab/-/issues/346976) in GitLab 14.8 [with a flag](../../administration/feature_flags.md) named `project_owners_list_project_pending_deletion`. Enabled by default.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/351556) in GitLab 14.9. [Feature flag `project_owners_list_project_pending_deletion`](https://gitlab.com/gitlab-org/gitlab/-/issues/351556) removed.
-
 To view a list of all projects that are pending deletion:
 
 1. On the left sidebar, select **Search or go to**.
 1. Select **View all my projects**.
-1. Based on your GitLab version:
-   - GitLab 14.6 and later: select the **Pending deletion** tab.
-   - GitLab 14.5 and earlier: select the **Deleted projects** tab.
+1. Select the **Pending deletion** tab.
 
 Each project in the list shows:
 
@@ -324,40 +367,6 @@ To rename a repository:
 1. Expand **Advanced**.
 1. In the **Change path** text box, edit the path.
 1. Select **Change path**.
-
-## Access the project overview page by using the project ID
-
-> - Project ID [moved](https://gitlab.com/gitlab-org/gitlab/-/issues/431539) to the Actions menu in GitLab 16.7.
-
-To access a project by using the project ID instead of its name,
-go to `https://gitlab.example.com/projects/<id>`.
-
-To copy the project ID:
-
-1. On the left sidebar, select **Search or go to** and find your project.
-1. On the project overview page, in the upper-right corner, select **Actions** (**{ellipsis_v}**).
-1. Select **Copy project ID**.
-
-For example, if in your personal namespace `alex` you have a project `my-project` with the ID `123456`, you can access the project
-either at `https://gitlab.example.com/alex/my-project` or `https://gitlab.example.com/projects/123456`.
-
-You might also need the project ID if you want to interact with it using the [GitLab API](../../api/index.md).
-
-## Who can view the Project overview page
-
-When you select a project, the **Project overview** page shows the project contents.
-
-For public projects, and members of internal and private projects
-with [permissions to view the project's code](../permissions.md#project-members-permissions),
-the project landing page shows:
-
-- A [`README` or index file](repository/index.md#readme-and-index-files).
-- A list of directories in the project's repository.
-
-For users without permission to view the project's code, the landing page shows:
-
-- The wiki homepage.
-- The list of issues in the project.
 
 ## Leave a project
 

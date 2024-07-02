@@ -38,8 +38,8 @@ RSpec.describe 'getting the containers protection rules linked to a project', :a
         expect(protection_rules).to include(
           hash_including(
             'repositoryPathPattern' => container_protection_rule.repository_path_pattern,
-            'pushProtectedUpToAccessLevel' => 'DEVELOPER',
-            'deleteProtectedUpToAccessLevel' => 'DEVELOPER'
+            'minimumAccessLevelForDelete' => 'MAINTAINER',
+            'minimumAccessLevelForPush' => 'MAINTAINER'
           )
         )
       end
@@ -55,7 +55,7 @@ RSpec.describe 'getting the containers protection rules linked to a project', :a
   end
 
   context 'with unauthorized user' do
-    let_it_be(:user) { create(:user).tap { |u| project.add_developer(u) } }
+    let_it_be(:user) { create(:user, developer_of: project) }
 
     before do
       send_graqhql_query

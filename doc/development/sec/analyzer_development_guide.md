@@ -39,7 +39,7 @@ Analyzers are shipped as Docker images. For example, to run the
        registry.gitlab.com/gitlab-org/security-products/analyzers/semgrep:latest /analyzer run
    ```
 
-1. The Docker container generates a report in the mounted project directory with a report filename corresponding to the analyzer category. For example, [SAST](../../user/application_security/sast) generates a file named `gl-sast-report.json`.
+1. The Docker container generates a report in the mounted project directory with a report filename corresponding to the analyzer category. For example, [SAST](../../user/application_security/sast/index.md) generates a file named `gl-sast-report.json`.
 
 ## Analyzers development
 
@@ -138,9 +138,9 @@ For more information, refer to the [project README](https://gitlab.com/gitlab-or
 
 ## Versioning and release process
 
-GitLab Security Products use an independent versioning system from GitLab Rails' `MAJOR.MINOR`. All products use a variation of [Semantic Versioning](https://semver.org) and are available as Docker images.
+GitLab Security Products use an independent versioning system from GitLab `MAJOR.MINOR`. All products use a variation of [Semantic Versioning](https://semver.org) and are available as Docker images.
 
-`Patch` version bumps tend to correspond to a `Minor` version bump of the underlying tools (i.e. [`bandit`](https://wiki.openstack.org/wiki/Security/Projects/Bandit)), allowing us greater flexibility in reserving `Minor` bumps for more significant changes to our scanners. In case of breaking changes imposed by the wrapped scanner, creating a new analyzer on a separate repository must be considered.
+`Major` is bumped with every new major release of GitLab, when [breaking changes are allowed](../deprecation_guidelines/index.md). `Minor` is bumped for new functionality, and `Patch` is reserved for bugfixes.
 
 The analyzers are released as Docker images following this scheme:
 
@@ -181,7 +181,7 @@ B3 -->|build and tag edge| D3[edge]
 Per our Continuous Deployment flow, for new components that do not have a counterpart in the GitLab
 Rails application, the component can be released at any time. Until the components
 are integrated with the existing application, iteration should not be blocked by
-[our standard release cycle and process](https://about.gitlab.com/product-process).
+[our standard release cycle and process](https://handbook.gitlab.com/handbook/product/product-processes/).
 
 ### Manual release process
 
@@ -234,6 +234,19 @@ After the above steps have been completed, the automatic release process execute
 **Never delete a Git tag that has been pushed** as there is a good
 chance that the tag will be used and/or cached by the Go package registry.
 
+### Backporting a critical fix or patch
+
+To backport a critical fix or patch to an earlier version, follow the steps below.
+
+1. Create a new branch from the tag you are backporting the fix to, if it doesn't exist.
+   - For example, if the latest stable tag is `v4` and you are backporting a fix to `v3`, create a new branch called `v3`.
+1. Submit a merge request targeting the branch you just created.
+1. After its approved, merge the merge request into the branch.
+1. Create a new tag for the branch.
+1. If the analyzer has the [automatic release process](#automatic-release-process) enabled, a new version will be released.
+1. If not, you have to follow the [manual release process](#manual-release-process) to release a new version.
+1. NOTE: the release pipeline will override the latest `edge` tag so the most recent release pipeline's `tag edge` job may need to be re-ran to avoid a regression for that tag.
+
 ## Development of new analyzers
 
 We occasionally need to build out new analyzer projects to support new frameworks and tools.
@@ -241,17 +254,17 @@ In doing so we should follow [our engineering Open Source guidelines](https://ha
 including licensing and [code standards](../../development/go_guide/index.md).
 
 In addition, to write a custom analyzer that will integrate into the GitLab application
-a minimal featureset is required:
+a minimal feature set is required:
 
 ### Checklist
 
-#### Underlying tool
+Verify whether the underlying tool has:
 
-- [ ] Has [permissive software license](https://handbook.gitlab.com/handbook/engineering/open-source/#using-open-source-software)
-- [ ] Headless execution (CLI tool)
-- [ ] Bundle-able dependencies to be packaged as a Docker image, to be executed using GitLab Runner's [Linux or Windows Docker executor](https://docs.gitlab.com/runner/executors/docker.html)
-- [ ] Compatible projects can be detected based on filenames or extensions
-- [ ] Offline execution (no Internet access) or can be configured to use custom proxies and/or CA certificates
+- A [permissive software license](https://handbook.gitlab.com/handbook/engineering/open-source/#using-open-source-software).
+- Headless execution (CLI tool).
+- Bundle-able dependencies to be packaged as a Docker image, to be executed using GitLab Runner's [Linux or Windows Docker executor](https://docs.gitlab.com/runner/executors/docker.html).
+- Compatible projects that can be detected based on filenames or extensions.
+- Offline execution (no internet access) or can be configured to use custom proxies and/or CA certificates.
 
 #### Dockerfile
 
@@ -299,6 +312,19 @@ Each group in the Sec Section is responsible for:
 1. Creating and configuring projects under the new location.
 1. Configuring builds to push release artifacts to the new location.
 1. Removing or keeping images in old locations according to their own support agreements.
+
+### Daily rebuild of Container Images
+
+The analyzer images are rebuilt on a daily basis to ensure that we frequently and automatically pull patches provided by vendors of the base images we rely on.
+
+This process only applies to the images used in versions of GitLab matching the current MAJOR release. The intent is not to release a newer version each day but rather rebuild each active variant of an image and overwrite the corresponding tags:
+
+- the `MAJOR.MINOR.PATCH` image tag (e.g.: `4.1.7`)
+- the `MAJOR.MINOR` image tag(e.g.: `4.1`)
+- the `MAJOR`  image tag (e.g.: `4`)
+- the `latest` image tag
+
+The implementation of the rebuild process may vary [depending on the project](../../user/application_security/index.md#vulnerability-scanner-maintenance), though a shared CI configuration is available in our [development ci-templates project](https://gitlab.com/gitlab-org/security-products/ci-templates/-/blob/master/includes-dev/docker.yml) to help achieving this.
 
 ## Security and Build fixes of Go
 
@@ -383,7 +409,6 @@ This issue will guide you through the whole release process. In general, you hav
 
   - [SAST vendored CI/CD template](https://gitlab.com/gitlab-org/gitlab/blob/master/lib/gitlab/ci/templates/Security/SAST.gitlab-ci.yml)
   - [Dependency Scanning vendored CI/CD template](https://gitlab.com/gitlab-org/gitlab/blob/master/lib/gitlab/ci/templates/Security/Dependency-Scanning.gitlab-ci.yml)
-  - [License Scanning vendored CI/CD template](https://gitlab.com/gitlab-org/gitlab/blob/master/lib/gitlab/ci/templates/Security/License-Scanning.gitlab-ci.yml)
   - [Container Scanning CI/CD template](https://gitlab.com/gitlab-org/gitlab/blob/master/lib/gitlab/ci/templates/Security/Container-Scanning.gitlab-ci.yml)
 
   If needed, go to the pipeline corresponding to the last Git tag,

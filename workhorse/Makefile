@@ -24,7 +24,7 @@ BUILD_TAGS := tracer_static tracer_static_jaeger continuous_profiler_stackdriver
 OS := $(shell uname | tr A-Z a-z)
 ARCH ?= $(shell uname -m | sed -e 's/x86_64/amd64/' | sed -e 's/aarch64/arm64/')
 
-GOLANGCI_LINT_VERSION := 1.55.2
+GOLANGCI_LINT_VERSION := 1.59.1
 GOLANGCI_LINT_ARCH ?= ${ARCH}
 GOLANGCI_LINT_FILE := _support/bin/golangci-lint-${GOLANGCI_LINT_VERSION}
 
@@ -133,7 +133,17 @@ $(GITALY_PID_FILE): gitaly.toml
 	$(call message, "Starting gitaly")
 	cd ..; GITALY_TESTING_NO_GIT_HOOKS=1 GITALY_PID_FILE=workhorse/$(GITALY_PID_FILE) scripts/gitaly-test-spawn workhorse/gitaly.toml
 
-gitaly.toml: ../tmp/tests/gitaly/config.toml
+GITALY_CONFIGURATION_SOURCE_BASE = ../tmp/tests/gitaly/config.toml
+ifeq ($(GITALY_TRANSACTIONS_ENABLED),true)
+	GITALY_CONFIGURATION_SOURCE = ${GITALY_CONFIGURATION_SOURCE_BASE}.transactions
+else
+	GITALY_CONFIGURATION_SOURCE = ${GITALY_CONFIGURATION_SOURCE_BASE}
+endif
+
+# Mark the target phony so the configuration is always refreshed in case the `GITALY_TRANSACTIONS_ENABLED`
+# environment variable has been changed.
+.PHONY: gitaly.toml
+gitaly.toml: ${GITALY_CONFIGURATION_SOURCE}
 	sed -e 's/^socket_path.*$$/listen_addr = "0.0.0.0:8075"/;s/^\[auth\]$$//;s/^token.*$$//;s/^internal_socket_dir.*$$//' \
 		$< > $@
 
@@ -150,16 +160,16 @@ verify: lint vet detect-context detect-external-tests check-formatting staticche
 .PHONY: lint
 lint:
 	$(call message,Verify: $@)
-	go install golang.org/x/lint/golint
 	@_support/lint.sh ./...
 
 .PHONY: golangci
 golangci: ${GOLANGCI_LINT_FILE}
-	${GOLANGCI_LINT_FILE} run --issues-exit-code 0 --print-issued-lines=false ${GOLANGCI_LINT_ARGS}
+	@${GOLANGCI_LINT_FILE} cache clean
+	@${GOLANGCI_LINT_FILE} run --issues-exit-code 0 --print-issued-lines=false ${GOLANGCI_LINT_ARGS}
 
 ${GOLANGCI_LINT_FILE}:
-	mkdir -p $(shell dirname ${GOLANGCI_LINT_FILE})
-	curl -L https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-${OS}-${GOLANGCI_LINT_ARCH}.tar.gz | tar --strip-components 1 -zOxf - golangci-lint-${GOLANGCI_LINT_VERSION}-${OS}-${GOLANGCI_LINT_ARCH}/golangci-lint > ${GOLANGCI_LINT_FILE} && chmod +x ${GOLANGCI_LINT_FILE}
+	@mkdir -p $(shell dirname ${GOLANGCI_LINT_FILE})
+	@curl -L https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-${OS}-${GOLANGCI_LINT_ARCH}.tar.gz | tar --strip-components 1 -zOxf - golangci-lint-${GOLANGCI_LINT_VERSION}-${OS}-${GOLANGCI_LINT_ARCH}/golangci-lint > ${GOLANGCI_LINT_FILE} && chmod +x ${GOLANGCI_LINT_FILE}
 
 .PHONY: vet
 vet:

@@ -21,7 +21,7 @@ This page contains possible solutions for problems you might encounter when usin
 SAML responses are base64 encoded, so we recommend the following browser plugins to decode them on the fly:
 
 - [SAML-tracer](https://addons.mozilla.org/en-US/firefox/addon/saml-tracer/) for Firefox.
-- [SAML Message Decoder](https://chrome.google.com/webstore/detail/saml-message-decoder/mpabchoaimgbdbbjjieoaeiibojelbhm?hl=en) for Chrome.
+- [SAML Message Decoder](https://chromewebstore.google.com/detail/mpabchoaimgbdbbjjieoaeiibojelbhm?hl=en) for Chrome.
 
 Pay specific attention to:
 
@@ -108,8 +108,7 @@ in case the customer has [configured SAML Group Sync](group_sync.md):
 
 In the relevant log entry, the:
 
-- `json.args` are in the form `<userID>, <group ID>,
-  [group link ID 1, group link ID 2, ..., group link ID N]`.
+- `json.args` are in the form `<userID>, <group ID>, [group link ID 1, group link ID 2, ..., group link ID N]`.
 - `json.extra.group_saml_group_sync_worker.stats.*` fields show how many times
   this run of group sync `added`, `removed` or `changed` the user's membership.
 
@@ -225,13 +224,18 @@ Alternatively, the SAML response may be missing the `InResponseTo` attribute in 
 The identity provider administrator should ensure that the login is
 initiated by the service provider and not only the identity provider.
 
-### Message: "There is already a GitLab account associated with this email address. Sign in with your existing credentials to connect your organization's account"
+### Message: `There is already a GitLab account associated with this email address.`
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com
 
-A user can see this message when they are trying to [manually link SAML to their existing GitLab.com account](index.md#link-saml-to-your-existing-gitlabcom-account).
+A user can see this message when they are trying to [manually link SAML to their existing GitLab.com account](index.md#link-saml-to-your-existing-gitlabcom-account):
+
+```plaintext
+There is already a GitLab account associated with this email address.
+Sign in with your existing credentials to connect your organization's account
+```
 
 To resolve this problem, the user should check they are using the correct GitLab password to sign in. The user first needs
 to [reset their password](https://gitlab.com/users/password/new) if both:
@@ -415,12 +419,22 @@ If you see this message after trying to invite a user to a group:
 
 Additionally, see [troubleshooting users receiving a 404 after sign in](#users-receive-a-404).
 
-## Message: The SAML response did not contain an email address. Either the SAML identity provider is not configured to send the attribute, or the identity provider directory does not have an email address value for your user
+## Message: `The SAML response did not contain an email address.`
 
-This error appears when the SAML response does not contain the user's email address in an **email** or **mail** attribute.
-Ensure the SAML identity provider is configured to send a [supported mail attribute](../../../integration/saml.md).
+If you see this error:
 
-Examples:
+```plaintext
+The SAML response did not contain an email address.
+Either the SAML identity provider is not configured to send the attribute, or the
+identity provider directory does not have an email address value for your user
+```
+
+This error appears when:
+
+- the SAML response does not contain the user's email address in an **email** or **mail** attribute.
+- a user attempts to [link SAML](index.md#user-access-and-management) to their account but has not yet completed the [identity verification process](../../../security/identity_verification.md).
+
+Ensure the SAML identity provider is configured to send a [supported mail attribute](../../../integration/saml.md):
 
 ```xml
 <Attribute Name="email">

@@ -31,7 +31,7 @@ module MergeRequests
         mark_pending_todos_done(mr)
       end
 
-      abort_ff_merge_requests_with_when_pipeline_succeeds
+      abort_ff_merge_requests_with_auto_merges
       cache_merge_requests_closing_issues
 
       merge_requests_for_source_branch.each do |mr|
@@ -98,9 +98,24 @@ module MergeRequests
         merge_request.merge_commit_sha = sha
         merge_request.merged_commit_sha = sha
 
+        # Look for a merged MR that includes the SHA to associate it with
+        # the MR we're about to mark as merged.
+        # Only the merged MRs without the event source would be considered
+        # to avoid associating it with other MRs that we may have marked as merged here.
+        source_merge_request = MergeRequestsFinder.new(
+          @current_user,
+          project_id: @project.id,
+          merged_without_event_source: true,
+          state: 'merged',
+          sort: 'merged_at',
+          commit_sha: sha
+        ).execute.first
+
+        source = source_merge_request || @project.commit(sha)
+
         MergeRequests::PostMergeService
           .new(project: merge_request.target_project, current_user: @current_user)
-          .execute(merge_request)
+          .execute(merge_request, source)
       end
     end
     # rubocop: enable CodeReuse/ActiveRecord
@@ -181,23 +196,19 @@ module MergeRequests
       abort_auto_merge(merge_request, 'source branch was updated')
     end
 
-    def abort_ff_merge_requests_with_when_pipeline_succeeds
+    def abort_ff_merge_requests_with_auto_merges
       return unless @project.ff_merge_must_be_possible?
 
       merge_requests_with_auto_merge_enabled_to(@push.branch_name).each do |merge_request|
-        next unless merge_request.auto_merge_strategy == AutoMergeService::STRATEGY_MERGE_WHEN_PIPELINE_SUCCEEDS
+        unless merge_request.auto_merge_strategy == AutoMergeService::STRATEGY_MERGE_WHEN_PIPELINE_SUCCEEDS ||
+            merge_request.auto_merge_strategy == AutoMergeService::STRATEGY_MERGE_WHEN_CHECKS_PASS
+          next
+        end
+
         next unless merge_request.should_be_rebased?
 
         abort_auto_merge_with_todo(merge_request, 'target branch was updated')
       end
-    end
-
-    def abort_auto_merge_with_todo(merge_request, reason)
-      response = abort_auto_merge(merge_request, reason)
-      response = ServiceResponse.new(**response)
-      return unless response.success?
-
-      todo_service.merge_request_became_unmergeable(merge_request)
     end
 
     def merge_requests_with_auto_merge_enabled_to(target_branch)

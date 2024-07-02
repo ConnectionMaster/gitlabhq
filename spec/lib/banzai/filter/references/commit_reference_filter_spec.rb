@@ -5,8 +5,8 @@ require 'spec_helper'
 RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_category: :source_code_management do
   include FilterSpecHelper
 
-  let(:project) { create(:project, :public, :repository) }
-  let(:commit)  { project.commit }
+  let_it_be(:project) { create(:project, :public, :repository) }
+  let_it_be(:commit)  { project.commit }
 
   it 'requires project context' do
     expect { described_class.call('') }.to raise_error(ArgumentError, /:project/)
@@ -14,8 +14,8 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
 
   %w[pre code a style].each do |elem|
     it "ignores valid references contained inside '#{elem}' element" do
-      exp = act = "<#{elem}>Commit #{commit.id}</#{elem}>"
-      expect(reference_filter(act).to_html).to eq exp
+      act = "<#{elem}>Commit #{commit.id}</#{elem}>"
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -63,9 +63,9 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
 
     it 'ignores invalid commit IDs' do
       invalid = invalidate_reference(reference)
-      exp = act = "See #{invalid}"
+      act = "See #{invalid}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
 
     it 'includes a title attribute' do
@@ -154,9 +154,9 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
     end
 
     it 'ignores invalid commit IDs on the referenced project' do
-      exp = act = "Committed #{invalidate_reference(reference)}"
+      act = "Committed #{invalidate_reference(reference)}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -180,9 +180,9 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
     end
 
     it 'ignores invalid commit IDs on the referenced project' do
-      exp = act = "Committed #{invalidate_reference(reference)}"
+      act = "Committed #{invalidate_reference(reference)}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -206,9 +206,9 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
     end
 
     it 'ignores invalid commit IDs on the referenced project' do
-      exp = act = "Committed #{invalidate_reference(reference)}"
+      act = "Committed #{invalidate_reference(reference)}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -272,15 +272,27 @@ RSpec.describe Banzai::Filter::References::CommitReferenceFilter, feature_catego
     let(:context) { { project: nil, group: create(:group) } }
 
     it 'ignores internal references' do
-      exp = act = "See #{commit.id}"
+      act = "See #{commit.id}"
 
-      expect(reference_filter(act, context).to_html).to eq exp
+      expect(reference_filter(act, context).to_html).to include act
     end
 
     it 'links to a valid reference' do
       act = "See #{project.full_path}@#{commit.id}"
 
       expect(reference_filter(act, context).css('a').first.text).to eql("#{project.full_path}@#{commit.short_id}")
+    end
+  end
+
+  context 'when Commit.reference_pattern causes a long scanning period' do
+    it 'timesout and rescues in filter' do
+      stub_const("Banzai::Filter::References::AbstractReferenceFilter::RENDER_TIMEOUT", 0.1)
+      markdown = 'a-' * 55000
+
+      expect(Gitlab::RenderTimeout).to receive(:timeout).and_call_original
+      expect(Gitlab::ErrorTracking).to receive(:track_exception)
+
+      reference_filter(markdown)
     end
   end
 

@@ -9,6 +9,9 @@ import { getParameterByName, joinPaths } from '~/lib/utils/url_utility';
 import { scrollUp } from '~/lib/utils/scroll_utils';
 import glFeatureFlagMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import IssuableList from '~/vue_shared/issuable/list/components/issuable_list_root.vue';
+import IssueCardTimeInfo from 'ee_else_ce/issues/list/components/issue_card_time_info.vue';
+import IssueCardStatistics from 'ee_else_ce/issues/list/components/issue_card_statistics.vue';
+
 import { DEFAULT_PAGE_SIZE, issuableListTabs } from '~/vue_shared/issuable/list/constants';
 import {
   convertToSearchQuery,
@@ -18,22 +21,21 @@ import {
   getFilterTokens,
   getSortOptions,
 } from '~/issues/list/utils';
+import { OPERATORS_IS_NOT_OR } from '~/vue_shared/components/filtered_search_bar/constants';
 import {
-  OPERATORS_IS_NOT,
-  OPERATORS_IS_NOT_OR,
-} from '~/vue_shared/components/filtered_search_bar/constants';
-import {
-  MAX_LIST_SIZE,
+  CLOSED_MOVED,
+  CLOSED,
+  CREATED_DESC,
   ISSUE_REFERENCE,
-  PARAM_STATE,
+  MAX_LIST_SIZE,
   PARAM_FIRST_PAGE_SIZE,
   PARAM_LAST_PAGE_SIZE,
   PARAM_PAGE_AFTER,
   PARAM_PAGE_BEFORE,
   PARAM_SORT,
-  CREATED_DESC,
-  UPDATED_DESC,
+  PARAM_STATE,
   RELATIVE_POSITION_ASC,
+  UPDATED_DESC,
   urlSortParams,
 } from '~/issues/list/constants';
 import { createAlert, VARIANT_INFO } from '~/alert';
@@ -77,11 +79,15 @@ export default {
     errorFetchingIssues,
     issueRepositioningMessage,
     reorderError,
+    closed: CLOSED,
+    closedMoved: CLOSED_MOVED,
   },
   issuableListTabs,
   components: {
     IssuableList,
     InfoBanner,
+    IssueCardTimeInfo,
+    IssueCardStatistics,
     EmptyStateWithAnyIssues,
     EmptyStateWithoutAnyIssues,
   },
@@ -200,17 +206,11 @@ export default {
         [STATUS_ALL]: allIssues?.count,
       };
     },
-    currentTabCount() {
-      return this.tabCounts[this.state] ?? 0;
-    },
     showPaginationControls() {
-      return (
-        this.serviceDeskIssues.length > 0 &&
-        (this.pageInfo.hasNextPage || this.pageInfo.hasPreviousPage)
-      );
+      return !this.isLoading && (this.pageInfo.hasNextPage || this.pageInfo.hasPreviousPage);
     },
-    showPageSizeControls() {
-      return this.currentTabCount > DEFAULT_PAGE_SIZE;
+    showPageSizeSelector() {
+      return this.serviceDeskIssues.length > 0;
     },
     isLoading() {
       return this.$apollo.loading;
@@ -237,9 +237,6 @@ export default {
     },
     canShowIssuesList() {
       return this.isLoading || this.issuesError.length || this.hasAnyServiceDeskIssue;
-    },
-    hasOrFeature() {
-      return this.glFeatures.orIssuableQueries;
     },
     hasSearch() {
       return Boolean(
@@ -276,7 +273,7 @@ export default {
         },
         {
           ...assigneeTokenBase,
-          operators: this.hasOrFeature ? OPERATORS_IS_NOT_OR : OPERATORS_IS_NOT,
+          operators: OPERATORS_IS_NOT_OR,
           fetchUsers: this.fetchUsers,
           recentSuggestionsStorageKey: `${this.fullPath}-issues-recent-tokens-assignee`,
           preloadedUsers,
@@ -288,7 +285,7 @@ export default {
         },
         {
           ...labelTokenBase,
-          operators: this.hasOrFeature ? OPERATORS_IS_NOT_OR : OPERATORS_IS_NOT,
+          operators: OPERATORS_IS_NOT_OR,
           fetchLabels: this.fetchLabels,
           fetchLatestLabels: this.glFeatures.frontendCaching ? this.fetchLatestLabels : null,
           recentSuggestionsStorageKey: `${this.fullPath}-issues-recent-tokens-label`,
@@ -434,10 +431,9 @@ export default {
 
       this.$router.push({ query: this.urlParams });
     },
-    handlePageSizeChange(newPageSize) {
-      const pageParam = getParameterByName(PARAM_LAST_PAGE_SIZE) ? 'lastPageSize' : 'firstPageSize';
-      this.pageParams[pageParam] = newPageSize;
-      this.pageSize = newPageSize;
+    handlePageSizeChange(pageSize) {
+      this.pageSize = pageSize;
+      this.pageParams = getInitialPageParams(pageSize);
       scrollUp();
 
       this.$router.push({ query: this.urlParams });
@@ -542,6 +538,15 @@ export default {
         variant: VARIANT_INFO,
       });
     },
+    getStatus(issue) {
+      if (issue.state === STATUS_CLOSED && issue.moved) {
+        return this.$options.i18n.closedMoved;
+      }
+      if (issue.state === STATUS_CLOSED) {
+        return this.$options.i18n.closed;
+      }
+      return undefined;
+    },
   },
 };
 </script>
@@ -557,9 +562,8 @@ export default {
       :search-tokens="searchTokens"
       :issuables-loading="isLoading"
       :initial-filter-value="filterTokens"
-      :show-filtered-search-friendly-text="hasOrFeature"
       :show-pagination-controls="showPaginationControls"
-      :show-page-size-change-controls="showPageSizeControls"
+      :show-page-size-selector="showPageSizeSelector"
       :sort-options="sortOptions"
       :initial-sort-by="sortKey"
       :is-manual-ordering="isManualOrdering"
@@ -570,6 +574,7 @@ export default {
       :default-page-size="pageSize"
       :has-next-page="pageInfo.hasNextPage"
       :has-previous-page="pageInfo.hasPreviousPage"
+      show-filtered-search-friendly-text
       sync-filter-and-sort
       use-keyset-pagination
       @click-tab="handleClickTab"
@@ -581,6 +586,18 @@ export default {
       @previous-page="handlePreviousPage"
       @page-size-change="handlePageSizeChange"
     >
+      <template #timeframe="{ issuable = {} }">
+        <issue-card-time-info :issue="issuable" />
+      </template>
+
+      <template #status="{ issuable = {} }">
+        {{ getStatus(issuable) }}
+      </template>
+
+      <template #statistics="{ issuable = {} }">
+        <issue-card-statistics :issue="issuable" />
+      </template>
+
       <template #empty-state>
         <empty-state-with-any-issues :has-search="hasSearch" :is-open-tab="isOpenTab" />
       </template>

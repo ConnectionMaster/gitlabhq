@@ -15,12 +15,16 @@ const createComponent = () => {
   });
 };
 
+afterEach(() => {
+  window.gon = {};
+});
+
 describe('GroupsExploreEmptyState', () => {
   it('renders empty state', () => {
     createComponent();
 
     expect(wrapper.findComponent(GlEmptyState).props()).toMatchObject({
-      title: 'No public groups',
+      title: 'No public or internal groups',
       svgPath: defaultProvide.groupsEmptyStateIllustration,
     });
   });

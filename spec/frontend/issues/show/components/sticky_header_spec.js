@@ -1,4 +1,4 @@
-import { GlIcon, GlLink } from '@gitlab/ui';
+import { GlBadge, GlLink } from '@gitlab/ui';
 import { shallowMountExtended } from 'helpers/vue_test_utils_helper';
 import HiddenBadge from '~/issuable/components/hidden_badge.vue';
 import LockedBadge from '~/issuable/components/locked_badge.vue';
@@ -13,12 +13,14 @@ import {
 } from '~/issues/constants';
 import StickyHeader from '~/issues/show/components/sticky_header.vue';
 import ConfidentialityBadge from '~/vue_shared/components/confidentiality_badge.vue';
+import ImportedBadge from '~/vue_shared/components/imported_badge.vue';
 
 describe('StickyHeader component', () => {
   let wrapper;
 
   const findConfidentialBadge = () => wrapper.findComponent(ConfidentialityBadge);
   const findHiddenBadge = () => wrapper.findComponent(HiddenBadge);
+  const findImportedBadge = () => wrapper.findComponent(ImportedBadge);
   const findLockedBadge = () => wrapper.findComponent(LockedBadge);
   const findTitle = () => wrapper.findComponent(GlLink);
 
@@ -47,7 +49,7 @@ describe('StickyHeader component', () => {
     ({ issuableType, issuableStatus, statusIcon }) => {
       createComponent({ issuableType, issuableStatus });
 
-      expect(wrapper.findComponent(GlIcon).props('name')).toBe(statusIcon);
+      expect(wrapper.findComponent(GlBadge).props('icon')).toBe(statusIcon);
     },
   );
 
@@ -100,6 +102,16 @@ describe('StickyHeader component', () => {
     const hiddenBadge = findHiddenBadge();
 
     expect(hiddenBadge.exists()).toBe(isHidden);
+  });
+
+  it.each`
+    title                                                        | isImported
+    ${'does not show imported badge when issue is not imported'} | ${false}
+    ${'shows imported badge when issue is imported'}             | ${true}
+  `('$title', ({ isImported }) => {
+    createComponent({ isImported });
+
+    expect(findImportedBadge().exists()).toBe(isImported);
   });
 
   it('shows with title', () => {

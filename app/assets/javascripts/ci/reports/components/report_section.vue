@@ -188,12 +188,12 @@ export default {
       <div class="media-body gl-display-flex gl-align-items-flex-start gl-flex-direction-row!">
         <div class="js-code-text code-text gl-align-self-center gl-flex-grow-1">
           <div class="gl-display-flex gl-align-items-center">
-            <p class="gl-line-height-normal gl-m-0">{{ headerText }}</p>
+            <p class="gl-leading-normal gl-m-0">{{ headerText }}</p>
             <slot :name="slotName"></slot>
             <help-popover
               v-if="hasPopover"
               :options="popoverOptions"
-              class="gl-ml-2 gl-display-inline-flex"
+              class="gl-ml-2 gl-inline-flex"
             />
           </div>
           <slot name="sub-heading"></slot>

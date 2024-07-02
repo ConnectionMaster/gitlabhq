@@ -173,7 +173,7 @@ RSpec.describe API::Settings, 'Settings', :do_not_mock_admin_mode_setting, featu
             diff_max_files: 2000,
             diff_max_lines: 50000,
             default_branch_protection: ::Gitlab::Access::PROTECTION_DEV_CAN_MERGE,
-            default_branch_protection_defaults: ::Gitlab::Access::BranchProtection.protected_against_developer_pushes.stringify_keys,
+            default_branch_protection_defaults: ::Gitlab::Access::BranchProtection.protected_after_initial_push.stringify_keys,
             local_markdown_version: 3,
             allow_local_requests_from_web_hooks_and_services: true,
             allow_local_requests_from_system_hooks: false,
@@ -262,7 +262,7 @@ RSpec.describe API::Settings, 'Settings', :do_not_mock_admin_mode_setting, featu
         expect(json_response['diff_max_files']).to eq(2000)
         expect(json_response['diff_max_lines']).to eq(50000)
         expect(json_response['default_branch_protection']).to eq(Gitlab::Access::PROTECTION_DEV_CAN_MERGE)
-        expect(json_response['default_branch_protection_defaults']).to eq(::Gitlab::Access::BranchProtection.protected_against_developer_pushes.stringify_keys)
+        expect(json_response['default_branch_protection_defaults']).to eq(::Gitlab::Access::BranchProtection.protected_after_initial_push.stringify_keys)
         expect(json_response['local_markdown_version']).to eq(3)
         expect(json_response['allow_local_requests_from_web_hooks_and_services']).to eq(true)
         expect(json_response['allow_local_requests_from_system_hooks']).to eq(false)
@@ -326,6 +326,24 @@ RSpec.describe API::Settings, 'Settings', :do_not_mock_admin_mode_setting, featu
       expect(response).to have_gitlab_http_status(:ok)
       expect(json_response['default_branch_protection']).to eq(Gitlab::Access::PROTECTION_DEV_CAN_MERGE)
       expect(ApplicationSetting.first.default_branch_protection_defaults).to eq(expected_update)
+    end
+
+    context 'when default_branch_protection_defaults is set to No one' do
+      it "updates default_branch_protection_defaults" do
+        put api("/application/settings", admin),
+          params: {
+            default_branch_protection_defaults: {
+              allowed_to_push: [{ access_level: 0 }],
+              allowed_to_merge: [{ access_level: 0 }]
+            }
+          }
+
+        expect(response).to have_gitlab_http_status(:ok)
+        expect(json_response['default_branch_protection_defaults']).to eq(
+          "allowed_to_merge" => [{ "access_level" => 0 }],
+          "allowed_to_push" => [{ "access_level" => 0 }]
+        )
+      end
     end
 
     it "supports legacy performance_bar_allowed_group_id" do

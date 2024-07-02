@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Pipeline Security
+group: Pipeline Authoring
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -16,7 +16,7 @@ CI/CD variables are a type of environment variable. You can use them to:
 - Store values you want to re-use.
 - Avoid hard-coding values in your `.gitlab-ci.yml` file.
 
-You can [override variable values manually for a specific pipeline](../jobs/index.md#specifying-variables-when-running-manual-jobs),
+You can [override variable values](#cicd-variable-precedence) for a specific pipeline when you [run a pipeline manually](../pipelines/index.md#run-a-pipeline-manually), [run a manual job](../jobs/index.md#specifying-variables-when-running-manual-jobs),
 or have them [prefilled in manual pipelines](../pipelines/index.md#prefill-variables-in-manual-pipelines).
 
 Variable names are limited by the [shell the runner uses](https://docs.gitlab.com/runner/shells/index.html)
@@ -139,7 +139,9 @@ Prerequisites:
 
 To add or update variables in the project settings:
 
-1. Go to your project's **Settings > CI/CD** and expand the **Variables** section.
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Select **Add variable** and fill in the details:
    - **Key**: Must be one line, with no spaces, using only letters, numbers, or `_`.
    - **Value**: No limitations.
@@ -168,7 +170,9 @@ Prerequisites:
 
 To add a group variable:
 
-1. In the group, go to **Settings > CI/CD**.
+1. On the left sidebar, select **Search or go to** and find your group.
+1. Select **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Select **Add variable** and fill in the details:
    - **Key**: Must be one line, with no spaces, using only letters, numbers, or `_`.
    - **Value**: No limitations.
@@ -190,7 +194,9 @@ DETAILS:
 
 To set a group CI/CD variable to only be available for certain environments:
 
-1. In the group, go to **Settings > CI/CD**.
+1. On the left sidebar, select **Search or go to** and find your group.
+1. Select **Settings > CI/CD**.
+1. Expand **Variables**.
 1. To the right of the variable, select **Edit** (**{pencil}**).
 1. For **Environment scope**, select **All (default)** (`*`), a specific [environment](../environments/index.md#types-of-environments),
    or a wildcard [environment scope](../environments/index.md#limit-the-environment-scope-of-a-cicd-variable).
@@ -201,9 +207,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/14108) in GitLab 13.0.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/299879) in GitLab 13.11.
-
 You can make a CI/CD variable available to all projects and groups in a GitLab instance.
 
 Prerequisites:
@@ -213,12 +216,12 @@ Prerequisites:
 To add an instance variable:
 
 1. On the left sidebar, at the bottom, select **Admin Area**.
-1. Select **Settings > CI/CD** and expand the **Variables** section.
+1. Select **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Select **Add variable** and fill in the details:
    - **Key**: Must be one line, with no spaces, using only letters, numbers, or `_`.
-   - **Value**: In [GitLab 13.3 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/220028),
-     the value is limited to 10,000 characters, but also bounded by any limits in the
-     runner's operating system. In GitLab 13.0 to 13.2, the value is limited to 700 characters.
+   - **Value**: The value is limited to 10,000 characters, but also bounded by any limits in the
+     runner's operating system.
    - **Type**: `Variable` (default) or [`File`](#use-file-type-cicd-variables).
    - **Protect variable** Optional. If selected, the variable is only available
      in pipelines that run on protected branches or tags.
@@ -267,8 +270,6 @@ valid [secrets file](../../administration/backup_restore/troubleshooting_backup_
 
 ### Mask a CI/CD variable
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/330650) in GitLab 13.12, the `~` character can be used in masked variables.
-
 WARNING:
 Masking a CI/CD variable is not a guaranteed way to prevent malicious users from
 accessing variable values. The masking feature is "best-effort" and there to
@@ -285,8 +286,8 @@ Prerequisites:
 
 To mask a variable:
 
-1. In the project, group, or Admin Area, go to **Settings > CI/CD**.
-1. Expand the **Variables** section.
+1. For the group, project, or in the Admin Area, select **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Next to the variable you want to protect, select **Edit**.
 1. Select the **Mask variable** checkbox.
 1. Select **Update variable**.
@@ -303,6 +304,10 @@ the value can contain only:
 
 - Characters from the Base64 alphabet (RFC4648).
 - The `@`, `:`, `.`, or `~` characters.
+
+Masking a variable automatically masks the value anywhere in a job log. If another
+variable has the same value, that value is also masked, including when a variable
+references a masked variable.
 
 Different versions of [GitLab Runner](../runners/index.md) have different masking limitations:
 
@@ -326,8 +331,8 @@ Prerequisites:
 
 To set a variable as protected:
 
-1. Go to **Settings > CI/CD** in the project, group or instance Admin Area.
-1. Expand the **Variables** section.
+1. For the project or group, go to **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Next to the variable you want to protect, select **Edit**.
 1. Select the **Protect variable** checkbox.
 1. Select **Update variable**.
@@ -461,10 +466,11 @@ job_name:
 
 [Service containers](../docker/using_docker_images.md) can use CI/CD variables, but
 by default can only access [variables saved in the `.gitlab-ci.yml` file](#define-a-cicd-variable-in-the-gitlab-ciyml-file).
+Variables [set in the GitLab UI](#define-a-cicd-variable-in-the-ui) are not available to
+service containers, because service containers are not trusted by default.
 
-Variables [set in the GitLab UI](#define-a-cicd-variable-in-the-ui) by default are not available to
-service containers. To make a UI-defined variable available in a service container,
-re-assign it in your `.gitlab-ci.yml`:
+To make a UI-defined variable available in a service container, you can re-assign
+it to another variable in your `.gitlab-ci.yml`:
 
 ```yaml
 variables:
@@ -473,12 +479,9 @@ variables:
 
 ### Pass an environment variable to another job
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/22638) in GitLab 13.0.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/217834) in GitLab 13.1.
-
-You can create a new environment variables in a job, and pass it to another job
-in a later stage. These variables cannot be used as CI/CD variables to configure a pipeline,
-but they can be used in job scripts.
+You can create a new environment variable in a job, and pass it to another job
+in a later stage. These variables cannot be used as CI/CD variables to configure a pipeline
+(for example with the [`rules` keyword](../yaml/index.md#rules)), but they can be used in job scripts.
 
 To pass a job-created environment variable to other jobs:
 
@@ -585,6 +588,43 @@ test-job6:
     - build-job2
 ```
 
+### Pass an environment variable from the `script` section to another section in the same job
+
+Use `$GITLAB_ENV` to pass environment variables defined in the `script` section to another section.
+
+For example:
+
+```yaml
+build-job:
+  stage: build
+  script:
+    - echo "ARCH=$(arch)" >> $GITLAB_ENV
+    - touch some-file-$(arch)
+  artifacts:
+    paths:
+      - some-file-$ARCH
+```
+
+To also reference the variable in other stages, write the variable to both the `$GITLAB_ENV` and `.env` files:
+
+```yaml
+build-job:
+  stage: build
+  script:
+    - echo "ARCH=$(arch)" | tee >> $GITLAB_ENV build.env
+    - touch some-file-$(arch)
+  artifacts:
+    paths:
+      - some-file-$ARCH
+    reports:
+      dotenv: build.env
+
+release-job:
+  stage: release
+  script:
+    - curl --upload-file some-file-$ARCH "https://example.com/some-file-$ARCH"
+```
+
 ### Store multiple values in one variable
 
 You cannot create a CI/CD variable that is an array of values, but you
@@ -646,8 +686,8 @@ Prerequisites:
 
 To disable variable expansion for the variable:
 
-1. In the project or group, go to **Settings > CI/CD**.
-1. Expand the **Variables** section.
+1. For the project or group, go to **Settings > CI/CD**.
+1. Expand **Variables**.
 1. Next to the variable you want to do not want expanded, select **Edit**.
 1. Clear the **Expand variable** checkbox.
 1. Select **Update variable**.
@@ -663,11 +703,13 @@ which variables take precedence.
 The order of precedence for variables is (from highest to lowest):
 
 1. [Scan Execution Policies variables](../../user/application_security/policies/scan-execution-policies.md).
-1. These variables all have the same (highest) precedence:
+1. Pipeline variables. These variables all have the same precedence:
+   - [Variables passed to downstream pipelines](../pipelines/downstream_pipelines.md#pass-cicd-variables-to-a-downstream-pipeline).
    - [Trigger variables](../triggers/index.md#pass-cicd-variables-in-the-api-call).
    - [Scheduled pipeline variables](../pipelines/schedules.md#add-a-pipeline-schedule).
    - [Manual pipeline run variables](../pipelines/index.md#run-a-pipeline-manually).
    - Variables added when [creating a pipeline with the API](../../api/pipelines.md#create-a-new-pipeline).
+   - [Manual job variables](../jobs/index.md#specifying-variables-when-running-manual-jobs).
 1. Project [variables](#for-a-project).
 1. Group [variables](#for-a-group). If the same variable name exists in a
    group and its subgroups, the job uses the value from the closest subgroup. For example, if
@@ -693,28 +735,26 @@ job1:
     - echo "The variable is '$API_TOKEN'"
 ```
 
-In this example, `job1` outputs `The variable is 'secure'` because variables defined in jobs
-have higher precedence than variables defined globally.
+In this example, `job1` outputs `The variable is 'secure'` because variables defined in jobs in the `.gitlab-ci.yml` file
+have higher precedence than variables defined globally in the `.gitlab-ci.yml` file.
 
 ### Override a defined CI/CD variable
 
-You can override the value of a variable when you:
+You can override the value of a variable, including [predefined variables](predefined_variables.md), when you:
 
 - [Run a pipeline manually](../pipelines/index.md#run-a-pipeline-manually) in the UI.
 - Create a pipeline by using [the `pipelines` API endpoint](../../api/pipelines.md#create-a-new-pipeline).
-- Use [push options](../../user/project/push_options.md#push-options-for-gitlab-cicd).
+- Use [push options](../../gitlab-basics/add-file.md#push-options-for-gitlab-cicd).
 - Trigger a pipeline by using [the `triggers` API endpoint](../triggers/index.md#pass-cicd-variables-in-the-api-call).
 - Pass variables to a downstream pipeline [by using the `variable` keyword](../pipelines/downstream_pipelines.md#pass-cicd-variables-to-a-downstream-pipeline)
   or [by using `dotenv` variables](../pipelines/downstream_pipelines.md#pass-dotenv-variables-created-in-a-job).
+- Specify variables when [running a manual job](../pipelines/index.md#run-a-pipeline-manually).
 
-You should avoid overriding [predefined variables](predefined_variables.md), as it
-can cause the pipeline to behave unexpectedly.
+You should avoid overriding predefined variables in most cases, as it can cause the pipeline to behave unexpectedly.
 
 ### Restrict who can override variables
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/295234) in GitLab 13.8.
-
-You can limit the ability to override variables to only users with the Maintainer role.
+You can limit the ability to override variables to only users with at least the Maintainer role.
 When other users try to run a pipeline with overridden variables, they receive the
 `Insufficient permissions to set pipeline variables` error message.
 
@@ -723,6 +763,28 @@ to enable the `restrict_user_defined_variables` setting. The setting is `disable
 
 If you [store your CI/CD configurations in a different repository](../../ci/pipelines/settings.md#specify-a-custom-cicd-configuration-file),
 use this setting for control over the environment the pipeline runs in.
+
+#### By minimum role
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/440338) in GitLab 17.1 
+
+When the `restrict_user_defined_variables` option is enabled, you can specify which
+[roles](../../user/permissions.md#roles) can override variables with the
+`ci_pipeline_variables_minimum_override_role` setting.
+
+To change the setting, use [the projects API](../../api/projects.md#edit-project)
+to modify `ci_pipeline_variables_minimum_override_role` to one of:
+
+- `owner`: Only users with the Owner role can override variables. You must have the Owner
+  role in the project to change the setting to this value.
+- `maintainer`: Only users with at least the Maintainer role can override variables.
+  Default when not specified.
+- `developer`: Only users with at least the Developer role can override variables.
+- `no_one_allowed`: Users cannot override variables.
+
+If you set the minimum role to `owner`, only users with at least the `owner` role
+can update the `ci_pipeline_variables_minimum_override_role` and `restrict_user_defined_variables`
+settings.
 
 ## Exporting variables
 
@@ -753,38 +815,38 @@ The runner cannot handle manual exports, shell aliases, and functions executed i
 For example, in the following `.gitlab-ci.yml` file, the following scripts are defined:
 
 ```yaml
-    job:
-     variables:
-       JOB_DEFINED_VARIABLE: "job variable"
-     before_script:
-       - echo "This is the 'before_script' script"
-       - export MY_VARIABLE="variable"
-     script:
-       - echo "This is the 'script' script"
-       - echo "JOB_DEFINED_VARIABLE's value is ${JOB_DEFINED_VARIABLE}"
-       - echo "CI_COMMIT_SHA's value is ${CI_COMMIT_SHA}"
-       - echo "MY_VARIABLE's value is ${MY_VARIABLE}"
-     after_script:
-       - echo "JOB_DEFINED_VARIABLE's value is ${JOB_DEFINED_VARIABLE}"
-       - echo "CI_COMMIT_SHA's value is ${CI_COMMIT_SHA}"
-       - echo "MY_VARIABLE's value is ${MY_VARIABLE}"
+job:
+ variables:
+   JOB_DEFINED_VARIABLE: "job variable"
+ before_script:
+   - echo "This is the 'before_script' script"
+   - export MY_VARIABLE="variable"
+ script:
+   - echo "This is the 'script' script"
+   - echo "JOB_DEFINED_VARIABLE's value is ${JOB_DEFINED_VARIABLE}"
+   - echo "CI_COMMIT_SHA's value is ${CI_COMMIT_SHA}"
+   - echo "MY_VARIABLE's value is ${MY_VARIABLE}"
+ after_script:
+   - echo "JOB_DEFINED_VARIABLE's value is ${JOB_DEFINED_VARIABLE}"
+   - echo "CI_COMMIT_SHA's value is ${CI_COMMIT_SHA}"
+   - echo "MY_VARIABLE's value is ${MY_VARIABLE}"
 ```
 
 When the runner executes the job:
 
 1. `before_script` is executed:
-    1. Prints to the output.
-    1. Defines the variable for `MY_VARIABLE`.
+   1. Prints to the output.
+   1. Defines the variable for `MY_VARIABLE`.
 1. `script` is executed:
-    1. Prints to the output.
-    1. Prints the value of `JOB_DEFINED_VARIABLE`.
-    1. Prints the value of `CI_COMMIT_SHA`.
-    1. Prints the value of `MY_VARIABLE`.
+   1. Prints to the output.
+   1. Prints the value of `JOB_DEFINED_VARIABLE`.
+   1. Prints the value of `CI_COMMIT_SHA`.
+   1. Prints the value of `MY_VARIABLE`.
 1. `after_script` is executed in a new, separate shell context:
-    1. Prints to the output.
-    1. Prints the value of `JOB_DEFINED_VARIABLE`.
-    1. Prints the value of `CI_COMMIT_SHA`.
-    1. Prints an empty value of `MY_VARIABLE`. The variable value cannot be detected because `after_script` is in a separate shell context to `before_script`.
+   1. Prints to the output.
+   1. Prints the value of `JOB_DEFINED_VARIABLE`.
+   1. Prints the value of `CI_COMMIT_SHA`.
+   1. Prints an empty value of `MY_VARIABLE`. The variable value cannot be detected because `after_script` is in a separate shell context to `before_script`.
 
 ## Related topics
 
@@ -940,8 +1002,8 @@ if [[ -d "/builds/gitlab-examples/ci-debug-trace/.git" ]]; then
 ++ CI_SERVER_PROTOCOL=https
 ++ export CI_SERVER_NAME=GitLab
 ++ CI_SERVER_NAME=GitLab
-++ export GITLAB_FEATURES=audit_events,burndown_charts,code_owners,contribution_analytics,description_diffs,elastic_search,group_bulk_edit,group_burndown_charts,group_webhooks,issuable_default_templates,issue_weights,jenkins_integration,ldap_group_sync,member_lock,merge_request_approvers,multiple_issue_assignees,multiple_ldap_servers,multiple_merge_request_assignees,protected_refs_for_users,push_rules,related_issues,repository_mirrors,repository_size_limit,scoped_issue_board,usage_quotas,visual_review_app,wip_limits,adjourned_deletion_for_projects_and_groups,admin_audit_log,auditor_user,batch_comments,blocking_merge_requests,board_assignee_lists,board_milestone_lists,ci_cd_projects,cluster_deployments,code_analytics,code_owner_approval_required,commit_committer_check,cross_project_pipelines,custom_file_templates,custom_file_templates_for_namespace,custom_project_templates,custom_prometheus_metrics,cycle_analytics_for_groups,db_load_balancing,default_project_deletion_protection,dependency_proxy,deploy_board,design_management,email_additional_text,extended_audit_events,external_authorization_service_api_management,feature_flags,file_locks,geo,github_integration,group_allowed_email_domains,group_project_templates,group_saml,issues_analytics,jira_dev_panel_integration,ldap_group_sync_filter,merge_pipelines,merge_request_performance_metrics,merge_trains,metrics_reports,multiple_approval_rules,multiple_group_issue_boards,object_storage,operations_dashboard,packages,productivity_analytics,project_aliases,protected_environments,reject_unsigned_commits,required_ci_templates,scoped_labels,service_desk,smartcard_auth,group_timelogs,type_of_work_analytics,unprotection_restrictions,ci_project_subscriptions,container_scanning,dast,dependency_scanning,epics,group_ip_restriction,incident_management,insights,license_management,personal_access_token_expiration_policy,pod_logs,prometheus_alerts,report_approver_rules,sast,security_dashboard,tracing,web_ide_terminal
-++ GITLAB_FEATURES=audit_events,burndown_charts,code_owners,contribution_analytics,description_diffs,elastic_search,group_bulk_edit,group_burndown_charts,group_webhooks,issuable_default_templates,issue_weights,jenkins_integration,ldap_group_sync,member_lock,merge_request_approvers,multiple_issue_assignees,multiple_ldap_servers,multiple_merge_request_assignees,protected_refs_for_users,push_rules,related_issues,repository_mirrors,repository_size_limit,scoped_issue_board,usage_quotas,visual_review_app,wip_limits,adjourned_deletion_for_projects_and_groups,admin_audit_log,auditor_user,batch_comments,blocking_merge_requests,board_assignee_lists,board_milestone_lists,ci_cd_projects,cluster_deployments,code_analytics,code_owner_approval_required,commit_committer_check,cross_project_pipelines,custom_file_templates,custom_file_templates_for_namespace,custom_project_templates,custom_prometheus_metrics,cycle_analytics_for_groups,db_load_balancing,default_project_deletion_protection,dependency_proxy,deploy_board,design_management,email_additional_text,extended_audit_events,external_authorization_service_api_management,feature_flags,file_locks,geo,github_integration,group_allowed_email_domains,group_project_templates,group_saml,issues_analytics,jira_dev_panel_integration,ldap_group_sync_filter,merge_pipelines,merge_request_performance_metrics,merge_trains,metrics_reports,multiple_approval_rules,multiple_group_issue_boards,object_storage,operations_dashboard,packages,productivity_analytics,project_aliases,protected_environments,reject_unsigned_commits,required_ci_templates,scoped_labels,service_desk,smartcard_auth,group_timelogs,type_of_work_analytics,unprotection_restrictions,ci_project_subscriptions,cluster_health,container_scanning,dast,dependency_scanning,epics,group_ip_restriction,incident_management,insights,license_management,personal_access_token_expiration_policy,pod_logs,prometheus_alerts,report_approver_rules,sast,security_dashboard,tracing,web_ide_terminal
+++ export GITLAB_FEATURES=audit_events,burndown_charts,code_owners,contribution_analytics,description_diffs,elastic_search,group_bulk_edit,group_burndown_charts,group_webhooks,issuable_default_templates,issue_weights,jenkins_integration,ldap_group_sync,member_lock,merge_request_approvers,multiple_issue_assignees,multiple_ldap_servers,multiple_merge_request_assignees,protected_refs_for_users,push_rules,related_issues,repository_mirrors,repository_size_limit,scoped_issue_board,usage_quotas,wip_limits,adjourned_deletion_for_projects_and_groups,admin_audit_log,auditor_user,batch_comments,blocking_merge_requests,board_assignee_lists,board_milestone_lists,ci_cd_projects,cluster_deployments,code_analytics,code_owner_approval_required,commit_committer_check,cross_project_pipelines,custom_file_templates,custom_file_templates_for_namespace,custom_project_templates,custom_prometheus_metrics,cycle_analytics_for_groups,db_load_balancing,default_project_deletion_protection,dependency_proxy,deploy_board,design_management,email_additional_text,extended_audit_events,external_authorization_service_api_management,feature_flags,file_locks,geo,github_integration,group_allowed_email_domains,group_project_templates,group_saml,issues_analytics,jira_dev_panel_integration,ldap_group_sync_filter,merge_pipelines,merge_request_performance_metrics,merge_trains,metrics_reports,multiple_approval_rules,multiple_group_issue_boards,object_storage,operations_dashboard,packages,productivity_analytics,project_aliases,protected_environments,reject_unsigned_commits,required_ci_templates,scoped_labels,service_desk,smartcard_auth,group_timelogs,type_of_work_analytics,unprotection_restrictions,ci_project_subscriptions,container_scanning,dast,dependency_scanning,epics,group_ip_restriction,incident_management,insights,license_management,personal_access_token_expiration_policy,pod_logs,prometheus_alerts,report_approver_rules,sast,security_dashboard,tracing,web_ide_terminal
+++ GITLAB_FEATURES=audit_events,burndown_charts,code_owners,contribution_analytics,description_diffs,elastic_search,group_bulk_edit,group_burndown_charts,group_webhooks,issuable_default_templates,issue_weights,jenkins_integration,ldap_group_sync,member_lock,merge_request_approvers,multiple_issue_assignees,multiple_ldap_servers,multiple_merge_request_assignees,protected_refs_for_users,push_rules,related_issues,repository_mirrors,repository_size_limit,scoped_issue_board,usage_quotas,wip_limits,adjourned_deletion_for_projects_and_groups,admin_audit_log,auditor_user,batch_comments,blocking_merge_requests,board_assignee_lists,board_milestone_lists,ci_cd_projects,cluster_deployments,code_analytics,code_owner_approval_required,commit_committer_check,cross_project_pipelines,custom_file_templates,custom_file_templates_for_namespace,custom_project_templates,custom_prometheus_metrics,cycle_analytics_for_groups,db_load_balancing,default_project_deletion_protection,dependency_proxy,deploy_board,design_management,email_additional_text,extended_audit_events,external_authorization_service_api_management,feature_flags,file_locks,geo,github_integration,group_allowed_email_domains,group_project_templates,group_saml,issues_analytics,jira_dev_panel_integration,ldap_group_sync_filter,merge_pipelines,merge_request_performance_metrics,merge_trains,metrics_reports,multiple_approval_rules,multiple_group_issue_boards,object_storage,operations_dashboard,packages,productivity_analytics,project_aliases,protected_environments,reject_unsigned_commits,required_ci_templates,scoped_labels,service_desk,smartcard_auth,group_timelogs,type_of_work_analytics,unprotection_restrictions,ci_project_subscriptions,cluster_health,container_scanning,dast,dependency_scanning,epics,group_ip_restriction,incident_management,insights,license_management,personal_access_token_expiration_policy,pod_logs,prometheus_alerts,report_approver_rules,sast,security_dashboard,tracing,web_ide_terminal
 ++ export CI_PROJECT_ID=17893
 ++ CI_PROJECT_ID=17893
 ++ export CI_PROJECT_NAME=ci-debug-trace
@@ -949,14 +1011,9 @@ if [[ -d "/builds/gitlab-examples/ci-debug-trace/.git" ]]; then
 ...
 ```
 
-#### Restrict access to debug logging
+#### Access to debug logging
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/213159) in GitLab 13.7.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/292661) in GitLab 13.8.
-
-You can restrict access to debug logging. When restricted, only users with
-at least the Developer role
-can view job logs when debug logging is enabled with a variable in:
+Access to debug logging is restricted to [users with at least the Developer role](../../user/permissions.md#gitlab-cicd-permissions). Users with a lower role cannot see the logs when debug logging is enabled with a variable in:
 
 - The [`.gitlab-ci.yml` file](#define-a-cicd-variable-in-the-gitlab-ciyml-file).
 - The CI/CD variables set in the GitLab UI.

@@ -2,13 +2,14 @@
 
 require 'spec_helper'
 
-RSpec.describe Gitlab::ImportExport::Base::RelationFactory do
+RSpec.describe Gitlab::ImportExport::Base::RelationFactory, feature_category: :importers do
   let(:user) { create(:admin) }
   let(:project) { create(:project) }
   let(:members_mapper) { double('members_mapper').as_null_object }
   let(:relation_sym) { :project_snippets }
   let(:relation_hash) { {} }
   let(:excluded_keys) { [] }
+  let(:import_source) { Import::SOURCE_DIRECT_TRANSFER }
 
   subject do
     described_class.create( # rubocop:disable Rails/SaveBang
@@ -19,7 +20,8 @@ RSpec.describe Gitlab::ImportExport::Base::RelationFactory do
       members_mapper: members_mapper,
       user: user,
       importable: project,
-      excluded_keys: excluded_keys
+      excluded_keys: excluded_keys,
+      import_source: import_source
     )
   end
 
@@ -88,6 +90,28 @@ RSpec.describe Gitlab::ImportExport::Base::RelationFactory do
 
       it 'creates imported object' do
         expect(subject).to be_instance_of(Note)
+      end
+
+      it 'sets imported_from' do
+        expect(subject.imported_from).to eq(Import::SOURCE_DIRECT_TRANSFER.to_s)
+      end
+
+      context 'when import_source is gitlab_project' do
+        let(:import_source) { Import::SOURCE_PROJECT_EXPORT_IMPORT }
+
+        it 'sets imported_from' do
+          expect(subject.imported_from).to eq(Import::SOURCE_PROJECT_EXPORT_IMPORT.to_s)
+        end
+      end
+
+      context 'when object does not have an imported_from attribute' do
+        let(:relation_sym) { :user }
+        let(:relation_hash) { attributes_for(:user) }
+
+        it 'works without an error' do
+          expect(subject).not_to respond_to(:imported_from) # Sanity check: This must be true for test subject
+          expect(subject).to be_instance_of(User)
+        end
       end
 
       context 'when relation contains user references' do
@@ -182,6 +206,14 @@ RSpec.describe Gitlab::ImportExport::Base::RelationFactory do
 
       it 'returns constantized class' do
         expect(described_class.relation_class(relation_name)).to eq(Badge)
+      end
+    end
+
+    context 'when relation name is user_contributions' do
+      let(:relation_name) { 'user_contributions' }
+
+      it 'returns constantized class' do
+        expect(described_class.relation_class(relation_name)).to eq(User)
       end
     end
   end

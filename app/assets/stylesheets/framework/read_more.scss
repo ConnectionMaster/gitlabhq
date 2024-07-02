@@ -17,7 +17,7 @@
     }
   }
 
-  &:has(.read-more-content--has-scrim:not(.is-expanded)) {
+  &:has(.read-more-content:not(.is-expanded)) {
     position: relative;
     max-height: var(--read-more-height, #{$fallback - $height});
     scroll-padding-top: 1000vh; // Fix anchor scroll, keep it up top
@@ -33,6 +33,6 @@
     right: 0;
     top: calc(var(--read-more-height, #{$fallback}) - #{$scrim} - #{$height});
     height: $scrim;
-    background: linear-gradient(180deg, transparent, $white);
+    background: linear-gradient(180deg, transparent, var(--gl-background-color-default));
   }
 }

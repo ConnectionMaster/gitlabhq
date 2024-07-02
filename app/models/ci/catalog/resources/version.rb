@@ -7,10 +7,8 @@ module Ci
       # Only versions which contain valid CI components are included in this table.
       class Version < ::ApplicationRecord
         include BulkInsertableAssociations
+        include CacheMarkdownField
         include SemanticVersionable
-
-        semver_method :version
-        validate_semver
 
         self.table_name = 'catalog_resource_versions'
 
@@ -26,16 +24,27 @@ module Ci
         scope :by_name, ->(name) { joins(:release).merge(Release.where(tag: name)) }
         scope :by_sha, ->(sha) { joins(:release).merge(Release.where(sha: sha)) }
         scope :with_semver, -> { where.not(semver_major: nil) }
+        scope :without_prerelease, -> { where(semver_prerelease: nil) }
 
         delegate :sha, :author_id, to: :release
+
+        cache_markdown_field :readme
 
         before_create :sync_with_release
         after_destroy :update_catalog_resource
         after_save :update_catalog_resource
 
         class << self
-          def latest
-            with_semver.order_by_semantic_version_desc.first
+          def latest(major = nil, minor = nil)
+            raise ArgumentError, 'semver minor version used without major version' if minor.present? &&
+              major.blank?
+
+            relation = with_semver
+            relation = relation.without_prerelease
+            relation = relation.where(semver_major: major) if major
+            relation = relation.where(semver_minor: minor) if minor
+
+            relation.order_by_semantic_version_desc.first
           end
 
           def versions_for_catalog_resources(catalog_resources)
@@ -46,7 +55,7 @@ module Ci
         end
 
         def name
-          release.tag
+          semver.to_s
         end
 
         def commit
@@ -58,7 +67,9 @@ module Ci
         end
 
         def readme
-          project.repository.tree(sha).readme
+          return unless project.repo_exists?
+
+          project.repository.tree(sha).readme&.data
         end
 
         def sync_with_release!

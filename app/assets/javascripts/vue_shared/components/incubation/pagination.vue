@@ -1,7 +1,6 @@
 <script>
 import { GlKeysetPagination } from '@gitlab/ui';
 import { setUrlParams } from '~/lib/utils/url_utility';
-import { __ } from '~/locale';
 
 export default {
   name: 'KeysetPagination',
@@ -39,22 +38,16 @@ export default {
       return this.hasPreviousPage || this.hasNextPage;
     },
   },
-  i18n: {
-    previousPageButtonLabel: __('Prev'),
-    nextPageButtonLabel: __('Next'),
-  },
 };
 </script>
 
 <template>
-  <div v-if="isPaginationVisible" class="gl--flex-center">
+  <div v-if="isPaginationVisible" class="gl-flex gl-justify-center gl-items-center">
     <gl-keyset-pagination
       :start-cursor="startCursor"
       :end-cursor="endCursor"
       :has-previous-page="hasPreviousPage"
       :has-next-page="hasNextPage"
-      :prev-text="$options.i18n.previousPageButtonLabel"
-      :next-text="$options.i18n.nextPageButtonLabel"
       :prev-button-link="previousPageLink"
       :next-button-link="nextPageLink"
       class="gl-mt-4"

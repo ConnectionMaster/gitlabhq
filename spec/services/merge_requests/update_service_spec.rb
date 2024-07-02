@@ -285,24 +285,6 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
         end
       end
 
-      it 'executes hooks with update action' do
-        expect(service).to have_received(:execute_hooks)
-          .with(
-            @merge_request,
-            'update',
-            old_associations: {
-              labels: [],
-              mentioned_users: [user2],
-              assignees: [user3],
-              reviewers: [],
-              milestone: nil,
-              total_time_spent: 0,
-              time_change: 0,
-              description: "FYI #{user2.to_reference}"
-            }
-          )
-      end
-
       context 'with reviewers' do
         let(:opts) { { reviewer_ids: [user2.id] } }
 
@@ -553,7 +535,7 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
             head_pipeline_of: merge_request
           )
 
-          expect(AutoMerge::MergeWhenPipelineSucceedsService).to receive(:new).with(project, user, { sha: merge_request.diff_head_sha })
+          expect(AutoMerge::MergeWhenChecksPassService).to receive(:new).with(project, user, { sha: merge_request.diff_head_sha })
             .and_return(service_mock)
           allow(service_mock).to receive(:available_for?) { true }
           expect(service_mock).to receive(:execute).with(merge_request)
@@ -897,7 +879,7 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           update_merge_request(title: 'New title')
         end
 
-        context 'when additional_merge_when_checks_ready is enabled' do
+        context 'when merge_when_checks_pass is enabled' do
           it 'publishes a DraftStateChangeEvent' do
             expected_data = {
               current_user_id: user.id,
@@ -908,9 +890,9 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           end
         end
 
-        context 'when additional_merge_when_checks_ready is disabled' do
+        context 'when merge_when_checks_pass is disabled' do
           before do
-            stub_feature_flags(additional_merge_when_checks_ready: false)
+            stub_feature_flags(merge_when_checks_pass: false)
           end
 
           it 'does not publish a DraftStateChangeEvent' do
@@ -944,7 +926,7 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           should_not_email(non_subscriber)
         end
 
-        context 'when additional_merge_when_checks_ready is enabled' do
+        context 'when merge_when_checks_pass is enabled' do
           it 'publishes a DraftStateChangeEvent' do
             expected_data = {
               current_user_id: user.id,
@@ -955,9 +937,9 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           end
         end
 
-        context 'when additional_merge_when_checks_ready is disabled' do
+        context 'when merge_when_checks_pass is disabled' do
           before do
-            stub_feature_flags(additional_merge_when_checks_ready: false)
+            stub_feature_flags(merge_when_checks_pass: false)
           end
 
           it 'does not publish a DraftStateChangeEvent' do
@@ -1086,26 +1068,39 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
       let(:first_issue) { create(:issue, project: project) }
       let(:second_issue) { create(:issue, project: project) }
 
-      it 'creates a `MergeRequestsClosingIssues` record for each issue' do
+      it 'creates a `MergeRequestsClosingIssues` record marked as from_mr_description for each issue' do
         issue_closing_opts = { description: "Closes #{first_issue.to_reference} and #{second_issue.to_reference}" }
         service = described_class.new(project: project, current_user: user, params: issue_closing_opts)
         allow(service).to receive(:execute_hooks)
-        service.execute(merge_request)
 
-        issue_ids = MergeRequestsClosingIssues.where(merge_request: merge_request).pluck(:issue_id)
-        expect(issue_ids).to match_array([first_issue.id, second_issue.id])
+        expect do
+          service.execute(merge_request)
+        end.to change { MergeRequestsClosingIssues.count }.by(2)
+
+        expect(MergeRequestsClosingIssues.where(merge_request: merge_request)).to contain_exactly(
+          have_attributes(issue_id: first_issue.id, from_mr_description: true),
+          have_attributes(issue_id: second_issue.id, from_mr_description: true)
+        )
       end
 
-      it 'removes `MergeRequestsClosingIssues` records when issues are not closed anymore' do
+      it 'removes `MergeRequestsClosingIssues` records marked as from_mr_description' do
+        third_issue = create(:issue, project: project)
         create(:merge_requests_closing_issues, issue: first_issue, merge_request: merge_request)
         create(:merge_requests_closing_issues, issue: second_issue, merge_request: merge_request)
+        create(
+          :merge_requests_closing_issues,
+          issue: third_issue,
+          merge_request: merge_request,
+          from_mr_description: false
+        )
 
         service = described_class.new(project: project, current_user: user, params: { description: "not closing any issues" })
         allow(service).to receive(:execute_hooks)
-        service.execute(merge_request.reload)
 
-        issue_ids = MergeRequestsClosingIssues.where(merge_request: merge_request).pluck(:issue_id)
-        expect(issue_ids).to be_empty
+        # Does not delete the one marked as from_mr_description: false
+        expect do
+          service.execute(merge_request.reload)
+        end.to change { MergeRequestsClosingIssues.count }.from(3).to(1)
       end
     end
 
@@ -1310,7 +1305,8 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           :merge_request,
           source_project: project,
           source_branch: 'mr-b',
-          target_branch: 'mr-a'
+          target_branch: 'mr-a',
+          head_pipeline_id: 1
         )
       end
 
@@ -1323,17 +1319,29 @@ RSpec.describe MergeRequests::UpdateService, :mailer, feature_category: :code_re
           .to change { merge_request.reload.target_branch }.from('mr-a').to('master')
       end
 
-      it 'updates to master because of branch deletion' do
-        expect(SystemNoteService).to receive(:change_branch).with(
-          merge_request, project, user, 'target', 'delete', 'mr-a', 'master'
-        )
-
-        expect { update_merge_request(target_branch: 'master', target_branch_was_deleted: true) }
-          .to change { merge_request.reload.target_branch }.from('mr-a').to('master')
-      end
-
       it_behaves_like "creates a new pipeline" do
         let(:new_target_branch) { "target" }
+      end
+
+      context 'when target_branch_was_deleted is true' do
+        it 'updates to master because of branch deletion' do
+          expect(SystemNoteService).to receive(:change_branch).with(
+            merge_request, project, user, 'target', 'delete', 'mr-a', 'master'
+          )
+
+          expect { update_merge_request(target_branch: 'master', target_branch_was_deleted: true) }
+            .to change { merge_request.reload.target_branch }.from('mr-a').to('master')
+        end
+
+        it 'does not create a new pipeline' do
+          expect(MergeRequests::CreatePipelineWorker).not_to receive(:perform_async)
+
+          expect { update_merge_request(target_branch: 'master', target_branch_was_deleted: true) }
+            .to change { merge_request.reload.target_branch }.from('mr-a').to('master')
+
+          expect(merge_request.reload.head_pipeline_id).to be_nil
+          expect(merge_request.retargeted).to eq(true)
+        end
       end
     end
 

@@ -19,17 +19,19 @@ module Gitlab
         Config::Yaml::Tags::TagError
       ].freeze
 
-      attr_reader :root, :context, :source_ref_path, :source, :logger, :inject_edge_stages
+      attr_reader :root, :context, :source_ref_path, :source, :logger, :inject_edge_stages, :pipeline_policy_context
 
       # rubocop: disable Metrics/ParameterLists
-      def initialize(config, project: nil, pipeline: nil, sha: nil, user: nil, parent_pipeline: nil, source: nil, pipeline_config: nil, logger: nil, inject_edge_stages: true)
+      def initialize(config, project: nil, pipeline: nil, sha: nil, ref: nil, user: nil, parent_pipeline: nil, source: nil, pipeline_config: nil, logger: nil, inject_edge_stages: true, pipeline_policy_context: nil)
         @logger = logger || ::Gitlab::Ci::Pipeline::Logger.new(project: project)
         @source_ref_path = pipeline&.source_ref_path
         @project = project
         @inject_edge_stages = inject_edge_stages
+        @pipeline_policy_context = pipeline_policy_context
 
         @context = self.logger.instrument(:config_build_context, once: true) do
-          pipeline ||= ::Ci::Pipeline.new(project: project, sha: sha, user: user, source: source)
+          pipeline ||= ::Ci::Pipeline.new(project: project, sha: sha, ref: ref, user: user, source: source)
+
           build_context(project: project, pipeline: pipeline, sha: sha, user: user, parent_pipeline: parent_pipeline, pipeline_config: pipeline_config)
         end
 
@@ -37,16 +39,18 @@ module Gitlab
 
         @source = source
 
-        @config = self.logger.instrument(:config_expand, once: true) do
-          expand_config(config)
-        end
+        Gitlab::Ci::Config::FeatureFlags.with_actor(project) do
+          @config = self.logger.instrument(:config_expand, once: true) do
+            expand_config(config)
+          end
 
-        @root = self.logger.instrument(:config_root, once: true) do
-          Entry::Root.new(@config, project: project, user: user, logger: self.logger)
-        end
+          @root = self.logger.instrument(:config_root, once: true) do
+            Entry::Root.new(@config, project: project, user: user, logger: self.logger)
+          end
 
-        self.logger.instrument(:config_root_compose, once: true) do
-          @root.compose!
+          self.logger.instrument(:config_root_compose, once: true) do
+            @root.compose!
+          end
         end
       rescue *rescue_errors => e
         raise Config::ConfigError, e.message
@@ -113,7 +117,7 @@ module Gitlab
       end
 
       def included_components
-        @context.includes.filter_map { |i| i[:extra] if i[:type] == :component }.uniq
+        @context.includes.filter_map { |i| i[:component] if i[:type] == :component }.uniq
       end
 
       def metadata

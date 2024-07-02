@@ -98,9 +98,12 @@ Consult these topics for information on contributing to specific GitLab features
 - [AI features](ai_features/index.md)
 - [Application settings](application_settings.md)
 - [Remote Development](remote_development/index.md)
+- [Markdown (GLFM) development guide](gitlab_flavored_markdown/index.md)
 
 ### Import and Export
 
+- [Add new relations to the direct transfer importer](bulk_imports/contributing.md)
+- [Principles of importer design](import/principles_of_importer_design.md)
 - [Working with the GitHub importer](github_importer.md)
 - [Import/Export development documentation](import_export.md)
 - [Test Import Project](import_project.md)
@@ -127,15 +130,15 @@ See [database guidelines](database/index.md).
 ## Integration guides
 
 - [Integrations development guide](integrations/index.md)
-- [Jira Connect app](integrations/jira_connect.md)
+- [GitLab for Jira Cloud app](integrations/jira_connect.md)
 - [Security Scanners](integrations/secure.md)
 - [Secure Partner Integration](integrations/secure_partner_integration.md)
 - [How to run Jenkins in development environment](integrations/jenkins.md)
 
 The following integration guides are internal. Some integrations require access to administrative accounts of third-party services and are available only for GitLab team members to contribute to:
 
-- [Jira app development](https://gitlab.com/gitlab-org/manage/integrate/team/-/blob/main/integrations/jira.md)
-- [GitLab for Slack app development](https://gitlab.com/gitlab-org/manage/integrate/team/-/blob/main/integrations/slack.md)
+- [Jira integration development](https://gitlab.com/gitlab-org/manage/import-and-integrate/team/-/blob/main/integrations/jira.md)
+- [GitLab for Slack app development](https://gitlab.com/gitlab-org/manage/import-and-integrate/team/-/blob/main/integrations/slack.md)
 
 ## Testing guides
 
@@ -191,7 +194,6 @@ The following integration guides are internal. Some integrations require access 
 ## Other development guides
 
 - [Defining relations between files using projections](projections.md)
-- [Reference processing](reference_processing.md)
 - [Compatibility with multiple versions of the application running at the same time](multi_version_compatibility.md)
 - [Features inside `.gitlab/`](features_inside_dot_gitlab.md)
 - [Dashboards for stage groups](stage_group_observability/index.md)
@@ -202,7 +204,6 @@ The following integration guides are internal. Some integrations require access 
 
 ## Other GitLab Development Kit (GDK) guides
 
-- [Run full Auto DevOps cycle in a GDK instance](https://gitlab.com/gitlab-org/gitlab-development-kit/blob/main/doc/howto/auto_devops.md)
 - [Using GitLab Runner with the GDK](https://gitlab.com/gitlab-org/gitlab-development-kit/blob/main/doc/howto/runner.md)
 - [Using the Web IDE terminal with the GDK](https://gitlab.com/gitlab-org/gitlab-development-kit/-/blob/main/doc/howto/web_ide_terminal_gdk_setup.md)
 - [Gitpod configuration internals page](gitpod_internals.md)

@@ -8,7 +8,7 @@ class Oauth::AuthorizationsController < Doorkeeper::AuthorizationsController
   before_action :add_gon_variables
   before_action :verify_confirmed_email!, :verify_admin_allowed!
 
-  layout 'profile'
+  layout 'minimal'
 
   # Overridden from Doorkeeper::AuthorizationsController to
   # include the call to session.delete
@@ -82,7 +82,7 @@ class Oauth::AuthorizationsController < Doorkeeper::AuthorizationsController
   end
 
   def doorkeeper_application
-    strong_memoize(:doorkeeper_application) { ::Doorkeeper::OAuth::Client.find(params['client_id'])&.application }
+    strong_memoize(:doorkeeper_application) { ::Doorkeeper::OAuth::Client.find(params['client_id'].to_s)&.application }
   end
 
   def application_has_read_user_scope?

@@ -6,6 +6,7 @@ module Projects
 
     ImportSourceDisabledError = Class.new(StandardError)
     INTERNAL_IMPORT_SOURCES = %w[gitlab_custom_project_template gitlab_project_migration].freeze
+    README_FILE = 'README.md'
 
     def initialize(user, params)
       @current_user = user
@@ -51,9 +52,8 @@ module Projects
 
       set_project_name_from_path
 
-      # get namespace id
-      namespace_id = params[:namespace_id] || current_user.namespace_id
-      @project.namespace_id = namespace_id.to_i
+      @project.namespace_id = (params[:namespace_id] || current_user.namespace_id).to_i
+      @project.organization_id = (params[:organization_id] || @project.namespace.organization_id).to_i
 
       @project.check_personal_projects_limit
       return @project if @project.errors.any?
@@ -102,6 +102,7 @@ module Projects
 
     def validate_import_permissions
       return unless @project.import?
+      return if @project.gitlab_project_import?
       return if current_user.can?(:import_projects, parent_namespace)
 
       @project.errors.add(:user, 'is not allowed to import projects')
@@ -112,11 +113,6 @@ module Projects
 
       if @project.import?
         Gitlab::Tracking.event(self.class.name, 'import_project', user: current_user)
-      else
-        # Skip writing the config for project imports/forks because it
-        # will always fail since the Git directory doesn't exist until
-        # a background job creates it (see Project#add_import_job).
-        @project.set_full_path
       end
 
       unless @project.gitlab_project_import?
@@ -202,7 +198,7 @@ module Projects
       commit_attrs = {
         branch_name: default_branch,
         commit_message: 'Initial commit',
-        file_path: 'README.md',
+        file_path: README_FILE,
         file_content: readme_content
       }
 
@@ -244,7 +240,7 @@ module Projects
           Namespaces::ProjectNamespace.create_from_project!(@project) if @project.valid?
 
           if @project.saved?
-            Integration.create_from_active_default_integrations(@project, :project_id)
+            Integration.create_from_default_integrations(@project, :project_id)
 
             @project.create_labels unless @project.gitlab_project_import?
 
@@ -316,6 +312,9 @@ module Projects
       return if @params[:import_export_upload].present? && import_type == 'gitlab_project'
 
       unless ::Gitlab::CurrentSettings.import_sources&.include?(import_type)
+        return if import_type == 'github' && Feature.enabled?(:override_github_disabled, current_user, type: :ops)
+        return if import_type == 'bitbucket_server' && Feature.enabled?(:override_bitbucket_server_disabled, current_user, type: :ops)
+
         raise ImportSourceDisabledError, "#{import_type} import source is disabled"
       end
     end

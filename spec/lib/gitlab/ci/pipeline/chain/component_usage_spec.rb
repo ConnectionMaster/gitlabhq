@@ -8,9 +8,9 @@ RSpec.describe Gitlab::Ci::Pipeline::Chain::ComponentUsage, feature_category: :p
   let_it_be(:pipeline) { create(:ci_pipeline, project: project) }
   let_it_be(:resource) { create(:ci_catalog_resource) }
 
+  let_it_be(:release) { create(:release, project: resource.project, tag: '1.2.0', sha: 'my_component_sha') }
   let_it_be(:version) do
-    create(:release, :with_catalog_resource_version, project: resource.project, tag: '1.2.0', sha: 'my_component_sha')
-      .catalog_resource_version
+    create(:ci_catalog_resource_version, catalog_resource: resource, release: release, semver: release.tag)
   end
 
   let_it_be(:component) { create(:ci_catalog_resource_component, version: version, name: 'my_component') }
@@ -26,9 +26,9 @@ RSpec.describe Gitlab::Ci::Pipeline::Chain::ComponentUsage, feature_category: :p
       allow(command).to receive(:yaml_processor_result)
         .and_return(instance_double(Gitlab::Ci::YamlProcessor::Result,
           included_components: [{
-            component_project: component.project,
-            component_sha: version.sha,
-            component_name: component.name
+            project: component.project,
+            sha: version.sha,
+            name: component.name
           }]
         ))
     end
@@ -48,22 +48,6 @@ RSpec.describe Gitlab::Ci::Pipeline::Chain::ComponentUsage, feature_category: :p
       it 'does not create a component usage record' do
         step.perform!
 
-        expect { perform }.not_to change { Ci::Catalog::Resources::Components::Usage.count }
-      end
-    end
-
-    context 'when the FF `ci_track_catalog_component_usage` is disabled' do
-      before do
-        stub_feature_flags(ci_track_catalog_component_usage: false)
-      end
-
-      it 'does not track an internal event' do
-        expect(Gitlab::InternalEvents).not_to receive(:track_event)
-
-        perform
-      end
-
-      it 'does not create a component usage record' do
         expect { perform }.not_to change { Ci::Catalog::Resources::Components::Usage.count }
       end
     end

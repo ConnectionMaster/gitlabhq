@@ -11,13 +11,14 @@ Deployment is the step of the software delivery process when your
 application gets deployed to its final, target infrastructure.
 
 You can deploy your application internally or to the public.
-Preview a release in a Review App, and use feature flags to
+Preview a release in a review app, and use feature flags to
 release features incrementally.
 
+- [Getting started](../user/get_started/get_started_deploy_release.md)
+- [Packages and registries](../user/packages/index.md)
 - [Environments and deployments](../ci/environments/index.md)
 - [Releases](../user/project/releases/index.md)
-- [Packages and registries](../user/packages/index.md)
-- [Review Apps](../ci/review_apps/index.md)
+- [Roll out an application incrementally](../ci/environments/incremental_rollouts.md)
 - [Feature flags](../operations/feature_flags.md)
 - [GitLab Pages](../user/project/pages/index.md)
 
@@ -30,7 +31,7 @@ release features incrementally.
   deployment using GitLab CI/CD. Auto Deploy has built-in support for EC2 and ECS deployments.
 - Deploy to Kubernetes clusters by using the [GitLab agent](../user/clusters/agent/install/index.md).
 - Use Docker images to run AWS commands from GitLab CI/CD, and a template to
-  facilitate [deployment to AWS](../ci/cloud_deployment).
+  facilitate [deployment to AWS](../ci/cloud_deployment/index.md).
 - Use GitLab CI/CD to target any type of infrastructure accessible by GitLab Runner.
   [User and pre-defined environment variables](../ci/variables/index.md) and CI/CD templates
   support setting up a vast number of deployment strategies.

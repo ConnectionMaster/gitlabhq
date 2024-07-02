@@ -157,7 +157,7 @@ export default {
       const sourceData = cache.readQuery(query);
 
       const newData = produce(sourceData, (draftState) => {
-        const { widgets } = draftState.workspace.workItems.nodes[0];
+        const { widgets } = draftState.workspace.workItem;
 
         const widgetCurrentUserTodos = widgets.find(
           (widget) => widget.type === WIDGET_TYPE_CURRENT_USER_TODOS,
@@ -182,6 +182,6 @@ export default {
     :aria-label="buttonLabel"
     @click="onToggle"
   >
-    <gl-icon :class="{ 'gl-fill-blue-500': pendingTodo }" :name="buttonIcon" />
+    <gl-icon :class="{ '!gl-fill-blue-500': pendingTodo }" :name="buttonIcon" />
   </gl-button>
 </template>

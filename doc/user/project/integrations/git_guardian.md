@@ -2,6 +2,7 @@
 stage: Create
 group: Source Code
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Integrate GitLab with GitGuardian to get alerts for policy violations and security issues before they can be exploited."
 ---
 
 # GitGuardian
@@ -71,6 +72,17 @@ To enable the integration for your project:
 1. Select **Save changes**.
 
 GitLab is now ready to reject commits based on GitGuardian policies.
+
+## Skip secret detection
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/152064) in GitLab 17.0.
+
+You can skip GitGuardian secret detection, if needed. The options to skip
+secret detection for all commits in a push are identical to the options for
+[Native Secret Detection](../../application_security/secret_detection/secret_push_protection/index.md#skip-secret-push-protection). Either:
+
+- Add `[skip secret detection]` to one of the commit messages.
+- Use the `secret_detection.skip_all` push option.
 
 ## Known issues
 

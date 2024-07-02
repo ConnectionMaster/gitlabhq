@@ -42,6 +42,8 @@ class Commit
   MAX_DIFF_FILES_SETTING_UPPER_BOUND = 3_000
   DIFF_SAFE_LIMIT_FACTOR = 10
 
+  CO_AUTHORED_TRAILER = "Co-authored-by"
+
   cache_markdown_field :title, pipeline: :single_line
   cache_markdown_field :full_title, pipeline: :single_line, limit: 1.kilobyte
   cache_markdown_field :description, pipeline: :commit_description, limit: 1.megabyte
@@ -581,23 +583,15 @@ class Commit
   end
 
   def branches_containing(limit: 0, exclude_tipped: false)
-    # WARNING: This argument can be confusing, if there is a limit.
-    # for example set the limit to 5 and in the 5 out a total of 25 refs there is 2 tipped refs,
-    # then the method will only 3 refs, even though there is more.
     excluded = exclude_tipped ? tipping_branches : []
 
-    refs = repository.branch_names_contains(id, limit: limit) || []
-    refs - excluded
+    repository.branch_names_contains(id, limit: limit, exclude_refs: excluded) || []
   end
 
   def tags_containing(limit: 0, exclude_tipped: false)
-    # WARNING: This argument can be confusing, if there is a limit.
-    # for example set the limit to 5 and in the 5 out a total of 25 refs there is 2 tipped refs,
-    # then the method will only 3 refs, even though there is more.
     excluded = exclude_tipped ? tipping_tags : []
 
-    refs = repository.tag_names_contains(id, limit: limit) || []
-    refs - excluded
+    repository.tag_names_contains(id, limit: limit, exclude_refs: excluded) || []
   end
 
   private

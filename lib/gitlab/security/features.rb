@@ -10,11 +10,22 @@ module Gitlab
           sast: {
             name: _('Static Application Security Testing (SAST)'),
             short_name: _('SAST'),
-            description: _('Analyze your source code for known vulnerabilities.'),
+            description: _('Analyze your source code for vulnerabilities.'),
             help_path: Gitlab::Routing.url_helpers.help_page_path('user/application_security/sast/index'),
             configuration_help_path: Gitlab::Routing.url_helpers.help_page_path('user/application_security/sast/index',
               anchor: 'configuration'),
             type: 'sast'
+          },
+          sast_advanced: {
+            name: _('GitLab Advanced SAST'),
+            short_name: _('Advanced SAST'),
+            description: _('Analyze your source code for vulnerabilities with the GitLab Advanced SAST analyzer.'),
+            help_path: Gitlab::Routing.url_helpers.help_page_path(
+              'user/application_security/sast/gitlab_advanced_sast'),
+            configuration_help_path: Gitlab::Routing.url_helpers.help_page_path(
+              'user/application_security/sast/gitlab_advanced_sast',
+              anchor: 'configuration'),
+            type: 'sast_advanced'
           },
           sast_iac: {
             name: _('Infrastructure as Code (IaC) Scanning'),
@@ -31,7 +42,7 @@ module Gitlab
               text: _('Available on demand'),
               tooltip_text: _(
                 'On-demand scans run outside of the DevOps cycle and find vulnerabilities in your projects'),
-              variant: 'info'
+              variant: 'neutral'
             },
             secondary: {
               type: 'dast_profiles',
@@ -69,9 +80,25 @@ module Gitlab
               'user/application_security/container_scanning/index', anchor: 'configuration'),
             type: 'container_scanning'
           },
+          container_scanning_for_registry: {
+            name: _('Container Scanning For Registry'),
+            description: _('Run container scanning job whenever a container image with the latest tag is pushed.'),
+            help_path: Gitlab::Routing.url_helpers.help_page_path(
+              'user/application_security/continuous_vulnerability_scanning/index'),
+            type: 'container_scanning_for_registry'
+          },
+          pre_receive_secret_detection: {
+            name: _('Secret push protection'),
+            description: _('Block secrets such as keys and API tokens from being pushed to your repositories. ' \
+                           'Secret push protection is triggered when commits are pushed to a repository. ' \
+                           'If any secrets are detected, the push is blocked.'),
+            help_path: Gitlab::Routing.url_helpers.help_page_path(
+              'user/application_security/secret_detection/secret_push_protection/index'),
+            type: 'pre_receive_secret_detection'
+          },
           secret_detection: {
-            name: _('Secret Detection'),
-            description: _('Analyze your source code and Git history for secrets.'),
+            name: _('Pipeline Secret Detection'),
+            description: _('Analyze your source code and Git history for secrets by using CI/CD pipelines.'),
             help_path: Gitlab::Routing.url_helpers.help_page_path(
               'user/application_security/secret_detection/pipeline/index'),
             configuration_help_path: Gitlab::Routing.url_helpers.help_page_path(
@@ -108,7 +135,7 @@ module Gitlab
               text: s_('SecurityConfiguration|Incubating feature'),
               tooltip_text: s_('SecurityConfiguration|Breach and Attack Simulation is an incubating ' \
                                'feature extending existing security testing by simulating adversary activity.'),
-              variant: 'info'
+              variant: 'neutral'
             },
             description: s_('SecurityConfiguration|Simulate breach and attack scenarios against your ' \
                             'running application by attempting to detect and exploit known vulnerabilities.'),

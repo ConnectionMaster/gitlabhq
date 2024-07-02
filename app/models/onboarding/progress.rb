@@ -4,9 +4,6 @@ module Onboarding
   class Progress < ApplicationRecord
     self.table_name = 'onboarding_progresses'
 
-    include IgnorableColumns
-    ignore_column :promote_ultimate_features_at, remove_with: '17.0', remove_after: '2024-04-13'
-
     belongs_to :namespace, optional: false
 
     validate :namespace_is_root_namespace
@@ -83,14 +80,14 @@ module Onboarding
       end
 
       def completed?(namespace, action)
-        return unless root_namespace?(namespace) && ACTIONS.include?(action)
+        return false unless root_namespace?(namespace) && ACTIONS.include?(action)
 
         action_column = column_name(action)
         where(namespace: namespace).where.not(action_column => nil).exists?
       end
 
       def not_completed?(namespace_id, action)
-        return unless ACTIONS.include?(action)
+        return false unless ACTIONS.include?(action)
 
         action_column = column_name(action)
         exists?(namespace_id: namespace_id, action_column => nil)

@@ -4,7 +4,7 @@ export const COMMENT_FORM = {
   GENERIC_UNSUBMITTABLE_NETWORK: __(
     'Your comment could not be submitted! Please check your network connection and try again.',
   ),
-  error: __('Your comment could not be submitted because %{reason}.'),
+  error: __('Comment could not be submitted: %{reason}.'),
   note: __('Note'),
   comment: __('Comment'),
   internalComment: __('Add internal note'),
@@ -46,9 +46,15 @@ export const COMMENT_FORM = {
     commentHelp: __('Add a general comment to this %{noteableDisplayName}.'),
     internalCommentHelp: __('Add a confidential internal note to this %{noteableDisplayName}.'),
   },
+  addToReviewButton: {
+    saveThread: __('Add thread to review'),
+    saveComment: __('Add comment to review'),
+  },
   attachmentMsg: s__(
     'Notes|Attachments are sent by email. Attachments over 10 MB are sent as links to your GitLab instance, and only accessible to project members.',
   ),
+  addCommentNow: __('Add comment now'),
+  addThreadNow: __('Add thread now'),
 };
 
 export const EDITED_TEXT = {
@@ -57,6 +63,6 @@ export const EDITED_TEXT = {
 };
 
 export const UPDATE_COMMENT_FORM = {
-  error: __('Your comment could not be updated because %{reason}.'),
+  error: __('Comment could not be updated: %{reason}.'),
   defaultError: __('Something went wrong while editing your comment. Please try again.'),
 };

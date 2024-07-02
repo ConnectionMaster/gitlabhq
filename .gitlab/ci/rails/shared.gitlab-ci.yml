@@ -56,6 +56,16 @@ include:
   variables:
     GITALY_PRAEFECT_WITH_DB: '1'
 
+.gitaly-with-transactions:
+  variables:
+    GITALY_TRANSACTIONS_ENABLED: "true"
+
+.gitaly-without-transactions:
+  extends:
+    - .rails:rules:gitaly-without-transactions
+  variables:
+    GITALY_TRANSACTIONS_ENABLED: "false"
+
 .rspec-base-needs:
   needs:
     - job: "clone-gitlab-repo"
@@ -68,6 +78,7 @@ include:
     - .rails-job-base
     - .base-artifacts
     - .repo-from-artifacts
+    - .gitaly-with-transactions
   stage: test
   variables:
     RUBY_GC_MALLOC_LIMIT: 67108864
@@ -92,7 +103,7 @@ include:
     - source scripts/utils.sh
     - bundle exec gem list gitlab_quality-test_tooling
     - |
-      section_start "relate-failure-issue" "Report test failures"
+      section_start "failed-test-issues" "Report test failures"
       if [ "$CREATE_RAILS_TEST_FAILURE_ISSUES" == "true" ]; then
         input_file="rspec/rspec-${CI_JOB_ID}.json"
 
@@ -101,22 +112,29 @@ include:
           input_file="rspec/rspec-retry-${CI_JOB_ID}.json"
         fi
 
-        bundle exec relate-failure-issue \
+        bundle exec failed-test-issues \
           --token "${TEST_FAILURES_PROJECT_TOKEN}" \
           --project "gitlab-org/gitlab" \
           --input-files "${input_file}" \
-          --exclude-labels-for-search "QA,rspec:slow test,knapsack_report" \
-          --system-log-files "log" \
+          --exclude-labels-for-search "QA,knapsack_report" \
           --related-issues-file "rspec/${CI_JOB_ID}-failed-test-issues.json";
+      else
+        echoinfo "Not reporting test failures because \$CREATE_RAILS_TEST_FAILURE_ISSUES != 'true'"
       fi
-      section_end "relate-failure-issue"
+      section_end "failed-test-issues"
     - |
       section_start "flaky-test-issues" "Report test flakiness"
-      if [ "$CREATE_RAILS_FLAKY_TEST_ISSUES" == "true" ] && [ -f "rspec/rspec-retry-${CI_JOB_ID}.json" ]; then
-        bundle exec flaky-test-issues \
-          --token "${TEST_FAILURES_PROJECT_TOKEN}" \
-          --project "gitlab-org/gitlab" \
-          --input-files "rspec/rspec-retry-${CI_JOB_ID}.json";
+      if [ "$CREATE_RAILS_FLAKY_TEST_ISSUES" == "true" ]; then
+        if [ -f "rspec/rspec-retry-${CI_JOB_ID}.json" ]; then
+          bundle exec flaky-test-issues \
+            --token "${TEST_FAILURES_PROJECT_TOKEN}" \
+            --project "gitlab-org/gitlab" \
+            --input-files "rspec/rspec-retry-${CI_JOB_ID}.json";
+        else
+          echoerr "Not reporting test flakiness because 'rspec/rspec-retry-${CI_JOB_ID}.json' is missing!"
+        fi
+      else
+        echoinfo "Not reporting test flakiness because \$CREATE_RAILS_FLAKY_TEST_ISSUES != 'true'"
       fi
       section_end "flaky-test-issues"
     - |
@@ -127,6 +145,8 @@ include:
           --project "gitlab-org/gitlab" \
           --input-files "rspec/rspec-*.json" \
           --related-issues-file "rspec/${CI_JOB_ID}-slow-test-issues.json";
+      else
+        echoinfo "Not reporting test slowness because \$CREATE_RAILS_SLOW_TEST_ISSUES != 'true'"
       fi
       section_end "slow-test-issues"
     - |
@@ -137,6 +157,8 @@ include:
           --project "gitlab-org/gitlab" \
           --input-files "rspec/rspec-*.json" \
           --merge_request_iid "$CI_MERGE_REQUEST_IID";
+      else
+        echoinfo "Not reporting test slowness in MR note because \$ADD_SLOW_TEST_NOTE_TO_MERGE_REQUEST != 'true'"
       fi
       section_end "slow-test-merge-request-report-note"
     - |
@@ -147,6 +169,8 @@ include:
           --project "gitlab-org/gitlab" \
           --input-file knapsack/rspec*_report.json \
           --expected-report knapsack/node_specs_expected_duration.json;
+      else
+        echoinfo "Not reporting test files close to timing out because \$ALLOW_KNAPSACK_REPORT_CREATE_ISSUES != 'true'"
       fi
       section_end "knapsack-report-issues"
     - tooling/bin/push_job_metrics || true
@@ -196,17 +220,6 @@ include:
     - 'sed -i "s|url:.*$|url: http://clickhouse:8123|g" config/click_house.yml'
     - !reference [.base-script, script]
     - rspec_section rspec_parallelized_job "--fail-fast=${RSPEC_FAIL_FAST_THRESHOLD} --tag click_house"
-
-.rspec-base-pg14-as-if-foss:
-  extends:
-    - .rspec-base
-    - .as-if-foss
-    - .use-pg14
-  needs:
-    - !reference [.rspec-base-needs, needs]
-    - job: "compile-test-assets as-if-foss"
-    - job: "detect-tests"
-      optional: true
 
 .rspec-base-pg15:
   extends:

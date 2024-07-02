@@ -1,6 +1,9 @@
 import { GlToast } from '@gitlab/ui';
 import Vue from 'vue';
 import VueApollo from 'vue-apollo';
+
+import { runnersAppProvide } from 'ee_else_ce/ci/runner/provide';
+
 import createDefaultClient from '~/lib/graphql';
 import { parseBoolean } from '~/lib/utils/common_utils';
 import { createLocalState } from '../graphql/list/local_state';
@@ -16,16 +19,8 @@ export const initGroupRunners = (selector = '#js-group-runners') => {
     return null;
   }
 
-  const {
-    allowRegistrationToken,
-    registrationToken,
-    runnerInstallHelpPage,
-    newRunnerPath,
-    groupId,
-    groupFullPath,
-    onlineContactTimeoutSecs,
-    staleTimeoutSecs,
-  } = el.dataset;
+  const { allowRegistrationToken, registrationToken, newRunnerPath, groupId, groupFullPath } =
+    el.dataset;
 
   const { cacheConfig, typeDefs, localMutations } = createLocalState();
 
@@ -37,11 +32,9 @@ export const initGroupRunners = (selector = '#js-group-runners') => {
     el,
     apolloProvider,
     provide: {
-      runnerInstallHelpPage,
-      localMutations,
+      ...runnersAppProvide(el.dataset),
       groupId,
-      onlineContactTimeoutSecs: parseInt(onlineContactTimeoutSecs, 10),
-      staleTimeoutSecs: parseInt(staleTimeoutSecs, 10),
+      localMutations,
     },
     render(h) {
       return h(GroupRunnersApp, {

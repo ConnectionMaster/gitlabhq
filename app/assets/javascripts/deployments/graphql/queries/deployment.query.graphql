@@ -25,8 +25,8 @@ query fetchDeployment($fullPath: ID!, $iid: ID!) {
       commit {
         id
         shortId
-        message
-        webUrl
+        title
+        webPath
         authorGravatar
         authorName
         authorEmail

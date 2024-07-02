@@ -246,8 +246,11 @@ the [`rules` configuration details](yaml/index.md#rules) carefully. The behavior
 of `only/except` and `rules` is different and can cause unexpected behavior when migrating
 between the two.
 
-The [common `if` clauses for `rules`](jobs/job_control.md#common-if-clauses-for-rules)
+The [common `if` clauses for `rules`](jobs/job_rules.md#common-if-clauses-with-predefined-variables)
 can be very helpful for examples of how to write rules that behave the way you expect.
+
+If a pipeline contains only jobs in the `.pre` or `.post` stages, it does not run.
+There must be at least one other job in a different stage.
 
 ### Unexpected behavior when `.gitlab-ci.yml` file contains a byte order mark (BOM)
 
@@ -259,7 +262,7 @@ Some text editors could insert a BOM character if configured to do so.
 
 If your pipeline has confusing behavior, you can check for the presence of BOM characters
 with a tool capable of displaying them. The pipeline editor cannot display the characters,
-so you must use an external tool. See [issue 35402](https://gitlab.com/gitlab-org/gitlab/-/issues/354026)
+so you must use an external tool. See [issue 354026](https://gitlab.com/gitlab-org/gitlab/-/issues/354026)
 for more details.
 
 ### A job with the `changes` keyword runs unexpectedly
@@ -280,7 +283,7 @@ associated with it. Usually one pipeline is a merge request pipeline, and the ot
 is a branch pipeline.
 
 This situation is usually caused by the `rules` configuration, and there are several ways to
-[prevent duplicate pipelines](jobs/job_control.md#avoid-duplicate-pipelines).
+[prevent duplicate pipelines](jobs/job_rules.md#avoid-duplicate-pipelines).
 
 ### No pipeline or the wrong type of pipeline runs
 
@@ -320,7 +323,7 @@ When you use [`rules`](yaml/index.md#rules) with a `when` clause without an `if`
 clause, multiple pipelines may run. Usually this occurs when you push a commit to
 a branch that has an open merge request associated with it.
 
-To [prevent duplicate pipelines](jobs/job_control.md#avoid-duplicate-pipelines), use
+To [prevent duplicate pipelines](jobs/job_rules.md#avoid-duplicate-pipelines), use
 [`workflow: rules`](yaml/index.md#workflow) or rewrite your rules to control
 which pipelines can run.
 
@@ -352,7 +355,7 @@ and error messages.
 
 ### `A CI/CD pipeline must run and be successful before merge` message
 
-This message is shown if the [**Pipelines must succeed**](../user/project/merge_requests/merge_when_pipeline_succeeds.md#require-a-successful-pipeline-for-merge)
+This message is shown if the [**Pipelines must succeed**](../user/project/merge_requests/auto_merge.md#require-a-successful-pipeline-for-merge)
 setting is enabled in the project and a pipeline has not yet run successfully.
 This also applies if the pipeline has not been created yet, or if you are waiting
 for an external CI service.
@@ -375,8 +378,8 @@ This issue is [resolved](https://gitlab.com/gitlab-org/gitlab/-/issues/229352) i
 
 ### `Checking pipeline status` message
 
-This message displays when the merge request does not yet have a pipeline associated with the
-latest commit. This might be because:
+This message displays with a spinning status icon (**{spinner}**) when the merge request
+does not yet have a pipeline associated with the latest commit. This might be because:
 
 - GitLab hasn't finished creating the pipeline yet.
 - You are using an external CI service and GitLab hasn't heard back from the service yet.
@@ -386,6 +389,11 @@ latest commit. This might be because:
 - The source branch of the merge request is on a private fork.
 
 After the pipeline is created, the message updates with the pipeline status.
+
+In some of these cases, the message might get stuck with the icon spinning endlessly
+if the [**Pipelines must succeed**](../user/project/merge_requests/auto_merge.md#require-a-successful-pipeline-for-merge)
+setting is enabled. See [issue 334281](https://gitlab.com/gitlab-org/gitlab/-/issues/334281)
+for more details.
 
 ### `Project <group/project> not found or access denied` message
 
@@ -459,7 +467,7 @@ These errors can happen if the following are both true:
   the private project's allowlist.
 
 To resolve this issue, add any projects with CI/CD jobs that fetch images from the container
-registry to the target project's [job token allowlist](jobs/ci_job_token.md#add-a-project-to-the-job-token-allowlist).
+registry to the target project's [job token allowlist](jobs/ci_job_token.md#add-a-group-or-project-to-the-job-token-allowlist).
 
 These errors might also happen when trying to use a [project access token](../user/project/settings/project_access_tokens.md)
 to access images in another project. Project access tokens are scoped to one project,
@@ -475,4 +483,19 @@ You might receive the following pipeline errors:
 
 These errors can happen if records of internal IDs become out of sync after a project is imported.
 
-To resolve this, see the [Workaround](https://gitlab.com/gitlab-org/gitlab/-/issues/352382#workaround) in issue #352382.
+To resolve this, see the [workaround in issue 352382](https://gitlab.com/gitlab-org/gitlab/-/issues/352382#workaround).
+
+### `config should be an array of hashes` error message
+
+You might see an error similar to the following when using [`!reference` tags](../ci/yaml/yaml_optimization.md#reference-tags)
+with the [`parallel:matrix` keyword](../ci/yaml/index.md#parallelmatrix):
+
+```plaintext
+This GitLab CI configuration is invalid: jobs:my_job_name:parallel:matrix config should be an array of hashes.
+```
+
+The `parallel:matrix` keyword does not support multiple `!reference` tags at the same time.
+Try using [YAML anchors](yaml/yaml_optimization.md#anchors) instead.
+
+[Issue 439828](https://gitlab.com/gitlab-org/gitlab/-/issues/439828) proposes improving
+`!reference` tag support in `parallel:matrix`.

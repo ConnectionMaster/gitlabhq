@@ -7,6 +7,8 @@ coach: [ "@andrewn" ]
 status: proposed
 ---
 
+<!-- vale gitlab.FutureTense = NO -->
+
 # Cells: Infrastructure
 
 ## Pre-reads
@@ -49,6 +51,16 @@ Below is the Cell architecture. You can find the current GitLab.com architecture
 
 ```plantuml
 @startuml
+!include <k8s/Common>
+!include <k8s/Context>
+!include <k8s/Simplified>
+!include <k8s/OSS/all>
+!include <gcp/GCPCommon>
+!include <gcp/Compute/all>
+!include <gcp/Databases/all>
+!include <gcp/Security/all>
+!include <gcp/Storage/all>
+
 skinparam actorStyle awesome
 skinparam frame {
   borderColor<<gcp_project>> #4285F4
@@ -76,6 +88,11 @@ cloud "cloud.gitlab.com" <<cloudflare>> {
 }
 :User:->gitlab.com
 :User:->cloud.gitlab.com
+
+cloud "ClickHouse Cloud" {
+  database "ClickHouse" as cell1Clickhouse
+  database "ClickHouse" as cell2Clickhouse
+}
 
 frame "Google Cloud Platform" <<gcp>> {
   frame "Cell Cluster" <<cluster>> {
@@ -146,60 +163,61 @@ frame "Google Cloud Platform" <<gcp>> {
     primaryCompute <--> primaryGitaly
     primaryGitaly .r[#F4B400].* gprdVPC
 
-    frame "gitlab-gprd-cell-1" <<gcp_project>> {
-        node cell1gke [
-        <b> GKE
-        ===
-        webservice
-        ---
-        gitlab-shell
-        ---
-        registry
-        ---
-        sidekiq
-        ---
-        kas
-        ---
-        ]
+    frame "cell-01HV3FBWXHSYBAR2R2" as cell1 <<gcp_project>> {
+      frame "cell-01HV3FBWXHSYBAR2R2 VPC" <<vpc>> as cell1VPC {
+        Cluster_Boundary(cell1gke, "cell1gke") {
+          Namespace_Boundary(cell1gitlab, "gitlab") {
+            KubernetesPod(cell1web, "Web", "")
+            KubernetesPod(cell1shell, "Shell", "")
+            KubernetesPod(cell1registry, "Registry", "")
+            KubernetesPod(cell1sidekiq, "Sidekiq", "")
+          }
+          Namespace_Boundary(cell1Observability, "monitoring") {
+            KubernetesPod(cell1Prom, "Prometheus", "")
+          }
+        }
 
-       rectangle "Storage" as cell1Storage {
-        database "Postgres" as cell1Postgres
-        database "Redis" as cell1Redis
-        file "object storage" as cell1ObjectStorage
-        file "gitaly" as cell1Gitaly
+        storage "Storage" as cell1Storage {
+          Cloud_SQL(cell1Postgres, "PostgreSQL", "")
+          Cloud_Memorystore(cell1Redis, "Redis", "")
+          Cloud_Storage(cell1ObjectStorage, "GCS", "")
+          Key_Management_Service(cell1SecretStorage, "GKMS", "")
+          Compute_Engine(cell1Gitaly, "Gitaly", "")
+        }
+        cell1gke <--> cell1Storage
+        cell1gke <---> cell1Clickhouse
       }
-
-      cell1gke <--> cell1Storage
     }
 
-    frame "gitlab-gprd-cell-2" <<gcp_project>> {
-        node cell2gke [
-        <b> GKE
-        ===
-        webservice
-        ---
-        gitlab-shell
-        ---
-        registry
-        ---
-        sidekiq
-        ---
-        kas
-        ---
-        ]
+    frame "cell-01HV3FBYX37C18SW05" as cell2 <<gcp_project>> {
+      frame "cell-01HV3FBYX37C18SW05 VPC" <<vpc>> as cell2VPC {
+        Cluster_Boundary(cell2gke, "cell2gke") {
+          Namespace_Boundary(cell2gitlab, "gitlab") {
+            KubernetesPod(cell2web, "Web", "")
+            KubernetesPod(cell2shell, "Shell", "")
+            KubernetesPod(cell2registry, "Registry", "")
+            KubernetesPod(cell2sidekiq, "Sidekiq", "")
+          }
+          Namespace_Boundary(cell2Observability, "monitoring") {
+            KubernetesPod(cell2Prom, "Prometheus", "")
+          }
+        }
 
-       rectangle "Storage" as cell2Storage {
-        database "Postgres" as cell2Postgres
-        database "Redis" as cell2Redis
-        file "object storage" as cell2ObjectStorage
-        file "gitaly" as cell2Gitaly
+        storage "Storage" as cell2Storage {
+          Cloud_SQL(cell2Postgres, "PostgreSQL", "")
+          Cloud_Memorystore(cell2Redis, "Redis", "")
+          Cloud_Storage(cell2ObjectStorage, "GCS", "")
+          Key_Management_Service(cell2SecretStorage, "GKMS", "")
+          Compute_Engine(cell2Gitaly, "Gitaly", "")
+        }
+
+        cell2gke <--> cell2Storage
+        cell2gke <---> cell2Clickhouse
       }
-
-      cell2gke <--> cell2Storage
     }
 
-    "gitlab-gprd-cell-2" .r[#F4B400].* gprdVPC
-    "gitlab-gprd-cell-1" .r[#F4B400].* gprdVPC
+    cell1VPC <. gprdVPC : Private Service Connect
+    cell2VPC <. gprdVPC : Private Service Connect
   }
 
   "Cell Cluster" -u-> cloud.gitlab.com
@@ -211,83 +229,169 @@ frame "Google Cloud Platform" <<gcp>> {
 @enduml
 ```
 
-- <details>
-  <summary> KAS: Select to Expand </summary>
+### KAS
 
-  ```plantuml
-  @startuml
+```plantuml
+@startuml
 
-  skinparam frame {
-    borderColor<<customer>> #F4B400
-  }
-  skinparam frame {
-    borderColor<<gcp>> #4285F4
-  }
-  skinparam cloud {
-    borderColor<<cloudflare>> #F48120
-  }
+skinparam frame {
+  borderColor<<customer>> #F4B400
+}
+skinparam frame {
+  borderColor<<gcp>> #4285F4
+}
+skinparam cloud {
+  borderColor<<cloudflare>> #F48120
+}
 
-  together {
-    frame "cluster 1" <<customer>> {
-        component "agentk" as cluster1AgentK
-    }
-
-    frame "cluster 2" <<customer>> {
-        component "agentk" as cluster2AgentK
-    }
-
-    frame "cluster 3" <<customer>> {
-        component "agentk" as cluster3AgentK
-    }
-
-    frame "workstation" <<customer>> {
-        component "kubectl"
-    }
+together {
+  frame "cluster 1" <<customer>> {
+      component "agentk" as cluster1AgentK
   }
 
-
-  cloud wss://kas.gitlab.com <<cloudflare>> as kas.gitlab.com {
-      component "routing service"
+  frame "cluster 2" <<customer>> {
+      component "agentk" as cluster2AgentK
   }
 
-  cluster1AgentK <..d..> kas.gitlab.com
-  cluster2AgentK <..d..> kas.gitlab.com
-  cluster3AgentK <--d--> kas.gitlab.com
-  kubectl <--d--> kas.gitlab.com
-
-  together {
-    frame "gprd-gitlab-cell-1" <<gcp>> {
-      component kas as kasCell1
-      component webservice as webserviceCell1
-      component redis as redisCell1
-      collections "gitaly(s)" as gitalyCell1
-
-      kasCell1 <-d-> webserviceCell1
-      kasCell1 <-d-> redisCell1
-      kasCell1 <-d-> gitalyCell1
-    }
-
-    frame "gprd-gitlab-cell-2" <<gcp>> {
-      component kas as kasCell2
-      component webservice as webserviceCell2
-      component redis as redisCell2
-      collections "gitaly(s)" as gitalyCell2
-
-      kasCell2 <-d-> webserviceCell2
-      kasCell2 <-d-> redisCell2
-      kasCell2 <-d-> gitalyCell2
-    }
+  frame "cluster 3" <<customer>> {
+      component "agentk" as cluster3AgentK
   }
 
-  "routing service" <--d--> kasCell1
-  "routing service" <--d--> kasCell1
-  "routing service" <..d..> kasCell2
-  "routing service" <..d..> kasCell2
+  frame "workstation" <<customer>> {
+      component "kubectl"
+  }
+}
 
-  @enduml
-  ```
 
-  </details>
+cloud wss://kas.gitlab.com <<cloudflare>> as kas.gitlab.com {
+    component "routing service"
+}
+
+cluster1AgentK <..d..> kas.gitlab.com
+cluster2AgentK <..d..> kas.gitlab.com
+cluster3AgentK <--d--> kas.gitlab.com
+kubectl <--d--> kas.gitlab.com
+
+together {
+  frame "gprd-gitlab-cell-1" <<gcp>> {
+    component kas as kasCell1
+    component webservice as webserviceCell1
+    component redis as redisCell1
+    collections "gitaly(s)" as gitalyCell1
+
+    kasCell1 <-d-> webserviceCell1
+    kasCell1 <-d-> redisCell1
+    kasCell1 <-d-> gitalyCell1
+  }
+
+  frame "gprd-gitlab-cell-2" <<gcp>> {
+    component kas as kasCell2
+    component webservice as webserviceCell2
+    component redis as redisCell2
+    collections "gitaly(s)" as gitalyCell2
+
+    kasCell2 <-d-> webserviceCell2
+    kasCell2 <-d-> redisCell2
+    kasCell2 <-d-> gitalyCell2
+  }
+}
+
+"routing service" <--d--> kasCell1
+"routing service" <--d--> kasCell1
+"routing service" <..d..> kasCell2
+"routing service" <..d..> kasCell2
+
+@enduml
+```
+
+### Rings
+
+`Rings` serve as the basis of the mental model of how we group the Cells we provision and the existing infrastructure.
+Inside of a ring, there is X number of Cells, subsequent rings consist of more cells gradually covering the entire fleet.
+Each Ring will be a superset of the previous rings.
+For example ring zero only contains the Cells in ring zero,
+ring 5 contains the Cells in `ring 5` and all other rings before it.
+Changes cascade outwards from inner rings to outer rings in discrete stages.
+For example If a change has reached `ring 5`, it will have reached ring 4, 3, 2, and 1.
+
+Any type of rollout will allow start from `ring 0` and move to subsequent rings if the change is successful,
+if it fails we can stop the rollout and we don't affect all of our customers.
+With this type of progressive rollout, we'll get the following benefits:
+
+1. Changes have a smaller blast radius, not affecting all customers at once.
+1. Clear boundaries on how to roll out a change.
+1. Removes the need of having different environments like [Staging](#staging), all Cells will be production.
+1. The more confident we are with a change the wider the audience.
+
+```plantuml
+@startuml
+
+skinparam frame {
+  borderColor<<Cells 1.0>> #0F9D58
+}
+
+skinparam frame {
+  borderColor<<Cells 1.5+>> #F4B400
+}
+
+left to right direction
+
+frame "Ring 3" <<cells 1.5+>> {
+  component "01HWRY6Y73W6TW3BHC"
+  component "01HWRY6Y740CZSBCGB"
+  component "01HWRY6Y74AHZ0AFZ1"
+  component "01HWRY6Y743018H2N7"
+
+  frame "Ring 2" <<Cells 1.0>> {
+    component "01HWRY6Y74HM0SKTZ9"
+    component "01HWRY6Y74YZF5DX5C"
+    component "01HWRY6Y74QYG7VV2Y"
+    component "01HWRY6Y745BE459Y6"
+    component "01HWRY6Y74915AAS8E"
+    component "01HWRY6Y74EV3ZVXF5"
+    component "01HWRY6Y74REVKJK3P"
+    component "01HWRY6Y748ZBGR9G1"
+    component "01HWRY6Y74AR5HHJ4H"
+    component "01HWRY6Y743V5085XK"
+
+    frame "Ring 1" <<Cells 1.0>> {
+      frame "Ring 0" <<Cells 1.0>> {
+        component "Canary stage" <<legacy>> as cny
+        component "01HWRY6Y745RS405F6"
+      }
+
+      component "Main stage\nPrimary Cell" <<legacy>> as Primary
+    }
+  }
+}
+
+@enduml
+```
+
+For [Cells 1.0](../iterations/cells-1.0.md) our aim is to have up to 10 cells inside `ring 2`.
+The number of Cells in a ring is arbitrary, their size is still to be determined.
+It will take into consideration our necessity to [adequately test auto-deploy packages before a public release](deployments.md#package-rollout-policy),
+the speed of a full production rollout for security fixes,
+and the protection from outages or bugs of our users.
+
+Where we'll eventually use rings for:
+
+1. [Deployments](deployments.md#ring-deployment).
+1. Roll out configuration changes.
+1. Feature flag rollouts.
+
+#### Staging
+
+We do not have the traditional Staging environment in rings,
+because we can test changes in the first rings which achieves the same outcome.
+This doesn't mean that we will shut off the existing staging environment,
+which will still be in use for the non-cell infrastructure.
+
+With this set up we'll end up removing some of the problems we have with staging right now:
+
+1. Staging is not a real representation of Production.
+1. We consider Staging as Production because it blocks deployments.
+1. The configuration of Staging can drift from Production.
 
 ## Large Domains
 
@@ -298,16 +402,17 @@ When we have a blueprint merged ideally the confidence should move to 👍 becau
 
 | Domain                           | Owner                             | Blueprint                                                                 | Confidence |
 |----------------------------------|-----------------------------------|---------------------------------------------------------------------------|------------|
-| Routing                          | group::tenant scale               | [Blueprint](../routing-service.md)                                        | 👍         |
+| Routing                          | group::tenant scale               | [Blueprint](../http_routing_service.md)                                        | 👍         |
 | Cell Control Plane               | group::Delivery/team::Foundations | To-Do                                                                     | 👎         |
 | Cell Sizing                      | team::Scalability-Observability   | [To-Do](https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/2838) | 👎         |
 | CI Runners                       | team::Scalability-Practices       | To-Do                                                                     | 👎         |
-| Databases                        | team::Database Reliability        | [To-Do](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/144238)     | 👎         |
+| Databases                        | team::Database Reliability        | [Blueprint](postgresql.md)                                                | 👍         |
 | Deployments                      | group::Delivery                   | [Blueprint](deployments.md)                                               | 👍         |
 | Observability                    | team::Scalability-Observability   | [Blueprint](observability.md)                                             | 👎         |
-| Cell Architecture and Tooling    | team::Foundations                 | [To-Do](https://gitlab.com/groups/gitlab-com/gl-infra/-/epics/1209)       | 👎         |
+| Cell Architecture and Tooling    | team::Foundations                 | [Blueprint](cell_arch_tooling.md)       | 👍         |
 | Provisioning                     | team::Foundations                 | To-Do                                                                     | 👎         |
 | Configuration Management/Rollout | team::Foundations                 | To-Do                                                                     | 👎         |
+| Disaster Recovery                 | team::Production Engineering       | [Blueprint](disaster_recovery.md)                                         | 👍         |
 
 ```plantuml
 @startuml

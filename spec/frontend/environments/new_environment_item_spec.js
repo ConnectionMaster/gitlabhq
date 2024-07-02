@@ -64,8 +64,7 @@ describe('~/environments/components/new_environment_item.vue', () => {
   it('truncates the name if it is very long', () => {
     const environment = {
       ...resolvedEnvironment,
-      name:
-        'this is a really long name that should be truncated because otherwise it would look strange in the UI',
+      name: 'this is a really long name that should be truncated because otherwise it would look strange in the UI',
     };
     wrapper = createWrapper({ propsData: { environment }, apolloProvider: createApolloProvider() });
 
@@ -356,7 +355,7 @@ describe('~/environments/components/new_environment_item.vue', () => {
     it('is collapsed by default', () => {
       expect(collapse.props('visible')).toBe(false);
       expect(icon.props('name')).toBe('chevron-lg-right');
-      expect(environmentName.classes('gl-font-weight-bold')).toBe(false);
+      expect(environmentName.classes('gl-font-bold')).toBe(false);
     });
 
     it('opens on click', async () => {
@@ -368,7 +367,7 @@ describe('~/environments/components/new_environment_item.vue', () => {
       expect(button.props('category')).toBe('secondary');
       expect(collapse.props('visible')).toBe(true);
       expect(icon.props('name')).toBe('chevron-lg-down');
-      expect(environmentName.classes('gl-font-weight-bold')).toBe(true);
+      expect(environmentName.classes('gl-font-bold')).toBe(true);
       expect(findDeployment().isVisible()).toBe(true);
     });
   });

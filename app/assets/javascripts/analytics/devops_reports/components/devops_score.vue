@@ -72,7 +72,6 @@ export default {
       v-if="isEmpty"
       :title="__('Data is still calculating...')"
       :svg-path="noDataImagePath"
-      :svg-height="null"
     >
       <template #description>
         <p class="gl-mb-0">{{ __('It may be several days before you see feature usage data.') }}</p>
@@ -104,7 +103,7 @@ export default {
         <template #cell(usage)="{ item }">
           <div data-testid="usageCol">
             <span>{{ item.usage }}</span>
-            <gl-badge :variant="item.scoreLevel.variant" size="sm" class="gl-ml-1">{{
+            <gl-badge :variant="item.scoreLevel.variant" class="gl-ml-1">{{
               item.scoreLevel.label
             }}</gl-badge>
           </div>

@@ -9,7 +9,7 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
 
   # We need to reload as the shared example 'pipelines visibility table' is changing project
   let_it_be(:project, reload: true) do
-    create(:project, :repository, creator: user)
+    create(:project, :repository, creator: user, maintainers: user)
   end
 
   let_it_be(:pipeline) do
@@ -21,10 +21,6 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
       user: user,
       name: 'Build pipeline'
     )
-  end
-
-  before do
-    project.add_maintainer(user)
   end
 
   describe 'GET /projects/:id/pipelines ' do
@@ -546,7 +542,7 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
   end
 
   describe 'GET /projects/:id/pipelines/:pipeline_id/bridges' do
-    let_it_be(:bridge) { create(:ci_bridge, pipeline: pipeline) }
+    let_it_be(:bridge) { create(:ci_bridge, pipeline: pipeline, user: pipeline.user) }
 
     let(:downstream_pipeline) { create(:ci_pipeline) }
 
@@ -670,7 +666,7 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
         end
       end
 
-      it 'avoids N+1 queries' do
+      it 'avoids N+1 queries', :use_sql_query_cache, :request_store do
         control = ActiveRecord::QueryRecorder.new(skip_cached: false) do
           get api("/projects/#{project.id}/pipelines/#{pipeline.id}/bridges", api_user), params: query
         end
@@ -679,7 +675,7 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
 
         expect do
           get api("/projects/#{project.id}/pipelines/#{pipeline.id}/bridges", api_user), params: query
-        end.not_to exceed_all_query_limit(control)
+        end.to issue_same_number_of_queries_as(control)
       end
     end
 
@@ -724,7 +720,7 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
     end
 
     def create_bridge(pipeline, status = :created)
-      create(:ci_bridge, status: status, pipeline: pipeline).tap do |bridge|
+      create(:ci_bridge, status: status, pipeline: pipeline, user: pipeline.user).tap do |bridge|
         downstream_pipeline = create(:ci_pipeline)
         create(
           :ci_sources_pipeline,
@@ -1336,6 +1332,34 @@ RSpec.describe API::Ci::Pipelines, feature_category: :continuous_integration do
 
           expect(response).to have_gitlab_http_status(:ok)
           expect(json_response['test_suites'].first['suite_error']).to eq('JUnit XML parsing failed: 1:1: FATAL: Document is empty')
+        end
+      end
+
+      context 'caching', :use_clean_rails_redis_caching, :clean_gitlab_redis_shared_state do
+        context 'when the test report is not ready yet' do
+          it 'does not cache the endpoint' do
+            api("/projects/#{project.id}/pipelines/#{pipeline.id}/test_report", user)
+
+            expect(TestReportEntity).to receive(:represent)
+
+            get api("/projects/#{project.id}/pipelines/#{pipeline.id}/test_report", user)
+          end
+        end
+
+        context 'when the test report is ready' do
+          before do
+            allow_next_found_instance_of(Ci::Pipeline) do |pipeline|
+              allow(pipeline).to receive(:has_test_reports?).and_return(true)
+            end
+          end
+
+          it 'caches the test report' do
+            get api("/projects/#{project.id}/pipelines/#{pipeline.id}/test_report", user)
+
+            expect(TestReportEntity).not_to receive(:represent)
+
+            get api("/projects/#{project.id}/pipelines/#{pipeline.id}/test_report", user)
+          end
         end
       end
     end

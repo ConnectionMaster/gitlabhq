@@ -133,7 +133,7 @@ To create a group:
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 For details about groups, watch [GitLab Namespaces (users, groups and subgroups)](https://youtu.be/r0sJgjR2f5A).
 
-## Edit group name and description
+## Edit group name, description, and avatar
 
 You can edit your group details from the group general settings.
 
@@ -148,6 +148,7 @@ To edit group details:
 1. In the **Group name** text box, enter your group name. See the [limitations on group names](../../user/reserved_names.md).
 1. Optional. In the **Group description (optional)** text box, enter your group description.
    The description is limited to 500 characters.
+1. Optional. Under **Group avatar**, select **Choose file**, then select an image. The ideal image size is 192 x 192 pixels, and the maximum file size allowed is 200 KB.
 1. Select **Save changes**.
 
 ## Leave a group
@@ -165,53 +166,52 @@ To leave a group:
 1. On the group overview page, in the upper-right corner, select **Actions** (**{ellipsis_v})**.
 1. Select **Leave group**, then **Leave group** again.
 
-## Remove a group
+## Delete a group
 
 > - Enabled delayed deletion by default and removed the option to delete immediately [on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/393622) and [on self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/119606) in GitLab 16.0.
 
-To remove a group and its contents:
+To delete a group and its contents:
 
 1. On the left sidebar, select **Search or go to** and find your group.
 1. Select **Settings > General**.
 1. Expand the **Advanced** section.
-1. In the **Remove group** section, select **Remove group**.
+1. In the **Delete group** section, select **Delete group**.
 1. On the confirmation dialog, type the group name and select **Confirm**.
 
-You can also remove a group from the groups dashboard:
+You can also delete a group from the groups dashboard:
 
 1. On the left sidebar, select **Search or go to**.
 1. Select **View all my groups**.
 1. Select (**{ellipsis_v}**) for the group you want to delete.
 1. Select **Delete**.
-1. In the **Remove group** section, select **Remove group**.
+1. In the **Delete group** section, select **Delete group**.
 1. On the confirmation dialog, type the group name and select **Confirm**.
 
-In [GitLab 12.8 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/33257), on GitLab [Premium](https://about.gitlab.com/pricing/premium/) and [Ultimate](https://about.gitlab.com/pricing/ultimate/), this action adds a background job to mark a group for deletion. By default, the job schedules the deletion seven days in the future. You can modify this retention period through the [instance settings](../../administration/settings/visibility_and_access_controls.md#deletion-protection).
+On GitLab [Premium](https://about.gitlab.com/pricing/premium/) and [Ultimate](https://about.gitlab.com/pricing/ultimate/), this action adds a background job to mark a group for deletion. By default, the job schedules the deletion seven days in the future. You can modify this retention period through the [instance settings](../../administration/settings/visibility_and_access_controls.md#deletion-protection).
 
-In [GitLab 13.6 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/39504), if the user who sets up the deletion is removed from the group before the deletion happens, the job is cancelled, and the group is no longer scheduled for deletion.
+If the user who set up the deletion is removed from the group before the deletion happens, the job is cancelled, and the group is no longer scheduled for deletion.
 
-## Remove a group immediately
+## Delete a group immediately
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/336985) in GitLab 14.2.
 > - Enabled delayed deletion by default and removed the option to delete immediately [on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/393622) and [on self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/119606) in GitLab 16.0.
 
-If you don't want to wait, you can remove a group immediately.
+If you don't want to wait, you can delete a group immediately.
 
 Prerequisites:
 
 - You must have the Owner role for a group.
-- You have [marked the group for deletion](#remove-a-group).
+- You have [marked the group for deletion](#delete-a-group).
 
-To immediately remove a group marked for deletion:
+To immediately delete a group marked for deletion:
 
 1. On the left sidebar, select **Search or go to** and find your group.
 1. Select **Settings > General**.
 1. Expand **Advanced**.
-1. In the **Permanently remove group** section, select **Remove group**.
+1. In the **Permanently delete group** section, select **Delete group**.
 1. Confirm the action when asked to.
 
 This action deletes the group, its subgroups, projects, and all related resources, including issues and merge requests.
@@ -221,8 +221,6 @@ This action deletes the group, its subgroups, projects, and all related resource
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/33257) in GitLab 12.8.
 
 To restore a group that is marked for deletion:
 
@@ -250,7 +248,7 @@ If you change your mind before your request is approved, select
 
 ## View group members
 
-To view a group's members:
+To view the direct and inherited members of a group:
 
 1. On the left sidebar, select **Search or go to** and find your group.
 1. Select **Manage > Members**.
@@ -272,11 +270,9 @@ NOTE:
 The display of group members' **Source** might be inconsistent.
 For more information, see [issue 23020](https://gitlab.com/gitlab-org/gitlab/-/issues/23020).
 
-## Filter and sort members in a group
+To view all namespace members (and their respective occupied seats), in the top-level namespace, [view the **Usage Quotas** page](../../subscriptions/gitlab_com/index.md#view-seat-usage).
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/21727) in GitLab 12.6.
-> - [Improved](https://gitlab.com/gitlab-org/gitlab/-/issues/228675) in GitLab 13.7.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/289911) in GitLab 13.8.
+## Filter and sort members in a group
 
 To find members in a group, you can sort, filter, or search.
 

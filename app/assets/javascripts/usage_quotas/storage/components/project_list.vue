@@ -112,7 +112,6 @@ export default {
     :sort-by="sortBy"
     sort-desc
     no-local-sorting
-    no-sort-reset
     @sort-changed="$emit('sortChanged', $event)"
   >
     <template v-for="field in fields" #[getHeaderSlotName(field.key)]>
@@ -144,7 +143,7 @@ export default {
 
       <gl-link
         :href="getUsageQuotasUrl(project.webUrl)"
-        class="gl-text-gray-900! js-project-link gl-word-break-word"
+        class="gl-text-gray-900! js-project-link gl-break-anywhere"
         data-testid="project-link"
       >
         {{ getProjectRelativePath(project.nameWithNamespace) }}

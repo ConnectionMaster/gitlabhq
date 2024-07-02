@@ -1,6 +1,7 @@
 <script>
 import {
   GlAlert,
+  GlButton,
   GlDropdown,
   GlDropdownItem,
   GlEmptyState,
@@ -53,6 +54,7 @@ const DEFAULT_PAGE_SIZE = PAGE_SIZES[0];
 export default {
   components: {
     GlAlert,
+    GlButton,
     GlDropdown,
     GlDropdownItem,
     GlEmptyState,
@@ -143,13 +145,13 @@ export default {
     {
       key: 'webUrl',
       label: s__('BulkImport|Source group'),
-      thClass: 'gl-pl-0! gl-w-half',
+      thClass: 'gl-pl-0! gl-w-1/2',
       tdClass: 'gl-pl-0!',
     },
     {
       key: 'importTarget',
       label: s__('BulkImport|New group'),
-      thClass: `gl-w-half`,
+      thClass: `gl-w-1/2`,
     },
     {
       key: 'progress',
@@ -398,7 +400,10 @@ export default {
           : {}),
       };
 
-      this.$set(this.importTargets, group.id, newImportTarget);
+      this.importTargets = {
+        ...this.importTargets,
+        [group.id]: newImportTarget,
+      };
       this.validateImportTarget(newImportTarget);
     },
 
@@ -568,6 +573,10 @@ export default {
     }, VALIDATION_DEBOUNCE_TIME),
 
     setDefaultImportTarget(group) {
+      if (!this.availableNamespaces) {
+        return;
+      }
+
       const lastTargetNamespace = this.availableNamespaces.find(
         (ns) => ns.id === this.defaultTargetNamespace,
       );
@@ -590,11 +599,14 @@ export default {
       }
 
       const cancellationToken = axios.CancelToken.source();
-      this.$set(this.importTargets, group.id, {
-        ...importTarget,
-        cancellationToken,
-        validationErrors: [],
-      });
+      this.importTargets = {
+        ...this.importTargets,
+        [group.id]: {
+          ...importTarget,
+          cancellationToken,
+          validationErrors: [],
+        },
+      };
 
       if (!importTarget.targetNamespace) {
         return;
@@ -649,9 +661,16 @@ export default {
         <img :src="$options.gitlabLogo" class="gl-w-6 gl-h-6" />
         <span>{{ s__('BulkImport|Import groups by direct transfer') }}</span>
       </h1>
-      <gl-link :href="historyPath" class="gl-ml-auto" data-testid="history-link">{{
-        s__('BulkImport|History')
-      }}</gl-link>
+      <gl-button
+        size="small"
+        variant="confirm"
+        category="secondary"
+        :href="historyPath"
+        class="gl-ml-auto"
+        data-testid="history-link"
+      >
+        {{ s__('BulkImport|View import history') }}
+      </gl-button>
     </div>
     <gl-alert
       v-if="unavailableFeatures.length > 0 && unavailableFeaturesAlertVisible"
@@ -767,7 +786,7 @@ export default {
       </gl-empty-state>
       <template v-else>
         <div
-          class="gl-bg-gray-10 gl-border-solid gl-border-gray-200 gl-border-0 gl-border-b-1 gl-px-4 gl-display-flex gl-align-items-center gl-sticky gl-z-index-3 import-table-bar"
+          class="gl-bg-gray-10 gl-border-solid gl-border-gray-200 gl-border-0 gl-border-b-1 gl-px-4 gl-display-flex gl-align-items-center gl-sticky gl-z-3 import-table-bar"
         >
           <span data-test-id="selection-count">
             <gl-sprintf :message="__('%{count} selected')">
@@ -822,7 +841,7 @@ export default {
           class="gl-w-full import-table"
           :tbody-tr-class="rowClasses"
           :tbody-tr-attr="qaRowAttributes"
-          thead-class="gl-sticky gl-z-index-2 gl-bg-gray-10"
+          thead-class="gl-sticky gl-z-2 gl-bg-gray-10"
           :items="groupsTableData"
           :fields="$options.fields"
           selectable

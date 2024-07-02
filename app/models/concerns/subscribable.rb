@@ -41,7 +41,7 @@ module Subscribable
           id: subscription.subscribable_id,
           subscribable_type: subscription.subscribable_type,
           project_id: subscription.project_id
-          }, subscription)
+        }, subscription)
       end
     end
   end
@@ -131,3 +131,5 @@ module Subscribable
     end
   end
 end
+
+Subscribable.prepend_mod

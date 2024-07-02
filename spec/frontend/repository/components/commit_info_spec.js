@@ -53,7 +53,7 @@ describe('Repository last commit component', () => {
     expect(findCommitterWrapper().classes()).toEqual([
       'committer',
       'gl-flex-basis-full',
-      'gl-display-inline-flex',
+      'gl-inline-flex',
     ]);
     expect(findUserLink().classes()).toEqual([
       'commit-author-link',
@@ -77,12 +77,12 @@ describe('Repository last commit component', () => {
 
     it('strips the first newline of the description', () => {
       expect(findCommitRowDescription().html()).toBe(
-        '<pre class="commit-row-description gl-mb-3 gl-white-space-pre-wrap">Update ADOPTERS.md</pre>',
+        '<pre class="commit-row-description gl-mb-3 gl-whitespace-pre-wrap">Update ADOPTERS.md</pre>',
       );
     });
 
     it('renders commit description collapsed by default', () => {
-      expect(findCommitRowDescription().classes('gl-display-block!')).toBe(false);
+      expect(findCommitRowDescription().classes('!gl-block')).toBe(false);
       expect(findTextExpander().classes('open')).toBe(false);
       expect(findTextExpander().props('selected')).toBe(false);
     });
@@ -91,7 +91,7 @@ describe('Repository last commit component', () => {
       findTextExpander().vm.$emit('click');
       await nextTick();
 
-      expect(findCommitRowDescription().classes('gl-display-block!')).toBe(true);
+      expect(findCommitRowDescription().classes('!gl-block')).toBe(true);
       expect(findTextExpander().classes('open')).toBe(true);
       expect(findTextExpander().props('selected')).toBe(true);
     });
@@ -116,6 +116,6 @@ describe('Repository last commit component', () => {
   it('sets correct CSS class if the commit message is empty', () => {
     createComponent({ commitMock: { message: '' } });
 
-    expect(findTitleHtml().classes()).toContain('gl-font-style-italic');
+    expect(findTitleHtml().classes()).toContain('gl-italic');
   });
 });

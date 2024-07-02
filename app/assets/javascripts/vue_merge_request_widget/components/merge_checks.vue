@@ -70,7 +70,6 @@ export default {
   data() {
     return {
       collapsed: true,
-      collapsedCount: 0,
       state: {},
     };
   },
@@ -79,9 +78,19 @@ export default {
       return this.$apollo.queries.state.loading;
     },
     statusIcon() {
+      if (this.warningChecks.length) {
+        return 'warning';
+      }
+
       return this.failedChecks.length ? 'failed' : 'success';
     },
     summaryText() {
+      if (this.warningChecks.length) {
+        return this.state?.userPermissions?.canMerge
+          ? __('%{boldStart}Merge with caution%{boldEnd}: Override added')
+          : __('%{boldStart}Ready to be merged with caution%{boldEnd}: Override added');
+      }
+
       if (!this.failedChecks.length) {
         return this.state?.userPermissions?.canMerge
           ? __('%{boldStart}Ready to merge!%{boldEnd}')
@@ -103,12 +112,11 @@ export default {
       return this.state?.mergeabilityChecks || [];
     },
     sortedChecks() {
-      const order = ['FAILED', 'SUCCESS'];
+      const order = ['FAILED', 'WARNING', 'SUCCESS'];
 
       return [...this.checks]
         .filter((s) => {
           if (this.isStatusInactive(s) || !this.hasMessage(s)) return false;
-          if (this.collapsedCount > 0 && this.collapsed) return false;
 
           return this.collapsed ? this.isStatusFailed(s) : true;
         })
@@ -117,16 +125,16 @@ export default {
     failedChecks() {
       return this.checks.filter((c) => this.isStatusFailed(c));
     },
+    warningChecks() {
+      return this.checks.filter((c) => this.isStatusWarning(c));
+    },
     showChecks() {
-      if (this.collapsed && this.collapsedCount > 0) return false;
-
       return this.failedChecks.length > 0 || !this.collapsed;
     },
   },
   methods: {
     toggleCollapsed() {
       this.collapsed = !this.collapsed;
-      this.collapsedCount += 1;
     },
     checkComponent(check) {
       return COMPONENTS[check.identifier.toLowerCase()] || COMPONENTS.default;
@@ -140,12 +148,15 @@ export default {
     isStatusFailed(check) {
       return check.status === 'FAILED';
     },
+    isStatusWarning(check) {
+      return check.status === 'WARNING';
+    },
   },
 };
 </script>
 
 <template>
-  <div class="gl-rounded-0!">
+  <div>
     <state-container
       :is-loading="isLoading"
       :status="statusIcon"

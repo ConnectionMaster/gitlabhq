@@ -46,21 +46,21 @@ export default {
   <div data-testid="ci-lint-value">
     <pre
       v-if="scripts.beforeScript.show"
-      class="gl-white-space-pre-wrap"
+      class="gl-whitespace-pre-wrap"
       data-testid="ci-lint-before-script"
       >{{ scripts.beforeScript.content }}</pre
     >
-    <pre v-if="scripts.script.show" class="gl-white-space-pre-wrap" data-testid="ci-lint-script">{{
+    <pre v-if="scripts.script.show" class="gl-whitespace-pre-wrap" data-testid="ci-lint-script">{{
       scripts.script.content
     }}</pre>
     <pre
       v-if="scripts.afterScript.show"
-      class="gl-white-space-pre-wrap"
+      class="gl-whitespace-pre-wrap"
       data-testid="ci-lint-after-script"
       >{{ scripts.afterScript.content }}</pre
     >
 
-    <ul class="gl-list-style-none gl-pl-0 gl-mb-0">
+    <ul class="gl-list-none gl-pl-0 gl-mb-0">
       <li v-if="tagList">
         <b>{{ __('Tag list:') }}</b>
         {{ tagList }}

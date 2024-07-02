@@ -85,17 +85,17 @@ export default {
     :visible="visible"
     @hidden="$emit('hidden')"
   >
-    <div class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3">
-      <strong class="gl-text-right col-sm-3">{{ $options.text.name }}</strong>
+    <div class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3">
+      <strong class="col-sm-3">{{ $options.text.name }}</strong>
       <div class="col-sm-9" data-testid="test-case-name">
         {{ testCase.name }}
       </div>
     </div>
 
-    <div v-if="testCase.file" class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3">
-      <strong class="gl-text-right col-sm-3">{{ $options.text.file }}</strong>
+    <div v-if="testCase.file" class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3">
+      <strong class="col-sm-3">{{ $options.text.file }}</strong>
       <div class="col-sm-9" data-testid="test-case-file">
-        <gl-link v-if="testCase.filePath" :href="testCase.filePath">
+        <gl-link v-if="testCase.filePath" class="gl-break-words" :href="testCase.filePath">
           {{ testCase.file }}
         </gl-link>
         <span v-else>{{ testCase.file }}</span>
@@ -109,8 +109,8 @@ export default {
       </div>
     </div>
 
-    <div class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3">
-      <strong class="gl-text-right col-sm-3">{{ $options.text.duration }}</strong>
+    <div class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3">
+      <strong class="col-sm-3">{{ $options.text.duration }}</strong>
       <div v-if="testCase.formattedTime" class="col-sm-9" data-testid="test-case-duration">
         {{ testCase.formattedTime }}
       </div>
@@ -119,15 +119,15 @@ export default {
       </div>
     </div>
 
-    <div v-if="testCase.recent_failures" class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3">
-      <strong class="gl-text-right col-sm-3">{{ $options.text.history }}</strong>
+    <div v-if="testCase.recent_failures" class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3">
+      <strong class="col-sm-3">{{ $options.text.history }}</strong>
       <div class="col-sm-9" data-testid="test-case-recent-failures">
         <gl-badge variant="warning">{{ failureHistoryMessage }}</gl-badge>
       </div>
     </div>
 
-    <div v-if="testCase.attachment_url" class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3">
-      <strong class="gl-text-right col-sm-3">{{ $options.text.attachment }}</strong>
+    <div v-if="testCase.attachment_url" class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3">
+      <strong class="col-sm-3">{{ $options.text.attachment }}</strong>
       <gl-link
         class="col-sm-9"
         :href="testCase.attachment_url"
@@ -140,13 +140,11 @@ export default {
 
     <div
       v-if="testCase.system_output"
-      class="gl-display-flex gl-flex-wrap gl-mx-n4 gl-my-3"
+      class="gl-display-flex gl-flex-wrap -gl-mx-4 gl-my-3"
       data-testid="test-case-trace"
     >
-      <strong class="gl-text-right col-sm-3">{{ $options.text.trace }}</strong>
-      <div class="col-sm-9">
-        <code-block :code="testCase.system_output" />
-      </div>
+      <strong class="col-sm-3 gl-mb-2">{{ $options.text.trace }}</strong>
+      <code-block class="gl-p-4" :code="testCase.system_output" />
     </div>
   </gl-modal>
 </template>

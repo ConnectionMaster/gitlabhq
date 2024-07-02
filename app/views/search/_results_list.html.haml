@@ -3,7 +3,7 @@
 
 - if @timeout
   = render partial: "search/results/timeout"
-- elsif @search_results.respond_to?(:failed?) && @search_results.failed?
+- elsif @search_results.respond_to?(:failed?) && @search_results.failed?(@scope)
   = render partial: "search/results/error"
 - elsif @search_objects.blank?
   = render partial: "search/results/empty"
@@ -17,6 +17,14 @@
         - if @scope == 'projects'
           .term
             = render 'shared/projects/list', projects: @search_objects, pipeline_status: false
+        - elsif @scope === 'users'
+          %table.table.b-table.gl-table.b-table-stacked-md{ role: 'table' }
+            %thead
+              %tr
+                %th= _('User')
+                %th.text-right= _('Activity')
+            %tbody
+              = render_if_exists partial: "search/results/user", collection: @search_objects
         - else
           = render_if_exists partial: "search/results/#{@scope.singularize}", collection: @search_objects
 

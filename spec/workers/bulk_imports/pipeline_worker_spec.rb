@@ -158,6 +158,8 @@ RSpec.describe BulkImports::PipelineWorker, feature_category: :importers do
   end
 
   context 'with stop signal from database health check' do
+    let(:setter) { instance_double('Sidekiq::Job::Setter') }
+
     around do |example|
       with_sidekiq_server_middleware do |chain|
         chain.add Gitlab::SidekiqMiddleware::SkipJobs
@@ -177,7 +179,8 @@ RSpec.describe BulkImports::PipelineWorker, feature_category: :importers do
         expect(worker).not_to receive(:perform).with(pipeline_tracker.id, pipeline_tracker.stage, entity.id)
       end
 
-      expect(described_class).to receive(:perform_in).with(
+      expect(described_class).to receive(:deferred).and_return(setter)
+      expect(setter).to receive(:perform_in).with(
         described_class::DEFER_ON_HEALTH_DELAY,
         pipeline_tracker.id,
         pipeline_tracker.stage,
@@ -247,6 +250,23 @@ RSpec.describe BulkImports::PipelineWorker, feature_category: :importers do
     end
   end
 
+  context 'when pipeline is canceled' do
+    let(:pipeline_tracker) do
+      create(
+        :bulk_import_tracker,
+        :canceled,
+        entity: entity,
+        pipeline_name: 'FakePipeline'
+      )
+    end
+
+    it 'no-ops and returns' do
+      expect(described_class).not_to receive(:run)
+
+      worker.perform(pipeline_tracker.id, pipeline_tracker.stage, entity.id)
+    end
+  end
+
   context 'when tracker is started' do
     it 'runs the pipeline' do
       pipeline_tracker = create(
@@ -287,6 +307,31 @@ RSpec.describe BulkImports::PipelineWorker, feature_category: :importers do
         worker.perform(pipeline_tracker.id, pipeline_tracker.stage, entity.id)
 
         expect(pipeline_tracker.reload.status_name).to eq(:skipped)
+      end
+    end
+
+    context 'when entity is canceled' do
+      it 'marks tracker as canceled and logs the cancel' do
+        entity.update!(status: -2)
+
+        pipeline_tracker = create(
+          :bulk_import_tracker,
+          entity: entity,
+          pipeline_name: 'FakePipeline',
+          status_event: 'enqueue'
+        )
+
+        expect_next_instance_of(BulkImports::Logger) do |logger|
+          allow(logger).to receive(:info)
+
+          expect(logger)
+            .to receive(:info)
+            .with(hash_including(message: 'Canceling pipeline due to canceled entity'))
+        end
+
+        worker.perform(pipeline_tracker.id, pipeline_tracker.stage, entity.id)
+
+        expect(pipeline_tracker.reload.status_name).to eq(:canceled)
       end
     end
 

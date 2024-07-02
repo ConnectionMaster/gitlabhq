@@ -11,7 +11,7 @@ class ProfilesController < Profiles::ApplicationController
   end
 
   feature_category :user_profile, [:reset_incoming_email_token, :reset_feed_token,
-                            :reset_static_object_token, :update_username]
+    :reset_static_object_token, :update_username]
 
   def reset_incoming_email_token
     Users::UpdateService.new(current_user, user: @user).execute! do |user|
@@ -67,7 +67,7 @@ class ProfilesController < Profiles::ApplicationController
   end
 
   def authorize_change_username!
-    return render_404 unless @user.can_change_username?
+    render_404 unless @user.can_change_username?
   end
 
   def username_param
@@ -104,7 +104,7 @@ class ProfilesController < Profiles::ApplicationController
       :pronouns,
       :pronunciation,
       :validation_password,
-      status: [:emoji, :message, :availability, :clear_status_after]
+      { status: [:emoji, :message, :availability, :clear_status_after] }
     ]
   end
 

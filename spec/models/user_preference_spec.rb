@@ -22,7 +22,7 @@ RSpec.describe UserPreference, feature_category: :user_profile do
       using RSpec::Parameterized::TableSyntax
 
       where(color: [
-              '#000000',
+        '#000000',
               '#123456',
               '#abcdef',
               '#AbCdEf',
@@ -35,7 +35,7 @@ RSpec.describe UserPreference, feature_category: :user_profile do
               '#fff',
               '#fFf',
               ''
-            ])
+      ])
 
       with_them do
         it { is_expected.to allow_value(color).for(:diffs_deletion_color) }
@@ -43,14 +43,14 @@ RSpec.describe UserPreference, feature_category: :user_profile do
       end
 
       where(color: [
-              '#1',
+        '#1',
               '#12',
               '#1234',
               '#12345',
               '#1234567',
               '123456',
               '#12345x'
-            ])
+      ])
 
       with_them do
         it { is_expected.not_to allow_value(color).for(:diffs_deletion_color) }
@@ -71,6 +71,29 @@ RSpec.describe UserPreference, feature_category: :user_profile do
       end
 
       it { is_expected.to define_enum_for(:visibility_pipeline_id_type).with_values(id: 0, iid: 1) }
+    end
+
+    describe 'extensions_marketplace_opt_in_status' do
+      it 'is set to 0 by default' do
+        pref = described_class.new
+
+        expect(pref.extensions_marketplace_opt_in_status).to eq('unset')
+      end
+
+      it do
+        is_expected
+          .to define_enum_for(:extensions_marketplace_opt_in_status).with_values(unset: 0, enabled: 1, disabled: 2)
+      end
+    end
+
+    describe 'organization_groups_projects_display' do
+      it 'is set to 0 by default' do
+        pref = described_class.new
+
+        expect(pref.organization_groups_projects_display).to eq('projects')
+      end
+
+      it { is_expected.to define_enum_for(:organization_groups_projects_display).with_values(projects: 0, groups: 1) }
     end
 
     describe 'user belongs to the home organization' do
@@ -301,6 +324,69 @@ RSpec.describe UserPreference, feature_category: :user_profile do
       pref = described_class.new(render_whitespace_in_code: true)
 
       expect(pref.read_attribute(:render_whitespace_in_code)).to eq(true)
+    end
+  end
+
+  describe '#early_access_event_tracking?' do
+    let(:participant) { true }
+    let(:tracking) { true }
+    let(:user_preference) do
+      build(:user_preference, early_access_program_participant: participant, early_access_program_tracking: tracking)
+    end
+
+    context 'when user participate in beta and agreed on tracking' do
+      it { expect(user_preference.early_access_event_tracking?).to be true }
+    end
+
+    context 'when user does not participate' do
+      let(:participant) { false }
+
+      it { expect(user_preference.early_access_event_tracking?).to be false }
+    end
+
+    context 'when user did not agree on tracking' do
+      let(:tracking) { false }
+
+      it { expect(user_preference.early_access_event_tracking?).to be false }
+    end
+  end
+
+  describe '#extensions_marketplace_enabled' do
+    where(:opt_in_status, :expected_value) do
+      [
+        ["enabled", true],
+        ["disabled", false],
+        ["unset", false]
+      ]
+    end
+
+    with_them do
+      it 'returns boolean from extensions_marketplace_opt_in_status' do
+        user_preference.update!(extensions_marketplace_opt_in_status: opt_in_status)
+
+        expect(user_preference.extensions_marketplace_enabled).to be expected_value
+      end
+    end
+  end
+
+  describe '#extensions_marketplace_enabled=' do
+    where(:value, :expected_opt_in_status) do
+      [
+        [true, "enabled"],
+        [false, "disabled"],
+        [0, "disabled"],
+        [1, "enabled"]
+      ]
+    end
+
+    with_them do
+      it 'updates extensions_marketplace_opt_in_status' do
+        user_preference.update!(extensions_marketplace_opt_in_status: 'unset')
+
+        user_preference.extensions_marketplace_enabled = value
+
+        expect(user_preference.extensions_marketplace_opt_in_status).to be expected_opt_in_status
+      end
     end
   end
 end

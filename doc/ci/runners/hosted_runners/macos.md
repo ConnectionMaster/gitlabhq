@@ -11,40 +11,33 @@ DETAILS:
 **Offering:** GitLab.com
 **Status:** Beta
 
-Hosted runners on macOS are in [Beta](../../../policy/experiment-beta-support.md#beta) for open source programs and customers in Premium and Ultimate plans.
+Hosted runners on macOS provide an on-demand macOS environment, fully integrated with GitLab [CI/CD](../../../ci/index.md).
+You can use these runners to build, test, and deploy apps for the Apple ecosystem (macOS, iOS, watchOS, tvOS).
+Our [Mobile DevOps section](../../../ci/mobile_devops.md#ios-build-environments) provides features, documentation, and guidance on building and deploying mobile applications for iOS.
 
-Hosted runners on macOS provide an on-demand macOS build environment integrated with
-GitLab SaaS [CI/CD](../../../ci/index.md).
-Use these runners to build, test, and deploy apps for the Apple ecosystem (macOS, iOS, watchOS, tvOS). You can take advantage
-of all the capabilities of the GitLab single DevOps platform and not have to manage or operate a
-build environment. Our [Mobile DevOps solution](../../../ci/mobile_devops.md#ios-build-environments) provides features, documentation, and guidance on building and deploying mobile applications for iOS.
-
-We want to keep iterating to get hosted runners on macOS
-[generally available](../../../policy/experiment-beta-support.md#generally-available-ga).
-You can follow our work towards this goal in the
-[related epic](https://gitlab.com/groups/gitlab-org/-/epics/8267).
+Hosted runners on macOS are in [beta](../../../policy/experiment-beta-support.md#beta) and available for open source programs and customers in Premium and Ultimate plans.
+[General availability](../../../policy/experiment-beta-support.md#generally-available-ga) of Hosted runners on macOS is proposed in [epic 8267](https://gitlab.com/groups/gitlab-org/-/epics/8267).
 
 ## Machine types available for macOS
 
-GitLab SaaS provides macOS build machines on Apple silicon (M1) chips. To build for an x86-64 target, you can use Rosetta 2 to emulate an Intel x86-64 build environment.
+GitLab offers the following machine type for hosted runners on macOS. To build for an x86-64 target, you can use Rosetta 2 to emulate an Intel x86-64 environment.
 
-| Runner Tag             | vCPUS | Memory | Storage |
-| ---------------------- | ----- | ------ | ------- |
-| `saas-macos-medium-m1` | 4     | 8 GB   | 25 GB   |
+| Runner Tag               | vCPUS | Memory | Storage |
+| ------------------------ | ----- | ------ | ------- |
+| `saas-macos-medium-m1`   | 4     | 8 GB   | 25 GB   |
 
 ## Supported macOS images
 
 In comparison to our hosted runners on Linux, where you can run any Docker image,
-GitLab SaaS provides a set of VM images for macOS.
+GitLab provides a set of VM images for macOS.
 
 You can execute your build in one of the following images, which you specify
 in your `.gitlab-ci.yml` file. Each image runs a specific version of macOS and Xcode.
 
 | VM image                   | Status |              |
 |----------------------------|--------|--------------|
-| `macos-12-xcode-14`        | `Deprecated` | (Removal in GitLab 16.10) |
-| `macos-13-xcode-14`        | `GA`   | [Preinstalled Software](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/job-images/-/blob/36d443841732f2d4f7e3de1bce63f530edef1676/toolchain/macos-13.yml) |
-| `macos-14-xcode-15`        | `GA`   | [Preinstalled Software](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/job-images/-/blob/36d443841732f2d4f7e3de1bce63f530edef1676/toolchain/macos-14.yml) |
+| `macos-13-xcode-14`        | `GA`   | [Preinstalled Software](https://gitlab-org.gitlab.io/incubation-engineering/mobile-devops/macos-runner-inspector/macos-13-xcode-14/) |
+| `macos-14-xcode-15`        | `GA`   | [Preinstalled Software](https://gitlab-org.gitlab.io/incubation-engineering/mobile-devops/macos-runner-inspector/macos-14-xcode-15/) |
 
 If no image is specified, the macOS runner uses `macos-13-xcode-14`.
 
@@ -54,7 +47,7 @@ The images and installed components are updated with each GitLab release, to kee
 
 Major and minor releases of macOS and Xcode, are made available within two weeks of Apple's release.
 
-A new major release image is initially made available as Beta, and becomes Generally Available (GA) with the release of the first minor release.
+A new major release image is initially made available as beta, and becomes generally available (GA) with the release of the first minor release.
 Because only two GA images are supported at a time, the oldest image becomes deprecated and will be removed after three months according to the [supported image lifecycle](../index.md#supported-image-lifecycle).
 
 ## Example `.gitlab-ci.yml` file
@@ -67,7 +60,7 @@ The following sample `.gitlab-ci.yml` file shows how to start using the hosted r
     - saas-macos-medium-m1
   image: macos-14-xcode-15
   before_script:
-    - echo "started by ${GITLAB_USER_NAME}"
+    - echo "started by ${GITLAB_USER_NAME} / @${GITLAB_USER_LOGIN}"
 
 build:
   extends:
@@ -86,7 +79,7 @@ test:
 
 ## Code signing iOS Projects with fastlane
 
-Before you can integrate GitLab with Apple services, install to a device, or deploy to the Apple App Store, you must [code sign](https://developer.apple.com/support/code-signing/) your application.
+Before you can integrate GitLab with Apple services, install to a device, or deploy to the Apple App Store, you must [code sign](https://developer.apple.com/documentation/security/code_signing_services) your application.
 
 Included in each runner on macOS VM image is [fastlane](https://fastlane.tools/),
 an open-source solution aimed at simplifying mobile app deployment.
@@ -95,7 +88,7 @@ For information about how to set up code signing for your application, see the i
 
 Related topics:
 
-- [Apple Developer Support - Code Signing](https://developer.apple.com/support/code-signing/)
+- [Apple Developer Support - Code Signing](https://forums.developer.apple.com/forums/thread/707080)
 - [Code Signing Best Practice Guide](https://codesigning.guide/)
 - [fastlane authentication with Apple Services guide](https://docs.fastlane.tools/getting-started/ios/authentication/)
 
@@ -163,3 +156,5 @@ but it does increase the overall size of your project's repository.
 - If the VM image does not include the specific software version you need for your job, the required software must be fetched and installed. This causes an increase in job execution time.
 - It is not possible to bring your own OS image.
 - The keychain for user `gitlab` is not publicly available. You must create a keychain instead.
+- Hosted runners on macOS run in headless mode.
+  Any workloads that require UI interactions such as `testmanagerd` are not supported.

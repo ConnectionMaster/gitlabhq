@@ -69,10 +69,10 @@ require_relative('../jh/spec/spec_helper') if Gitlab.jh?
 require Rails.root.join("spec/support/helpers/stub_requests.rb")
 
 # Then the rest
-Dir[Rails.root.join("spec/support/helpers/*.rb")].sort.each { |f| require f }
-Dir[Rails.root.join("spec/support/shared_contexts/*.rb")].sort.each { |f| require f }
-Dir[Rails.root.join("spec/support/shared_examples/*.rb")].sort.each { |f| require f }
-Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
+Dir[Rails.root.join("spec/support/helpers/*.rb")].each { |f| require f }
+Dir[Rails.root.join("spec/support/shared_contexts/*.rb")].each { |f| require f }
+Dir[Rails.root.join("spec/support/shared_examples/*.rb")].each { |f| require f }
+Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 
 require_relative '../tooling/quality/test_level'
 
@@ -158,7 +158,6 @@ RSpec.configure do |config|
   config.include StubGitlabCalls
   config.include NextFoundInstanceOf
   config.include NextInstanceOf
-  config.include TestEnv
   config.include FileReadHelpers
   config.include Database::MultipleDatabasesHelpers
   config.include Database::WithoutCheckConstraint
@@ -205,6 +204,7 @@ RSpec.configure do |config|
   config.include UnlockPipelinesHelpers, :unlock_pipelines
   config.include UserWithNamespaceShim
   config.include OrphanFinalArtifactsCleanupHelpers, :orphan_final_artifacts_cleanup
+  config.include ClickHouseHelpers, :click_house
 
   config.include_context 'when rendered has no HTML escapes', type: :view
 
@@ -318,15 +318,33 @@ RSpec.configure do |config|
       # Keep-around refs should only be turned off for specific projects/repositories.
       stub_feature_flags(disable_keep_around_refs: false)
 
-      # Postgres is the primary data source, and ClickHouse only when enabled in certain cases.
-      stub_feature_flags(clickhouse_data_collection: false)
-
       # The Vue version of the merge request list app is missing a lot of information
       # disabling this for now whilst we work on it across multiple merge requests
       stub_feature_flags(vue_merge_request_list: false)
 
       # Work in progress reviewer sidebar that does not have most of the features yet
       stub_feature_flags(reviewer_assign_drawer: false)
+
+      # Disable suspending ClickHouse data ingestion workers
+      stub_feature_flags(suspend_click_house_data_ingestion: false)
+
+      # Disable license requirement for duo chat, which is subject to change.
+      # See https://gitlab.com/gitlab-org/gitlab/-/issues/457090
+      stub_feature_flags(duo_chat_requires_licensed_seat: false)
+
+      # Disable license requirement for duo chat (self managed), which is subject to change.
+      # See https://gitlab.com/gitlab-org/gitlab/-/issues/457283
+      stub_feature_flags(duo_chat_requires_licensed_seat_sm: false)
+
+      # Experimental merge request dashboard
+      stub_feature_flags(merge_request_dashboard: false)
+
+      # We want this this FF disabled by default
+      stub_feature_flags(synced_epic_work_item_editable: false)
+
+      # Since we are very early in the Vue migration, there isn't much value in testing when the feature flag is enabled
+      # Please see https://gitlab.com/gitlab-org/gitlab/-/issues/466081 for tracking revisiting this.
+      stub_feature_flags(your_work_projects_vue: false)
     else
       unstub_all_feature_flags
     end
@@ -383,8 +401,14 @@ RSpec.configure do |config|
     ::Gitlab::SafeRequestStore.ensure_request_store { example.run }
   end
 
-  config.around(:example, :yaml_processor_feature_flag_corectness) do |example|
-    ::Gitlab::Ci::YamlProcessor::FeatureFlags.ensure_correct_usage do
+  config.around(:example, :ci_config_feature_flag_correctness) do |example|
+    ::Gitlab::Ci::Config::FeatureFlags.ensure_correct_usage do
+      example.run
+    end
+  end
+
+  config.around(:example, :allow_unrouted_sidekiq_calls) do |example|
+    ::Gitlab::SidekiqSharding::Validator.allow_unrouted_sidekiq_calls do
       example.run
     end
   end
@@ -418,9 +442,15 @@ RSpec.configure do |config|
         arguments_logger: false, # We're not logging the regular messages for inline jobs
         skip_jobs: false # We're not skipping jobs for inline tests
       ).call(chain)
-      chain.add DisableQueryLimit
+
       chain.insert_after ::Gitlab::SidekiqMiddleware::RequestStoreMiddleware, IsolatedRequestStore
 
+      example.run
+    end
+  end
+
+  config.around do |example|
+    Gitlab::SidekiqSharding::Validator.enabled do
       example.run
     end
   end
@@ -512,6 +542,9 @@ Rugged::Settings['search_path_global'] = Rails.root.join('tmp/tests').to_s
 
 # Initialize FactoryDefault to use create_default helper
 TestProf::FactoryDefault.init
+
+# Set the start of ID sequence for records initialized by `build_stubbed` to prevent conflicts
+FactoryBot::Strategy::Stub.next_id = 1_000_000_000
 
 # Exclude the Geo proxy API request from getting on_next_request Warden handlers,
 # necessary to prevent race conditions with feature tests not getting authenticated.

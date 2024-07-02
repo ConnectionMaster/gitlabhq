@@ -1,11 +1,23 @@
 # frozen_string_literal: true
 
+# On .com partitions are not created on application startup,
+# they are created by the PartitionManagementWorker cron worker
+# which is executed several times per day. If a partition must be present
+# on startup, it could be created using a regular migration.
+# https://gitlab.com/gitlab-com/gl-infra/production/-/issues/2446
+
 Gitlab::Database::Partitioning.register_models(
   [
     AuditEvent,
+    AuditEvents::UserAuditEvent,
+    AuditEvents::GroupAuditEvent,
+    AuditEvents::ProjectAuditEvent,
+    AuditEvents::InstanceAuditEvent,
     BatchedGitRefUpdates::Deletion,
     Ci::BuildMetadata,
+    Ci::BuildExecutionConfig,
     Ci::BuildName,
+    Ci::BuildSource,
     Ci::Catalog::Resources::Components::Usage,
     Ci::Catalog::Resources::SyncEvent,
     Ci::JobAnnotation,
@@ -63,6 +75,7 @@ end
 
 # Enable partition management for the backfill table during merge_request_diff_commits partitioning.
 # This way new partitions will be created as the trigger syncs new rows across to this table.
+#
 Gitlab::Database::Partitioning.register_tables(
   [
     {
@@ -73,4 +86,16 @@ Gitlab::Database::Partitioning.register_tables(
   ]
 )
 
+# Enable partition management for the backfill table during merge_request_diff_files partitioning.
+# This way new partitions will be created as the trigger syncs new rows across to this table.
+#
+Gitlab::Database::Partitioning.register_tables(
+  [
+    {
+      limit_connection_names: %i[main],
+      table_name: 'merge_request_diff_files_99208b8fac',
+      partitioned_column: :merge_request_diff_id, strategy: :int_range, partition_size: 200_000_000
+    }
+  ]
+)
 Gitlab::Database::Partitioning.sync_partitions_ignore_db_error

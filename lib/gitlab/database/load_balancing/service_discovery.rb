@@ -18,7 +18,7 @@ module Gitlab
         attr_accessor :refresh_thread, :refresh_thread_last_run, :refresh_thread_interruption_logged
 
         attr_reader :interval, :record, :record_type, :disconnect_timeout,
-                    :load_balancer
+          :load_balancer
 
         MAX_SLEEP_ADJUSTMENT = 10
         MAX_DISCOVERY_RETRIES = 3
@@ -101,7 +101,8 @@ module Gitlab
             Gitlab::Database::LoadBalancing::Logger.error(
               event: :service_discovery_failure,
               message: "Service discovery encountered an error: #{error.message}",
-              host_list_length: load_balancer.host_list.length
+              host_list_length: load_balancer.host_list.length,
+              backtrace: error.backtrace
             )
 
             # Slightly randomize the retry delay so that, in the case of a total

@@ -12,6 +12,8 @@ module Banzai
     #   :project
     #   :system_note
     class UploadLinkFilter < BaseRelativeLinkFilter
+      prepend Concerns::PipelineTimingCheck
+
       def call
         return doc if context[:system_note]
 
@@ -32,9 +34,9 @@ module Banzai
         path_parts = [unescape_and_scrub_uri(html_attr.value)]
 
         if project
-          path_parts.unshift(relative_url_root, project.full_path)
+          path_parts.unshift(relative_url_root, '-', 'project', project.id.to_s)
         elsif group
-          path_parts.unshift(relative_url_root, 'groups', group.full_path, '-')
+          path_parts.unshift(relative_url_root, '-', 'group', group.id.to_s)
         else
           path_parts.unshift(relative_url_root)
         end

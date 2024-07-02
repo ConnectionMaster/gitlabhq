@@ -73,7 +73,7 @@ or other schema change to make added queries more performant. To test the query,
 For example, running this command:
 
 ```sql
-exec CREATE INDEX on application_settings USING btree (instance_administration_project_id)
+exec CREATE INDEX on application_settings USING btree (restricted_visibility_levels)
 ```
 
 creates the specified index on the table. You can [test queries](#generate-query-plans) leveraging
@@ -143,13 +143,13 @@ To access the database lab instances, you must:
 Host lb-bastion.db-lab.gitlab.com
   User ${USER}
   IdentitiesOnly yes
-  IdentityFile ~/.ssh/ed25519
+  IdentityFile ~/.ssh/id_ed25519
 
 Host *.gitlab-db-lab.internal
   User ${USER}
   PreferredAuthentications publickey
   IdentitiesOnly yes
-  IdentityFile ~/.ssh/ed25519
+  IdentityFile ~/.ssh/id_ed25519
   ProxyCommand ssh lb-bastion.db-lab.gitlab.com -W %h:%p
 ```
 

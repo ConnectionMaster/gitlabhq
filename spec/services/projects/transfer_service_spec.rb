@@ -84,11 +84,11 @@ RSpec.describe Projects::TransferService, feature_category: :groups_and_projects
 
     context 'EventStore' do
       let(:group) do
-        create(:group, :nested).tap { |g| g.add_owner(user) }
+        create(:group, :nested, owners: user)
       end
 
       let(:target) do
-        create(:group, :nested).tap { |g| g.add_owner(user) }
+        create(:group, :nested, owners: user)
       end
 
       let(:project) { create(:project, namespace: group) }
@@ -272,6 +272,29 @@ RSpec.describe Projects::TransferService, feature_category: :groups_and_projects
       context 'with a custom integration' do
         it 'does not update the integrations' do
           expect { execute_transfer }.not_to change { project.slack_integration.webhook }
+        end
+      end
+
+      context 'when the new default integration is instance specific and deactivated' do
+        let!(:instance_specific_integration) { create(:beyond_identity_integration) }
+        let!(:project_instance_specific_integration) do
+          create(
+            :beyond_identity_integration,
+            project: project,
+            instance: false,
+            active: true,
+            inherit_from_id: instance_specific_integration.id
+          )
+        end
+
+        let!(:group_instance_specific_integration) do
+          create(:beyond_identity_integration, group: target, instance: false, active: false)
+        end
+
+        it 'creates an integration inheriting from the default' do
+          expect { execute_transfer }
+            .to change { project.beyond_identity_integration.reload.active }.from(true).to(false)
+            .and change { project.beyond_identity_integration.inherit_from_id }.to(group_instance_specific_integration.id)
         end
       end
     end

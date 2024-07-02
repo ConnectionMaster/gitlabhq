@@ -2,6 +2,7 @@
 issues:
 - subscriptions
 - award_emoji
+- own_award_emoji
 - author
 - assignees
 - updated_by
@@ -19,7 +20,11 @@ issues:
 - sentry_issue
 - issuable_severity
 - label_links
+- own_label_links
 - labels
+- own_labels
+- own_description_versions
+- sync_object
 - last_edited_by
 - todos
 - user_agent_detail
@@ -78,7 +83,9 @@ work_item_type:
 - widget_definitions
 - enabled_widget_definitions
 - child_restrictions
+- parent_restrictions
 - allowed_child_types_by_name
+- allowed_parent_types_by_name
 events:
 - author
 - project
@@ -126,6 +133,7 @@ commit_notes:
 label_links:
 - target
 - label
+- own_label
 label:
 - subscriptions
 - project
@@ -159,6 +167,7 @@ snippets:
 - snippet_repository
 - statistics
 - repository_storage_moves
+- organization
 releases:
 - author
 - project
@@ -255,6 +264,7 @@ merge_requests:
 - user_agent_detail
 - scan_result_policy_violations
 - applicable_post_merge_approval_rules
+- requested_changes
 external_pull_requests:
 - project
 merge_request_diff:
@@ -347,6 +357,7 @@ ci_pipelines:
 - package_file_build_infos
 - build_trace_chunks
 - pipeline_metadata
+- build_execution_configs
 pipeline_metadata:
 - project
 - pipeline
@@ -380,6 +391,7 @@ builds:
 - needs
 - resource
 - pipeline
+- execution_config
 - sourced_pipeline
 - resource_group
 - metadata
@@ -587,6 +599,7 @@ project:
 - harbor_integration
 - irker_integration
 - packagist_integration
+- phorge_integration
 - pivotaltracker_integration
 - prometheus_integration
 - assembla_integration
@@ -638,6 +651,7 @@ project:
 - project_repository
 - users
 - maintainers
+- owners_and_maintainers
 - requesters
 - namespace_members
 - namespace_requesters
@@ -656,6 +670,7 @@ project:
 - import_data
 - commit_statuses
 - ci_pipelines
+- build_execution_configs
 - all_pipelines
 - stages
 - ci_refs
@@ -753,6 +768,7 @@ project:
 - self_managed_prometheus_alert_events
 - software_license_policies
 - software_licenses
+- custom_software_licenses
 - project_registry
 - packages
 - package_files
@@ -789,8 +805,8 @@ project:
 - export_jobs
 - daily_build_group_report_results
 - jira_imports
-- compliance_framework_setting
-- compliance_management_framework
+- compliance_framework_settings
+- compliance_management_frameworks
 - metrics_users_starred_dashboards
 - alert_management_alerts
 - repository_storage_moves
@@ -835,6 +851,8 @@ project:
 - sbom_occurrences
 - analytics_dashboards_configuration_project
 - analytics_dashboards_pointer
+- targeting_dashboards_pointers
+- targeting_dashboards_pointer_projects
 - design_management_repository
 - design_management_repository_state
 - compliance_standards_adherence
@@ -996,6 +1014,7 @@ design_versions: *version
 epic:
 - subscriptions
 - award_emoji
+- own_award_emoji
 - description_versions
 - author
 - assignee
@@ -1004,7 +1023,11 @@ epic:
 - milestone
 - notes
 - label_links
+- own_label_links
 - labels
+- own_labels
+- own_description_versions
+- sync_object
 - todos
 - metrics
 - group
@@ -1026,6 +1049,7 @@ epic:
 - boards_epic_user_preferences
 - epic_board_positions
 - work_item
+- own_subscriptions
 epic_issue:
 - epic
 - issue

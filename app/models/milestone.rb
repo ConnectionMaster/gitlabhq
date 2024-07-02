@@ -11,6 +11,7 @@ class Milestone < ApplicationRecord
   include UpdatedAtFilterable
   include EachBatch
   include Spammable
+  include AfterCommitQueue
 
   prepend_mod_with('Milestone') # rubocop: disable Cop/InjectEnterpriseEditionModule
 
@@ -41,7 +42,7 @@ class Milestone < ApplicationRecord
 
   scope :of_projects, ->(ids) { where(project_id: ids) }
   scope :for_projects, -> { where(group: nil).includes(:project) }
-  scope :for_projects_and_groups, -> (projects, groups) do
+  scope :for_projects_and_groups, ->(projects, groups) do
     projects = projects.compact if projects.is_a? Array
     projects = [] if projects.nil?
 
@@ -53,7 +54,7 @@ class Milestone < ApplicationRecord
 
   scope :order_by_name_asc, -> { order(Arel::Nodes::Ascending.new(arel_table[:title].lower)) }
   scope :reorder_by_due_date_asc, -> { reorder(arel_table[:due_date].asc.nulls_last) }
-  scope :with_api_entity_associations, -> { preload(project: [:project_feature, :route, namespace: :route]) }
+  scope :with_api_entity_associations, -> { preload(project: [:project_feature, :route, { namespace: :route }]) }
   scope :preload_for_indexing, -> { includes(project: [:project_feature]) }
   scope :order_by_dates_and_title, -> { order(due_date: :asc, start_date: :asc, title: :asc) }
   scope :with_ids_or_title, ->(ids:, title:) { id_in(ids).or(with_title(title)) }
@@ -61,7 +62,7 @@ class Milestone < ApplicationRecord
   validates :group, presence: true, unless: :project
   validates :project, presence: true, unless: :group
   validates :title, presence: true
-  validates_associated :milestone_releases, message: -> (_, obj) { obj[:value].map(&:errors).map(&:full_messages).join(",") }
+  validates_associated :milestone_releases, message: ->(_, obj) { obj[:value].map(&:errors).map(&:full_messages).join(",") }
   validate :parent_type_check
   validate :uniqueness_of_title, if: :title_changed?
 
@@ -132,7 +133,7 @@ class Milestone < ApplicationRecord
   end
 
   def self.with_web_entity_associations
-    preload(:group, project: [:project_feature, group: [:parent], namespace: :route])
+    preload(:group, project: [:project_feature, { group: [:parent], namespace: :route }])
   end
 
   def participants
@@ -184,9 +185,9 @@ class Milestone < ApplicationRecord
                .count
 
     {
-        opened: counts['active'] || 0,
-        closed: counts['closed'] || 0,
-        all: counts.values.sum
+      opened: counts['active'] || 0,
+      closed: counts['closed'] || 0,
+      all: counts.values.sum
     }
   end
 
@@ -278,7 +279,7 @@ class Milestone < ApplicationRecord
       raise ArgumentError, _('Cannot refer to a group milestone by an internal id!')
     end
 
-    if format == :name && !name.include?('"')
+    if format == :name && name.exclude?('"')
       %("#{name}")
     else
       iid
@@ -300,9 +301,9 @@ class Milestone < ApplicationRecord
   # milestone titles must be unique across project and group milestones
   def uniqueness_of_title
     if project
-      relation = self.class.for_projects_and_groups([project_id], [project.group&.id])
+      relation = self.class.for_projects_and_groups([project_id], [project.group&.self_and_ancestors_ids])
     elsif group
-      relation = self.class.for_projects_and_groups(group.projects.select(:id), [group.id])
+      relation = self.class.for_projects_and_groups(group.all_project_ids, [group.self_and_hierarchy])
     end
 
     title_exists = relation.find_by_title(title)

@@ -7,13 +7,13 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
 
   let_it_be(:group) { create(:group) }
   let_it_be_with_reload(:project) { create(:project, :private, group: group) }
-  let_it_be(:developer) { create(:user).tap { |u| group.add_developer(u) } }
-  let_it_be(:guest) { create(:user).tap { |u| group.add_guest(u) } }
+  let_it_be(:developer) { create(:user, developer_of: group) }
+  let_it_be(:guest) { create(:user, guest_of: group) }
   let_it_be(:work_item) do
     create(
       :work_item,
       project: project,
-      description: '- List item',
+      description: '- [x] List item',
       start_date: Date.today,
       due_date: 1.week.from_now,
       created_at: 1.week.ago,
@@ -22,8 +22,8 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
     )
   end
 
-  let_it_be(:child_item1) { create(:work_item, :task, project: project) }
-  let_it_be(:child_item2) { create(:work_item, :task, confidential: true, project: project) }
+  let_it_be(:child_item1) { create(:work_item, :task, project: project, id: 1200) }
+  let_it_be(:child_item2) { create(:work_item, :task, confidential: true, project: project, id: 1400) }
   let_it_be(:child_link1) { create(:parent_link, work_item_parent: work_item, work_item: child_item1) }
   let_it_be(:child_link2) { create(:parent_link, work_item_parent: work_item, work_item: child_item2) }
 
@@ -132,6 +132,10 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
                   username
                 }
                 lastEditedAt
+                taskCompletionStatus {
+                  completedCount
+                  count
+                }
               }
             }
           GRAPHQL
@@ -150,6 +154,10 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
                 'lastEditedBy' => {
                   'webPath' => "/#{guest.full_path}",
                   'username' => guest.username
+                },
+                'taskCompletionStatus' => {
+                  'completedCount' => 1,
+                  'count' => 1
                 }
               )
             )
@@ -250,9 +258,9 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
           end
         end
 
-        context 'when ordered by default by created_at' do
-          let_it_be(:newest_child) { create(:work_item, :task, project: project, created_at: 5.minutes.from_now) }
-          let_it_be(:oldest_child) { create(:work_item, :task, project: project, created_at: 5.minutes.ago) }
+        context 'when ordered by default by work_item_id' do
+          let_it_be(:newest_child) { create(:work_item, :task, project: project, id: 2000) }
+          let_it_be(:oldest_child) { create(:work_item, :task, project: project, id: 1000) }
           let_it_be(:newest_link) { create(:parent_link, work_item_parent: work_item, work_item: newest_child) }
           let_it_be(:oldest_link) { create(:parent_link, work_item_parent: work_item, work_item: oldest_child) }
 
@@ -268,7 +276,7 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
           end
 
           context 'when relative position is set' do
-            let_it_be(:first_child) { create(:work_item, :task, project: project, created_at: 5.minutes.from_now) }
+            let_it_be(:first_child) { create(:work_item, :task, project: project, id: 3000) }
 
             let_it_be(:first_link) do
               create(:parent_link, work_item_parent: work_item, work_item: first_child, relative_position: 1)
@@ -695,24 +703,6 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
             expect(widget_data.dig("nodes", 0, "linkType")).to eq('relates_to')
           end
         end
-
-        context 'when `linked_work_items` feature flag is disabled' do
-          before do
-            stub_feature_flags(linked_work_items: false)
-            post_graphql(query, current_user: current_user)
-          end
-
-          it 'returns empty result' do
-            expect(work_item_data).to include(
-              'widgets' => include(
-                hash_including(
-                  'type' => 'LINKED_ITEMS',
-                  'linkedItems' => { "nodes" => [] }
-                )
-              )
-            )
-          end
-        end
       end
     end
 
@@ -788,7 +778,7 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
         end
 
         it 'avoids N+1 queries' do
-          another_user = create(:user).tap { |u| note.resource_parent.add_developer(u) }
+          another_user = create(:user, developer_of: note.resource_parent)
           create(:note, project: note.project, noteable: work_item, author: another_user)
 
           post_graphql(query, current_user: developer)
@@ -799,7 +789,7 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
 
           another_note = create(:note, project: work_item.project, noteable: work_item)
           create(:award_emoji, awardable: another_note, name: 'star', user: guest)
-          another_user = create(:user).tap { |u| note.resource_parent.add_developer(u) }
+          another_user = create(:user, developer_of: note.resource_parent)
           note_with_different_user = create(:note, project: note.project, noteable: work_item, author: another_user)
           create(:award_emoji, awardable: note_with_different_user, name: 'star', user: developer)
 
@@ -1075,7 +1065,7 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
       end
 
       context 'when work item base type is non issue' do
-        let_it_be(:epic) { create(:work_item, :epic, namespace: group) }
+        let_it_be(:epic) { create(:work_item, :task, namespace: group) }
         let_it_be(:global_id) { epic.to_gid.to_s }
 
         it 'returns without design' do
@@ -1087,6 +1077,102 @@ RSpec.describe 'Query.work_item(id)', feature_category: :team_planning do
               'type' => 'DESIGNS'
             )
           )
+        end
+      end
+    end
+
+    describe 'development widget' do
+      context 'when fetching closing merge requests' do
+        let_it_be(:merge_request1) { create(:merge_request, source_project: project) }
+        let_it_be(:merge_request2) { create(:merge_request, source_project: project, target_branch: 'feature2') }
+        let_it_be(:private_project) { create(:project, :repository, :private) }
+        let_it_be(:private_merge_request) { create(:merge_request, source_project: private_project) }
+        let(:work_item_fields) do
+          <<~GRAPHQL
+            id
+            widgets {
+              type
+              ... on WorkItemWidgetDevelopment {
+                closingMergeRequests {
+                  nodes {
+                    id
+                    fromMrDescription
+                    mergeRequest { id }
+                  }
+                }
+              }
+            }
+          GRAPHQL
+        end
+
+        let_it_be(:mr_closing_issue1) do
+          create(
+            :merge_requests_closing_issues,
+            merge_request: merge_request1,
+            issue: work_item,
+            from_mr_description: false
+          )
+        end
+
+        let_it_be(:mr_closing_issue2) do
+          create(
+            :merge_requests_closing_issues,
+            merge_request: merge_request2,
+            issue: work_item,
+            from_mr_description: true
+          )
+        end
+
+        before do
+          post_graphql(query, current_user: current_user)
+        end
+
+        context 'when user is developer' do
+          let(:current_user) { developer }
+
+          it 'returns related merge requests in the response' do
+            expect(work_item_data).to include(
+              'id' => work_item.to_global_id.to_s,
+              'widgets' => array_including(
+                hash_including(
+                  'type' => 'DEVELOPMENT',
+                  'closingMergeRequests' => {
+                    'nodes' => containing_exactly(
+                      hash_including(
+                        'id' => mr_closing_issue1.to_gid.to_s,
+                        'mergeRequest' => { 'id' => merge_request1.to_global_id.to_s },
+                        'fromMrDescription' => false
+                      ),
+                      hash_including(
+                        'id' => mr_closing_issue2.to_gid.to_s,
+                        'mergeRequest' => { 'id' => merge_request2.to_global_id.to_s },
+                        'fromMrDescription' => true
+                      )
+                    )
+                  }
+                )
+              )
+            )
+          end
+
+          it 'avoids N + 1 queries', :use_sql_query_cache do
+            # warm-up already done in the before block
+            control = ActiveRecord::QueryRecorder.new(skip_cached: false) do
+              post_graphql(query, current_user: current_user)
+            end
+            expect(graphql_errors).to be_blank
+
+            create(
+              :merge_requests_closing_issues,
+              merge_request: create(:merge_request, source_project: project, target_branch: 'feature3'),
+              issue: work_item
+            )
+
+            expect do
+              post_graphql(query, current_user: current_user)
+            end.to issue_same_number_of_queries_as(control)
+            expect(graphql_errors).to be_blank
+          end
         end
       end
     end

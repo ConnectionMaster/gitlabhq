@@ -43,7 +43,7 @@ export default {
 <template>
   <div>
     <gl-card
-      class="gl-new-card gl-overflow-hidden"
+      class="gl-new-card"
       header-class="gl-new-card-header gl-border-b-0"
       body-class="gl-new-card-body gl-px-0"
     >
@@ -51,7 +51,7 @@ export default {
         <h3 class="gl-new-card-title">{{ $options.i18n.activeIntegrationsHeading }}</h3>
       </template>
       <integrations-table
-        class="gl-mb-n2"
+        class="-gl-mb-2"
         :integrations="integrationsGrouped.active"
         :empty-text="$options.i18n.activeTableEmptyText"
         show-updated-at
@@ -59,7 +59,7 @@ export default {
       />
     </gl-card>
     <gl-card
-      class="gl-new-card gl-overflow-hidden"
+      class="gl-new-card"
       header-class="gl-new-card-header gl-border-b-0"
       body-class="gl-new-card-body gl-px-0"
     >
@@ -67,7 +67,7 @@ export default {
         <h3 class="gl-new-card-title">{{ $options.i18n.inactiveIntegrationsHeading }}</h3>
       </template>
       <integrations-table
-        class="gl-mb-n2"
+        class="-gl-mb-2"
         inactive
         :integrations="integrationsGrouped.inactive"
         :empty-text="$options.i18n.inactiveTableEmptyText"

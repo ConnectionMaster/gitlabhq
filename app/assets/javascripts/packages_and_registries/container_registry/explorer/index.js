@@ -5,7 +5,7 @@ import PerformancePlugin from '~/performance/vue_performance_plugin';
 import Translate from '~/vue_shared/translate';
 import RegistryBreadcrumb from '~/packages_and_registries/shared/components/registry_breadcrumb.vue';
 import { injectVueAppBreadcrumbs } from '~/lib/utils/breadcrumbs';
-import { apolloProvider } from './graphql/index';
+import { apolloProvider } from 'ee_else_ce/packages_and_registries/container_registry/explorer/graphql';
 import RegistryExplorer from './pages/index.vue';
 import createRouter from './router';
 
@@ -35,11 +35,14 @@ export default () => {
     expirationPolicy,
     isGroupPage,
     isAdmin,
+    isMetadataDatabaseEnabled,
     showCleanupPolicyLink,
     showContainerRegistrySettings,
     showUnfinishedTagCleanupCallout,
     connectionError,
     invalidPathError,
+    securityConfigurationPath,
+    containerScanningForRegistryDocsPath,
     ...config
   } = el.dataset;
 
@@ -74,6 +77,9 @@ export default () => {
             showUnfinishedTagCleanupCallout: parseBoolean(showUnfinishedTagCleanupCallout),
             connectionError: parseBoolean(connectionError),
             invalidPathError: parseBoolean(invalidPathError),
+            isMetadataDatabaseEnabled: parseBoolean(isMetadataDatabaseEnabled),
+            securityConfigurationPath,
+            containerScanningForRegistryDocsPath,
           },
           /* eslint-disable @gitlab/require-i18n-strings */
           dockerBuildCommand: `docker build -t ${config.repositoryUrl} .`,

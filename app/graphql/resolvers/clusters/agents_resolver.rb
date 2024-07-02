@@ -11,8 +11,8 @@ module Resolvers
 
       when_single do
         argument :name, GraphQL::Types::String,
-            required: true,
-            description: 'Name of the cluster agent.'
+          required: true,
+          description: 'Name of the cluster agent.'
       end
 
       def resolve_with_lookahead(**args)
@@ -27,7 +27,7 @@ module Resolvers
 
       def preloads
         {
-          activity_events: { activity_events: [:user, agent_token: :agent] },
+          activity_events: { activity_events: [:user, { agent_token: :agent }] },
           tokens: :active_agent_tokens
         }
       end

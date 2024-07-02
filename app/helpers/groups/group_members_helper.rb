@@ -5,7 +5,7 @@ module Groups::GroupMembersHelper
 
   AVATAR_SIZE = 40
 
-  def group_members_app_data(group, members:, invited:, access_requests:, banned:, include_relations:, search:)
+  def group_members_app_data(group, members:, invited:, access_requests:, banned:, include_relations:, search:, pending_members:)
     {
       user: group_members_list_data(group, members, { param_name: :page, params: { invited_members_page: nil, search_invited: nil } }),
       group: group_group_links_list_data(group, include_relations, search),
@@ -15,7 +15,8 @@ module Groups::GroupMembersHelper
       can_manage_members: can?(current_user, :admin_group_member, group),
       can_manage_access_requests: can?(current_user, :admin_member_access_request, group),
       group_name: group.name,
-      group_path: group.full_path
+      group_path: group.full_path,
+      can_approve_access_requests: true # true for CE, overridden in EE
     }
   end
 

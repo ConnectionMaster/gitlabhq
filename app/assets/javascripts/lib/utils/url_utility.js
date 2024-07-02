@@ -23,7 +23,10 @@ export const PROMO_URL = `https://${PROMO_HOST}`;
 // eslint-disable-next-line no-restricted-syntax
 export const DOCS_URL_IN_EE_DIR = `${DOCS_URL}/ee`;
 
-// Reset the cursor in a Regex so that multiple uses before a recompile don't fail
+/**
+ * Reset the cursor in a Regex so that multiple uses before a recompile don't fail
+ * @param {RegExp} regex
+ */
 function resetRegExp(regex) {
   regex.lastIndex = 0; /* eslint-disable-line no-param-reassign */
 
@@ -32,6 +35,7 @@ function resetRegExp(regex) {
 
 /**
  * Returns the absolute pathname for a relative or absolute URL string.
+ * @param {string} url
  *
  * A few examples of inputs and outputs:
  * 1) 'http://a.com/b/c/d' => '/b/c/d'
@@ -44,8 +48,11 @@ export const parseUrlPathname = (url) => {
   return pathname;
 };
 
-// Returns a decoded url parameter value
-// - Treats '+' as '%20'
+/**
+ * Returns a decoded url parameter value
+ * - Treats '+' as '%20'
+ * @param {string} val
+ */
 function decodeUrlParameter(val) {
   return decodeURIComponent(val.replace(/\+/g, '%20'));
 }
@@ -94,10 +101,16 @@ export function encodeSaferUrl(potentiallyUnsafePath) {
   return saferPath;
 }
 
+/**
+ * @param {string} path
+ */
 export function cleanLeadingSeparator(path) {
   return path.replace(PATH_SEPARATOR_LEADING_REGEX, '');
 }
 
+/**
+ * @param {string} path
+ */
 export function cleanEndingSeparator(path) {
   return path.replace(PATH_SEPARATOR_ENDING_REGEX, '');
 }
@@ -109,8 +122,8 @@ export function cleanEndingSeparator(path) {
  * - `joinPaths('abc/', '/def') === 'abc/def'`
  * - `joinPaths(null, 'abc/def', 'zoo) === 'abc/def/zoo'`
  *
- * @param  {...String} paths
- * @returns {String}
+ * @param  {...string} paths
+ * @returns {string}
  */
 export function joinPaths(...paths) {
   return paths.reduce((acc, path) => {
@@ -148,10 +161,10 @@ export function getParameterValues(sParam, url = window.location) {
  * Also removes `null` param values from the resulting URL.
  *
  * @param {Object} params - url keys and value to merge
- * @param {String} url
- * @param {Object} options
- * @param {Boolean} options.spreadArrays - split array values into separate key/value-pairs
- * @param {Boolean} options.sort - alphabetically sort params in the returned url (in asc order, i.e., a-z)
+ * @param {string} url
+ * @param {Object} [options]
+ * @param {boolean} [options.spreadArrays] - split array values into separate key/value-pairs
+ * @param {boolean} [options.sort] - alphabetically sort params in the returned url (in asc order, i.e., a-z)
  */
 export function mergeUrlParams(params, url, options = {}) {
   const { spreadArrays = false, sort = false } = options;
@@ -251,6 +264,7 @@ export const getLocationHash = () => window.location.hash?.split('#')[1];
 
 /**
  * Returns a boolean indicating whether the URL hash contains the given string value
+ * @param {string} hashName
  */
 export function doesHashExistInUrl(hashName) {
   const hash = getLocationHash();
@@ -359,17 +373,39 @@ export function isAbsoluteOrRootRelative(url) {
 }
 
 /**
- * Returns true if url is an external URL
+ * Returns a list of path segments of the given URL instance.
  *
- * @param {String} url
- * @returns {Boolean}
+ * @param {URL} url - URL instance (not a string!)
+ * @returns {Array<string>} List of path segments of the given URL
+ */
+export function pathSegments(url) {
+  const pathname = url.pathname.endsWith(PATH_SEPARATOR) ? url.pathname.slice(0, -1) : url.pathname;
+  return pathname.split(PATH_SEPARATOR).slice(1);
+}
+
+/**
+ * Returns `true` if the `url` is an external URL.
+ * The query and hash of the url are ignored.
+ *
+ * @param {string} url
+ * @returns {boolean}
  */
 export function isExternal(url) {
-  if (isRootRelative(url)) {
-    return false;
+  const gitlabURL = new URL(gon.gitlab_url);
+  const newURL = new URL(url, window.location.href);
+
+  if (gitlabURL.origin !== newURL.origin) {
+    return true;
   }
 
-  return !url.includes(gon.gitlab_url);
+  const gitlabURLpathSegments = pathSegments(gitlabURL);
+  const newURLpathSegments = pathSegments(newURL);
+
+  const isInternal = gitlabURLpathSegments.every(
+    (pathSegment, i) => pathSegment === newURLpathSegments[i],
+  );
+
+  return !isInternal;
 }
 
 /**
@@ -682,24 +718,16 @@ export const removeLastSlashInUrlPath = (url) =>
   url.replace(/\/$/, '').replace(/\/(\?|#){1}([^/]*)$/, '$1$2');
 
 /**
- * Navigates to a URL
- * @deprecated Use visitUrl from ~/lib/utils/url_utility.js instead
- * @param {*} url
- */
-export function redirectTo(url) {
-  return window.location.assign(url);
-}
-
-/**
  * Navigates to a URL.
  *
  * If destination is a querystring, it will be automatically transformed into a fully qualified URL.
  * If the URL is not a safe URL (see isSafeURL implementation), this function will log an exception into Sentry.
+ * If the URL is external it calls window.open so it has no referrer header or reference to its opener.
  *
  * @param {*} destination - url to navigate to. This can be a fully qualified URL or a querystring.
- * @param {*} external - if true, open a new page or tab
+ * @param {*} openWindow - if true, open a new window or tab
  */
-export function visitUrl(destination, external = false) {
+export function visitUrl(destination, openWindow = false) {
   let url = destination;
 
   if (destination.startsWith('?')) {
@@ -712,12 +740,12 @@ export function visitUrl(destination, external = false) {
     throw new RangeError(`Only http and https protocols are allowed: ${url}`);
   }
 
-  if (external) {
-    // Simulate `target="_blank" rel="noopener noreferrer"`
-    // See https://mathiasbynens.github.io/rel-noopener/
-    const otherWindow = window.open();
-    otherWindow.opener = null;
-    otherWindow.location.assign(url);
+  if (isExternal(url)) {
+    const target = openWindow ? '_blank' : '_self';
+    // Sets window.opener to null and avoids leaking referrer information.
+    window.open(url, target, 'noreferrer');
+  } else if (openWindow) {
+    window.open(url);
   } else {
     window.location.assign(url);
   }

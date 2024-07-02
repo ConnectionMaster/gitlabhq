@@ -126,14 +126,12 @@ GitLab has several features which can help you manage the number of users:
   option.
 - Enable `block_auto_created_users` for new sign-ups via [LDAP](../../administration/auth/ldap/index.md#basic-configuration-settings) or [OmniAuth](../../integration/omniauth.md#configure-common-settings).
 - Enable the [User cap](../../administration/settings/sign_up_restrictions.md#user-cap)
-  option. **Available in GitLab 13.7 and later**.
+  option.
 - [Disable new sign-ups](../../administration/settings/sign_up_restrictions.md), and instead manage new
   users manually.
 - View a breakdown of users by role in the [Users statistics](../../administration/admin_area.md#users-statistics) page.
 
 ## Subscription data synchronization
-
-> - Introduced in GitLab 14.1.
 
 Subscription data can be automatically synchronized between your self-managed instance and GitLab.
 To enable subscription data synchronization you must have:
@@ -227,7 +225,7 @@ You can manually synchronize your subscription details at any time.
 
 1. On the left sidebar, at the bottom, select **Admin Area**.
 1. Select **Subscription**.
-1. In the **Subscription details** section, select **Sync subscription details**.
+1. In the **Subscription details** section, select **Sync** (**{retry}**).
 
 A job is queued. When the job finishes, the subscription details are updated.
 
@@ -254,8 +252,6 @@ It also displays the following information:
 | Users over subscription | Calculated as `Maximum users` - `Users in subscription` for the current license term. This number incurs a retroactive charge that must be paid before renewal. |
 
 ## Export your license usage
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/66826) in GitLab 14.2.
 
 If you are an administrator, you can export your license usage into a CSV:
 
@@ -408,11 +404,10 @@ If you have difficulty during the renewal process, contact the
 
 #### Renew for fewer seats
 
-There are several options to renew a subscription for fewer seats, as long as the seat total is equal to or greater than the billable user quantity at the time of renewal:
+There are two options to renew a subscription for fewer seats, as long as the seat total is equal to or greater than the billable user quantity at the time of renewal:
 
-1. [Turn off auto-renewal](#enable-or-disable-automatic-subscription-renewal) to avoid renewing at a higher seat quantity.
-1. [Manually renew](#renew-subscription-manually) within 15 days of subscription renewal date, and specify the desired seat quantity.
-1. Work with the Sales team to renew your subscription.
+- [Manually renew](#renew-subscription-manually) within 15 days of subscription renewal date, and **specify the desired seat quantity** on the renewal page.
+- Work with the Sales team to renew your subscription. To avoid auto-renewing at a higher seat quantity while you work with Sales, [cancel your subscription](#enable-or-disable-automatic-subscription-renewal).
 
 ## Upgrade your subscription tier
 
@@ -455,6 +450,13 @@ an expiration message is displayed to all administrators.
 
 For GitLab self-managed instances, you have a 14-day grace period
 before this occurs.
+
+For example, if a license has a start date of January 1, 2024 and an end date of January 1, 2025:
+
+- It expires at 11:59:59 PM UTC December 31, 2024.
+- It is considered expired from 12:00:00 AM UTC January 1, 2025.
+- The grace period of 14 days starts at 12:00:00 AM UTC January 1, 2025 and ends at 11:59:59 PM UTC January 14, 2025.
+- Your instance becomes read-only at 12:00:00 AM UTC January 15, 2025.
 
 - To resume functionality, activate a new license.
 - To fall back to Free features, delete the expired license.

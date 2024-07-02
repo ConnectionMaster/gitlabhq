@@ -11,12 +11,9 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
 WARNING:
-This API is in an [Experiment](../policy/experiment-beta-support.md#experiment) and considered unstable.
+This API is in an [experiment](../policy/experiment-beta-support.md#experiment) and considered unstable.
 The response payload may be subject to change or breakage
 across GitLab releases.
-
-> - Introduced in GitLab 12.1.
-> - Pagination introduced in 14.4.
 
 Every call to this endpoint requires authentication. To perform this call, user should be authorized to read repository.
 To see vulnerabilities in response, user should be authorized to read

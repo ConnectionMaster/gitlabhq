@@ -25,6 +25,7 @@ export const PACKAGE_TYPE_RUBYGEMS = 'RUBYGEMS';
 export const PACKAGE_TYPE_GENERIC = 'GENERIC';
 export const PACKAGE_TYPE_DEBIAN = 'DEBIAN';
 export const PACKAGE_TYPE_HELM = 'HELM';
+export const PACKAGE_TYPE_ML_MODEL = 'ML_MODEL';
 
 export const TRACKING_LABEL_CODE_INSTRUCTION = 'code_instruction';
 export const TRACKING_LABEL_MAVEN_INSTALLATION = 'maven_installation';
@@ -205,17 +206,31 @@ export const SORT_FIELDS = [
   },
 ];
 
-export const PACKAGE_TYPES = [
-  s__('PackageRegistry|Composer'),
-  s__('PackageRegistry|Conan'),
-  s__('PackageRegistry|Generic'),
-  s__('PackageRegistry|Maven'),
-  s__('PackageRegistry|npm'),
-  s__('PackageRegistry|NuGet'),
-  s__('PackageRegistry|PyPI'),
-  s__('PackageRegistry|RubyGems'),
-  s__('PackageRegistry|Debian'),
-  s__('PackageRegistry|Helm'),
+/* eslint-disable @gitlab/require-i18n-strings */
+export const PACKAGE_TYPES_OPTIONS = [
+  { value: 'Composer', title: s__('PackageRegistry|Composer') },
+  { value: 'Conan', title: s__('PackageRegistry|Conan') },
+  { value: 'Generic', title: s__('PackageRegistry|Generic') },
+  { value: 'Maven', title: s__('PackageRegistry|Maven') },
+  { value: 'npm', title: s__('PackageRegistry|npm') },
+  { value: 'NuGet', title: s__('PackageRegistry|NuGet') },
+  { value: 'PyPI', title: s__('PackageRegistry|PyPI') },
+  { value: 'RubyGems', title: s__('PackageRegistry|RubyGems') },
+  { value: 'Debian', title: s__('PackageRegistry|Debian') },
+  { value: 'Helm', title: s__('PackageRegistry|Helm') },
+  { value: 'Ml_Model', title: s__('PackageRegistry|Machine learning model') },
+];
+/* eslint-enable @gitlab/require-i18n-strings */
+
+export const PACKAGE_STATUS_OPTIONS = [
+  {
+    value: PACKAGE_DEFAULT_STATUS.toLowerCase(),
+    title: s__('PackageRegistry|Default'),
+  },
+  { value: PACKAGE_ERROR_STATUS.toLowerCase(), title: s__('PackageRegistry|Error') },
+  { value: 'hidden', title: s__('PackageRegistry|Hidden') },
+  { value: 'pending_destruction', title: s__('PackageRegistry|Pending deletion') },
+  { value: 'processing', title: s__('PackageRegistry|Processing') },
 ];
 
 // links

@@ -16,11 +16,12 @@ Each member gets a role, which determines what they can do in the project.
 
 ## Membership types
 
-> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to display invited group members on the Members tab of the Members page in GitLab 16.10 behind `webui_members_inherited_users` feature flag. Disabled by default.
+> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to display invited group members on the Members tab of the Members page in GitLab 16.10 [with a flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - Feature flag `webui_members_inherited_users` was [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 Users can become members of a group or project directly or indirectly.
 Indirect membership can be inherited, shared, or inherited shared.
@@ -28,23 +29,27 @@ Indirect membership can be inherited, shared, or inherited shared.
 | Membership type                               | Membership process |
 | --------------------------------------------- | ------------------ |
 | [Direct](#add-users-to-a-project)             | The user is added directly to the current group or project. |
-| [Indirect](#indirect-membership)  | The user is not added directly to the current group or project. Instead, the user becomes a member through inheritance from a parent group or through sharing the current group or project with another group. |
+| [Indirect](#indirect-membership)  | The user is not added directly to the current group or project. Instead, the user becomes a member by inheriting from a parent group, or inviting the current group or project to another group. |
 | [Inherited](#inherited-membership)            | The user is a member of a parent group that contains the current group or project. |
-| [Shared](share_project_with_groups.md) | The user is a member of a group or project shared into the current group or project or one of its ancestors. |
-| [Inherited shared](../../group/manage.md#share-a-group-with-another-group) | The user is a member of a parent of a group or project shared into the current group or project. |
+| [Shared](share_project_with_groups.md) | The user is a member of a group or project invited to the current group or project or one of its ancestors. |
+| [Inherited shared](../../group/manage.md#share-a-group-with-another-group) | The user is a member of a parent of a group or project invited to the current group or project. |
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 flowchart RL
+  accTitle: Membership types
+  accDescr: Describes membership types and their inheritance
+
   subgraph Group A
     A(Direct member)
     B{{Shared member}}
-    subgraph Project A
-      H(1. Direct member)
-      C{{2. Inherited member}}
-      D{{4. Inherited member}}
-      E{{3. Shared member}}
+    subgraph Project X
+      H(Direct member)
+      C{{Inherited member}}
+      D{{Inherited shared member}}
+      E{{Shared member}}
     end
-    A-->|Direct membership of Group A\nInherited membership of Project A|C
+    A-->|Inherited membership in Project X\nDirect membership in Group A|C
   end
   subgraph Group C
     G(Direct member)
@@ -52,16 +57,13 @@ flowchart RL
   subgraph Group B
     F(Direct member)
   end
-  F-->|Group B\nshared with\nGroup A|B
-  B-->|Inherited membership of Project A|D
-  G-->|Group C shared with Project A|E
+  F-->|Group B\ninvited to\nGroup A|B
+  B-->|Inherited membership in Project X\nIndirect membership in Group A|D
+  G-->|Group C invited to Project X|E
 ```
 
 ## Add users to a project
 
-> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/247208) in GitLab 13.11 from a form to a modal window [with a flag](../../feature_flags.md). Disabled by default.
-> - Modal window [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/247208) in GitLab 14.8.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/352526) in GitLab 14.9. [Feature flag `invite_members_group_modal`](https://gitlab.com/gitlab-org/gitlab/-/issues/352526) removed.
 > - Expiring access email notification [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/12704) in GitLab 16.2.
 
 Add users to a project so they become direct members and have permission
@@ -111,7 +113,6 @@ role for the group. For example, the maximum role you can set is:
 - Owner (`50`), if you have the Owner role for the project.
 - Maintainer (`40`), if you have the Maintainer role on the project.
 
-In GitLab 14.8 and earlier, direct members of a project have a maximum role of Maintainer.
 The Owner [role](../../permissions.md#project-members-permissions) can be added for the group only.
 
 ## Inherited membership
@@ -139,10 +140,11 @@ If a user is:
 ## Indirect membership
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/444476) in GitLab 16.10 [with a flag](../../feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - Feature flag `webui_members_inherited_users` was [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 If your project belongs to a group, the users gain membership to the project through either inheritance from a parent group or through sharing the project or the project's parent group with another group.
 
@@ -161,14 +163,12 @@ If a user is:
 
 ## Add groups to a project
 
-> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/247208) in GitLab 13.11 from a form to a modal window [with a flag](../../feature_flags.md). Disabled by default.
-> - Modal window [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/247208) in GitLab 14.8.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/352526) in GitLab 14.9. [Feature flag `invite_members_group_modal`](https://gitlab.com/gitlab-org/gitlab/-/issues/352526) removed.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to display invited group members on the Members tab of the Members page in GitLab 16.10 [with a flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - Feature flag `webui_members_inherited_users` was [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 When you add a group to a project, every group member (direct or inherited) gets access to the project.
 Each member's access is based on the:
@@ -282,10 +282,6 @@ To avoid this problem, GitLab administrators can:
 
 ## Filter and sort project members
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/21727) in GitLab 12.6.
-> - [Improved](https://gitlab.com/groups/gitlab-org/-/epics/4901) in GitLab 13.9.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/299954) in GitLab 13.10.
-
 You can filter and sort members in a project.
 
 ### Display direct members
@@ -333,9 +329,7 @@ To sort members:
 GitLab users can request to become a member of a project.
 
 1. On the left sidebar, select **Search or go to** and find the project you want to be a member of.
-1. By the project's name, select **Request Access**.
-
-![Request access button](img/request_access_button.png)
+1. In the top right, select the vertical ellipsis (**{ellipsis_v}**) and select **Request Access**.
 
 An email is sent to the most recently active project Maintainers or Owners.
 Up to ten project Maintainers or Owners are notified.
@@ -405,7 +399,10 @@ In the following example, `User` is a:
 - Indirect inherited member of `subsubgroup-2` and `subsubgroup-3`.
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 graph TD
+  accTitle: Diagram of group inheritance
+  accDescr: User inheritance, both direct and indirect through subgroups
   classDef user stroke:green,color:green;
 
   root --> subgroup --> subsubgroup

@@ -60,7 +60,7 @@ An instance of the `Vulnerabilities::Remediation` class. A remediation is repres
 Assumptions:
 
 - Project uses GitLab CI
-- Project uses [security scanning tools](../../user/application_security)
+- Project uses [security scanning tools](../../user/application_security/index.md)
 - No Vulnerabilities are present in the database
 - All pipelines perform security scans
 
@@ -82,8 +82,8 @@ Some of the scenarios where these `Security::Finding` records may be promoted to
 
 If the pipeline ran on the default branch then the following steps, in addition to the steps in [Scan runs in a pipeline for a non-default branch](#scan-runs-in-a-pipeline-for-a-non-default-branch), are executed:
 
-1. `Security::StoreScansService` gets called and schedules `StoreSecurityReportsWorker`.
-1. `StoreSecurityReportsWorker` executes `Security::Ingestion::IngestReportsService`.
+1. `Security::StoreScansService` gets called and schedules `StoreSecurityReportsByProjectWorker`.
+1. `StoreSecurityReportsByProjectWorker` executes `Security::Ingestion::IngestReportsService`.
 1. `Security::Ingestion::IngestReportsService` takes all reports from a given Pipeline and calls `Security::Ingestion::IngestReportService` and then calls `Security::Ingestion::MarkAsResolvedService`.
 1. `Security::Ingestion::IngestReportService` calls `Security::Ingestion::IngestReportSliceService` which executes a number of tasks for a report slice.
 
@@ -114,3 +114,11 @@ Security Findings detected in scan run on the default branch are saved as `Vulne
 `Vulnerability::Read` records are created via PostgreSQL database trigger upon the creation of a `Vulnerability::Finding` record and as such are part of our ingestion process, though they have no impact on it bar it's denormalization performance benefits on the report pages.
 
 This style of creation was intended to be fast and seamless, but has proven difficult to debug and maintain and may be [migrated to the application layer later](https://gitlab.com/gitlab-org/gitlab/-/issues/393912).
+
+## No longer detected
+
+The "No longer detected" badge on the vulnerability report is displayed if the `Vulnerability` record has `resolved_on_default_branch: true`.
+This is set by `Security::Ingestion::MarkAsResolvedService` when a pipeline runs on the default branch. Vulnerabilities which have
+`resolved_on_default_branch: false` and _are not_ present in the pipeline scan results are marked as resolved.
+[Secret Detection](../../user/application_security/secret_detection/index.md) and [manual](../../user/application_security/vulnerability_report/index.md#manually-add-a-vulnerability)
+vulnerabilities are excluded from this process.

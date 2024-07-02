@@ -78,14 +78,13 @@ the size value only changes when:
   are analyzed and their layers deleted if not referenced by any other tagged image.
   If any layers are deleted, the namespace usage is updated.
 - The namespace's registry usage shrinks enough that GitLab can measure it with maximum precision.
-  As usage for namespaces shrinks to be under the [limits](../../../user/usage_quotas.md#namespace-storage-limit),
+  As usage for namespaces shrinks,
   the measurement switches automatically from delayed to precise usage measurement.
   There is no place in the UI to determine which measurement method is being used,
   but [issue 386468](https://gitlab.com/gitlab-org/gitlab/-/issues/386468) proposes to improve this.
 
 ## Cleanup policy
 
-> - [Renamed](https://gitlab.com/gitlab-org/gitlab/-/issues/218737) from "expiration policy" to "cleanup policy" in GitLab 13.2.
 > - [Required permissions](https://gitlab.com/gitlab-org/gitlab/-/issues/350682) changed from developer to maintainer in GitLab 15.0.
 
 The cleanup policy is a scheduled job you can use to remove tags from the container registry.
@@ -96,22 +95,6 @@ To delete the underlying layers and images that aren't associated with any tags,
 [garbage collection](../../../administration/packages/container_registry.md#removing-untagged-manifests-and-unreferenced-layers) with the `-m` switch.
 
 ### Enable the cleanup policy
-
-You can run cleanup policies on all projects with these exceptions:
-
-- For self-managed GitLab instances, the project must have been created
-  in GitLab 12.8 or later. However, an administrator can enable the cleanup policy
-  for all projects (even those created before GitLab 12.8) in
-  [GitLab application settings](../../../api/settings.md#change-application-settings)
-  by setting `container_expiration_policies_enable_historic_entries` to true.
-  Alternatively, you can execute the following command in the [Rails console](../../../administration/operations/rails_console.md#starting-a-rails-console-session):
-
-  ```ruby
-  ApplicationSetting.last.update(container_expiration_policies_enable_historic_entries: true)
-  ```
-
-  Enabling cleanup policies on all projects can impact performance, especially if you
-  are using an [external registry](#use-with-external-container-registries).
 
 WARNING:
 For performance reasons, enabled cleanup policies are automatically disabled for projects on
@@ -195,7 +178,8 @@ You can create a cleanup policy in [the API](#use-the-cleanup-policy-api) or the
 
 To create a cleanup policy in the UI:
 
-1. For your project, go to **Settings > Packages and registries**.
+1. On the left sidebar, select **Search or go to** and find your project.
+1. Select **Settings > Packages and registries**.
 1. In the **Cleanup policies** section, select **Set cleanup rules**.
 1. Complete the fields:
 
@@ -208,6 +192,9 @@ To create a cleanup policy in the UI:
    | **Remove tags older than** | Remove only tags older than X days. |
    | **Remove tags matching**   | A regex pattern that determines which tags to remove. This value cannot be blank. For all tags, use `.*`. See other [regex pattern examples](#regex-pattern-examples). |
 
+   NOTE:
+   Both keep and remove regex patterns are automatically surrounded with `\A` and `\Z` anchors, so you do not need to include them. However, make sure to take this into account when choosing and testing your regex patterns.
+
 1. Select **Save**.
 
 The policy runs on the scheduled interval you selected.
@@ -219,8 +206,7 @@ If you edit the policy and select **Save** again, the interval is reset.
 
 Cleanup policies use regex patterns to determine which tags should be preserved or removed, both in the UI and the API.
 
-Regex patterns are automatically surrounded with `\A` and `\Z` anchors. Therefore, you do not need to include any
-`\A`, `\Z`, `^` or `$` tokens in the regex patterns.
+GitLab uses [RE2 syntax](https://github.com/google/re2/wiki/Syntax) for regular expressions in the cleanup policy.
 
 Here are some examples of regex patterns you can use:
 
@@ -258,8 +244,6 @@ Here are some examples of regex patterns you can use:
 
 ### Set cleanup limits to conserve resources
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/288812) in GitLab 13.9 [with a flag](../../../administration/feature_flags.md) named `container_registry_expiration_policies_throttling`. Disabled by default.
-> - [Enabled by default](https://gitlab.com/groups/gitlab-org/-/epics/2270) in GitLab 14.9.
 > - [Removed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/84996) the feature flag `container_registry_expiration_policies_throttling` in GitLab 15.0.
 
 Cleanup policies are executed as a background process. This process is complex, and depending on the number of tags to delete,
@@ -303,7 +287,8 @@ Examples:
   any images with the name `main`, and the policy is enabled:
 
   ```shell
-  curl --request PUT --header 'Content-Type: application/json;charset=UTF-8' --header "PRIVATE-TOKEN: <your_access_token>" \
+  curl --fail-with-body --request PUT --header 'Content-Type: application/json;charset=UTF-8'
+       --header "PRIVATE-TOKEN: <your_access_token>" \
        --data-binary '{"container_expiration_policy_attributes":{"cadence":"1month","enabled":true,"keep_n":1,"older_than":"14d","name_regex":".*","name_regex_keep":".*-main"}}' \
        "https://gitlab.example.com/api/v4/projects/2"
   ```
@@ -340,8 +325,6 @@ When using an [external container registry](../../../administration/packages/con
 running a cleanup policy on a project may have some performance risks.
 If a project runs a policy to remove thousands of tags,
 the GitLab background jobs may get backed up or fail completely.
-For projects created before GitLab 12.8, you should enable container cleanup policies
-only if the number of tags being cleaned up is minimal.
 
 ## More container registry storage reduction options
 
@@ -359,20 +342,12 @@ Here are some other options you can use to reduce the container registry storage
 
 If you see this error message, check the regex patterns to ensure they are valid.
 
-GitLab uses [RE2 syntax](https://github.com/google/re2/wiki/Syntax) for regular expressions in the cleanup policy. You can test them with the [regex101 regex tester](https://regex101.com/) using the `Golang` flavor.
+You can test them with the [regex101 regex tester](https://regex101.com/) using the `Golang` flavor.
 View some common [regex pattern examples](#regex-pattern-examples).
 
 ### The cleanup policy doesn't delete any tags
 
 There can be different reasons behind this:
-
-- In GitLab 13.6 and earlier, when you run the cleanup policy you may expect it to delete tags and
-  it does not. This occurs when the cleanup policy is saved without editing the value in the
-  **Remove tags matching** field. This field has a grayed out `.*` value as a placeholder. Unless
-  `.*` (or another regex pattern) is entered explicitly into the field, a `nil` value is submitted.
-  This value prevents the saved cleanup policy from matching any tags. As a workaround, edit the
-  cleanup policy. In the **Remove tags matching** field, enter `.*` and save. This value indicates
-  that all tags should be removed.
 
 - If you are on GitLab self-managed instances and you have 1000+ tags in a container repository, you
   might run into a [Container Registry token expiration issue](https://gitlab.com/gitlab-org/gitlab/-/issues/288814),
@@ -380,7 +355,7 @@ There can be different reasons behind this:
 
   To fix this, there are two workarounds:
 
-  - If you are on GitLab 13.9 or later, you can [set limits for the cleanup policy](reduce_container_registry_storage.md#set-cleanup-limits-to-conserve-resources).
+  - You can [set limits for the cleanup policy](reduce_container_registry_storage.md#set-cleanup-limits-to-conserve-resources).
     This limits the cleanup execution in time, and avoids the expired token error.
 
   - Extend the expiration delay of the container registry authentication tokens. This defaults to 5
@@ -399,7 +374,7 @@ the tags. To create the list and delete the tags:
 
    ```shell
    # Get a list of all tags in a certain container repository while considering [pagination](../../../api/rest/index.md#pagination)
-   echo -n "" > list_o_tags.out; for i in {1..N}; do curl --header 'PRIVATE-TOKEN: <PAT>' "https://gitlab.example.com/api/v4/projects/<Project_id>/registry/repositories/<container_repo_id>/tags?per_page=100&page=${i}" | jq '.[].name' | sed 's:^.\(.*\).$:\1:' >> list_o_tags.out; done
+   echo -n "" > list_o_tags.out; for i in {1..N}; do curl --fail-with-body --header 'PRIVATE-TOKEN: <PAT>' "https://gitlab.example.com/api/v4/projects/<Project_id>/registry/repositories/<container_repo_id>/tags?per_page=100&page=${i}" | jq '.[].name' | sed 's:^.\(.*\).$:\1:' >> list_o_tags.out; done
    ```
 
    If you have Rails console access, you can enter the following commands to retrieve a list of tags limited by date:
@@ -460,5 +435,5 @@ the tags. To create the list and delete the tags:
 
    ```shell
    # loop over list_o_tags.out to delete a single tag at a time
-   while read -r LINE || [[ -n $LINE ]]; do echo ${LINE}; curl --request DELETE --header 'PRIVATE-TOKEN: <PAT>' "https://gitlab.example.com/api/v4/projects/<Project_id>/registry/repositories/<container_repo_id>/tags/${LINE}"; sleep 0.1; echo; done < list_o_tags.out > delete.logs
+   while read -r LINE || [[ -n $LINE ]]; do echo ${LINE}; curl --fail-with-body --request DELETE --header 'PRIVATE-TOKEN: <PAT>' "https://gitlab.example.com/api/v4/projects/<Project_id>/registry/repositories/<container_repo_id>/tags/${LINE}"; sleep 0.1; echo; done < list_o_tags.out > delete.logs
    ```

@@ -13,6 +13,7 @@ import { formatDate } from '~/lib/utils/datetime_utility';
 import { numberToHumanSize } from '~/lib/utils/number_utils';
 import {
   CREATED_AT,
+  LAST_PUBLISHED_AT,
   CLEANUP_UNSCHEDULED_TEXT,
   CLEANUP_SCHEDULED_TEXT,
   CLEANUP_ONGOING_TEXT,
@@ -41,6 +42,7 @@ export default {
     GlTooltip: GlTooltipDirective,
   },
   mixins: [timeagoMixin],
+  inject: ['config'],
   props: {
     image: {
       type: Object,
@@ -63,6 +65,7 @@ export default {
       variables() {
         return {
           id: this.image.id,
+          metadataDatabaseEnabled: this.config.isMetadataDatabaseEnabled,
         };
       },
     },
@@ -75,10 +78,21 @@ export default {
       return this.imageDetails?.project?.visibility === 'public' ? 'eye' : 'eye-slash';
     },
     formattedCreatedAtDate() {
-      return formatDate(this.imageDetails.createdAt, 'mmm d, yyyy HH:MM', true);
+      return this.formatDate(this.imageDetails.createdAt);
+    },
+    containsLastPublishedAtDate() {
+      return Boolean(this.imageDetails.lastPublishedAt);
+    },
+    formattedLastPublishedAtDate() {
+      return this.containsLastPublishedAtDate
+        ? this.formatDate(this.imageDetails.lastPublishedAt)
+        : '';
     },
     createdText() {
       return sprintf(CREATED_AT, { time: this.formattedCreatedAtDate });
+    },
+    lastPublishedAtText() {
+      return sprintf(LAST_PUBLISHED_AT, { time: this.formattedLastPublishedAtDate });
     },
     tagCountText() {
       if (this.$apollo.queries.containerRepository.loading) {
@@ -113,6 +127,11 @@ export default {
     formattedSize() {
       const { size } = this.imageDetails;
       return size ? numberToHumanSize(Number(size)) : null;
+    },
+  },
+  methods: {
+    formatDate(date) {
+      return formatDate(date, 'mmm d, yyyy HH:MM', true);
     },
   },
   i18n: {
@@ -168,11 +187,19 @@ export default {
         data-testid="created-and-visibility"
       />
     </template>
+    <template v-if="containsLastPublishedAtDate" #metadata-last-published-at>
+      <metadata-item
+        icon="calendar"
+        :text="lastPublishedAtText"
+        size="xl"
+        data-testid="last-published-at"
+      />
+    </template>
     <template v-if="!deleteButtonDisabled" #right-actions>
       <gl-disclosure-dropdown
         category="tertiary"
         icon="ellipsis_v"
-        placement="right"
+        placement="bottom-end"
         :toggle-text="$options.i18n.MORE_ACTIONS_TEXT"
         text-sr-only
         no-caret

@@ -22,12 +22,16 @@ inherit_mode:
 
 AllCops:
   # The oldest supported Ruby version.
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.1
   SuggestExtensions: false
   NewCops: disable
 
 # This cop doesn't make sense in the context of gems
 CodeReuse/ActiveRecord:
+  Enabled: false
+
+# This cop doesn't make sense in the context of gems
+RSpec/FactoriesInMigrationSpecs:
   Enabled: false
 
 # This cop doesn't make sense in the context of gems
@@ -43,6 +47,11 @@ Gemspec/AvoidExecutingGit:
 
 # We disable this since we support multiple Ruby versions
 Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+# This cop enforces domain bounded contexts which generally
+# are not applicable to gems.
+Gitlab/BoundedContexts:
   Enabled: false
 
 # This cop doesn't make sense in the context of gems
@@ -123,3 +132,10 @@ Style/HashSyntax:
 # This cop doesn't make sense in the context of gems
 Migration/EnsureFactoryForTable:
   Enabled: false
+
+# This cop doesn't make sense in the context of gems unless they're
+# adding Controller code
+Rails/StrongParams:
+  Enabled: true
+  Include:
+    - '**/controllers/**/*'

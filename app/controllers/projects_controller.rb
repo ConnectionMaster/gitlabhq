@@ -3,7 +3,6 @@
 class ProjectsController < Projects::ApplicationController
   include API::Helpers::RelatedResourcesHelpers
   include IssuableCollections
-  include ExtractsPath
   include PreviewMarkdown
   include SendFileUpload
   include RecordUserLastActivity
@@ -41,7 +40,8 @@ class ProjectsController < Projects::ApplicationController
     push_frontend_feature_flag(:remove_monitor_metrics, @project)
     push_frontend_feature_flag(:explain_code_chat, current_user)
     push_frontend_feature_flag(:issue_email_participants, @project)
-    push_frontend_feature_flag(:add_branch_rule, @project)
+    push_frontend_feature_flag(:service_desk_tickets_confidentiality, @project)
+    push_frontend_feature_flag(:edit_branch_rules, @project)
     # TODO: We need to remove the FF eventually when we rollout page_specific_styles
     push_frontend_feature_flag(:page_specific_styles, current_user)
     push_licensed_feature(:file_locks) if @project.present? && @project.licensed_feature_available?(:file_locks)
@@ -52,8 +52,8 @@ class ProjectsController < Projects::ApplicationController
 
     push_force_frontend_feature_flag(:work_items, @project&.work_items_feature_flag_enabled?)
     push_force_frontend_feature_flag(:work_items_beta, @project&.work_items_beta_feature_flag_enabled?)
-    push_force_frontend_feature_flag(:work_items_mvc_2, @project&.work_items_mvc_2_feature_flag_enabled?)
-    push_force_frontend_feature_flag(:linked_work_items, @project&.linked_work_items_feature_flag_enabled?)
+    push_force_frontend_feature_flag(:work_items_alpha, @project&.work_items_alpha_feature_flag_enabled?)
+    push_frontend_feature_flag(:namespace_level_work_items, @project&.group)
   end
 
   layout :determine_layout
@@ -74,7 +74,7 @@ class ProjectsController < Projects::ApplicationController
   # TODO: Set high urgency for #show https://gitlab.com/gitlab-org/gitlab/-/issues/334444
 
   urgency :low, [:refs, :show, :toggle_star, :transfer, :archive, :destroy, :update, :create,
-                 :activity, :edit, :new, :export, :remove_export, :generate_new_export, :download_export]
+    :activity, :edit, :new, :export, :remove_export, :generate_new_export, :download_export]
 
   urgency :high, [:unfoldered_environment_names]
 
@@ -163,7 +163,8 @@ class ProjectsController < Projects::ApplicationController
   end
 
   def show
-    @id, @ref, @path = extract_ref_path
+    @id = @ref = repository_root
+    @path = ''
 
     if @project.import_in_progress?
       redirect_to project_import_path(@project, custom_import_params)
@@ -175,15 +176,6 @@ class ProjectsController < Projects::ApplicationController
     end
 
     @ref_type = 'heads'
-
-    if !Feature.enabled?(:ambiguous_ref_modal, @project) && ambiguous_ref?(@project, @ref)
-      branch = @project.repository.find_branch(@ref)
-
-      # The files view would render a ref other than the default branch
-      # This redirect can be removed once the view is fixed
-      redirect_to(project_tree_path(@project, branch.target), alert: _("The default branch of this project clashes with another ref"))
-      return
-    end
 
     respond_to do |format|
       format.html do
@@ -203,7 +195,7 @@ class ProjectsController < Projects::ApplicationController
     return access_denied! unless can?(current_user, :remove_project, @project)
 
     ::Projects::DestroyService.new(@project, current_user, {}).async_execute
-    flash[:notice] = _("Project '%{project_name}' is in the process of being deleted.") % { project_name: @project.full_name }
+    flash[:toast] = format(_("Project '%{project_name}' is being deleted."), project_name: @project.full_name)
 
     redirect_to dashboard_projects_path, status: :found
   rescue Projects::DestroyService::DestroyError => e
@@ -469,6 +461,7 @@ class ProjectsController < Projects::ApplicationController
   def project_setting_attributes
     %i[
       show_default_award_emojis
+      show_diff_preview_in_email
       squash_option
       mr_default_target_self
       warn_about_potentially_unwanted_characters
@@ -516,8 +509,9 @@ class ProjectsController < Projects::ApplicationController
       :service_desk_enabled,
       :merge_commit_template_or_default,
       :squash_commit_template_or_default,
-      project_setting_attributes: project_setting_attributes
-    ] + [project_feature_attributes: project_feature_attributes]
+      { project_setting_attributes: project_setting_attributes,
+        project_feature_attributes: project_feature_attributes }
+    ]
   end
 
   def project_params_create_attributes
@@ -547,15 +541,7 @@ class ProjectsController < Projects::ApplicationController
     false
   end
 
-  # Override extract_ref from ExtractsPath, which returns the branch and file path
-  # for the blob/tree, which in this case is just the root of the default branch.
-  # This way we avoid to access the repository.ref_names.
-  def extract_ref(_id)
-    [get_id, '']
-  end
-
-  # Override get_id from ExtractsPath in this case is just the root of the default branch.
-  def get_id
+  def repository_root
     project.repository.root_ref
   rescue Gitlab::Git::CommandError
     # Empty string is intentional and prevent the @ref reload

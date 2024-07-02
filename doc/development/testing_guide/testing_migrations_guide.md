@@ -67,7 +67,7 @@ Since the migration files are not autoloaded by Rails, you must manually
 load the migration file. To do so, you can use the `require_migration!` helper method
 which can automatically load the correct migration file based on the spec filename.
 
-In GitLab 14.4 and later, you can use `require_migration!` to load migration files from spec files
+You can use `require_migration!` to load migration files from spec files
 that contain the schema version in the filename (for example,
 `2021101412150000_populate_foo_column_spec.rb`).
 
@@ -106,7 +106,7 @@ application code which can change after the migration has run, and cause the tes
 to fail. For example, to create a record in the `projects` table:
 
 ```ruby
-project = table(:projects).create!(id: 1, name: 'gitlab1', path: 'gitlab1')
+project = table(:projects).create!(name: 'gitlab1', path: 'gitlab1')
 ```
 
 #### `migrate!`

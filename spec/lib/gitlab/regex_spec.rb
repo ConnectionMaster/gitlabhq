@@ -80,10 +80,12 @@ RSpec.describe Gitlab::Regex, feature_category: :tooling do
     it { is_expected.not_to match('http://custom-url.com|click here') }
     it { is_expected.not_to match('custom-url.com|any-Charact3r$') }
     it { is_expected.not_to match("&lt;custom-url.com|any-Charact3r$&gt;") }
+    it { is_expected.not_to match('<<|' * 1000) }
 
     it { is_expected.to match('<http://custom-url.com|click here>') }
     it { is_expected.to match('<custom-url.com|any-Charact3r$>') }
     it { is_expected.to match('<any-Charact3r$|any-Charact3r$>') }
+    it { is_expected.to match(('<<|' * 1000) + '<https://gitlab.example|click here>') }
   end
 
   describe '.environment_name_regex' do
@@ -319,7 +321,7 @@ RSpec.describe Gitlab::Regex, feature_category: :tooling do
 
     it 'has no backtracking issue' do
       Timeout.timeout(1) do
-        expect(subject).not_to match("-" * 50000 + ";")
+        expect(subject).not_to match(("-" * 50000) + ";")
       end
     end
   end
@@ -369,7 +371,7 @@ RSpec.describe Gitlab::Regex, feature_category: :tooling do
 
     it 'has no ReDos issues with long strings ending with an exclamation mark' do
       Timeout.timeout(5) do
-        expect(subject).not_to match('a' * 50000 + '!')
+        expect(subject).not_to match(('a' * 50000) + '!')
       end
     end
 
@@ -707,11 +709,27 @@ RSpec.describe Gitlab::Regex, feature_category: :tooling do
   describe '.go_package_regex' do
     subject { described_class.go_package_regex }
 
+    let(:fifty_segment_tld) { "#{Array.new(50, 'segment').join('.')}.com/path" }
+    let(:fifty_one_segment_tld) { "#{Array.new(51, 'segment').join('.')}.com/path" }
+    let(:one_thousand_character_path) { "example.com/#{'a' * 1000}" }
+    let(:one_thousand_and_one_character_path) { "example.com/#{'a' * 1001}" }
+
     it { is_expected.to match('example.com') }
     it { is_expected.to match('example.com/foo') }
+    it { is_expected.to match('example.com/foo%2Fbar') }
     it { is_expected.to match('example.com/foo/bar') }
     it { is_expected.to match('example.com/foo/bar/baz') }
     it { is_expected.to match('tl.dr.foo.bar.baz') }
+    it { is_expected.to match('(tl.dr.foo.bar.baz)') }
+    it { is_expected.to match(' tl.dr.foo.bar.baz ') }
+    it { is_expected.to match(fifty_segment_tld) }
+    it { is_expected.to match(one_thousand_character_path) }
+
+    it { is_expected.not_to match('.tl.dr.foo.bar.baz') }
+    it { is_expected.not_to match('-tl.dr.foo.bar.baz') }
+    it { is_expected.not_to match('tl.dr.foo.bar.baz.') }
+    it { is_expected.not_to match(fifty_one_segment_tld) }
+    it { is_expected.not_to match(one_thousand_and_one_character_path) }
   end
 
   describe '.unbounded_semver_regex' do
@@ -976,11 +994,11 @@ RSpec.describe Gitlab::Regex, feature_category: :tooling do
     it { is_expected.to match('abcdefABCDEF1234567890abcdefABCDEF1234567890abcdefABCDEF12345678') }
     it { is_expected.not_to match('a' * 63) }
     it { is_expected.not_to match('a' * 65) }
-    it { is_expected.not_to match('a' * 63 + 'g') }
-    it { is_expected.not_to match('a' * 63 + '{') }
-    it { is_expected.not_to match('a' * 63 + '%') }
-    it { is_expected.not_to match('a' * 63 + '*') }
-    it { is_expected.not_to match('a' * 63 + '#') }
+    it { is_expected.not_to match(('a' * 63) + 'g') }
+    it { is_expected.not_to match(('a' * 63) + '{') }
+    it { is_expected.not_to match(('a' * 63) + '%') }
+    it { is_expected.not_to match(('a' * 63) + '*') }
+    it { is_expected.not_to match(('a' * 63) + '#') }
     it { is_expected.not_to match('') }
   end
 

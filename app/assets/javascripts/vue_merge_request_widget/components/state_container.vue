@@ -98,14 +98,15 @@ export default {
         <div
           :class="{
             'gl-display-flex gl-align-items-center': actions.length,
-            'gl-md-display-flex gl-align-items-center gl-flex-wrap gl-gap-3': !actions.length,
+            'md:gl-flex gl-align-items-center gl-flex-wrap gl-gap-3': !actions.length,
           }"
-          class="media-body gl-line-height-normal"
+          class="media-body gl-leading-normal"
         >
           <slot></slot>
           <div
             :class="{
-              'state-container-action-buttons gl-flex-wrap gl-lg-justify-content-end': !actions.length,
+              'state-container-action-buttons gl-flex-wrap gl-lg-justify-content-end':
+                !actions.length,
               'gl-md-pt-0 gl-pt-3': hasActionsSlot,
             }"
             class="gl-display-flex gl-font-size-0 gl-gap-3"
@@ -117,7 +118,7 @@ export default {
         </div>
         <div
           v-if="isCollapsible"
-          :class="{ 'gl-md-display-none': !collapseOnDesktop }"
+          :class="{ 'md:gl-hidden': !collapseOnDesktop }"
           class="gl-border-l-1 gl-border-l-solid gl-border-gray-100 gl-ml-3 gl-pl-3 gl-h-6"
         >
           <gl-button
@@ -127,7 +128,7 @@ export default {
             :icon="collapsed ? 'chevron-lg-down' : 'chevron-lg-up'"
             category="tertiary"
             size="small"
-            class="gl-vertical-align-top"
+            class="gl-align-top"
             data-testid="widget-toggle"
             @click="() => $emit('toggle')"
           />

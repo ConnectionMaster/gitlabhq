@@ -2,6 +2,16 @@
 
 module Emails
   module MergeRequests
+    extend ActiveSupport::Concern
+
+    included do
+      override_layout_lookup_table.merge!({
+        merge_when_pipeline_succeeds_email: 'mailer',
+        approved_merge_request_email: 'mailer',
+        unapproved_merge_request_email: 'mailer'
+      })
+    end
+
     def new_merge_request_email(recipient_id, merge_request_id, reason = nil)
       setup_merge_request_mail(merge_request_id, recipient_id, present: true)
 
@@ -169,7 +179,7 @@ module Emails
     def setup_merge_request_mail(merge_request_id, recipient_id, present: false)
       @merge_request = MergeRequest.find(merge_request_id)
       @project = @merge_request.project
-      @target_url = project_merge_request_url(@project, @merge_request)
+      @target_url = Gitlab::Routing.url_helpers.project_merge_request_url(@project, @merge_request)
       @recipient = User.find(recipient_id)
 
       if present

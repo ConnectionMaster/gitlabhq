@@ -235,7 +235,7 @@ RSpec.describe ::SystemNotes::MergeRequestsService, feature_category: :code_revi
         subject { service.change_branch('target', 'invalid', old_branch, new_branch) }
 
         it 'raises exception' do
-          expect { subject }.to raise_error /invalid value for event_type/
+          expect { subject }.to raise_error(/invalid value for event_type/)
         end
       end
     end
@@ -330,6 +330,20 @@ RSpec.describe ::SystemNotes::MergeRequestsService, feature_category: :code_revi
     context 'when merge request approved' do
       it 'sets the note text' do
         expect(subject.note).to eq "approved this merge request"
+      end
+    end
+  end
+
+  describe '#requested_changes' do
+    subject { described_class.new(noteable: noteable, project: project, author: author).requested_changes }
+
+    it_behaves_like 'a system note' do
+      let(:action) { 'requested_changes' }
+    end
+
+    context 'when the user has requested changes' do
+      it 'sets the note text' do
+        expect(subject.note).to eq "requested changes"
       end
     end
   end

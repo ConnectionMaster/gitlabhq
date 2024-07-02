@@ -18,21 +18,13 @@ module Gitlab
       end
 
       def execute
-        Gitlab::Ci::YamlProcessor::FeatureFlags.with_actor(project) do
-          parse_config
-        end
-      end
-
-      private
-
-      def parse_config
         if @config_content.blank?
           return Result.new(errors: ['Please provide content of .gitlab-ci.yml'])
         end
 
         verify_project_sha! if verify_project_sha?
 
-        @ci_config = Gitlab::Ci::Config.new(@config_content, **@opts)
+        @ci_config = Gitlab::Ci::Config.new(@config_content, **ci_config_opts)
 
         unless @ci_config.valid?
           return Result.new(ci_config: @ci_config, errors: @ci_config.errors, warnings: @ci_config.warnings)
@@ -45,6 +37,14 @@ module Gitlab
         Result.new(ci_config: @ci_config, errors: [e.message], warnings: @ci_config&.warnings)
       rescue ValidationError => e
         Result.new(ci_config: @ci_config, errors: [e.message], warnings: @ci_config&.warnings)
+      end
+
+      private
+
+      attr_reader :opts
+
+      def ci_config_opts
+        @opts
       end
 
       def project

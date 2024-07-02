@@ -17,8 +17,8 @@ import { timeTrackingQueries } from '../../queries/constants';
 import eventHub from '../../event_hub';
 import TimeTrackingCollapsedState from './collapsed_state.vue';
 import TimeTrackingComparisonPane from './comparison_pane.vue';
-import TimeTrackingReport from './report.vue';
 import TimeTrackingSpentOnlyPane from './spent_only_pane.vue';
+import TimeTrackingReport from './time_tracking_report.vue';
 import { CREATE_TIMELOG_MODAL_ID, SET_TIME_ESTIMATE_MODAL_ID } from './constants';
 import CreateTimelogForm from './create_timelog_form.vue';
 import SetTimeEstimateForm from './set_time_estimate_form.vue';
@@ -235,7 +235,7 @@ export default {
       :time-estimate-human-readable="humanTimeEstimate"
     />
     <div
-      class="hide-collapsed gl-line-height-20 gl-text-gray-900 gl-display-flex gl-align-items-center gl-font-weight-bold"
+      class="hide-collapsed gl-leading-20 gl-text-gray-900 gl-display-flex gl-align-items-center gl-font-bold"
     >
       {{ __('Time tracking') }}
       <gl-loading-icon v-if="isTimeTrackingInfoLoading" size="sm" class="gl-ml-2" inline />

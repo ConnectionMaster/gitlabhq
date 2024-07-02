@@ -10,15 +10,6 @@ module Gitlab
       REDIS_SLOT = 'hll_counters'
       KEY_OVERRIDES_PATH = Rails.root.join('lib/gitlab/usage_data_counters/hll_redis_key_overrides.yml')
       LEGACY_EVENTS_PATH = Rails.root.join('lib/gitlab/usage_data_counters/hll_redis_legacy_events.yml')
-      # To be removed with https://gitlab.com/gitlab-org/gitlab/-/issues/439982
-      HALF_MIGRATED_EVENTS = %w[
-        i_analytics_dev_ops_adoption
-        i_analytics_dev_ops_score
-        g_project_management_issue_cross_referenced
-        k8s_api_proxy_requests_unique_users_via_ci_access
-        k8s_api_proxy_requests_unique_users_via_pat_access
-        k8s_api_proxy_requests_unique_users_via_user_access
-      ].freeze
 
       EventError = Class.new(StandardError)
       UnknownEvent = Class.new(EventError)
@@ -54,7 +45,9 @@ module Gitlab
         # start_date  - The start date of the time range.
         # end_date  - The end date of the time range.
         def unique_events(event_names:, start_date:, end_date:, property_name: nil)
-          count_unique_events(event_names: event_names, property_name: property_name, start_date: start_date, end_date: end_date)
+          used_in_aggregate_metric = event_names.is_a?(Array) && event_names.size > 1
+
+          count_unique_events(event_names: event_names, property_name: property_name, start_date: start_date, end_date: end_date, used_in_aggregate_metric: used_in_aggregate_metric)
         end
 
         def known_event?(event_name)
@@ -65,10 +58,8 @@ module Gitlab
           @known_events ||= load_events
         end
 
-        def calculate_events_union(event_names:, property_name:, start_date:, end_date:)
-          # :used_in_aggregate_metric is needed because this method is
-          # used by AggregatedMetrics, which sends :property_name even for legacy events
-          count_unique_events(event_names: event_names, property_name: property_name, start_date: start_date, end_date: end_date, used_in_aggregate_metric: true)
+        def legacy_event?(event_name)
+          legacy_events.include?(event_name)
         end
 
         private
@@ -164,7 +155,7 @@ module Gitlab
                       "When an event gets migrated to Internal Events, its name needs to be removed " \
                       "from hll_redis_legacy_events.yml and added to hll_redis_key_overrides.yml: #{link}"
             Gitlab::ErrorTracking.track_and_raise_for_dev_exception(UnfinishedEventMigrationError.new(message), event_name: event_name)
-          elsif !property_name && legacy_events.exclude?(event_name) && HALF_MIGRATED_EVENTS.exclude?(event_name)
+          elsif !property_name && legacy_events.exclude?(event_name)
             message = "Event #{event_name} has been invoked with no property_name.\n" \
                       "When a new non-internal event gets created, its name needs to be added " \
                       "to the hll_redis_legacy_events.yml file."

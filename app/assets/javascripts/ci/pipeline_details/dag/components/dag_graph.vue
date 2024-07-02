@@ -30,7 +30,7 @@ export default {
     ),
     hoverFadeClasses: [
       'gl-cursor-pointer',
-      'gl-transition-duration-slow',
+      'gl-duration-slow',
       'gl-transition-timing-function-ease',
     ].join(' '),
   },
@@ -139,7 +139,7 @@ export default {
         'gl-pointer-events-none',
         'gl-flex-direction-column',
         'gl-justify-content-center',
-        'gl-overflow-wrap-break',
+        'gl-break-words',
       ].join(' ');
 
       return (
@@ -216,14 +216,8 @@ export default {
     },
 
     drawGraph({ maxNodesPerLayer, linksAndNodes }) {
-      const {
-        baseWidth,
-        baseHeight,
-        minNodeHeight,
-        nodeWidth,
-        nodePadding,
-        paddingForLabels,
-      } = this.$options.viewOptions;
+      const { baseWidth, baseHeight, minNodeHeight, nodeWidth, nodePadding, paddingForLabels } =
+        this.$options.viewOptions;
 
       this.width = baseWidth;
       this.height = baseHeight + maxNodesPerLayer * minNodeHeight;
@@ -255,7 +249,7 @@ export default {
           return this.createAndAssignId(d, 'uid', LINK_SELECTOR);
         })
         .classed(
-          `${LINK_SELECTOR} gl-transition-property-stroke-opacity ${this.$options.viewOptions.hoverFadeClasses}`,
+          `${LINK_SELECTOR} gl-transition-stroke-opacity ${this.$options.viewOptions.hoverFadeClasses}`,
           true,
         );
     },
@@ -270,7 +264,7 @@ export default {
         .enter()
         .append('line')
         .classed(
-          `${NODE_SELECTOR} gl-transition-property-stroke ${this.$options.viewOptions.hoverFadeClasses}`,
+          `${NODE_SELECTOR} gl-transition-stroke ${this.$options.viewOptions.hoverFadeClasses}`,
           true,
         )
         .attr('id', (d) => {

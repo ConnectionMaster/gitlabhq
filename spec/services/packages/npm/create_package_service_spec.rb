@@ -66,14 +66,6 @@ RSpec.describe Packages::Npm::CreatePackageService, feature_category: :package_r
         subject { super().payload.fetch(:package) }
 
         it { is_expected.to have_attributes status: 'processing' }
-
-        context 'when upload_npm_packages_async feature flag is disabled' do
-          before do
-            stub_feature_flags(upload_npm_packages_async: false)
-          end
-
-          it_behaves_like 'assigns status to package'
-        end
       end
 
       context 'when the npm metadatum creation results in a size error' do
@@ -372,17 +364,17 @@ RSpec.describe Packages::Npm::CreatePackageService, feature_category: :package_r
 
         let(:package_name_pattern_no_match) { "#{package_name}_no_match" }
 
-        where(:package_name_pattern, :push_protected_up_to_access_level) do
-          ref(:package_name)                  | :developer
+        where(:package_name_pattern, :minimum_access_level_for_push) do
+          ref(:package_name)                  | :maintainer
           ref(:package_name)                  | :owner
-          ref(:package_name_pattern_no_match) | :developer
+          ref(:package_name_pattern_no_match) | :maintainer
           ref(:package_name_pattern_no_match) | :owner
         end
 
         with_them do
           before do
             package_protection_rule.update!(package_name_pattern: package_name_pattern,
-              push_protected_up_to_access_level: push_protected_up_to_access_level)
+              minimum_access_level_for_push: minimum_access_level_for_push)
           end
 
           it_behaves_like 'valid package'
@@ -397,8 +389,8 @@ RSpec.describe Packages::Npm::CreatePackageService, feature_category: :package_r
         create(:package_protection_rule, package_type: :npm, project: project)
       end
 
-      let_it_be(:project_developer) { create(:user).tap { |u| project.add_developer(u) } }
-      let_it_be(:project_maintainer) { create(:user).tap { |u| project.add_maintainer(u) } }
+      let_it_be(:project_developer) { create(:user, developer_of: project) }
+      let_it_be(:project_maintainer) { create(:user, maintainer_of: project) }
 
       let(:project_owner) { project.owner }
       let(:package_name_pattern_no_match) { "#{package_name}_no_match" }
@@ -419,22 +411,45 @@ RSpec.describe Packages::Npm::CreatePackageService, feature_category: :package_r
         end
       end
 
-      where(:package_name_pattern, :push_protected_up_to_access_level, :current_user, :shared_examples_name) do
-        ref(:package_name)                  | :developer  | ref(:project_developer)  | 'protected package'
-        ref(:package_name)                  | :developer  | ref(:project_owner)      | 'valid package'
-        ref(:package_name)                  | :maintainer | ref(:project_maintainer) | 'protected package'
-        ref(:package_name)                  | :owner      | ref(:project_owner)      | 'protected package'
-        ref(:package_name_pattern_no_match) | :developer  | ref(:project_owner)      | 'valid package'
+      where(:package_name_pattern, :minimum_access_level_for_push, :current_user, :shared_examples_name) do
+        ref(:package_name)                  | :maintainer | ref(:project_developer)  | 'protected package'
+        ref(:package_name)                  | :maintainer | ref(:project_owner)      | 'valid package'
+        ref(:package_name)                  | :owner      | ref(:project_maintainer) | 'protected package'
+        ref(:package_name)                  | :owner      | ref(:project_owner)      | 'valid package'
+        ref(:package_name)                  | :admin      | ref(:project_owner)      | 'protected package'
         ref(:package_name_pattern_no_match) | :owner      | ref(:project_owner)      | 'valid package'
+        ref(:package_name_pattern_no_match) | :admin      | ref(:project_owner)      | 'valid package'
       end
 
       with_them do
         before do
           package_protection_rule.update!(package_name_pattern: package_name_pattern,
-            push_protected_up_to_access_level: push_protected_up_to_access_level)
+            minimum_access_level_for_push: minimum_access_level_for_push)
         end
 
         it_behaves_like params[:shared_examples_name]
+      end
+
+      context 'with deploy token' do
+        let_it_be(:deploy_token) { create(:deploy_token, projects: [project]) }
+        let_it_be(:current_user) { deploy_token }
+        let_it_be(:user) { nil }
+
+        where(:package_name_pattern, :minimum_access_level_for_push, :shared_examples_name) do
+          ref(:package_name)                  | :maintainer | 'valid package'
+          ref(:package_name)                  | :owner      | 'valid package'
+          ref(:package_name)                  | :admin      | 'valid package'
+          ref(:package_name_pattern_no_match) | :owner      | 'valid package'
+        end
+
+        with_them do
+          before do
+            package_protection_rule.update!(package_name_pattern: package_name_pattern,
+              minimum_access_level_for_push: minimum_access_level_for_push)
+          end
+
+          it_behaves_like params[:shared_examples_name]
+        end
       end
     end
 
@@ -443,18 +458,6 @@ RSpec.describe Packages::Npm::CreatePackageService, feature_category: :package_r
 
       it 'returns an unique key' do
         is_expected.to eq lease_key
-      end
-    end
-
-    context 'when upload_npm_packages_async feature flag is disabled' do
-      before do
-        stub_feature_flags(upload_npm_packages_async: false)
-      end
-
-      it 'does not enqueue a background job' do
-        expect(::Packages::Npm::ProcessPackageFileWorker).not_to receive(:perform_async)
-
-        execute_service
       end
     end
   end

@@ -17,13 +17,13 @@ class ServiceDeskSetting < ApplicationRecord
   validates :project_key,
     length: { maximum: 255 },
     allow_blank: true,
-    format: { with: /\A[a-z0-9_]+\z/, message: -> (setting, data) { _("can contain only lowercase letters, digits, and '_'.") } }
+    format: { with: /\A[a-z0-9_]+\z/, message: ->(setting, data) { _("can contain only lowercase letters, digits, and '_'.") } }
 
   validates :custom_email,
     length: { maximum: 255 },
     uniqueness: true,
     allow_nil: true,
-    format: /\A[\w\-._]+@[\w\-.]+\.{1}[a-zA-Z]{2,}\z/
+    format: Gitlab::Utils::Email::EMAIL_REGEXP_WITH_ANCHORS
 
   validates :custom_email_credential,
     presence: true,
@@ -84,6 +84,14 @@ class ServiceDeskSetting < ApplicationRecord
     if custom_email_verification.blank? || !custom_email_verification.finished?
       errors.add(:custom_email_enabled, 'cannot be enabled until verification process has finished.')
     end
+  end
+
+  def tickets_confidential_by_default?
+    return true unless Feature.enabled?(:service_desk_tickets_confidentiality, project)
+    # Tickets in public projects should always be confidential by default
+    return true if project.public?
+
+    self[:tickets_confidential_by_default]
   end
 
   private

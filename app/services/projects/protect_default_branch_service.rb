@@ -10,11 +10,9 @@ module Projects
     def initialize(project)
       @project = project
 
-      @default_branch_protection = if Feature.enabled?(:default_branch_protection_defaults, project)
-                                     Gitlab::Access::DefaultBranchProtection.new(project)
-                                   else
-                                     Gitlab::Access::BranchProtection.new(project.namespace.default_branch_protection)
-                                   end
+      @default_branch_protection = Gitlab::Access::DefaultBranchProtection.new(
+        project.namespace.default_branch_protection_settings
+      )
     end
 
     def execute
@@ -32,7 +30,9 @@ module Projects
       params = {
         name: default_branch,
         push_access_levels_attributes: [{ access_level: push_access_level }],
-        merge_access_levels_attributes: [{ access_level: merge_access_level }]
+        merge_access_levels_attributes: [{ access_level: merge_access_level }],
+        code_owner_approval_required: code_owner_approval_required?,
+        allow_force_push: allow_force_push?
       }
 
       # The creator of the project is always allowed to create protected
@@ -40,6 +40,15 @@ module Projects
       ProtectedBranches::CreateService
         .new(project, project.creator, params)
         .execute(skip_authorization: true)
+    end
+
+    # overriden in EE
+    def code_owner_approval_required?
+      false
+    end
+
+    def allow_force_push?
+      default_branch_protection.allow_force_push?
     end
 
     def protect_branch?
@@ -56,18 +65,26 @@ module Projects
     end
 
     def push_access_level
-      if default_branch_protection.developer_can_push?
+      if default_branch_protection.no_one_can_push?
+        Gitlab::Access::NO_ACCESS
+      elsif default_branch_protection.developer_can_push?
         Gitlab::Access::DEVELOPER
-      else
+      elsif default_branch_protection.maintainer_can_push?
         Gitlab::Access::MAINTAINER
+      else
+        Gitlab::Access::ADMIN
       end
     end
 
     def merge_access_level
-      if default_branch_protection.developer_can_merge?
+      if default_branch_protection.no_one_can_merge?
+        Gitlab::Access::NO_ACCESS
+      elsif default_branch_protection.developer_can_merge?
         Gitlab::Access::DEVELOPER
-      else
+      elsif default_branch_protection.maintainer_can_merge?
         Gitlab::Access::MAINTAINER
+      else
+        Gitlab::Access::ADMIN
       end
     end
   end

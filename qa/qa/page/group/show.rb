@@ -22,7 +22,14 @@ module QA
         end
 
         def has_subgroup?(name)
-          has_filtered_group?(name)
+          filter_input = find_element('filtered-search-term-input')
+          filter_input.click
+          filter_input.set(name)
+          click_element 'search-button'
+
+          wait_for_requests
+
+          page.has_link?(name, wait: 0) # element containing link to group
         end
 
         def go_to_new_subgroup
@@ -38,6 +45,8 @@ module QA
         end
 
         def leave_group
+          dismiss_duo_chat_popup if respond_to?(:dismiss_duo_chat_popup)
+
           click_element 'groups-projects-more-actions-dropdown'
           wait_for_requests
 
@@ -55,3 +64,6 @@ module QA
     end
   end
 end
+
+QA::Page::Group::Show.prepend_mod_with('Page::Component::DuoChatCallout', namespace: QA)
+QA::Page::Group::Show.prepend_mod_with('Page::Alert::FreeTrial', namespace: QA)

@@ -10,7 +10,8 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-Pipeline configuration begins with jobs. Jobs are the most fundamental element of a `.gitlab-ci.yml` file.
+Jobs are fundamental elements of a GitLab CI/CD pipeline. Jobs are configured in the `.gitlab-ci.yml` file
+with a list of commands to run to accomplish tasks like building, testing, or deploying code.
 
 Jobs are:
 
@@ -62,7 +63,7 @@ You can filter the list by [job status](#the-order-of-jobs-in-a-pipeline).
 When a pipeline fails or is allowed to fail, there are several places where you
 can find the reason:
 
-- In the [pipeline graph](../pipelines/index.md#visualize-pipelines), on the pipeline detail view.
+- In the [pipeline graph](../pipelines/index.md#pipeline-details), in the pipeline details view.
 - In the pipeline widgets, in the merge requests and commit pages.
 - In the job views, in the global and detailed views of a job.
 
@@ -76,7 +77,7 @@ You can also see the reason it failed on the Job detail page.
 
 The order of jobs in a pipeline depends on the type of pipeline graph.
 
-- For [full pipeline graphs](../pipelines/index.md#view-full-pipeline-graph), jobs are sorted by name.
+- For [full pipeline graphs](../pipelines/index.md#pipeline-details), jobs are sorted by name.
 - For [pipeline mini graphs](../pipelines/index.md#pipeline-mini-graphs), jobs are sorted by status, and then by name.
 
 The job status order is:
@@ -123,7 +124,7 @@ If the same job name is used in one or more included files,
 
 ## Group jobs in a pipeline
 
-If you have many similar jobs, your [pipeline graph](../pipelines/index.md#visualize-pipelines) becomes long and hard
+If you have many similar jobs, your [pipeline graph](../pipelines/index.md#pipeline-details) becomes long and hard
 to read.
 
 You can automatically group similar jobs together. If the job names are formatted in a certain way,
@@ -135,7 +136,7 @@ jobs. Select to expand them.
 
 ![Grouped pipelines](img/pipeline_grouped_jobs_v14_2.png)
 
-To create a group of jobs, in the [`.gitlab-ci.yml` file](../index.md#the-gitlab-ciyml-file),
+To create a group of jobs, in the `.gitlab-ci.yml` file,
 separate each job name with a number and one of the following:
 
 - A slash (`/`), for example, `slash-test 1/3`, `slash-test 2/3`, `slash-test 3/3`.
@@ -263,7 +264,7 @@ When running manual jobs you can supply additional job specific variables.
 
 You can do this from the job page of the manual job you want to run with
 additional variables. To access this page, select the **name** of the manual job in
-the pipeline view, *not* the play (**{play}**) button.
+the pipeline view, *not* **Run** (**{play}**).
 
 Define CI/CD variables here when you want to alter the execution of a job that uses
 [CI/CD variables](../variables/index.md).

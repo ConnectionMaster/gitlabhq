@@ -175,17 +175,17 @@ RSpec.describe Gitlab::PrometheusClient do
     let(:query) { 'avg (metric) by (job)' }
     let(:prometheus_response) do
       {
-        "status": "success",
-        "data": {
-          "resultType": "vector",
-          "result": [
+        status: "success",
+        data: {
+          resultType: "vector",
+          result: [
             {
-              "metric": { "job" => "gitlab-rails" },
-              "value": [1488758662.506, "1"]
+              metric: { "job" => "gitlab-rails" },
+              value: [1488758662.506, "1"]
             },
             {
-              "metric": { "job" => "gitlab-sidekiq" },
-              "value": [1488758662.506, "2"]
+              metric: { "job" => "gitlab-sidekiq" },
+              value: [1488758662.506, "2"]
             }
           ]
         }
@@ -335,7 +335,7 @@ RSpec.describe Gitlab::PrometheusClient do
     where(:time_interval_in_seconds, :step) do
       0               | 60
       10.hours        | 60
-      10.hours + 1    | 61
+      (10.hours + 1) | 61
       # frontend options
       30.minutes      | 60
       3.hours         | 60

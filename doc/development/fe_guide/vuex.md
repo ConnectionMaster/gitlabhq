@@ -152,12 +152,12 @@ Instead of creating an mutation to toggle the loading state, we should:
 1. A mutation with type `RECEIVE_SOMETHING_SUCCESS`, to handle the success callback
 1. A mutation with type `RECEIVE_SOMETHING_ERROR`, to handle the error callback
 1. An action `fetchSomething` to make the request and commit mutations on mentioned cases
-    1. In case your application does more than a `GET` request you can use these as examples:
-        - `POST`: `createSomething`
-        - `PUT`: `updateSomething`
-        - `DELETE`: `deleteSomething`
+   1. In case your application does more than a `GET` request you can use these as examples:
+      - `POST`: `createSomething`
+      - `PUT`: `updateSomething`
+      - `DELETE`: `deleteSomething`
 
-As a result, we can dispatch the `fetchNamespace` action from the component and it is responsible to commit  `REQUEST_NAMESPACE`, `RECEIVE_NAMESPACE_SUCCESS` and `RECEIVE_NAMESPACE_ERROR` mutations.
+As a result, we can dispatch the `fetchNamespace` action from the component and it is responsible to commit `REQUEST_NAMESPACE`, `RECEIVE_NAMESPACE_SUCCESS` and `RECEIVE_NAMESPACE_ERROR` mutations.
 
 > Previously, we were dispatching actions from the `fetchNamespace` action instead of committing mutation, so don't be confused if you find a different pattern in the older parts of the codebase. However, we encourage leveraging a new pattern whenever you write new Vuex stores.
 

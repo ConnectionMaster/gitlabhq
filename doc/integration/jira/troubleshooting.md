@@ -68,6 +68,41 @@ curl --verbose --user "$USER:$API_TOKEN" "https://$ATLASSIAN_SUBDOMAIN.atlassian
 
 If the user can access the issue, Jira responds with a `200 OK` and the returned JSON includes the Jira issue details.
 
+### Verify GitLab can post a comment to a Jira issue
+
+WARNING:
+Commands that change data can cause damage if not run correctly or under the right conditions. Always run commands in a test environment first and have a backup instance ready to restore.
+
+To help troubleshoot your Jira integration, you can check whether
+GitLab can post a comment to a Jira issue using the project's Jira
+integration settings.
+
+To do so:
+
+- From a [Rails console](../../administration/operations/rails_console.md#starting-a-rails-console-session),
+  run the following:
+
+  ```ruby
+  jira_issue_id = "ALPHA-1" # Change to your Jira issue ID
+  project = Project.find_by_full_path("group/project") # Change to your project's path
+
+  integration = project.integrations.find_by(type: "Integrations::Jira")
+  jira_issue = integration.client.Issue.find(jira_issue_id)
+  jira_issue.comments.build.save!(body: 'This is a test comment from GitLab via the Rails console')
+  ```
+
+If the command is successful, a comment is added to the Jira issue.
+
+## GitLab cannot create a Jira issue
+
+When you try to create a Jira issue from a vulnerability, you might see a "field is required" error. For example, `Components is required` because a field called
+"Components" is missing. This occurs because Jira has some required fields
+configured that are not passed by GitLab. To work around this issue:
+
+1. Create a new "Vulnerability" [issue type](https://support.atlassian.com/jira-cloud-administration/docs/what-are-issue-types/) in the Jira instance.
+1. Assign the new issue type to the project.
+1. Alter the field scheme to all "Vulnerabilities" in the project so they do not require the missing field.
+
 ## GitLab cannot close a Jira issue
 
 If GitLab cannot close a Jira issue:
@@ -132,32 +167,21 @@ To change all Jira projects to use instance-level integration settings:
 
 1. In a [Rails console](../../administration/operations/rails_console.md#starting-a-rails-console-session), run the following:
 
-   - In GitLab 15.0 and later:
+   ```ruby
+   Integrations::Jira.where(active: true, instance: false, inherit_from_id: nil).find_each do |integration|
+     default_integration = Integration.default_integration(integration.type, integration.project)
 
-     ```ruby
-     Integrations::Jira.where(active: true, instance: false, inherit_from_id: nil).find_each do |integration|
-       default_integration = Integration.default_integration(integration.type, integration.project)
+     integration.inherit_from_id = default_integration.id
 
-       integration.inherit_from_id = default_integration.id
-
-       if integration.save(context: :manual_change)
-         if Gitlab.version_info >= Gitlab::VersionInfo.new(16, 9)
-           Integrations::Propagation::BulkUpdateService.new(default_integration, [integration]).execute
-         else
-           BulkUpdateIntegrationService.new(default_integration, [integration]).execute
-         end
+     if integration.save(context: :manual_change)
+       if Gitlab.version_info >= Gitlab::VersionInfo.new(16, 9)
+         Integrations::Propagation::BulkUpdateService.new(default_integration, [integration]).execute
+       else
+         BulkUpdateIntegrationService.new(default_integration, [integration]).execute
        end
      end
-     ```
-
-   - In GitLab 14.10 and earlier:
-
-     ```ruby
-     jira_integration_instance_id = Integrations::Jira.find_by(instance: true).id
-     Integrations::Jira.where(active: true, instance: false, template: false, inherit_from_id: nil).find_each do |integration|
-       integration.update_attribute(:inherit_from_id, jira_integration_instance_id)
-     end
-     ```
+   end
+   ```
 
 1. Modify and save the instance-level integration from the UI to propagate the changes to all group-level and project-level integrations.
 
@@ -261,18 +285,43 @@ The Jira issue list does not load if the project key contains a reserved JQL wor
 For more information, see [issue 426176](https://gitlab.com/gitlab-org/gitlab/-/issues/426176).
 Your Jira project key must not have [restricted words and characters](https://confluence.atlassian.com/jirasoftwareserver/advanced-searching-939938733.html#Advancedsearching-restrictionsRestrictedwordsandcharacters).
 
-### Jira credentials not allowed to access the data
+### Errors with Jira credentials
 
-When you try to view the Jira issue list in GitLab, you might get this message:
+When you try to view the Jira issue list in GitLab, you might see one of the following errors.
+
+#### Error: `The value '<project>' does not exist for the field 'project'.`
+
+If you use the wrong authentication credentials for your Jira installation, you might see this error:
 
 ```plaintext
-The credentials for accessing Jira are not allowed to access the data. Check your Jira integration credentials and try again.
+An error occurred while requesting data from Jira:
+The value '<project>' does not exist for the field 'project'.
+Check your Jira integration configuration and try again.
 ```
 
-This error occurs when the Jira credentials cannot access the Jira project key
-you specified in the [Jira issue integration](configure.md#configure-the-integration).
-To resolve this issue, ensure the Jira user you configured in the Jira issue integration
-has permission to view issues associated with the specified Jira project key.
+Authentication credentials depend on your type of Jira installation:
+
+- **For Jira Cloud**, you must have a Jira Cloud API token
+  and the email address you used to create the token.
+- **For Jira Data Center or Jira Server**, you must have a Jira username and password
+  or, in GitLab 16.0 and later, a Jira personal access token.
+
+For more information, see [Jira issue integration](configure.md).
+
+To resolve this issue, update the authentication credentials to match your Jira installation.
+
+#### Error: `The credentials for accessing Jira are not allowed to access the data.`
+
+If your Jira credentials cannot access the Jira project key you specified in the
+[Jira issue integration](configure.md#configure-the-integration), you might see this error:
+
+```plaintext
+The credentials for accessing Jira are not allowed to access the data.
+Check your Jira integration credentials and try again.
+```
+
+To resolve this issue, ensure the Jira user you configured in the Jira issue integration has permission to view issues
+associated with the specified Jira project key.
 
 To verify the Jira user has this permission, do one of the following:
 
@@ -295,4 +344,5 @@ Both methods should return a JSON response:
 - `total` gives a count of the issues that match the Jira project key.
 - `issues` contains an array of the issues that match the Jira project key.
 
-For more information about returned status codes, see the [Jira Cloud platform REST API documentation](https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-issueidorkey-get-response).
+For more information about returned status codes, see the
+[Jira Cloud platform REST API documentation](https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-issueidorkey-get-response).

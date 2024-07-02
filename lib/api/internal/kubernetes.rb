@@ -118,7 +118,6 @@ module API
           end
           params do
             optional :counters, type: Hash do
-              optional :gitops_sync, type: Integer, desc: 'The count to increment the gitops_sync metric by'
               optional :k8s_api_proxy_request, type: Integer, desc: 'The count to increment the k8s_api_proxy_request metric by'
               optional :flux_git_push_notifications_total, type: Integer, desc: 'The count to increment the flux_git_push_notifications_total metrics by'
               optional :k8s_api_proxy_requests_via_ci_access, type: Integer, desc: 'The count to increment the k8s_api_proxy_requests_via_ci_access metric by'
@@ -164,6 +163,11 @@ module API
               optional :k8s_api_proxy_requests_unique_users_via_pat_access, type: Array, desc: 'An array of events that have interacted with the CI tunnel via `ci_access`' do
                 optional :user_id, type: Integer, desc: 'User ID'
                 optional :project_id, type: Integer, desc: 'Project ID'
+              end
+              optional :register_agent_at_kas, type: Array, desc: 'An array of events that indicate an agent has been registered' do
+                optional :project_id, type: Integer, desc: 'Project ID'
+                optional :agent_version, type: String, desc: 'Agent version'
+                optional :architecture, type: String, desc: 'CPU architecture of the agent'
               end
             end
           end

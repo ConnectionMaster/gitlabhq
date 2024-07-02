@@ -26,7 +26,7 @@ method:
 To use kaniko with GitLab, [a runner](https://docs.gitlab.com/runner/) with one
 of the following executors is required:
 
-- [Kubernetes](https://docs.gitlab.com/runner/executors/kubernetes.html).
+- [Kubernetes](https://docs.gitlab.com/runner/executors/kubernetes/index.html).
 - [Docker](https://docs.gitlab.com/runner/executors/docker.html).
 - [Docker Machine](https://docs.gitlab.com/runner/executors/docker_machine.html).
 
@@ -147,7 +147,7 @@ video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-ex
 Guided Exploration project pipeline. It was tested on:
 
 - [GitLab.com instance runners](../runners/index.md)
-- [The Kubernetes runner executor](https://docs.gitlab.com/runner/executors/kubernetes.html)
+- [The Kubernetes runner executor](https://docs.gitlab.com/runner/executors/kubernetes/index.html)
 
 The example can be copied to your own group or instance for testing. More details
 on what other GitLab CI patterns are demonstrated are available at the project page.
@@ -160,9 +160,9 @@ If you receive this error, it might be due to an outside proxy. Setting the `htt
 and `https_proxy` [environment variables](../../administration/packages/container_registry.md#running-the-docker-daemon-with-a-proxy)
 can fix the problem.
 
-### Error: `kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue`
+### Error: kaniko should only be run inside of a container
 
-There is a known incompatibility introduced by Docker Engine 20.10.
+There is a known incompatibility introduced by Docker Engine 20.10
 
 When the host uses Docker Engine 20.10 or newer, then the `gcr.io/kaniko-project/executor:debug` image in a version
 older than v1.9.0 does not work as expected.

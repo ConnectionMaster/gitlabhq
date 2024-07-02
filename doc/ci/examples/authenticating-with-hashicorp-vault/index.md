@@ -16,6 +16,10 @@ and the token is scheduled to be removed in GitLab 17.0. Use
 [ID tokens to authenticate with HashiCorp Vault](../../secrets/id_token_authentication.md#automatic-id-token-authentication-with-hashicorp-vault)
 instead, as demonstrated on this page.
 
+NOTE:
+Starting in Vault 1.17, [JWT auth login requires bound audiences on the role](https://developer.hashicorp.com/vault/docs/upgrading/upgrade-to-1.17.x#jwt-auth-login-requires-bound-audiences-on-the-role)
+when the JWT contains an `aud` claim. The `aud` claim can be a single string or a list of strings.
+
 This tutorial demonstrates how to authenticate, configure, and read secrets with HashiCorp's Vault from GitLab CI/CD.
 
 ## Prerequisites
@@ -52,15 +56,15 @@ The following fields are included in the JWT:
 | `user_login`            | Always                       | Username of the user executing the job                                                                                                                                                               |
 | `user_email`            | Always                       | Email of the user executing the job                                                                                                                                                                  |
 | `pipeline_id`           | Always                       | ID of this pipeline                                                                                                                                                                                  |
-| `pipeline_source`       | Always                       | [Pipeline source](../../jobs/job_control.md#common-if-clauses-for-rules)                                                                                                                             |
+| `pipeline_source`       | Always                       | [Pipeline source](../../jobs/job_rules.md#common-if-clauses-with-predefined-variables)                                                                                                                             |
 | `job_id`                | Always                       | ID of this job                                                                                                                                                                                       |
 | `ref`                   | Always                       | Git ref for this job                                                                                                                                                                                 |
 | `ref_type`              | Always                       | Git ref type, either `branch` or `tag`                                                                                                                                                               |
 | `ref_path`              | Always                       | Fully qualified ref for the job. For example, `refs/heads/main`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/119075) in GitLab 16.0.                                          |
 | `ref_protected`         | Always                       | `true` if this Git ref is protected, `false` otherwise                                                                                                                                               |
-| `environment`           | Job specifies an environment | Environment this job specifies ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/294440) in GitLab 13.9)                                                                                   |
+| `environment`           | Job specifies an environment | Environment this job specifies                                                                                   |
 | `groups_direct`         | User is a direct member of 0 to 200 groups | The paths of the user's direct membership groups. Omitted if the user is a direct member of more than 200 groups. ([Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/435848) in GitLab 16.11). |
-| `environment_protected` | Job specifies an environment | `true` if specified environment is protected, `false` otherwise ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/294440) in GitLab 13.9)                                                  |
+| `environment_protected` | Job specifies an environment | `true` if specified environment is protected, `false` otherwise                                                  |
 | `deployment_tier`       | Job specifies an environment | [Deployment tier](../../environments/index.md#deployment-tier-of-environments) of environment this job specifies ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/363590) in GitLab 15.2) |
 | `environment_action`    | Job specifies an environment | [Environment action (`environment:action`)](../../environments/index.md) specified in the job. ([Introduced](https://gitlab.com/gitlab-org/gitlab/-/) in GitLab 16.5)                                   |
 
@@ -163,6 +167,7 @@ $ vault write auth/jwt/role/myproject-staging - <<EOF
   "policies": ["myproject-staging"],
   "token_explicit_max_ttl": 60,
   "user_claim": "user_email",
+  "bound_audiences": "https://vault.example.com",
   "bound_claims": {
     "project_id": "22",
     "ref": "master",
@@ -181,6 +186,7 @@ $ vault write auth/jwt/role/myproject-production - <<EOF
   "policies": ["myproject-production"],
   "token_explicit_max_ttl": 60,
   "user_claim": "user_email",
+  "bound_audiences": "https://vault.example.com",
   "bound_claims_type": "glob",
   "bound_claims": {
     "project_id": "22",
@@ -217,8 +223,8 @@ in the bound claims. For example:
 }
 ```
 
-- If only `namespace_id` is used, all projects in the namespace are allowed.
-- If both `namespace_id` and `project_id` are used, Vault first checks if the project's namespace is in `namespace_id`. If not, it then checks if the project is in `project_id`.
+- If only `namespace_id` is used, all projects in the namespace are allowed. Nested projects are not included, so their namespace IDs must also be added to the list if needed.
+- If both `namespace_id` and `project_id` are used, Vault first checks if the project's namespace is in `namespace_id` then checks if the project is in `project_id`.
 
 [`token_explicit_max_ttl`](https://developer.hashicorp.com/vault/api-docs/auth/jwt#token_explicit_max_ttl) specifies that the token issued by Vault, upon successful authentication, has a hard lifetime limit of 60 seconds.
 
@@ -278,7 +284,7 @@ The following job, when run for the default branch, can read secrets under `secr
 job_with_secrets:
   id_tokens:
     VAULT_ID_TOKEN:
-      aud: https://example.vault.com
+      aud: https://vault.example.com
   secrets:
     STAGING_DB_PASSWORD:
       vault: secret/myproject/staging/db/password@secrets # authenticates using $VAULT_ID_TOKEN
@@ -288,6 +294,8 @@ job_with_secrets:
 
 In this example:
 
+- `id_tokens` - The JSON Web Token (JWT) used for OIDC authentication. The `aud` claim
+  is set to match the `bound_audiences` parameter of the Vault JWT authentication method.
 - `@secrets` - The vault name, where your Secrets Engines are enabled.
 - `secret/myproject/staging/db` - The path location of the secret in Vault.
 - `password` The field to be fetched within the referenced secret.
@@ -297,6 +305,8 @@ In this example:
 You can control ID token access to Vault secrets by using Vault protections
 and GitLab features. For example, restrict the token by:
 
+- Using Vault [bound audiences](https://developer.hashicorp.com/vault/docs/auth/jwt#bound-audiences)
+  for specific ID token `aud` claims.
 - Using Vault [bound claims](https://developer.hashicorp.com/vault/docs/auth/jwt#bound-claims)
   for specific groups using `group_claim`.
 - Hard coding values for Vault bound claims based on the `user_login` and `user_email`

@@ -1,6 +1,7 @@
 #import "~/graphql_shared/fragments/label.fragment.graphql"
 #import "~/graphql_shared/fragments/user.fragment.graphql"
 #import "~/work_items/graphql/milestone.fragment.graphql"
+#import "~/work_items/graphql/timelog.fragment.graphql"
 #import "ee_else_ce/work_items/graphql/work_item_metadata_widgets.fragment.graphql"
 
 fragment WorkItemWidgets on WorkItemWidget {
@@ -43,6 +44,11 @@ fragment WorkItemWidgets on WorkItemWidget {
   }
   ... on WorkItemWidgetTimeTracking {
     timeEstimate
+    timelogs {
+      nodes {
+        ...TimelogFragment
+      }
+    }
     totalTimeSpent
   }
   ... on WorkItemWidgetHierarchy {
@@ -75,6 +81,9 @@ fragment WorkItemWidgets on WorkItemWidget {
         closedAt
         webUrl
         reference(full: true)
+        namespace {
+          fullPath
+        }
         widgets {
           ... on WorkItemWidgetHierarchy {
             type
@@ -125,6 +134,37 @@ fragment WorkItemWidgets on WorkItemWidget {
           reference(full: true)
           widgets {
             ...WorkItemMetadataWidgets
+          }
+        }
+      }
+    }
+  }
+  ... on WorkItemWidgetDevelopment {
+    type
+    closingMergeRequests {
+      nodes {
+        fromMrDescription
+        mergeRequest {
+          iid
+          id
+          title
+          webUrl
+          state
+          project {
+            id
+            name
+            namespace {
+              path
+            }
+          }
+          assignees {
+            nodes {
+              webUrl
+              id
+              name
+              webPath
+              avatarUrl
+            }
           }
         }
       }

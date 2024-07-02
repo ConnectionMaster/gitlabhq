@@ -17,8 +17,7 @@ DISCLAIMER:
 This page contains information related to upcoming products, features, and functionality.
 It is important to note that the information presented is for informational purposes only.
 Please do not rely on this information for purchasing or planning purposes.
-As with all projects, the items mentioned on this page are subject to change or delay.
-The development, release, and timing of any products, features, or functionality remain at the
+The development, release, and timing of any products, features, or functionality may be subject to change or delay and remain at the
 sole discretion of GitLab Inc.
 
 NOTE:
@@ -67,12 +66,22 @@ To view the organizations you have access to:
 1. In the **Organization URL** text box, edit the URL.
 1. Select **Change organization URL**.
 
+## Switch organizations
+
+NOTE:
+Switching between organizations is not supported in [Cells 1.0](../../architecture/blueprints/cells/iterations/cells-1.0.md),
+but is supported in [Cells 1.5](../../architecture/blueprints/cells/iterations/cells-1.5.md).
+
+To switch organizations:
+
+- On the left sidebar, in the upper corner, from the **Current organization** dropdown list select the organization you want to switch to.
+
 ## Manage groups and projects
 
 1. On the left sidebar, select **Organizations** and find the organization you want to manage.
 1. Select **Manage > Groups and projects**.
 1. Optional. Filter the results:
-   - To search for specific groups or projects, in the search box enter your search term.
+   - To search for specific groups or projects, in the search box enter your search term (minimum three characters).
    - To view only groups or projects, from the **Display** dropdown list select an option.
 1. Optional. To sort the results by name, date created, or date updated, from the dropdown list select an option. Then select ascending (**{sort-lowest}**) or descending (**{sort-highest}**) order.
 

@@ -10,7 +10,6 @@ DETAILS:
 **Tier:** Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/6346) in GitLab 14.8.
 > - [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/368828) the starboard directive in GitLab 15.4. The starboard directive is scheduled for removal in GitLab 16.0.
 
 ## Supported architectures
@@ -81,6 +80,9 @@ To create a new schedule rule.
 
 NOTE:
 The Kubernetes agent must be running in your cluster to scan running container images
+
+NOTE:
+Operational Container Scanning operates independently of GitLab pipelines. It is fully automated and managed by the Kubernetes Agent, which initiates new scans at the scheduled time configured in the Scan Execution Policy. The agent creates a dedicated Job within your cluster to perform the scan and report findings back to GitLab.
 
 Here is an example of a policy which enables operational container scanning within the cluster the Kubernetes agent is attached to:
 

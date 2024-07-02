@@ -106,7 +106,7 @@ Before starting the flow, generate the `STATE`, the `CODE_VERIFIER` and the `COD
 - The `CODE_VERIFIER` is a random string, between 43 and 128 characters in length,
   which use the characters `A-Z`, `a-z`, `0-9`, `-`, `.`, `_`, and `~`.
 - The `CODE_CHALLENGE` is an URL-safe base64-encoded string of the SHA256 hash of the
-  `CODE_VERIFIER`
+  `CODE_VERIFIER`.
   - The SHA256 hash must be in binary format before encoding.
   - In Ruby, you can set that up with `Base64.urlsafe_encode64(Digest::SHA256.digest(CODE_VERIFIER), padding: false)`.
   - For reference, a `CODE_VERIFIER` string of `ks02i3jdikdo2k0dkfodf3m39rjfjsdk0wk349rj3jrhf` when hashed
@@ -272,6 +272,10 @@ The Resource Owner Password Credentials is disabled for users with
 These users can access the API using [personal access tokens](../user/profile/personal_access_tokens.md)
 instead.
 
+NOTE:
+Ensure the [**Allow password authentication for Git over HTTP(S)**](../administration/settings/sign_in_restrictions.md#password-authentication-enabled)
+checkbox is selected for the GitLab instance to support the password credentials flow.
+
 In this flow, a token is requested in exchange for the resource owner credentials
 (username and password).
 
@@ -360,10 +364,10 @@ curl --header "Authorization: Bearer OAUTH-TOKEN" "https://gitlab.example.com/ap
 
 A token with [scope](../integration/oauth_provider.md#view-all-authorized-applications)
 `read_repository` or `write_repository` can access Git over HTTPS. Use the token as the password.
-The username must be `oauth2`, not your username:
+The username should be your GitLab username or `oauth2`:
 
 ```plaintext
-https://oauth2:<your_access_token>@gitlab.example.com/project_path/project_name.git
+https://<your_gitlab_username>:<your_access_token>@gitlab.example.com/project_path/project_name.git
 ```
 
 Alternatively, you can use a [Git credential helper](../user/profile/account/two_factor_authentication.md#oauth-credential-helpers)

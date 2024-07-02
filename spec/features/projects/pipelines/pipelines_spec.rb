@@ -620,8 +620,8 @@ RSpec.describe 'Pipelines', :js, feature_category: :continuous_integration do
             wait_for_requests
 
             within_testid('mini-pipeline-graph-dropdown') do
-              build_element = page.find('.pipeline-job-item [data-testid="job-name"]')
-              expect(build_element['title']).to eq('build - failed - (unknown failure)')
+              build_element = page.find('.ci-job-component [data-testid="job-name"]')
+              expect(build_element['title']).to eq('Failed - (unknown failure)')
             end
           end
         end
@@ -753,12 +753,14 @@ RSpec.describe 'Pipelines', :js, feature_category: :continuous_integration do
             stub_ci_pipeline_to_return_yaml_file
           end
 
+          subject(:run_pipeline) do
+            find_by_testid('run-pipeline-button', text: 'Run pipeline').click
+
+            wait_for_requests
+          end
+
           it 'creates a new pipeline' do
-            expect do
-              find_by_testid('run-pipeline-button', text: 'Run pipeline').click
-              wait_for_requests
-            end
-              .to change { Ci::Pipeline.count }.by(1)
+            expect { run_pipeline }.to change { Ci::Pipeline.count }.by(1)
 
             expect(Ci::Pipeline.last).to be_web
           end

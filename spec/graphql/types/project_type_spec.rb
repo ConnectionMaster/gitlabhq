@@ -18,7 +18,7 @@ RSpec.describe GitlabSchema.types['Project'], feature_category: :groups_and_proj
       user_permissions id full_path path name_with_namespace
       name description description_html tag_list topics ssh_url_to_repo
       http_url_to_repo web_url star_count forks_count
-      created_at last_activity_at archived visibility
+      created_at updated_at last_activity_at archived visibility
       container_registry_enabled shared_runners_enabled
       lfs_enabled merge_requests_ff_only_enabled avatar_url
       issues_enabled merge_requests_enabled wiki_enabled
@@ -341,6 +341,7 @@ RSpec.describe GitlabSchema.types['Project'], feature_category: :groups_and_proj
         :draft,
         :approved,
         :labels,
+        :label_name,
         :before,
         :after,
         :first,
@@ -349,12 +350,20 @@ RSpec.describe GitlabSchema.types['Project'], feature_category: :groups_and_proj
         :merged_before,
         :created_after,
         :created_before,
+        :deployed_after,
+        :deployed_before,
+        :deployment_id,
         :updated_after,
         :updated_before,
         :author_username,
         :assignee_username,
+        :assignee_wildcard_id,
         :reviewer_username,
+        :reviewer_wildcard_id,
+        :review_state,
+        :review_states,
         :milestone_title,
+        :milestone_wildcard_id,
         :not,
         :sort
       )
@@ -471,7 +480,7 @@ RSpec.describe GitlabSchema.types['Project'], feature_category: :groups_and_proj
   end
 
   it_behaves_like 'a GraphQL type with labels' do
-    let(:labels_resolver_arguments) { [:search_term, :includeAncestorGroups] }
+    let(:labels_resolver_arguments) { [:search_term, :includeAncestorGroups, :searchIn] }
   end
 
   describe 'jira_imports' do
@@ -504,14 +513,14 @@ RSpec.describe GitlabSchema.types['Project'], feature_category: :groups_and_proj
     subject { described_class.fields['pipelineAnalytics'] }
 
     it { is_expected.to have_graphql_type(Types::Ci::AnalyticsType) }
-    it { is_expected.to have_graphql_resolver(Resolvers::ProjectPipelineStatisticsResolver) }
+    it { is_expected.to have_graphql_resolver(Resolvers::Ci::ProjectPipelineAnalyticsResolver) }
   end
 
   describe 'jobs field' do
     subject { described_class.fields['jobs'] }
 
     it { is_expected.to have_graphql_type(Types::Ci::JobType.connection_type) }
-    it { is_expected.to have_graphql_arguments(:statuses, :with_artifacts) }
+    it { is_expected.to have_graphql_arguments(:statuses, :with_artifacts, :name, :after, :before, :first, :last) }
   end
 
   describe 'ci_template field' do

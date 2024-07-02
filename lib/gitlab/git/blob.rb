@@ -26,6 +26,7 @@ module Gitlab
 
       attr_accessor :size, :mode, :id, :commit_id, :loaded_size, :binary
       attr_writer :name, :path, :data
+      attr_reader :raw
 
       def self.gitlab_blob_truncated_true
         @gitlab_blob_truncated_true ||= ::Gitlab::Metrics.counter(:gitlab_blob_truncated_true, 'blob.truncated? == true')
@@ -73,7 +74,7 @@ module Gitlab
             new(id: entry.oid, name: name, size: 0, data: '', path: path, commit_id: sha)
           when :BLOB
             new(id: entry.oid, name: name, size: entry.size, data: entry.data.dup, mode: entry.mode.to_s(8),
-                path: path, commit_id: sha, binary: binary?(entry.data))
+              path: path, commit_id: sha, binary: binary?(entry.data))
           end
         end
 
@@ -127,6 +128,9 @@ module Gitlab
         # Retain the actual size before it is encoded
         @loaded_size = @data.bytesize if @data
         @loaded_all_data = @loaded_size == size
+
+        # Retain the data before it is encoded
+        @raw = @data.dup
 
         # Recalculate binary status if we loaded all data
         @binary = nil if @loaded_all_data

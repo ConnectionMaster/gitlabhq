@@ -187,12 +187,18 @@ function mountSidebarReviewers(mediator) {
     return;
   }
 
-  const { iid, fullPath } = getSidebarOptions();
+  const { id, iid, fullPath, multipleApprovalRulesAvailable = false } = getSidebarOptions();
   // eslint-disable-next-line no-new
   new Vue({
     el,
     name: 'SidebarReviewersRoot',
     apolloProvider,
+    provide: {
+      issuableIid: String(iid),
+      issuableId: String(id),
+      projectPath: fullPath,
+      multipleApprovalRulesAvailable: parseBoolean(multipleApprovalRulesAvailable),
+    },
     render: (createElement) =>
       createElement(SidebarReviewers, {
         props: {
@@ -270,7 +276,10 @@ function mountSidebarMilestoneWidget() {
           attrWorkspacePath: projectPath,
           workspacePath: projectPath,
           iid: issueIid,
-          issuableType: isInIssuePage() || isInDesignPage() ? TYPE_ISSUE : TYPE_MERGE_REQUEST,
+          issuableType:
+            isInIssuePage() || isInIncidentPage() || isInDesignPage()
+              ? TYPE_ISSUE
+              : TYPE_MERGE_REQUEST,
           issuableAttribute: IssuableAttributeType.Milestone,
           icon: 'milestone',
         },
@@ -538,15 +547,8 @@ function mountSidebarSubscriptionsWidget() {
 function mountSidebarTimeTracking() {
   const el = document.querySelector('.js-sidebar-time-tracking-root');
 
-  const {
-    id,
-    iid,
-    fullPath,
-    issuableType,
-    timeTrackingLimitToHours,
-    canCreateTimelogs,
-    editable,
-  } = getSidebarOptions();
+  const { id, iid, fullPath, issuableType, timeTrackingLimitToHours, canCreateTimelogs, editable } =
+    getSidebarOptions();
 
   if (!el) {
     return null;

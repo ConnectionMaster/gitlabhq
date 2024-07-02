@@ -6,7 +6,7 @@ module WorkItems
 
     self.table_name = 'work_item_parent_links'
 
-    MAX_CHILDREN = 100
+    MAX_CHILDREN = 5000
 
     belongs_to :work_item
     belongs_to :work_item_parent, class_name: 'WorkItem'
@@ -50,7 +50,7 @@ module WorkItems
     private
 
     def validate_max_children
-      return unless work_item_parent
+      return unless work_item_parent && work_item_parent_id_changed?
 
       max = persisted? ? MAX_CHILDREN : MAX_CHILDREN - 1
       if work_item_parent.child_links.count > max
@@ -74,7 +74,7 @@ module WorkItems
         .find_by_parent_type_id_and_child_type_id(work_item_parent.work_item_type_id, work_item.work_item_type_id)
 
       if restriction.nil?
-        errors.add :work_item, _('is not allowed to add this type of parent')
+        errors.add :work_item, _("it's not allowed to add this type of parent item")
         return
       end
 
@@ -106,7 +106,7 @@ module WorkItems
       end
 
       if work_item_parent.ancestors.detect { |ancestor| work_item.id == ancestor.id }
-        errors.add :work_item, _('is already present in ancestors')
+        errors.add :work_item, _("it's already present in this item's hierarchy")
       end
     end
 

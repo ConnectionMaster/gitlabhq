@@ -104,7 +104,7 @@ RSpec.describe WorkItems::ParentLink, feature_category: :portfolio_management do
             link = build(:parent_link, work_item_parent: item4, work_item: item3)
 
             expect(link).not_to be_valid
-            expect(link.errors[:work_item]).to include('is already present in ancestors')
+            expect(link.errors[:work_item]).to include("it's already present in this item's hierarchy")
           end
         end
       end
@@ -150,6 +150,21 @@ RSpec.describe WorkItems::ParentLink, feature_category: :portfolio_management do
 
         it 'existing link is still valid' do
           expect(link1).to be_valid
+        end
+
+        context 'when parent already exceeds maximum number of links' do
+          let_it_be(:task3) { create(:work_item, :task, project: project) }
+          let_it_be(:link2) { create(:parent_link, work_item_parent: issue, work_item: task2) }
+
+          it 'only invalidates new links' do
+            link3 = build(:parent_link, work_item_parent: issue, work_item: task3)
+
+            expect(link3).not_to be_valid
+            expect(link3.errors[:work_item_parent]).to include('parent already has maximum number of children.')
+
+            expect(link1).to be_valid
+            expect(link2).to be_valid
+          end
         end
       end
 

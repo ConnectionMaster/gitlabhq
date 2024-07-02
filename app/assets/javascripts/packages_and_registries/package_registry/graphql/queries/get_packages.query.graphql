@@ -1,5 +1,4 @@
 #import "~/packages_and_registries/package_registry/graphql/fragments/package_data.fragment.graphql"
-#import "~/packages_and_registries/package_registry/graphql/fragments/package_group_settings.fragment.graphql"
 #import "~/graphql_shared/fragments/page_info.fragment.graphql"
 
 query getPackages(
@@ -10,6 +9,7 @@ query getPackages(
   $packageName: String
   $packageType: PackageTypeEnum
   $packageVersion: String
+  $packageStatus: PackageStatus
   $first: Int
   $last: Int
   $after: String
@@ -22,6 +22,7 @@ query getPackages(
       packageName: $packageName
       packageType: $packageType
       packageVersion: $packageVersion
+      status: $packageStatus
       after: $after
       before: $before
       first: $first
@@ -34,9 +35,6 @@ query getPackages(
       pageInfo {
         ...PageInfo
       }
-    }
-    group {
-      ...GroupPackageSettings
     }
   }
   group(fullPath: $fullPath) @include(if: $isGroupPage) {
@@ -46,6 +44,7 @@ query getPackages(
       packageName: $packageName
       packageType: $packageType
       packageVersion: $packageVersion
+      status: $packageStatus
       after: $after
       before: $before
       first: $first
@@ -54,11 +53,15 @@ query getPackages(
       count
       nodes {
         ...PackageData
+        project {
+          id
+          name
+          webUrl
+        }
       }
       pageInfo {
         ...PageInfo
       }
     }
-    ...GroupPackageSettings
   }
 }

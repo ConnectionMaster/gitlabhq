@@ -52,7 +52,7 @@ When working with directories and files:
 1. When creating or renaming a file or directory and it has more than one word
    in its name, use underscores (`_`) instead of spaces or dashes. For example,
    proper naming would be `import_project/import_from_github.md`. This applies
-   to both [image files](../styleguide/index.md#images) and Markdown files.
+   to both [image files](../styleguide/index.md#illustrations) and Markdown files.
 1. Do not upload video files to the product repositories.
    [Link or embed videos](../styleguide/index.md#videos) instead.
 1. In the `doc/user/` directory:
@@ -62,8 +62,8 @@ When working with directories and files:
      Every page you would navigate under `/profile` should have its own document,
      for example, `account.md`, `applications.md`, or `emails.md`.
 1. In the `doc/administration/` directory: all administrator-related
-     documentation for administrators, including admin tasks done in both
-    the UI and on the backend servers.
+   documentation for administrators, including admin tasks done in both
+   the UI and on the backend servers.
 
 If you're unsure where to place a document or a content addition, this shouldn't
 stop you from authoring and contributing. Use your best judgment, and then ask

@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe Ci::Partitionable do
+RSpec.describe Ci::Partitionable, feature_category: :continuous_integration do
   let(:ci_model) { Class.new(Ci::ApplicationRecord) }
 
   around do |ex|
@@ -91,42 +91,63 @@ RSpec.describe Ci::Partitionable do
           end
 
           ci_model.table_name = :_test_table_name
+          stub_const('Ci::Pipeline::NEXT_PARTITION_VALUE', 101)
         end
 
         subject(:value) { partitioning_strategy.next_partition_if.call(active_partition) }
 
-        context 'without any existing partitions' do
-          it { is_expected.to eq(true) }
-        end
-
-        context 'with initial partition attached' do
+        context 'when not using ci partitioning automation' do
           before do
-            ci_model.connection.execute(<<~SQL)
-              CREATE TABLE IF NOT EXISTS _test_table_name_100 PARTITION OF _test_table_name FOR VALUES IN (100);
-            SQL
+            stub_feature_flags(ci_partitioning_automation: false)
           end
 
-          it { is_expected.to eq(true) }
-        end
-
-        context 'with an existing partition for partition_id = 101' do
-          before do
-            ci_model.connection.execute(<<~SQL)
-              CREATE TABLE IF NOT EXISTS _test_table_name_101 PARTITION OF _test_table_name FOR VALUES IN (101);
-            SQL
+          context 'without any existing partitions' do
+            it { is_expected.to eq(true) }
           end
 
-          it { is_expected.to eq(false) }
-        end
+          context 'with initial partition attached' do
+            before do
+              ci_model.connection.execute(<<~SQL)
+                CREATE TABLE IF NOT EXISTS _test_table_name_100 PARTITION OF _test_table_name FOR VALUES IN (100);
+              SQL
+            end
 
-        context 'with an existing partition for partition_id in 100, 101' do
-          before do
-            ci_model.connection.execute(<<~SQL)
-              CREATE TABLE IF NOT EXISTS _test_table_name_101 PARTITION OF _test_table_name FOR VALUES IN (100, 101);
-            SQL
+            it { is_expected.to eq(true) }
           end
 
-          it { is_expected.to eq(false) }
+          context 'with an existing partition for partition_id = 101' do
+            before do
+              ci_model.connection.execute(<<~SQL)
+                CREATE TABLE IF NOT EXISTS _test_table_name_101 PARTITION OF _test_table_name FOR VALUES IN (101);
+              SQL
+            end
+
+            it { is_expected.to eq(false) }
+          end
+
+          context 'with an existing partition for partition_id in 100, 101' do
+            before do
+              ci_model.connection.execute(<<~SQL)
+                CREATE TABLE IF NOT EXISTS _test_table_name_101 PARTITION OF _test_table_name FOR VALUES IN (100, 101);
+              SQL
+            end
+
+            it { is_expected.to eq(false) }
+          end
+        end
+
+        context 'when using ci partitioning automation' do
+          context 'when current ci_partition exists' do
+            before do
+              create_list(:ci_partition, 2)
+            end
+
+            it { is_expected.to eq(true) }
+          end
+
+          context 'when current ci_partition does not exist' do
+            it { is_expected.to eq(false) }
+          end
         end
       end
     end
@@ -162,6 +183,27 @@ RSpec.describe Ci::Partitionable do
       it 'adds a partition_id filter' do
         expect(scope_values).to include('partition_id' => 101)
       end
+    end
+  end
+
+  describe '.registered_models' do
+    subject(:ci_partitioned_models) { described_class.registered_models }
+
+    it 'returns a list of CI models being partitioned' do
+      expected_list = %w[
+        Ci::BuildMetadata
+        Ci::BuildExecutionConfig
+        Ci::BuildName
+        Ci::BuildSource
+        Ci::JobAnnotation
+        Ci::JobArtifact
+        Ci::PipelineVariable
+        Ci::RunnerManagerBuild
+        Ci::Stage
+        CommitStatus
+      ]
+
+      expect(ci_partitioned_models.map(&:name)).to eq(expected_list)
     end
   end
 end

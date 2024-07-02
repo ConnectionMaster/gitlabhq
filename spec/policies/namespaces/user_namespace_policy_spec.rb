@@ -8,7 +8,7 @@ RSpec.describe Namespaces::UserNamespacePolicy, feature_category: :groups_and_pr
   let_it_be(:admin) { create(:admin) }
   let_it_be(:namespace) { create(:user_namespace, owner: owner) }
 
-  let(:owner_permissions) { [:owner_access, :create_projects, :admin_namespace, :read_namespace, :read_namespace_via_membership, :read_statistics, :transfer_projects, :admin_package, :read_billing, :edit_billing, :import_projects] }
+  let(:owner_permissions) { [:owner_access, :create_projects, :admin_runner, :admin_namespace, :read_namespace, :read_namespace_via_membership, :read_statistics, :transfer_projects, :admin_package, :read_billing, :edit_billing, :import_projects] }
 
   subject { described_class.new(current_user, namespace) }
 
@@ -58,7 +58,7 @@ RSpec.describe Namespaces::UserNamespacePolicy, feature_category: :groups_and_pr
     end
   end
 
-  describe 'create_jira_connect_subscription' do
+  describe 'create_jira_connect_subscription', feature_category: :integrations do
     context 'admin' do
       let(:current_user) { build_stubbed(:admin) }
 
@@ -106,7 +106,7 @@ RSpec.describe Namespaces::UserNamespacePolicy, feature_category: :groups_and_pr
     end
   end
 
-  describe 'import projects' do
+  describe 'import projects', feature_category: :importers do
     context 'when user can import projects' do
       let(:current_user) { owner }
 

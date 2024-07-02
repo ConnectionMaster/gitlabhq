@@ -5,12 +5,8 @@ require 'spec_helper'
 RSpec.describe Projects::AutocompleteService, feature_category: :groups_and_projects do
   let_it_be(:group) { create(:group) }
   let_it_be(:project) { create(:project, :public, group: group) }
-  let_it_be(:owner) { create(:user) }
+  let_it_be(:owner) { create(:user, owner_of: project) }
   let_it_be(:issue) { create(:issue, project: project, title: 'Issue 1') }
-
-  before_all do
-    project.add_owner(owner)
-  end
 
   describe '#issues' do
     describe 'confidential issues' do
@@ -21,6 +17,13 @@ RSpec.describe Projects::AutocompleteService, feature_category: :groups_and_proj
       let(:admin) { create(:admin) }
       let!(:security_issue_1) { create(:issue, :confidential, project: project, title: 'Security issue 1', author: author) }
       let!(:security_issue_2) { create(:issue, :confidential, title: 'Security issue 2', project: project, assignees: [assignee]) }
+
+      it 'includes work item icons in list' do
+        autocomplete = described_class.new(project, nil)
+        issues = autocomplete.issues.map(&:icon_name)
+
+        expect(issues).to include 'issue-type-issue'
+      end
 
       it 'does not list project confidential issues for guests' do
         autocomplete = described_class.new(project, nil)

@@ -46,6 +46,10 @@ class Project < ApplicationRecord
   include IgnorableColumns
   include CrossDatabaseIgnoredTables
   include UseSqlFunctionForPrimaryKeyLookups
+  include Importable
+  include SafelyChangeColumnDefault
+
+  columns_changing_default :organization_id
 
   ignore_column :emails_disabled, remove_with: '16.3', remove_after: '2023-08-22'
 
@@ -130,13 +134,15 @@ class Project < ApplicationRecord
   # Storage specific hooks
   after_initialize :use_hashed_storage
   after_initialize :set_project_feature_defaults, if: :new_record?
-  before_validation :mark_remote_mirrors_for_removal, if: -> { RemoteMirror.table_exists? }
 
+  before_validation :mark_remote_mirrors_for_removal, if: -> { RemoteMirror.table_exists? }
   before_validation :ensure_project_namespace_in_sync
   before_validation :set_package_registry_access_level, if: :packages_enabled_changed?
   before_validation :remove_leading_spaces_on_name
   before_validation :set_last_activity_at
+
   after_validation :check_pending_delete
+
   before_save :ensure_runners_token
 
   after_create -> { create_or_load_association(:project_feature) }
@@ -234,6 +240,7 @@ class Project < ApplicationRecord
   has_one :mock_ci_integration, class_name: 'Integrations::MockCi'
   has_one :mock_monitoring_integration, class_name: 'Integrations::MockMonitoring'
   has_one :packagist_integration, class_name: 'Integrations::Packagist'
+  has_one :phorge_integration, class_name: 'Integrations::Phorge'
   has_one :pipelines_email_integration, class_name: 'Integrations::PipelinesEmail'
   has_one :pivotaltracker_integration, class_name: 'Integrations::Pivotaltracker'
   has_one :prometheus_integration, class_name: 'Integrations::Prometheus', inverse_of: :project
@@ -363,10 +370,18 @@ class Project < ApplicationRecord
 
   has_many :users, -> { allow_cross_joins_across_databases(url: "https://gitlab.com/gitlab-org/gitlab/-/issues/422405") },
     through: :project_members
+
   has_many :maintainers,
     -> do
       allow_cross_joins_across_databases(url: "https://gitlab.com/gitlab-org/gitlab/-/issues/422405")
         .where(members: { access_level: Gitlab::Access::MAINTAINER })
+    end,
+    through: :project_members,
+    source: :user
+
+  has_many :owners_and_maintainers,
+    -> do
+      where(members: { access_level: [Gitlab::Access::OWNER, Gitlab::Access::MAINTAINER] })
     end,
     through: :project_members,
     source: :user
@@ -477,7 +492,7 @@ class Project < ApplicationRecord
   # rubocop:disable Cop/ActiveRecordDependent -- we need to clean up files, not only remove records
   has_many :pages_deployments, dependent: :destroy, inverse_of: :project
   # rubocop:enable Cop/ActiveRecordDependent
-  has_many :active_pages_deployments, -> { active }, class_name: 'PagesDeployment', inverse_of: :project
+  has_many :active_pages_deployments, -> { active.order_by(:created_desc) }, class_name: 'PagesDeployment', inverse_of: :project
 
   has_many :operations_feature_flags, class_name: 'Operations::FeatureFlag'
   has_one :operations_feature_flags_client, class_name: 'Operations::FeatureFlagsClient'
@@ -535,6 +550,8 @@ class Project < ApplicationRecord
     delegate :job_token_scope_enabled, :job_token_scope_enabled=, prefix: :ci_outbound
 
     with_options prefix: :ci do
+      delegate :pipeline_variables_minimum_override_role, :pipeline_variables_minimum_override_role=
+      delegate :push_repository_for_job_token_allowed, :push_repository_for_job_token_allowed=
       delegate :default_git_depth, :default_git_depth=
       delegate :forward_deployment_enabled, :forward_deployment_enabled=
       delegate :forward_deployment_rollback_allowed, :forward_deployment_rollback_allowed=
@@ -647,7 +664,9 @@ class Project < ApplicationRecord
   # Sometimes queries (e.g. using CTEs) require explicit disambiguation with table name
   scope :projects_order_id_asc, -> { reorder(self.arel_table['id'].asc) }
   scope :projects_order_id_desc, -> { reorder(self.arel_table['id'].desc) }
-  scope :order_by_storage_size, -> (direction) do
+  scope :sorted_by_storage_size_asc, -> { order_by_storage_size(:asc) }
+  scope :sorted_by_storage_size_desc, -> { order_by_storage_size(:desc) }
+  scope :order_by_storage_size, ->(direction) do
     build_keyset_order_on_joined_column(
       scope: joins(:statistics),
       attribute_name: 'project_statistics_storage_size',
@@ -657,7 +676,7 @@ class Project < ApplicationRecord
     )
   end
 
-  scope :sorted_by_similarity_desc, -> (search, full_path_only: false) do
+  scope :sorted_by_similarity_desc, ->(search, full_path_only: false) do
     rules = if full_path_only
               [{ column: arel_table["path"], multiplier: 1 }]
             else
@@ -680,7 +699,6 @@ class Project < ApplicationRecord
           column_expression: order_expression,
           order_expression: order_expression.desc,
           order_direction: :desc,
-          distinct: false,
           add_to_projections: true
         ),
         Gitlab::Pagination::Keyset::ColumnOrderDefinition.new(
@@ -708,12 +726,13 @@ class Project < ApplicationRecord
   scope :inc_routes, -> { includes(:route, namespace: :route) }
   scope :with_statistics, -> { includes(:statistics) }
   scope :with_namespace, -> { includes(:namespace) }
+  scope :joins_namespace, -> { joins(:namespace) }
   scope :with_group, -> { includes(:group) }
   scope :with_import_state, -> { includes(:import_state) }
   scope :include_project_feature, -> { includes(:project_feature) }
-  scope :include_integration, -> (integration_association_name) { includes(integration_association_name) }
-  scope :with_integration, -> (integration_class) { joins(:integrations).merge(integration_class.all) }
-  scope :with_active_integration, -> (integration_class) { with_integration(integration_class).merge(integration_class.active) }
+  scope :include_integration, ->(integration_association_name) { includes(integration_association_name) }
+  scope :with_integration, ->(integration_class) { joins(:integrations).merge(integration_class.all) }
+  scope :with_active_integration, ->(integration_class) { with_integration(integration_class).merge(integration_class.active) }
   scope :with_shared_runners_enabled, -> { where(shared_runners_enabled: true) }
   # .with_slack_integration can generate poorly performing queries. It is intended only for UsagePing.
   scope :with_slack_integration, -> { joins(:slack_integration) }
@@ -759,14 +778,21 @@ class Project < ApplicationRecord
   scope :with_builds_enabled, -> { with_feature_enabled(:builds) }
   scope :with_issues_enabled, -> { with_feature_enabled(:issues) }
   scope :with_package_registry_enabled, -> { with_feature_enabled(:package_registry) }
+  scope :with_public_package_registry, -> do
+    where_exists(
+      ::ProjectFeature
+        .where(::ProjectFeature.arel_table[:project_id].eq(arel_table[:id]))
+        .with_feature_access_level(:package_registry, ::ProjectFeature::PUBLIC)
+    )
+  end
   scope :with_issues_available_for_user, ->(current_user) { with_feature_available_for_user(:issues, current_user) }
   scope :with_merge_requests_available_for_user, ->(current_user) { with_feature_available_for_user(:merge_requests, current_user) }
-  scope :with_issues_or_mrs_available_for_user, -> (user) do
+  scope :with_issues_or_mrs_available_for_user, ->(user) do
     with_issues_available_for_user(user).or(with_merge_requests_available_for_user(user))
   end
   scope :with_merge_requests_enabled, -> { with_feature_enabled(:merge_requests) }
   scope :with_remote_mirrors, -> { joins(:remote_mirrors).where(remote_mirrors: { enabled: true }) }
-  scope :with_limit, -> (maximum) { limit(maximum) }
+  scope :with_limit, ->(maximum) { limit(maximum) }
 
   scope :with_group_runners_enabled, -> do
     joins(:ci_cd_settings)
@@ -786,14 +812,14 @@ class Project < ApplicationRecord
     preload(:project_feature, :route, namespace: [:route, :owner])
   }
 
-  scope :with_name, -> (name) { where(name: name) }
-  scope :created_by, -> (user) { where(creator: user) }
-  scope :imported_from, -> (type) { where(import_type: type) }
+  scope :with_name, ->(name) { where(name: name) }
+  scope :created_by, ->(user) { where(creator: user) }
+  scope :imported_from, ->(type) { where(import_type: type) }
   scope :imported, -> { where.not(import_type: nil) }
   scope :with_enabled_error_tracking, -> { joins(:error_tracking_setting).where(project_error_tracking_settings: { enabled: true }) }
-  scope :last_activity_before, -> (time) { where('projects.last_activity_at < ?', time) }
+  scope :last_activity_before, ->(time) { where('projects.last_activity_at < ?', time) }
 
-  scope :with_service_desk_key, -> (key) do
+  scope :with_service_desk_key, ->(key) do
     # project_key is not indexed for now
     # see https://gitlab.com/gitlab-org/gitlab/-/merge_requests/24063#note_282435524 for details
     joins(:service_desk_setting).where('service_desk_settings.project_key' => key)
@@ -813,7 +839,8 @@ class Project < ApplicationRecord
     .order(id: :desc)
   end
 
-  scope :in_organization, -> (organization) { where(organization: organization) }
+  scope :in_organization, ->(organization) { where(organization: organization) }
+  scope :by_project_namespace, ->(project_namespace) { where(project_namespace_id: project_namespace) }
 
   scope :not_a_fork, -> {
     left_outer_joins(:fork_network_member).where(fork_network_member: { forked_from_project_id: nil })
@@ -904,11 +931,28 @@ class Project < ApplicationRecord
   end
 
   def self.projects_user_can(projects, user, action)
-    projects = where(id: projects)
-
     DeclarativePolicy.user_scope do
       projects.select { |project| Ability.allowed?(user, action, project) }
     end
+  end
+
+  def self.filter_out_public_projects_with_unauthorized_private_repos(projects, user)
+    public_projects_with_private_repos = projects.with_project_feature.where(
+      visibility_level: Gitlab::VisibilityLevel::PUBLIC,
+      project_features: { repository_access_level: ProjectFeature::PRIVATE }
+    ).pluck(:id)
+
+    return projects unless public_projects_with_private_repos.present?
+
+    authorized_public_projects_with_private_repos = projects.filter_by_feature_visibility(
+      :repository, user
+    )
+
+    rejected_projects_with_private_repos = (
+      public_projects_with_private_repos - authorized_public_projects_with_private_repos.pluck(:id)
+    )
+
+    projects.where.not(id: rejected_projects_with_private_repos)
   end
 
   # This scope returns projects where user has access to both the project and the feature.
@@ -942,7 +986,7 @@ class Project < ApplicationRecord
 
   # We require an alias to the project_mirror_data_table in order to use import_state in our queries
   scope :joins_import_state, -> { joins("INNER JOIN project_mirror_data import_state ON import_state.project_id = projects.id") }
-  scope :for_group, -> (group) { where(group: group) }
+  scope :for_group, ->(group) { where(group: group) }
   scope :for_group_and_its_subgroups, ->(group) { where(namespace_id: group.self_and_descendants.select(:id)) }
   scope :for_group_and_its_ancestor_groups, ->(group) { where(namespace_id: group.self_and_ancestors.select(:id)) }
   scope :is_importing, -> { with_import_state.where(import_state: { status: %w[started scheduled] }) }
@@ -984,10 +1028,10 @@ class Project < ApplicationRecord
 
     def sort_by_attribute(method)
       case method.to_s
+      when 'storage_size_asc'
+        sorted_by_storage_size_asc
       when 'storage_size_desc'
-        # storage_size is a joined column so we need to
-        # pass a string to avoid AR adding the table name
-        reorder('project_statistics.storage_size DESC, projects.id DESC')
+        sorted_by_storage_size_desc
       when 'latest_activity_desc'
         sorted_by_updated_desc
       when 'latest_activity_asc'
@@ -1133,6 +1177,10 @@ class Project < ApplicationRecord
 
   def prometheus_integration_active?
     !!prometheus_integration&.active?
+  end
+
+  def jenkins_integration_active?
+    !!jenkins_integration&.active?
   end
 
   def personal_namespace_holder?(user)
@@ -1331,9 +1379,7 @@ class Project < ApplicationRecord
 
   def container_repositories_size
     strong_memoize(:container_repositories_size) do
-      next unless Gitlab.com?
       next 0 if container_repositories.empty?
-      next unless container_repositories.all_migrated?
       next unless ContainerRegistry::GitlabApiClient.supports_gitlab_api?
 
       ContainerRegistry::GitlabApiClient.deduplicated_size(full_path)
@@ -1539,6 +1585,16 @@ class Project < ApplicationRecord
       URI.parse(import_url).host != URI.parse(Octokit::Default::API_ENDPOINT).host
   end
 
+  # Determine whether any kind of import is in progress.
+  # - Full file import
+  # - Relation import
+  # - Direct Transfer
+  def any_import_in_progress?
+    relation_import_trackers.last&.started? ||
+      import_started? ||
+      BulkImports::Entity.with_status(:started).where(project_id: id).any?
+  end
+
   def has_remote_mirror?
     remote_mirror_available? && remote_mirrors.enabled.exists?
   end
@@ -1575,7 +1631,7 @@ class Project < ApplicationRecord
     # present. Since the validation for that will fail, we can just return
     # early.
     return if !creator || creator.can_create_project? ||
-        namespace.kind == 'group'
+      namespace.kind == 'group'
 
     limit = creator.projects_limit
     error =
@@ -2022,11 +2078,11 @@ class Project < ApplicationRecord
     # Backward compatibility
     if backward
       attrs.merge!({
-                    homepage: web_url,
-                    url: url_to_repo,
-                    ssh_url: ssh_url_to_repo,
-                    http_url: http_url_to_repo
-                  })
+        homepage: web_url,
+        url: url_to_repo,
+        ssh_url: ssh_url_to_repo,
+        http_url: http_url_to_repo
+      })
     end
 
     attrs
@@ -2281,16 +2337,6 @@ class Project < ApplicationRecord
     ensure_pages_metadatum.update!(onboarding_complete: true)
   end
 
-  def set_full_path(gl_full_path: full_path)
-    # We'd need to keep track of project full path otherwise directory tree
-    # created with hashed storage enabled cannot be usefully imported using
-    # the import rake task.
-    repository.raw_repository.set_full_path(full_path: gl_full_path)
-  rescue Gitlab::Git::Repository::NoRepository => e
-    Gitlab::AppLogger.error("Error writing to .git/config for project #{full_path} (#{id}): #{e.message}.")
-    nil
-  end
-
   def after_import
     repository.expire_content_cache
     repository.remove_prohibited_branches
@@ -2302,18 +2348,21 @@ class Project < ApplicationRecord
 
     enqueue_record_project_target_platforms
 
+    reset_counters_and_iids
+
+    import_state&.finish
+    after_create_default_branch
+    join_pool_repository
+    refresh_markdown_cache!
+  end
+
+  def reset_counters_and_iids
     # The import assigns iid values on its own, e.g. by re-using GitHub ids.
     # Flush existing InternalId records for this project for consistency reasons.
     # Those records are going to be recreated with the next normal creation
     # of a model instance (e.g. an Issue).
     InternalId.flush_records!(project: self)
-
-    import_state&.finish
     update_project_counter_caches
-    after_create_default_branch
-    join_pool_repository
-    refresh_markdown_cache!
-    set_full_path
   end
 
   def update_project_counter_caches
@@ -2340,6 +2389,8 @@ class Project < ApplicationRecord
 
   def add_export_job(current_user:, after_export_strategy: nil, params: {})
     check_project_export_limit!
+
+    params[:exported_by_admin] = current_user.can_admin_all_resources?
 
     job_id = if Feature.enabled?(:parallel_project_export, current_user)
                Projects::ImportExport::CreateRelationExportsWorker
@@ -2375,6 +2426,8 @@ class Project < ApplicationRecord
       :started
     elsif export_file_exists?
       :finished
+    elsif export_failed?
+      :failed
     else
       :none
     end
@@ -2389,6 +2442,12 @@ class Project < ApplicationRecord
   def export_enqueued?
     strong_memoize(:export_enqueued) do
       ::Projects::ExportJobFinder.new(self, { status: :queued }).execute.present?
+    end
+  end
+
+  def export_failed?
+    strong_memoize(:export_failed) do
+      ::Projects::ExportJobFinder.new(self, { status: :failed }).execute.present?
     end
   end
 
@@ -2913,27 +2972,15 @@ class Project < ApplicationRecord
   end
 
   def default_branch_protected?
-    if Feature.enabled?(:default_branch_protection_defaults, self)
-      branch_protection = Gitlab::Access::DefaultBranchProtection.new(self)
+    branch_protection = Gitlab::Access::DefaultBranchProtection.new(self.namespace.default_branch_protection_settings)
 
-      return !branch_protection.developer_can_push?
-    end
-
-    branch_protection = Gitlab::Access::BranchProtection.new(self.namespace.default_branch_protection)
-
-    branch_protection.fully_protected? || branch_protection.developer_can_merge? || branch_protection.developer_can_initial_push?
+    !branch_protection.developer_can_push?
   end
 
   def initial_push_to_default_branch_allowed_for_developer?
-    if Feature.enabled?(:default_branch_protection_defaults, self)
-      branch_protection = Gitlab::Access::DefaultBranchProtection.new(self)
+    branch_protection = Gitlab::Access::DefaultBranchProtection.new(self.namespace.default_branch_protection_settings)
 
-      return branch_protection.developer_can_push? || branch_protection.developer_can_initial_push?
-    end
-
-    branch_protection = Gitlab::Access::BranchProtection.new(self.namespace.default_branch_protection)
-
-    !branch_protection.any? || branch_protection.developer_can_push? || branch_protection.developer_can_initial_push?
+    branch_protection.developer_can_push? || branch_protection.developer_can_initial_push?
   end
 
   def environments_for_scope(scope)
@@ -3098,6 +3145,18 @@ class Project < ApplicationRecord
     ci_cd_settings.restrict_user_defined_variables?
   end
 
+  def override_pipeline_variables_allowed?(access_level)
+    return false unless ci_cd_settings
+
+    ci_cd_settings.override_pipeline_variables_allowed?(access_level)
+  end
+
+  def ci_push_repository_for_job_token_allowed?
+    return false unless ci_cd_settings
+
+    ci_cd_settings.push_repository_for_job_token_allowed?
+  end
+
   def keep_latest_artifacts_available?
     return false unless ci_cd_settings
 
@@ -3194,12 +3253,8 @@ class Project < ApplicationRecord
     group&.work_items_beta_feature_flag_enabled? || Feature.enabled?(:work_items_beta, type: :beta)
   end
 
-  def work_items_mvc_2_feature_flag_enabled?
-    group&.work_items_mvc_2_feature_flag_enabled? || Feature.enabled?(:work_items_mvc_2)
-  end
-
-  def linked_work_items_feature_flag_enabled?
-    group&.linked_work_items_feature_flag_enabled? || Feature.enabled?(:linked_work_items, self)
+  def work_items_alpha_feature_flag_enabled?
+    group&.work_items_alpha_feature_flag_enabled? || Feature.enabled?(:work_items_alpha)
   end
 
   def enqueue_record_project_target_platforms
@@ -3291,6 +3346,16 @@ class Project < ApplicationRecord
 
   # Overridden in EE
   def on_demand_dast_available?
+    false
+  end
+
+  # Overridden in EE
+  def supports_saved_replies?
+    false
+  end
+
+  # Overridden in EE
+  def merge_trains_enabled?
     false
   end
 
@@ -3466,7 +3531,7 @@ class Project < ApplicationRecord
       Gitlab::GitalyClient.allow_n_plus_1_calls do
         merge_requests_allowing_collaboration(branch_name).any? do |merge_request|
           merge_request.author.can?(:push_code, self) &&
-          merge_request.can_be_merged_by?(user, skip_collaboration_check: true)
+            merge_request.can_be_merged_by?(user, skip_collaboration_check: true)
         end
       end
     end

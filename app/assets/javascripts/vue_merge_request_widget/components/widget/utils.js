@@ -27,11 +27,11 @@ const TEXT_STYLES = {
 
 const getStartTag = (tag) => TEXT_STYLES[tag].start;
 const textStyleTags = {
-  [getStartTag('success')]: '<span class="gl-font-weight-bold gl-text-green-500">',
-  [getStartTag('danger')]: '<span class="gl-font-weight-bold gl-text-red-500">',
-  [getStartTag('critical')]: '<span class="gl-font-weight-bold gl-text-red-800">',
-  [getStartTag('same')]: '<span class="gl-font-weight-bold gl-text-gray-700">',
-  [getStartTag('strong')]: '<span class="gl-font-weight-bold">',
+  [getStartTag('success')]: '<span class="gl-font-bold gl-text-green-500">',
+  [getStartTag('danger')]: '<span class="gl-font-bold gl-text-red-500">',
+  [getStartTag('critical')]: '<span class="gl-font-bold gl-text-red-800">',
+  [getStartTag('same')]: '<span class="gl-font-bold gl-text-gray-700">',
+  [getStartTag('strong')]: '<span class="gl-font-bold">',
   [getStartTag('small')]: '<span class="gl-font-sm gl-text-gray-700">',
 };
 
@@ -68,9 +68,9 @@ export const generateText = (text) => {
   }
   if (typeof text === 'object' && typeof text.text === 'string' && typeof text.href === 'string') {
     return createText(
-      `${
-        text.prependText ? `${escapeText(text.prependText)} ` : ''
-      }<a class="gl-text-decoration-underline" href="${text.href}">${escapeText(text.text)}</a>`,
+      `${text.prependText ? `${escapeText(text.prependText)} ` : ''}<a class="gl-underline" href="${
+        text.href
+      }">${escapeText(text.text)}</a>`,
     );
   }
 

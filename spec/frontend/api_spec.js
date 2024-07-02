@@ -51,6 +51,23 @@ describe('Api', () => {
     });
   });
 
+  describe('projectGroups', () => {
+    const projectId = '123';
+    const options = { search: 'foo' };
+    const apiResponse = [{ id: 1, name: 'foo' }];
+
+    it('fetch all project groups', () => {
+      const expectedUrl = `${dummyUrlRoot}/api/${dummyApiVersion}/projects/${projectId}/groups.json`;
+      jest.spyOn(axios, 'get');
+      mock.onGet(expectedUrl).replyOnce(HTTP_STATUS_OK, apiResponse);
+
+      return Api.projectGroups(projectId, options).then((data) => {
+        expect(data).toEqual(apiResponse);
+        expect(axios.get).toHaveBeenCalledWith(expectedUrl, { params: { ...options } });
+      });
+    });
+  });
+
   describe('packages', () => {
     const projectId = 'project_a';
     const packageId = 'package_b';
@@ -183,6 +200,19 @@ describe('Api', () => {
       mock.onGet(expectedUrl).reply(HTTP_STATUS_OK, expectedData);
 
       return Api.groupMembers(groupId).then(({ data }) => {
+        expect(data).toEqual(expectedData);
+      });
+    });
+  });
+
+  describe('groupSubgroups', () => {
+    it('fetches group subgroups', () => {
+      const groupId = '54321';
+      const expectedUrl = `${dummyUrlRoot}/api/${dummyApiVersion}/groups/${groupId}/subgroups`;
+      const expectedData = [{ id: 7 }];
+      mock.onGet(expectedUrl).reply(HTTP_STATUS_OK, expectedData);
+
+      return Api.groupSubgroups(groupId).then(({ data }) => {
         expect(data).toEqual(expectedData);
       });
     });
@@ -1554,8 +1584,7 @@ describe('Api', () => {
           title: 'My title 1',
           created_at: '2021-10-29T16:59:55.229Z',
           expires_at: null,
-          key:
-            'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDLvQzRX960N7dxPdge9o5a96+M4GEGQ7rxT2D3wAQDtQFjQV5ZcKb5wfeLtYLe3kRVI4lCO10PXeQppb1XBaYmVO31IaRkcgmMEPVyfp76Dp4CJZz6aMEbbcqfaHkDre0Fa8kzTXnBJVh2NeDbBfGMjFM5NRQLhKykodNsepO6dQ== dummy@gitlab.com',
+          key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDLvQzRX960N7dxPdge9o5a96+M4GEGQ7rxT2D3wAQDtQFjQV5ZcKb5wfeLtYLe3kRVI4lCO10PXeQppb1XBaYmVO31IaRkcgmMEPVyfp76Dp4CJZz6aMEbbcqfaHkDre0Fa8kzTXnBJVh2NeDbBfGMjFM5NRQLhKykodNsepO6dQ== dummy@gitlab.com',
           fingerprint: '81:93:63:b9:1e:24:a2:aa:e0:87:d3:3f:42:81:f2:c2',
           projects_with_write_access: [
             {

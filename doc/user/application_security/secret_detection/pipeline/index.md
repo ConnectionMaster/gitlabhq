@@ -8,11 +8,11 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 # Pipeline secret detection
 
 DETAILS:
-**Tier:** Free
-**Offering:** GitLab.com
+**Tier:** Free, Premium, Ultimate
+**Offering:** GitLab.com, Self-managed, GitLab Dedicated
 **Status:** GA
 
-Pipeline secret detection scans committed files after they has been pushed to GitLab.
+Pipeline secret detection scans files after they are committed to a Git repository and pushed to GitLab.
 
 After you [enable Pipeline Secret Detection](#enabling-the-analyzer), scans run in a CI/CD job named `secret_detection`.
 You can run scans and view [Pipeline Secret Detection JSON report artifacts](../../../../ci/yaml/artifacts_reports.md#artifactsreportssecret_detection) in any GitLab tier.
@@ -42,6 +42,12 @@ Many services add prefixes or other structural details to their secrets so they 
 For example, GitLab [adds a `glpat-` prefix](../../../../administration/settings/account_and_limit_settings.md#personal-access-token-prefix) to project, group, and personal access tokens by default.
 
 To provide more reliable, high-confidence results, Pipeline Secret Detection only looks for passwords or other unstructured secrets in specific contexts like URLs.
+
+A detected secret remains in the vulnerability report as "Still
+detected" even after the secret is removed from the scanned file. This
+is because the secret remains in the Git repository's history. To
+address a detected secret, remediate the leak, then triage the
+vulnerability.
 
 ## Coverage
 
@@ -96,6 +102,26 @@ can take a long time, especially for larger repositories with lengthy Git histor
 completing an initial full history scan, use only standard Pipeline Secret Detection as part of your
 pipeline.
 
+## Advanced vulnerability tracking
+
+DETAILS:
+**Tier:** Ultimate
+**Offering:** GitLab.com, Self-managed, GitLab Dedicated
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/434096) in GitLab 17.0.
+
+When developers make changes to a file with identified secrets, it's likely that the positions of these secrets will also change. The Secret Detection analyzer may have already flagged these secrets as vulnerabilities, tracked in the [Vulnerability Report](../../vulnerability_report/index.md). These vulnerabilities are associated with specific secrets for easy identification and action. However, if the detected secrets aren't accurately tracked as they shift, managing vulnerabilities becomes challenging, potentially resulting in duplicate vulnerability reports.
+
+GitLab Secret Detection uses an advanced vulnerability tracking algorithm to more accurately identify when the same secret has moved within a file due to refactoring or unrelated changes.
+
+For more information, see the confidential project `https://gitlab.com/gitlab-org/security-products/post-analyzers/tracking-calculator`. The content of this project is available only to GitLab team members.
+
+### Unsupported workflows
+
+- The algorithm does not support the workflow where the existing finding lacks a tracking signature and does not share the same location as the newly detected finding.
+- For certain rule types like Cryptographic Keys, the Secret Detection identifies leaks by matching the prefix of the secret rather than the entire secret value. In this scenario, the algorithm consolidates different secrets of the same rule type in a file into a single finding, rather than treating each distinct secret as a separate finding. For example, the [SSH Private Key rule type](https://gitlab.com/gitlab-org/security-products/analyzers/secrets/-/blob/d2919f65f1d8001755015b5d790af620676b97ea/gitleaks.toml#L138) matches only the `-----BEGIN OPENSSH PRIVATE KEY-----` prefix of a value to confirm the presence of a SSH private key. If there are two distinct SSH Private Keys within the same file, the algorithm considers both values as identical and reports only one finding instead of two.
+- The algorithm's scope is limited to a per-file basis, meaning that the same secret appearing in two different files is treated as two distinct findings.
+
 ## Configuration
 
 ### Requirements
@@ -108,7 +134,7 @@ Prerequisites:
   - Windows Runners are not supported.
   - CPU architectures other than amd64 are not supported.
 - If you use your own runners, make sure the Docker version installed is **not** `19.03.0`. See
-  [troubleshooting information](../../sast/troubleshooting.md#error-response-from-daemon-error-processing-tar-file-docker-tar-relocation-error)
+  [Docker error](../../sast/troubleshooting.md#docker-error)
   for details.
 - GitLab CI/CD configuration (`.gitlab-ci.yml`) must include the `test` stage.
 
@@ -301,7 +327,7 @@ You can customize which [secrets are reported in the GitLab UI](#pipeline-secret
 However, the `secret_detection` job logs always include the number
 of secrets detected by the default Pipeline Secret Detection rules.
 
-The following customization options can be used separately, or in combination:
+The following customization options can be used separately, or in combination (except for synthesizing a custom configuration with a remote configuration file):
 
 - [Disable predefined rules](#disable-predefined-analyzer-rules).
 - [Override predefined rules](#override-predefined-analyzer-rules).
@@ -313,8 +339,12 @@ The following customization options can be used separately, or in combination:
 You can use passthroughs to override the default Pipeline Secret Detection ruleset. The
 following passthrough types are supported by the `secrets` analyzer:
 
-- `raw`
-- `file`
+- `raw`: Include custom rules directly in the `secret-detection-ruleset.toml` file.
+- `file`: Include custom rules in a separate file in the project's repository.
+
+NOTE:
+The `file` option can only be used to synthesize a custom configuration from
+a file in the project's repository, not [a remote configuration file](#specify-a-remote-configuration-file).
 
 To define a passthrough, add _one_ of the following to the
 `secret-detection-ruleset.toml` file:
@@ -407,6 +437,8 @@ secret_detection:
 
 #### Override predefined analyzer rules
 
+> - Ability to override a rule with a remote ruleset was [enabled](https://gitlab.com/gitlab-org/gitlab/-/issues/425251) in GitLab 16.0 and later.
+
 If there are specific Pipeline Secret Detection rules you want to customize, you can override them. For
 example, you might increase the severity of specific secrets.
 
@@ -444,6 +476,8 @@ In the following example `secret-detection-ruleset.toml` file, rules are matched
 ```
 
 #### Disable predefined analyzer rules
+
+> - Ability to disable a rule with a remote ruleset was [enabled](https://gitlab.com/gitlab-org/gitlab/-/issues/425251) in GitLab 16.0 and later.
 
 If there are specific Pipeline Secret Detection rules that you don't want active, you can disable them.
 
@@ -570,6 +604,16 @@ variable, or as a CI/CD variable.
 
 - If using a variable, set the value of `ADDITIONAL_CA_CERT_BUNDLE` to the text
   representation of the certificate.
+
+### Demo Projects
+
+There are [demonstration projects](https://gitlab.com/gitlab-org/security-products/demos/SAST-analyzer-configurations) that illustrate some of these configuration options.
+
+Many of the demo projects illustrate using remote rulesets to override or disable rules and are grouped together by which analyzer they are for.
+
+There are also some video demonstrations walking through setting up remote rulesets:
+
+- [Secret Detection with local and remote ruleset](https://youtu.be/rsN1iDug5GU)
 
 ## FIPS-enabled images
 

@@ -10,17 +10,17 @@ import (
 func TestRangesRead(t *testing.T) {
 	r := setup(t)
 
-	firstRange := Range{Line: 1, Character: 2, ResultSetId: 4}
+	firstRange := Range{Line: 1, Character: 2, ResultSetID: 4}
 	rg, err := r.getRange(1)
 	require.NoError(t, err)
 	require.Equal(t, &firstRange, rg)
 
-	secondRange := Range{Line: 5, Character: 4, ResultSetId: 4}
+	secondRange := Range{Line: 5, Character: 4, ResultSetID: 4}
 	rg, err = r.getRange(2)
 	require.NoError(t, err)
 	require.Equal(t, &secondRange, rg)
 
-	thirdRange := Range{Line: 7, Character: 4, ResultSetId: 4}
+	thirdRange := Range{Line: 7, Character: 4, ResultSetID: 4}
 	rg, err = r.getRange(3)
 	require.NoError(t, err)
 	require.Equal(t, &thirdRange, rg)
@@ -29,10 +29,10 @@ func TestRangesRead(t *testing.T) {
 func TestSerialize(t *testing.T) {
 	r := setup(t)
 
-	docs := map[Id]string{6: "def-path", 7: "ref-path"}
+	docs := map[ID]string{6: "def-path", 7: "ref-path"}
 
 	var buf bytes.Buffer
-	err := r.Serialize(&buf, []Id{1}, docs)
+	err := r.Serialize(&buf, []ID{1}, docs)
 	want := `[{"start_line":1,"start_char":2,"definition_path":"def-path#L2","hover":null,"references":[{"path":"ref-path#L6"},{"path":"ref-path#L8"}]}` + "\n]"
 
 	require.NoError(t, err)

@@ -29,7 +29,7 @@ const SCSS_PARTIAL_GLOB = '**/_*.scss';
  * It ensures that the `ee/` and `jh/` directories take precedence, so that the
  * correct file is loaded.
  */
-function resolveLoadPaths() {
+export function resolveLoadPaths() {
   const loadPaths = {
     base: [BASE_PATH],
     vendor: [
@@ -86,6 +86,10 @@ function findSourceFiles(globPath, options = {}) {
   });
 }
 
+function alwaysTrue() {
+  return true;
+}
+
 /**
  * This function returns a Map<inputPath, outputPath> of absolute paths
  * which map from a SCSS source file to a CSS output file.
@@ -98,7 +102,7 @@ function findSourceFiles(globPath, options = {}) {
  * but theoretically they could be completely separate files.
  *
  */
-function resolveCompilationTargets() {
+function resolveCompilationTargets(filter) {
   const inputGlobs = [
     [
       'app/assets/stylesheets/*.scss',
@@ -111,7 +115,7 @@ function resolveCompilationTargets() {
       },
     ],
     [
-      'app/assets/stylesheets/{highlight/themes,lazy_bundles,mailers,page_bundles,themes}/**/*.scss',
+      'app/assets/stylesheets/{highlight/themes,lazy_bundles,lookbook,mailers,page_bundles,themes}/**/*.scss',
     ],
     // This is explicitly compiled to ensure that we do not end up with actual class definitions in this file
     // See scripts/frontend/check_page_bundle_mixins_css_for_sideeffects.js
@@ -154,10 +158,14 @@ function resolveCompilationTargets() {
 
   for (const [sourcePath, options] of inputGlobs) {
     const sources = findSourceFiles(sourcePath, options);
-    console.log(`${sourcePath} resolved to:`, sources);
+    const log = [];
     for (const { source, dest } of sources) {
-      result.set(dest, source);
+      if (filter(source, dest)) {
+        log.push({ source, dest });
+        result.set(dest, source);
+      }
     }
+    console.log(`${sourcePath} resolved to:`, log);
   }
 
   /*
@@ -167,6 +175,13 @@ function resolveCompilationTargets() {
   return Object.fromEntries([...result.entries()].map((entry) => entry.reverse()));
 }
 
+export function resolveCompilationTargetsForVite() {
+  const targets = resolveCompilationTargets(() => true);
+  return Object.fromEntries(
+    Object.entries(targets).map(([source, dest]) => [dest.replace(OUTPUT_PATH, ''), source]),
+  );
+}
+
 function createPostCSSProcessors() {
   return {
     tailwind: postcss([tailwindcss(tailwindConfig), autoprefixer()]),
@@ -174,10 +189,14 @@ function createPostCSSProcessors() {
   };
 }
 
-export async function compileAllStyles({ shouldWatch = false }) {
+export async function compileAllStyles({
+  shouldWatch = false,
+  style = null,
+  filter = alwaysTrue,
+} = {}) {
   const reverseDependencies = {};
 
-  const compilationTargets = resolveCompilationTargets();
+  const compilationTargets = resolveCompilationTargets(filter);
 
   const processors = createPostCSSProcessors();
 
@@ -188,7 +207,7 @@ export async function compileAllStyles({ shouldWatch = false }) {
     // We probably want to change this later if there are more
     // post-processing steps, because we would compress
     // _after_ things like auto-prefixer, etc. happened
-    style: shouldWatch ? 'expanded' : 'compressed',
+    style: style ?? (shouldWatch ? 'expanded' : 'compressed'),
     sourceMap: shouldWatch,
     sourceMapIncludeSources: shouldWatch,
   };
@@ -251,19 +270,6 @@ export async function compileAllStyles({ shouldWatch = false }) {
   await Promise.all(initialCompile);
 
   return fileWatcher;
-}
-
-export function viteCSSCompilerPlugin({ shouldWatch = true }) {
-  let fileWatcher = null;
-  return {
-    name: 'gitlab-css-compiler',
-    async configureServer() {
-      fileWatcher = await compileAllStyles({ shouldWatch });
-    },
-    buildEnd() {
-      return fileWatcher?.close();
-    },
-  };
 }
 
 export function simplePluginForNodemon({ shouldWatch = true }) {

@@ -30,55 +30,7 @@
           }
         },
         "required": [
-          "instrumentation_class",
-          "options"
-        ],
-        "not": {
-          "required": [
-            "events"
-          ]
-        }
-      },
-      {
-        "properties": {
-          "instrumentation_class": {
-            "const": "AggregatedMetric"
-          },
-          "options": {
-            "type": "object",
-            "properties": {
-              "aggregate": {
-                "type": "object",
-                "properties": {
-                  "attribute": {
-                    "enum": [
-                      "user.id",
-                      "project.id"
-                    ]
-                  }
-                },
-                "required": [
-                  "attribute"
-                ],
-                "additionalProperties": false
-              },
-              "events": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "required": [
-              "aggregate",
-              "events"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "instrumentation_class",
-          "options"
+          "instrumentation_class"
         ]
       },
       {

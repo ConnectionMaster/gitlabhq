@@ -1,5 +1,5 @@
 import Vue, { nextTick } from 'vue';
-import { GlSprintf } from '@gitlab/ui';
+import { GlFormTextarea, GlSprintf } from '@gitlab/ui';
 import VueApollo from 'vue-apollo';
 import produce from 'immer';
 import { createMockSubscription as createMockApolloSubscription } from 'mock-apollo-client';
@@ -14,7 +14,7 @@ import CommitMessageDropdown from '~/vue_merge_request_widget/components/states/
 import ReadyToMerge from '~/vue_merge_request_widget/components/states/ready_to_merge.vue';
 import SquashBeforeMerge from '~/vue_merge_request_widget/components/states/squash_before_merge.vue';
 import MergeFailedPipelineConfirmationDialog from '~/vue_merge_request_widget/components/states/merge_failed_pipeline_confirmation_dialog.vue';
-import { MWPS_MERGE_STRATEGY } from '~/vue_merge_request_widget/constants';
+import { MWPS_MERGE_STRATEGY, MWCP_MERGE_STRATEGY } from '~/vue_merge_request_widget/constants';
 import eventHub from '~/vue_merge_request_widget/event_hub';
 import readyToMergeSubscription from '~/vue_merge_request_widget/queries/states/ready_to_merge.subscription.graphql';
 
@@ -124,6 +124,7 @@ const createComponent = (customConfig = {}, createState = true) => {
     },
     stubs: {
       CommitEdit,
+      GlFormTextarea,
       GlSprintf,
     },
     apolloProvider,
@@ -154,6 +155,7 @@ const triggerApprovalUpdated = () => eventHub.$emit('ApprovalUpdated');
 const triggerEditCommitInput = () =>
   wrapper.find('[data-testid="widget_edit_commit_message"]').vm.$emit('input', true);
 const findMergeHelperText = () => wrapper.find('[data-testid="auto-merge-helper-text"]');
+const findTextareas = () => wrapper.findAllComponents(GlFormTextarea);
 
 describe('ReadyToMerge', () => {
   beforeEach(() => {
@@ -213,6 +215,13 @@ describe('ReadyToMerge', () => {
       expect(findMergeHelperText().text()).toBe('Merge when pipeline succeeds');
     });
 
+    it('should return Set to auto-merge in the button and Merge when checks pass in the helper text', () => {
+      createComponent({ mr: { preferredAutoMergeStrategy: MWCP_MERGE_STRATEGY } });
+
+      expect(findMergeButton().text()).toBe('Set to auto-merge');
+      expect(findMergeHelperText().text()).toBe('Merge when pipeline succeeds');
+    });
+
     it('should show merge help text when pipeline has failed and has an auto merge strategy', () => {
       createComponent({
         mr: {
@@ -228,16 +237,41 @@ describe('ReadyToMerge', () => {
   });
 
   describe('merge immediately dropdown', () => {
-    it('dropdown should be hidden if no pipeline is active', () => {
+    it('dropdown should be visible if auto merge is available', () => {
       createComponent({
-        mr: { isPipelineActive: false, onlyAllowMergeIfPipelineSucceeds: false },
+        mr: {
+          availableAutoMergeStrategies: [MWPS_MERGE_STRATEGY],
+          mergeable: true,
+          headPipeline: { active: false },
+          onlyAllowMergeIfPipelineSucceeds: false,
+        },
+      });
+
+      expect(findMergeImmediatelyDropdown().exists()).toBe(true);
+    });
+
+    it('dropdown should be hidden if auto merge is unavailable', () => {
+      createComponent({
+        mr: {
+          availableAutoMergeStrategies: [],
+          mergeable: true,
+          headPipeline: { active: true },
+          onlyAllowMergeIfPipelineSucceeds: false,
+        },
       });
 
       expect(findMergeImmediatelyDropdown().exists()).toBe(false);
     });
 
-    it('dropdown should be hidden if "Pipelines must succeed" is enabled', () => {
-      createComponent({ mr: { isPipelineActive: true, onlyAllowMergeIfPipelineSucceeds: true } });
+    it('dropdown should be hidden if the MR is not mergeable', () => {
+      createComponent({
+        mr: {
+          availableAutoMergeStrategies: [MWPS_MERGE_STRATEGY],
+          mergeable: false,
+          headPipeline: { active: true },
+          onlyAllowMergeIfPipelineSucceeds: false,
+        },
+      });
 
       expect(findMergeImmediatelyDropdown().exists()).toBe(false);
     });
@@ -794,6 +828,22 @@ describe('ReadyToMerge', () => {
     });
   });
 
+  describe('Merge button when merge request has been retargeted', () => {
+    beforeEach(() => {
+      createComponent({
+        mr: { retargeted: true },
+      });
+    });
+
+    it('should display confirmation modal when merge button is clicked', async () => {
+      expect(findPipelineFailedConfirmModal().props()).toEqual({ visible: false });
+
+      await findMergeButton().vm.$emit('click');
+
+      expect(findPipelineFailedConfirmModal().props()).toEqual({ visible: true });
+    });
+  });
+
   describe('updating graphql data triggers commit message update when default changed', () => {
     const UPDATED_MERGE_COMMIT_MESSAGE = 'New merge message from BE';
     const UPDATED_SQUASH_COMMIT_MESSAGE = 'New squash message from BE';
@@ -817,10 +867,10 @@ describe('ReadyToMerge', () => {
     });
 
     describe.each`
-      desc                       | finderFn                   | initialValue           | updatedValue                     | inputId
-      ${'merge commit message'}  | ${findMergeCommitMessage}  | ${commitMessage}       | ${UPDATED_MERGE_COMMIT_MESSAGE}  | ${'#merge-message-edit'}
-      ${'squash commit message'} | ${findSquashCommitMessage} | ${squashCommitMessage} | ${UPDATED_SQUASH_COMMIT_MESSAGE} | ${'#squash-message-edit'}
-    `('with $desc', ({ finderFn, initialValue, updatedValue, inputId }) => {
+      desc                       | finderFn                   | initialValue           | updatedValue                     | variant
+      ${'merge commit message'}  | ${findMergeCommitMessage}  | ${commitMessage}       | ${UPDATED_MERGE_COMMIT_MESSAGE}  | ${1}
+      ${'squash commit message'} | ${findSquashCommitMessage} | ${squashCommitMessage} | ${UPDATED_SQUASH_COMMIT_MESSAGE} | ${0}
+    `('with $desc', ({ finderFn, initialValue, updatedValue, variant }) => {
       it('should have initial value', async () => {
         createDefaultGqlComponent();
 
@@ -847,9 +897,7 @@ describe('ReadyToMerge', () => {
         await waitForPromises();
         await triggerEditCommitInput();
 
-        const input = wrapper.find(inputId);
-        input.element.value = USER_COMMIT_MESSAGE;
-        input.trigger('input');
+        findTextareas().at(variant).vm.$emit('input', USER_COMMIT_MESSAGE);
 
         triggerApprovalUpdated();
         await waitForPromises();

@@ -22,6 +22,7 @@ RSpec.shared_examples 'validate dictionary' do |objects, directory_path, require
         allow_cross_foreign_keys
         desired_sharding_key_migration_job_name
         exempt_from_sharding
+        sharding_key_issue_url
       ]
     end
 
@@ -123,7 +124,7 @@ RSpec.shared_examples 'validate dictionary' do |objects, directory_path, require
   end
 
   def invalid_feature_categories(object_feature_categories)
-    return false unless object_feature_categories.present?
+    return [] unless object_feature_categories.present?
 
     object_feature_categories - all_feature_categories
   end

@@ -31,7 +31,9 @@ setup-test-env:
     paths:
       - ${TMP_TEST_FOLDER}/gitaly/_build/bin/
       - ${TMP_TEST_FOLDER}/gitaly/config.toml
+      - ${TMP_TEST_FOLDER}/gitaly/config.toml.transactions
       - ${TMP_TEST_FOLDER}/gitaly/gitaly2.config.toml
+      - ${TMP_TEST_FOLDER}/gitaly/gitaly2.config.toml.transactions
       - ${TMP_TEST_FOLDER}/gitaly/internal/
       - ${TMP_TEST_FOLDER}/gitaly/Makefile
       - ${TMP_TEST_FOLDER}/gitaly/praefect.config.toml
@@ -45,6 +47,7 @@ setup-test-env:
       - ${TMP_TEST_FOLDER}/repositories/
       - ${TMP_TEST_FOLDER}/second_storage/
       - ${TMP_TEST_GITLAB_WORKHORSE_PATH}/
+      - log/*.log
     when: always
 
 setup-test-env-fips:
@@ -302,6 +305,59 @@ rspec system pg14 praefect:
     - .praefect-with-db
     - .rspec-system-parallel
     - .rails:rules:praefect-with-db
+
+# Test jobs that run without Gitaly's transactions enabled. These will be removed once
+# transactions are always in use in Gitaly.
+rspec migration pg14 no_gitaly_transactions:
+  extends:
+    - rspec migration pg14
+    - .gitaly-without-transactions
+
+rspec background_migration pg14 no_gitaly_transactions:
+  extends:
+    - rspec background_migration pg14
+    - .gitaly-without-transactions
+
+rspec unit pg14 no_gitaly_transactions:
+  extends:
+    - rspec unit pg14
+    - .gitaly-without-transactions
+
+rspec integration pg14 no_gitaly_transactions:
+  extends:
+    - rspec integration pg14
+    - .gitaly-without-transactions
+
+rspec system pg14 no_gitaly_transactions:
+  extends:
+    - rspec system pg14
+    - .gitaly-without-transactions
+
+rspec-ee migration pg14 no_gitaly_transactions:
+  extends:
+    - rspec-ee migration pg14
+    - .gitaly-without-transactions
+
+rspec-ee background_migration pg14 no_gitaly_transactions:
+  extends:
+    - rspec-ee background_migration pg14
+    - .gitaly-without-transactions
+
+rspec-ee unit pg14 no_gitaly_transactions:
+  extends:
+    - rspec-ee unit pg14
+    - .gitaly-without-transactions
+
+rspec-ee integration pg14 no_gitaly_transactions:
+  extends:
+    - rspec-ee integration pg14
+    - .gitaly-without-transactions
+
+rspec-ee system pg14 no_gitaly_transactions:
+  extends:
+    - rspec-ee system pg14
+    - .gitaly-without-transactions
+
 
 # Dedicated job to test DB library code against PG13.
 # Note that these are already tested against PG13 in the `rspec unit pg13` / `rspec-ee unit pg13` jobs.
@@ -599,7 +655,7 @@ rspec:merge-auto-explain-logs:
 # EE: default refs (MRs, default branch, schedules) jobs #
 rspec-predictive:pipeline-generate:
   extends:
-    - .rails:rules:rspec-predictive
+    - .rails:rules:rspec-predictive:pipeline-generate
   stage: prepare
   needs: ["detect-tests", "retrieve-tests-metadata"]
   script:
@@ -632,6 +688,7 @@ rspec:predictive:trigger:
   variables:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
     GIT_STRATEGY: $GIT_STRATEGY
+    PIPELINE_NAME: 'rspec:predictive'
   trigger:
     strategy: depend
     forward:
@@ -641,18 +698,55 @@ rspec:predictive:trigger:
       - artifact: "${RSPEC_PREDICTIVE_PIPELINE_TEMPLATE_YML}.yml"
         job: rspec-predictive:pipeline-generate
 
+rspec:predictive:trigger single-db:
+  extends:
+    - rspec:predictive:trigger
+    - .single-db-rspec
+    - .rails:rules:rspec-predictive:single-db
+  variables:
+    PIPELINE_NAME: 'rspec:predictive single-db'
+
+rspec:predictive:trigger single-db-ci-connection:
+  extends:
+    - rspec:predictive:trigger
+    - .single-db-ci-connection-rspec
+    - .rails:rules:rspec-predictive:single-db-ci-connection
+  variables:
+    PIPELINE_NAME: 'rspec:predictive single-db-ci-connection'
+
 rspec-ee:predictive:trigger:
   extends: rspec:predictive:trigger
   trigger:
     include:
       - artifact: "${RSPEC_PREDICTIVE_PIPELINE_TEMPLATE_YML}-ee.yml"
         job: rspec-predictive:pipeline-generate
+  variables:
+    PIPELINE_NAME: 'rspec-ee:predictive'
+
+rspec-ee:predictive:trigger single-db:
+  extends: rspec:predictive:trigger single-db
+  trigger:
+    include:
+      - artifact: "${RSPEC_PREDICTIVE_PIPELINE_TEMPLATE_YML}-ee.yml"
+        job: rspec-predictive:pipeline-generate
+  variables:
+    PIPELINE_NAME: 'rspec-ee:predictive single-db'
+
+rspec-ee:predictive:trigger single-db-ci-connection:
+  extends: rspec:predictive:trigger single-db-ci-connection
+  trigger:
+    include:
+      - artifact: "${RSPEC_PREDICTIVE_PIPELINE_TEMPLATE_YML}-ee.yml"
+        job: rspec-predictive:pipeline-generate
+  variables:
+    PIPELINE_NAME: 'rspec-ee:predictive single-db-ci-connection'
 
 .rspec-ee-base-gitlab-duo:
   extends:
     - .rspec-ee-base-pg14
   variables:
     REAL_AI_REQUEST: "true"
+    AI_GATEWAY_URL: http://ai-gateway:5052
 
 rspec-ee unit gitlab-duo-chat-zeroshot pg14:
   extends:
@@ -1251,44 +1345,6 @@ rspec-ee fail-fast:
     - .rspec-fail-fast  # extends from .rspec-fail-fast last to override script from .rspec-ee-base-pg13
   variables:
     MATCHING_TESTS_PATH: "${RSPEC_MATCHING_TESTS_EE_PATH}"
-
-rspec-foss-impact:pipeline-generate:
-  extends:
-    - .rails:rules:rspec-foss-impact
-  stage: prepare
-  needs: ["detect-tests", "retrieve-tests-metadata"]
-  script:
-    - scripts/generate_rspec_pipeline.rb -f "${RSPEC_MATCHING_TESTS_FOSS_PATH}" -t "${RSPEC_FOSS_IMPACT_PIPELINE_TEMPLATE_YML}" -k "${KNAPSACK_RSPEC_SUITE_REPORT_PATH}"
-    - cat "${RSPEC_FOSS_IMPACT_PIPELINE_TEMPLATE_YML}.yml"
-  artifacts:
-    expire_in: 1 day
-    paths:
-      - "${RSPEC_FOSS_IMPACT_PIPELINE_TEMPLATE_YML}.yml"
-
-rspec-foss-impact:trigger:
-  extends:
-    - .rails:rules:rspec-foss-impact
-  stage: test
-  needs:
-    - job: "setup-test-env"
-      artifacts: false
-    - job: "retrieve-tests-metadata"
-      artifacts: false
-    - job: "compile-test-assets as-if-foss"
-      artifacts: false
-    - job: "rspec-foss-impact:pipeline-generate"
-      artifacts: true
-  variables:
-    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
-    GIT_STRATEGY: $GIT_STRATEGY
-  trigger:
-    strategy: depend
-    forward:
-      yaml_variables: true
-      pipeline_variables: true
-    include:
-      - artifact: "${RSPEC_FOSS_IMPACT_PIPELINE_TEMPLATE_YML}.yml"
-        job: rspec-foss-impact:pipeline-generate
 
 fail-pipeline-early:
   extends:

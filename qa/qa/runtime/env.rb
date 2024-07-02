@@ -86,6 +86,14 @@ module QA
         ENV['CI_PROJECT_NAME']
       end
 
+      def ci_project_path
+        ENV['CI_PROJECT_PATH']
+      end
+
+      def coverband_enabled?
+        enabled?(ENV['COVERBAND_ENABLED'], default: false)
+      end
+
       def schedule_type
         ENV['SCHEDULE_TYPE']
       end
@@ -517,10 +525,6 @@ module QA
         ENV['QA_RUNTIME_SCENARIO_ATTRIBUTES']
       end
 
-      def disable_rspec_retry?
-        enabled?(ENV['QA_DISABLE_RSPEC_RETRY'], default: false)
-      end
-
       def simulate_slow_connection?
         enabled?(ENV['QA_SIMULATE_SLOW_CONNECTION'], default: false)
       end
@@ -559,7 +563,7 @@ module QA
       end
 
       def gitlab_agentk_version
-        ENV.fetch('GITLAB_AGENTK_VERSION', 'v16.6.0')
+        ENV.fetch('GITLAB_AGENTK_VERSION', 'v16.10.0')
       end
 
       def transient_trials
@@ -598,10 +602,6 @@ module QA
 
       def validate_resource_reuse?
         enabled?(ENV['QA_VALIDATE_RESOURCE_REUSE'], default: false)
-      end
-
-      def skip_smoke_reliable?
-        enabled?(ENV['QA_SKIP_SMOKE_RELIABLE'], default: false)
       end
 
       def fips?
@@ -691,6 +691,34 @@ module QA
         ENV["QA_DOCKER_NETWORK"]
       end
 
+      # Product analytics configurator string (e.g. https://usr:pass@gl-configurator.gitlab.com)
+      #
+      # @return [String]
+      def pa_configurator_url
+        ENV['PA_CONFIGURATOR_URL']
+      end
+
+      # Product analytics collector url (e.g. https://collector.gitlab.com)
+      #
+      # @return [String]
+      def pa_collector_host
+        ENV['PA_COLLECTOR_HOST']
+      end
+
+      # Product analytics cube api url (e.g. https://cube.gitlab.com)
+      #
+      # @return [String]
+      def pa_cube_api_url
+        ENV['PA_CUBE_API_URL']
+      end
+
+      # Product analytics cube api key
+      #
+      # @return [String]
+      def pa_cube_api_key
+        ENV['PA_CUBE_API_KEY']
+      end
+
       # Test run is in rspec retried process
       #
       # @return [Boolean]
@@ -715,7 +743,7 @@ module QA
       def enabled?(value, default: true)
         return default if value.nil?
 
-        (value.to_s =~ /^(false|no|0)$/i) != 0
+        value.to_s.match?(/^(true|yes|1)$/i)
       end
     end
   end

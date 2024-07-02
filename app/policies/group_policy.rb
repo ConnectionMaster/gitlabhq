@@ -34,12 +34,10 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
 
   desc "User owns the group's organization"
   condition(:organization_owner) do
-    if @user.is_a?(User)
-      @user.owns_organization?(@subject.organization_id)
-    else
-      false
-    end
+    owns_group_organization?
   end
+
+  rule { admin | organization_owner }.enable :admin_organization
 
   with_options scope: :subject, score: 0
   condition(:request_access_enabled) { @subject.request_access_enabled }
@@ -59,6 +57,24 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     end
 
     @subject.project_creation_level == ::Gitlab::Access::NO_ONE_PROJECT_ACCESS || allowed_visibility_levels.empty?
+  end
+
+  condition(:create_subgroup_disabled, scope: :subject) do
+    next true if @user.nil?
+
+    visibility_levels = if @user.can_admin_all_resources?
+                          # admin can create groups even with restricted visibility levels
+                          Gitlab::VisibilityLevel.values
+                        else
+                          Gitlab::VisibilityLevel.allowed_levels
+                        end
+
+    # visibility_level_allowed? is not supporting root-groups, so we have to create a dummy sub-group.
+    subgroup = Group.new(parent_id: @subject.id)
+
+    # if a subgroup with none of the remaining visibility levels can be allowed by the group,
+    # then it means that the `Create subgroup` button must be disabled.
+    visibility_levels.none? { |level| subgroup.visibility_level_allowed?(level) }
   end
 
   condition(:developer_maintainer_access, scope: :subject) do
@@ -114,10 +130,6 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     @subject.allow_runner_registration_token?
   end
 
-  condition(:raise_admin_package_to_owner_enabled) do
-    Feature.enabled?(:raise_group_admin_package_permission_to_owner, @subject)
-  end
-
   rule { can?(:read_group) & design_management_enabled }.policy do
     enable :read_design_activity
   end
@@ -162,19 +174,27 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     enable :read_custom_emoji
     enable :read_counts
     enable :read_issue
+    enable :read_work_item
     enable :read_namespace
   end
 
-  rule { achievements_enabled }.policy do
+  rule { ~achievements_enabled }.policy do
+    prevent :read_achievement
+    prevent :admin_achievement
+    prevent :award_achievement
+    prevent :destroy_user_achievement
+  end
+
+  rule { can?(:read_group) }.policy do
     enable :read_achievement
   end
 
-  rule { can?(:maintainer_access) & achievements_enabled }.policy do
+  rule { can?(:maintainer_access) }.policy do
     enable :admin_achievement
     enable :award_achievement
   end
 
-  rule { can?(:owner_access) & achievements_enabled }.policy do
+  rule { can?(:owner_access) }.policy do
     enable :destroy_user_achievement
   end
 
@@ -237,12 +257,16 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     enable :maintainer_access
     enable :read_upload
     enable :destroy_upload
+    enable :admin_push_rules
   end
 
   rule { owner }.policy do
     enable :admin_group
     enable :admin_namespace
     enable :admin_group_member
+    enable :admin_package
+    enable :admin_runner
+    enable :admin_integrations
     enable :change_visibility_level
 
     enable :read_usage_quotas
@@ -268,6 +292,7 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     enable :edit_billing
 
     enable :remove_group
+    enable :manage_merge_request_settings
   end
 
   rule { can?(:read_nested_project_resources) }.policy do
@@ -305,6 +330,10 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     prevent :import_projects
   end
 
+  rule { create_subgroup_disabled }.policy do
+    prevent :create_subgroup
+  end
+
   rule { owner | admin | organization_owner }.policy do
     enable :owner_access
     enable :read_statistics
@@ -329,11 +358,7 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
   rule { dependency_proxy_access_allowed & dependency_proxy_available }
     .enable :read_dependency_proxy
 
-  rule { maintainer & dependency_proxy_available & ~raise_admin_package_to_owner_enabled }.policy do
-    enable :admin_dependency_proxy
-  end
-
-  rule { owner & dependency_proxy_available & raise_admin_package_to_owner_enabled }.policy do
+  rule { owner & dependency_proxy_available }.policy do
     enable :admin_dependency_proxy
   end
 
@@ -381,6 +406,7 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
 
   rule { ~runner_registration_token_enabled }.policy do
     prevent :register_group_runners
+    prevent :update_runners_registration_token
   end
 
   rule { migration_bot }.policy do
@@ -390,9 +416,6 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
 
   # Should be matched with ProjectPolicy#read_internal_note
   rule { admin | reporter }.enable :read_internal_note
-
-  rule { maintainer & ~raise_admin_package_to_owner_enabled }.enable :admin_package
-  rule { owner & raise_admin_package_to_owner_enabled }.enable :admin_package
 
   rule { can?(:remove_group) }.enable :view_edit_page
 
@@ -408,10 +431,6 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
   end
 
   private
-
-  def user_is_user?
-    user.is_a?(User)
-  end
 
   def group
     @subject
@@ -433,9 +452,26 @@ class GroupPolicy < Namespaces::GroupProjectNamespaceSharedPolicy
     resource_access_token_create_feature_available? && group.root_ancestor.namespace_settings.resource_access_token_creation_allowed?
   end
 
+  # TODO: Remove this when we rollout the feature flag packages_dependency_proxy_pass_token_to_policy
+  # https://gitlab.com/gitlab-org/gitlab/-/issues/441588
   def valid_dependency_proxy_deploy_token
     @user.is_a?(DeployToken) && @user&.valid_for_dependency_proxy? && @user&.has_access_to_group?(@subject)
   end
+
+  # rubocop:disable Cop/UserAdmin -- specifically check the admin attribute
+  def owns_group_organization?
+    return false unless @user
+    return false unless user_is_user?
+    return false unless @subject.organization
+    # Ensure admins can't bypass admin mode.
+    return false if @user.admin? && !can?(:admin)
+
+    # Load the owners with a single query.
+    @subject.organization
+            .owner_user_ids
+            .include?(@user.id)
+  end
+  # rubocop:enable Cop/UserAdmin
 end
 
 GroupPolicy.prepend_mod_with('GroupPolicy')

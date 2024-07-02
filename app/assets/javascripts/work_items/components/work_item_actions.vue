@@ -22,6 +22,7 @@ import {
   sprintfWorkItem,
   I18N_WORK_ITEM_DELETE,
   I18N_WORK_ITEM_ARE_YOU_SURE_DELETE,
+  I18N_WORK_ITEM_ARE_YOU_SURE_DELETE_HIERARCHY,
   TEST_ID_CONFIDENTIALITY_TOGGLE_ACTION,
   TEST_ID_NOTIFICATIONS_TOGGLE_FORM,
   TEST_ID_DELETE_ACTION,
@@ -78,7 +79,6 @@ export default {
   promoteActionTestId: TEST_ID_PROMOTE_ACTION,
   lockDiscussionTestId: TEST_ID_LOCK_ACTION,
   stateToggleTestId: TEST_ID_TOGGLE_ACTION,
-  inject: ['isGroup'],
   props: {
     fullPath: {
       type: String,
@@ -89,6 +89,11 @@ export default {
       required: true,
     },
     workItemId: {
+      type: String,
+      required: false,
+      default: null,
+    },
+    workItemIid: {
       type: String,
       required: false,
       default: null,
@@ -153,6 +158,11 @@ export default {
       required: false,
       default: false,
     },
+    hasChildren: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
   },
   data() {
     return {
@@ -172,7 +182,7 @@ export default {
         return data.workspace?.workItemTypes?.nodes;
       },
       skip() {
-        return !this.canUpdate;
+        return !this.canUpdate || this.workItemType !== WORK_ITEM_TYPE_VALUE_KEY_RESULT;
       },
     },
   },
@@ -180,7 +190,6 @@ export default {
     i18n() {
       return {
         deleteWorkItem: sprintfWorkItem(I18N_WORK_ITEM_DELETE, this.workItemType),
-        areYouSureDelete: sprintfWorkItem(I18N_WORK_ITEM_ARE_YOU_SURE_DELETE, this.workItemType),
         convertError: sprintfWorkItem(I18N_WORK_ITEM_ERROR_CONVERTING, this.workItemType),
         copyCreateNoteEmail: sprintfWorkItem(
           I18N_WORK_ITEM_COPY_CREATE_NOTE_EMAIL,
@@ -192,6 +201,11 @@ export default {
           this.workItemType,
         ),
       };
+    },
+    areYouSureDeleteMessage() {
+      return this.hasChildren
+        ? sprintfWorkItem(I18N_WORK_ITEM_ARE_YOU_SURE_DELETE_HIERARCHY, this.workItemType)
+        : sprintfWorkItem(I18N_WORK_ITEM_ARE_YOU_SURE_DELETE, this.workItemType);
     },
     canLockWorkItem() {
       return this.canUpdate && this.glFeatures.workItemsBeta;
@@ -338,6 +352,9 @@ export default {
     hideDropdown() {
       this.isDropdownVisible = false;
     },
+    emitStateToggleError(error) {
+      this.$emit('error', error);
+    },
   },
 };
 </script>
@@ -376,6 +393,18 @@ export default {
         <gl-dropdown-divider />
       </template>
 
+      <work-item-state-toggle
+        v-if="canUpdate"
+        :data-testid="$options.stateToggleTestId"
+        :work-item-id="workItemId"
+        :work-item-iid="workItemIid"
+        :work-item-state="workItemState"
+        :work-item-type="workItemType"
+        :full-path="fullPath"
+        show-as-dropdown-item
+        @error="emitStateToggleError"
+      />
+
       <gl-disclosure-dropdown-item
         v-if="canPromoteToObjective"
         :data-testid="$options.promoteActionTestId"
@@ -403,18 +432,10 @@ export default {
         <template #list-item>{{ confidentialItemText }}</template>
       </gl-disclosure-dropdown-item>
 
-      <work-item-state-toggle
-        v-if="canUpdate"
-        :data-testid="$options.stateToggleTestId"
-        :work-item-id="workItemId"
-        :work-item-state="workItemState"
-        :work-item-type="workItemType"
-        show-as-dropdown-item
-      />
-
       <gl-disclosure-dropdown-item
         :data-testid="$options.copyReferenceTestId"
         :data-clipboard-text="workItemReference"
+        class="shortcut-copy-reference"
         @action="copyToClipboard(workItemReference, $options.i18n.referenceCopied)"
       >
         <template #list-item>{{ $options.i18n.copyReference }}</template>
@@ -452,7 +473,7 @@ export default {
       @ok="handleDeleteWorkItem"
       @hide="handleCancelDeleteWorkItem"
     >
-      {{ i18n.areYouSureDelete }}
+      {{ areYouSureDeleteMessage }}
     </gl-modal>
   </div>
 </template>

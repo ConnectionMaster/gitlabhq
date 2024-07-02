@@ -2,6 +2,8 @@
 
 module Integrations
   class Pumble < BaseChatNotification
+    include HasAvatar
+
     field :webhook,
       section: SECTION_TYPE_CONNECTION,
       help: 'https://api.pumble.com/workspaces/x/...',
@@ -47,7 +49,7 @@ module Integrations
 
     def self.supported_events
       %w[push issue confidential_issue merge_request note confidential_note tag_push
-         pipeline wiki_page]
+        pipeline wiki_page]
     end
 
     private

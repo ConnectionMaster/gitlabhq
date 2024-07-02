@@ -50,7 +50,7 @@ module Git
       strong_memoize(:commits_count) do
         next threshold_commits.count if
           strong_memoized?(:threshold_commits) &&
-          threshold_commits.count <= PROCESS_COMMIT_LIMIT
+            threshold_commits.count <= PROCESS_COMMIT_LIMIT
 
         if creating_default_branch?
           project.repository.commit_count_for_ref(ref)
@@ -81,7 +81,6 @@ module Git
       project.repository.after_push_commit(branch_name)
 
       branch_create_hooks if creating_branch?
-      branch_update_hooks if updating_branch?
       branch_change_hooks if creating_branch? || updating_branch?
       branch_remove_hooks if removing_branch?
 
@@ -93,12 +92,6 @@ module Git
       project.after_create_default_branch if default_branch?
     end
 
-    def branch_update_hooks
-      # Update the bare repositories info/attributes file using the contents of
-      # the default branch's .gitattributes file
-      project.repository.copy_gitattributes(ref) if default_branch?
-    end
-
     def branch_change_hooks
       enqueue_process_commit_messages
       enqueue_jira_connect_sync_messages
@@ -106,6 +99,7 @@ module Git
     end
 
     def branch_remove_hooks
+      enqueue_jira_connect_remove_branches
       project.repository.after_remove_branch(expire_cache: false)
     end
 
@@ -173,6 +167,20 @@ module Git
           Atlassian::JiraConnect::Client.generate_update_sequence_id
         )
       end
+    end
+
+    def enqueue_jira_connect_remove_branches
+      return unless Feature.enabled?(:jira_connect_remove_branches, project)
+      return unless project.jira_subscription_exists?
+
+      return unless Atlassian::JiraIssueKeyExtractors::Branch.has_keys?(project, branch_name)
+
+      Integrations::JiraConnect::RemoveBranchWorker.perform_async(
+        project.id,
+        {
+          branch_name: branch_name
+        }
+      )
     end
 
     def filtered_commit_shas

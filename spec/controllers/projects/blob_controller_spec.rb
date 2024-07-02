@@ -6,6 +6,7 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
   include ProjectForksHelper
 
   let_it_be(:project) { create(:project, :public, :repository) }
+  let(:mutable_project) { create(:project, :public, :repository) }
 
   describe "GET show" do
     let(:params) { { namespace_id: project.namespace, project_id: project, id: id, ref_type: ref_type } }
@@ -29,27 +30,10 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
         let(:id) { "#{ref}/#{path}" }
 
         it_behaves_like '#set_is_ambiguous_ref when ref is ambiguous'
-
-        context 'and explicitly requesting a branch' do
-          let(:ref_type) { 'heads' }
-
-          it 'redirects to blob#show with sha for the branch' do
-            expect(response).to redirect_to(project_blob_path(project, "#{RepoHelpers.another_sample_commit.id}/#{path}"))
-          end
-        end
-
-        context 'and explicitly requesting a tag' do
-          let(:ref_type) { 'tags' }
-
-          it 'responds with success' do
-            expect(response).to be_ok
-          end
-        end
       end
 
       describe '#set_is_ambiguous_ref with no ambiguous ref' do
         let(:id) { 'master/invalid-path.rb' }
-        let(:ambiguous_ref_modal) { true }
 
         it_behaves_like '#set_is_ambiguous_ref when ref is not ambiguous'
       end
@@ -301,6 +285,7 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
 
     before do
       project.add_maintainer(user)
+      mutable_project.add_maintainer(user)
 
       sign_in(user)
     end
@@ -309,6 +294,27 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
       put :update, params: default_params
 
       expect(response).to redirect_to(blob_after_edit_path)
+    end
+
+    context 'when file is renamed' do
+      let(:default_params) do
+        {
+          namespace_id: mutable_project.namespace,
+          project_id: mutable_project,
+          id: 'master/CHANGELOG',
+          file_path: 'CHANGELOG2',
+          branch_name: 'master',
+          content: 'Added changes',
+          commit_message: 'Rename CHANGELOG'
+        }
+      end
+
+      it 'redirects to blob' do
+        put :update, params: default_params
+
+        expect(response).to redirect_to(project_blob_path(mutable_project, 'master/CHANGELOG2'))
+        expect(assigns[:commit_params]).to include(file_path: 'CHANGELOG2', previous_path: 'CHANGELOG')
+      end
     end
 
     context '?from_merge_request_iid' do
@@ -518,7 +524,8 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
   end
 
   describe 'POST create' do
-    let(:user) { create(:user) }
+    let_it_be(:user) { create(:user) }
+
     let(:target_event) { 'g_edit_by_sfe' }
     let(:default_params) do
       {
@@ -549,6 +556,29 @@ RSpec.describe Projects::BlobController, feature_category: :source_code_manageme
       request
 
       expect(response).to redirect_to(project_blob_path(project, 'master/docs/EXAMPLE_FILE'))
+    end
+
+    context 'when file_name is missing' do
+      let(:default_params) do
+        {
+          namespace_id: project.namespace,
+          project_id: project,
+          id: 'master',
+          branch_name: 'master',
+          content: 'Added changes',
+          commit_message: 'Create CHANGELOG'
+        }
+      end
+
+      render_views
+
+      it 'renders an error message' do
+        request
+
+        expect(response).to be_successful
+        expect(response).to render_template(:new)
+        expect(response.body).to include('You must provide a file path')
+      end
     end
   end
 end

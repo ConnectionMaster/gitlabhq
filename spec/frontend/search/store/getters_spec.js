@@ -1,5 +1,9 @@
 import { cloneDeep } from 'lodash';
-import { GROUPS_LOCAL_STORAGE_KEY, PROJECTS_LOCAL_STORAGE_KEY } from '~/search/store/constants';
+import {
+  GROUPS_LOCAL_STORAGE_KEY,
+  PROJECTS_LOCAL_STORAGE_KEY,
+  LS_REGEX_HANDLE,
+} from '~/search/store/constants';
 import * as getters from '~/search/store/getters';
 import createState from '~/search/store/state';
 import { useMockLocationHelper } from 'helpers/mock_window_location_helper';
@@ -71,6 +75,8 @@ describe('Global Search Store Getters', () => {
 
   describe('navigationItems', () => {
     it('returns the re-mapped navigation data', () => {
+      localStorage.setItem(LS_REGEX_HANDLE, JSON.stringify(true));
+
       state.navigation = MOCK_NAVIGATION;
       expect(getters.navigationItems(state)).toStrictEqual(MOCK_NAVIGATION_ITEMS);
     });
@@ -151,6 +157,17 @@ describe('Global Search Store Getters', () => {
       // Selected but unapplied labels
       // expect(getters.unappliedNewLabels(state)).toStrictEqual(MOCK_FILTERED_UNSELECTED_LABELS);
       expect(getters.unappliedNewLabels(state).map(({ key }) => key)).toStrictEqual(['6', '73']);
+    });
+  });
+  describe('showArchived', () => {
+    it('returns true project_id is NOT in query', () => {
+      state.query.project_id = undefined;
+      expect(getters.showArchived(state)).toBe(true);
+    });
+
+    it('returns false project_id is in query', () => {
+      state.query.project_id = 'test';
+      expect(getters.showArchived(state)).toBe(false);
     });
   });
 });

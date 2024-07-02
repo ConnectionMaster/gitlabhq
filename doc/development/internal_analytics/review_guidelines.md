@@ -20,7 +20,7 @@ This includes but is not limited to:
   - files in [`ee/config/metrics`](https://gitlab.com/gitlab-org/gitlab/-/tree/master/ee/config/metrics).
   - [`schema.json`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/config/metrics/schema.json).
 - Internal events, for example files in [`config/events`](https://gitlab.com/gitlab-org/gitlab/-/tree/master/config/events).
-- Analytics Instrumentation tooling, for example [`InternalEventsGenerator`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/generators/gitlab/analytics/internal_events_generator.rb).
+- Analytics Instrumentation tooling, for example [`Internal events CLI`](https://gitlab.com/gitlab-org/gitlab/blob/master/scripts/internal_events/cli.rb).
 
 In most cases, an Analytics Instrumentation review is automatically added, but it can also be requested manually if the automations miss the relevant change.
 
@@ -35,7 +35,7 @@ In most cases, an Analytics Instrumentation review is automatically added, but i
 - If a change to an event is a part of the MR:
   - Check that the events are firing locally using one of the [testing tools](internal_event_instrumentation/local_setup_and_debugging.md) available.
 - If a change to a metric is a part of the MR:
-  - Make sure that the new metric is available in Service Ping payload, by running: `Gitlab::Usage::ServicePingReport.for(output: :all_metrics_values).dig(*'key_path'.split('.'))` with `key_path` substituted by the new metric's `key_path`.
+  - Make sure that the new metric is available and reporting data in the Service Ping payload, by running: `require_relative 'spec/support/helpers/service_ping_helpers.rb'; ServicePingHelpers.get_current_usage_metric_value(key_path)` with `key_path` substituted by the new metric's `key_path`.
 - Use reviewer roulette to assign an [Analytics Instrumentation reviewer](https://gitlab-org.gitlab.io/gitlab-roulette/?hourFormat24=true&visible=reviewer%7Canalytics+instrumentation) who is not the author.
 - Assign any other reviews as appropriate.
 - `~analytics instrumentation` review does not require a maintainer review.
@@ -53,7 +53,7 @@ In most cases, an Analytics Instrumentation review is automatically added, but i
   - For a metric's YAML definition:
     - Check the metric's `description`.
     - Check the metric's `key_path`.
-    - Check the `product_section`, `product_stage`, and `product_group` fields.
+    - Check the `product_group` field.
       They should correspond to the [stages file](https://gitlab.com/gitlab-com/www-gitlab-com/blob/master/data/stages.yml).
     - Check the file location. Consider the time frame, and if the file should be under `ee`.
     - Check the tiers.

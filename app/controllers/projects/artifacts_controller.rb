@@ -115,7 +115,9 @@ class Projects::ArtifactsController < Projects::ApplicationController
   def extract_ref_name_and_path
     return unless params[:ref_name_and_path]
 
-    @ref_name, @path = extract_ref(params[:ref_name_and_path])
+    ref_extractor = ExtractsRef::RefExtractor.new(@project, {})
+
+    @ref_name, @path = ref_extractor.extract_ref(params[:ref_name_and_path])
   end
 
   def artifacts_params
@@ -187,7 +189,7 @@ class Projects::ArtifactsController < Projects::ApplicationController
   end
 
   def authorize_read_job_artifacts!
-    return access_denied! unless can?(current_user, :read_job_artifacts, job_artifact)
+    access_denied! unless can?(current_user, :read_job_artifacts, job_artifact)
   end
 end
 

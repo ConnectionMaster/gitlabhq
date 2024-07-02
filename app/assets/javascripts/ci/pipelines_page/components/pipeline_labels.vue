@@ -34,11 +34,17 @@ export default {
     isTriggered() {
       return this.pipeline.source === TRIGGER_ORIGIN;
     },
-    isInFork() {
-      return Boolean(
-        this.targetProjectFullPath &&
-          this.pipeline?.project?.full_path !== `/${this.targetProjectFullPath}`,
+    isPipelineFromSource() {
+      if (!this.targetProjectFullPath) return true;
+
+      const fullPath = this.pipeline?.project?.full_path;
+      // We may or may not have a trailing slash in `targetProjectFullPath` value, so we account for both cases
+      return (
+        fullPath === `/${this.targetProjectFullPath}` || fullPath === this.targetProjectFullPath
       );
+    },
+    isInFork() {
+      return !this.isPipelineFromSource;
     },
     showMergedResultsBadge() {
       // A merge train pipeline is technically also a merged results pipeline,
@@ -68,7 +74,6 @@ export default {
       target="__blank"
       :title="__('This pipeline was created by a schedule.')"
       variant="info"
-      size="sm"
       data-testid="pipeline-url-scheduled"
       >{{ __('scheduled') }}</gl-badge
     >
@@ -77,7 +82,6 @@ export default {
       v-gl-tooltip
       :title="__('This pipeline was created by an API call authenticated with a trigger token')"
       variant="info"
-      size="sm"
       data-testid="pipeline-url-triggered"
       >{{ __('trigger token') }}</gl-badge
     >
@@ -86,7 +90,6 @@ export default {
       v-gl-tooltip
       :title="__('Latest pipeline for the most recent commit on this branch')"
       variant="success"
-      size="sm"
       data-testid="pipeline-url-latest"
       >{{ __('latest') }}</gl-badge
     >
@@ -99,7 +102,6 @@ export default {
         )
       "
       variant="info"
-      size="sm"
       data-testid="pipeline-url-train"
       >{{ s__('Pipeline|merge train') }}</gl-badge
     >
@@ -108,7 +110,6 @@ export default {
       v-gl-tooltip
       :title="pipeline.yaml_errors"
       variant="danger"
-      size="sm"
       data-testid="pipeline-url-yaml"
       >{{ __('yaml invalid') }}</gl-badge
     >
@@ -117,7 +118,6 @@ export default {
       v-gl-tooltip
       :title="pipeline.failure_reason"
       variant="danger"
-      size="sm"
       data-testid="pipeline-url-failure"
       >{{ __('error') }}</gl-badge
     >
@@ -128,13 +128,13 @@ export default {
         data-testid="pipeline-url-autodevops"
         role="button"
       >
-        <gl-badge variant="info" size="sm">
+        <gl-badge variant="info">
           {{ __('Auto DevOps') }}
         </gl-badge>
       </gl-link>
       <gl-popover :target="autoDevopsTagId" triggers="focus" placement="top">
         <template #title>
-          <div class="gl-font-weight-normal gl-line-height-normal">
+          <div class="gl-font-normal gl-leading-normal">
             <gl-sprintf
               :message="
                 __(
@@ -158,13 +158,9 @@ export default {
       </gl-popover>
     </template>
 
-    <gl-badge
-      v-if="pipeline.flags.stuck"
-      variant="warning"
-      size="sm"
-      data-testid="pipeline-url-stuck"
-      >{{ __('stuck') }}</gl-badge
-    >
+    <gl-badge v-if="pipeline.flags.stuck" variant="warning" data-testid="pipeline-url-stuck">{{
+      __('stuck')
+    }}</gl-badge>
     <gl-badge
       v-if="pipeline.flags.detached_merge_request_pipeline"
       v-gl-tooltip
@@ -174,7 +170,6 @@ export default {
         )
       "
       variant="info"
-      size="sm"
       data-testid="pipeline-url-detached"
       >{{ s__('Pipeline|merge request') }}</gl-badge
     >
@@ -187,7 +182,6 @@ export default {
         )
       "
       variant="info"
-      size="sm"
       data-testid="pipeline-url-merged-results"
       >{{ s__('Pipeline|merged results') }}</gl-badge
     >
@@ -196,7 +190,6 @@ export default {
       v-gl-tooltip
       :title="__('Pipeline ran in fork of project')"
       variant="info"
-      size="sm"
       data-testid="pipeline-url-fork"
       >{{ __('fork') }}</gl-badge
     >
@@ -205,7 +198,6 @@ export default {
       v-gl-tooltip
       :title="__('This pipeline was triggered using the api')"
       variant="info"
-      size="sm"
       data-testid="pipeline-api-badge"
       >{{ s__('Pipeline|api') }}</gl-badge
     >

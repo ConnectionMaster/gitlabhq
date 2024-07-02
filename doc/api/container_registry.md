@@ -10,9 +10,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - The ability to authenticate with a CI/CD job token [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/49750) in GitLab 13.12 [with a flag](../administration/feature_flags.md) named `ci_job_token_scope`. Disabled by default.
-> - CI/CD job token authentication [generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/300821) in GitLab 16.8. Feature flag `ci_job_token_scope` removed.
-
 Use these API endpoints to work with the [GitLab container registry](../user/packages/container_registry/index.md).
 
 You can authenticate with these endpoints from a CI/CD job by passing the [`$CI_JOB_TOKEN`](../ci/jobs/ci_job_token.md)
@@ -21,18 +18,16 @@ of the project that created the pipeline.
 
 ## Change the visibility of the container registry
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/18792) in GitLab 14.2.
-
 This controls who can view the container registry.
 
 ```plaintext
 PUT /projects/:id/
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
-| `container_registry_access_level` | string | no | The desired visibility of the container registry. One of `enabled` (default), `private`, or `disabled`. |
+| Attribute                         | Type           | Required | Description |
+|-----------------------------------|----------------|----------|-------------|
+| `id`                              | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
+| `container_registry_access_level` | string         | no       | The desired visibility of the container registry. One of `enabled` (default), `private`, or `disabled`. |
 
 Descriptions of the possible values for `container_registry_access_level`:
 
@@ -83,11 +78,11 @@ Get a list of registry repositories in a project.
 GET /projects/:id/registry/repositories
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
-| `tags`      | boolean | no | If the parameter is included as true, each repository includes an array of `"tags"` in the response. |
-| `tags_count` | boolean | no | If the parameter is included as true, each repository includes `"tags_count"` in the response ([Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/32141) in GitLab 13.1). |
+| Attribute    | Type           | Required | Description |
+|--------------|----------------|----------|-------------|
+| `id`         | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
+| `tags`       | boolean        | no       | If the parameter is included as true, each repository includes an array of `"tags"` in the response. |
+| `tags_count` | boolean        | no       | If the parameter is included as true, each repository includes `"tags_count"` in the response . |
 
 ```shell
 curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/projects/5/registry/repositories"
@@ -130,9 +125,9 @@ Get a list of registry repositories in a group.
 GET /groups/:id/registry/repositories
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
+| Attribute | Type           | Required | Description |
+|-----------|----------------|----------|-------------|
+| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
 
 ```shell
 curl --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -166,20 +161,18 @@ Example response:
 
 ## Get details of a single repository
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/209916) in GitLab 13.6.
-
 Get details of a registry repository.
 
 ```plaintext
 GET /registry/repositories/:id
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID of the registry repository accessible by the authenticated user. |
-| `tags`      | boolean | no | If the parameter is included as `true`, the response includes an array of `"tags"`. |
-| `tags_count` | boolean | no | If the parameter is included as `true`, the response includes `"tags_count"`. |
-| `size` | boolean | no | If the parameter is included as `true`, the response includes `"size"`. This is the deduplicated size of all images within the repository. Deduplication eliminates extra copies of identical data. For example, if you upload the same image twice, the container registry stores only one copy. This field is only available on GitLab.com for repositories created after `2021-11-04`. |
+| Attribute    | Type           | Required | Description |
+|--------------|----------------|----------|-------------|
+| `id`         | integer/string | yes      | The ID of the registry repository accessible by the authenticated user. |
+| `tags`       | boolean        | no       | If the parameter is included as `true`, the response includes an array of `"tags"`. |
+| `tags_count` | boolean        | no       | If the parameter is included as `true`, the response includes `"tags_count"`. |
+| `size`       | boolean        | no       | If the parameter is included as `true`, the response includes `"size"`. This is the deduplicated size of all images within the repository. Deduplication eliminates extra copies of identical data. For example, if you upload the same image twice, the container registry stores only one copy. This field is only available on GitLab.com for repositories created after `2021-11-04`. |
 
 ```shell
 curl --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -220,10 +213,10 @@ This operation is executed asynchronously and might take some time to get execut
 DELETE /projects/:id/registry/repositories/:repository_id
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
-| `repository_id` | integer | yes | The ID of registry repository. |
+| Attribute       | Type           | Required | Description |
+|-----------------|----------------|----------|-------------|
+| `id`            | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `repository_id` | integer        | yes      | The ID of registry repository. |
 
 ```shell
 curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -242,10 +235,10 @@ Get a list of tags for given registry repository.
 GET /projects/:id/registry/repositories/:repository_id/tags
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
-| `repository_id` | integer | yes | The ID of registry repository. |
+| Attribute       | Type           | Required | Description |
+|-----------------|----------------|----------|-------------|
+| `id`            | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
+| `repository_id` | integer        | yes      | The ID of registry repository. |
 
 ```shell
 curl --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -277,11 +270,11 @@ Get details of a registry repository tag.
 GET /projects/:id/registry/repositories/:repository_id/tags/:tag_name
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
-| `repository_id` | integer | yes | The ID of registry repository. |
-| `tag_name` | string | yes | The name of tag. |
+| Attribute       | Type           | Required | Description |
+|-----------------|----------------|----------|-------------|
+| `id`            | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) accessible by the authenticated user. |
+| `repository_id` | integer        | yes      | The ID of registry repository. |
+| `tag_name`      | string         | yes      | The name of tag. |
 
 ```shell
 curl --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -311,11 +304,11 @@ Delete a registry repository tag.
 DELETE /projects/:id/registry/repositories/:repository_id/tags/:tag_name
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
-| `repository_id` | integer | yes | The ID of registry repository. |
-| `tag_name` | string | yes | The name of tag. |
+| Attribute       | Type           | Required | Description |
+|-----------------|----------------|----------|-------------|
+| `id`            | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `repository_id` | integer        | yes      | The ID of registry repository. |
+| `tag_name`      | string         | yes      | The name of tag. |
 
 ```shell
 curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -336,15 +329,15 @@ For an overview, see [Use the container registry API to delete all tags except *
 DELETE /projects/:id/registry/repositories/:repository_id/tags
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
-| `repository_id` | integer | yes | The ID of registry repository. |
-| `name_regex` | string | no | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to delete. To delete all tags specify `.*`. **Note:** `name_regex` is deprecated in favor of `name_regex_delete`. This field is validated. |
-| `name_regex_delete` | string | yes | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to delete. To delete all tags specify `.*`. This field is validated. |
-| `name_regex_keep` | string | no | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to keep. This value overrides any matches from `name_regex_delete`. This field is validated. Note: setting to `.*` results in a no-op. |
-| `keep_n` | integer | no | The amount of latest tags of given name to keep. |
-| `older_than` | string | no | Tags to delete that are older than the given time, written in human readable form `1h`, `1d`, `1month`. |
+| Attribute           | Type           | Required | Description |
+|---------------------|----------------|----------|-------------|
+| `id`                | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `repository_id`     | integer        | yes      | The ID of registry repository. |
+| `name_regex`        | string         | no       | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to delete. To delete all tags specify `.*`. **Note:** `name_regex` is deprecated in favor of `name_regex_delete`. This field is validated. |
+| `name_regex_delete` | string         | yes      | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to delete. To delete all tags specify `.*`. This field is validated. |
+| `name_regex_keep`   | string         | no       | The [re2](https://github.com/google/re2/wiki/Syntax) regex of the name to keep. This value overrides any matches from `name_regex_delete`. This field is validated. Note: setting to `.*` results in a no-op. |
+| `keep_n`            | integer        | no       | The amount of latest tags of given name to keep. |
+| `older_than`        | string         | no       | Tags to delete that are older than the given time, written in human readable form `1h`, `1d`, `1month`. |
 
 This API returns [HTTP response status code 202](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/202)
 if successful, and performs the following operations:

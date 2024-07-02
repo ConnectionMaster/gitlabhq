@@ -15,10 +15,6 @@ RSpec.describe 'Profile > Active Sessions', :clean_gitlab_redis_shared_state, fe
 
   it 'user sees their active sessions' do
     travel_to(Time.zone.parse('2018-03-12 09:06')) do
-      Capybara::Session.new(:session1)
-      Capybara::Session.new(:session2)
-      Capybara::Session.new(:session3)
-
       # note: headers can only be set on the non-js (aka. rack-test) driver
       using_session :session1 do
         Capybara.page.driver.header(
@@ -82,48 +78,23 @@ RSpec.describe 'Profile > Active Sessions', :clean_gitlab_redis_shared_state, fe
     end
   end
 
-  context 'with feature flag show_admin_mode_within_active_sessions disabled' do
-    before do
-      stub_feature_flags(show_admin_mode_within_active_sessions: false)
-    end
-
-    it 'admin sees if the session is with admin mode', :enable_admin_mode do
-      Capybara::Session.new(:admin_session)
-
-      using_session :admin_session do
-        gitlab_sign_in(admin)
-        visit user_settings_active_sessions_path
-        expect(page).not_to have_content('with Admin Mode')
-      end
+  it 'admin sees if the session is with admin mode', :enable_admin_mode do
+    using_session :admin_session do
+      gitlab_sign_in(admin)
+      visit user_settings_active_sessions_path
+      expect(page).to have_content('with Admin Mode')
     end
   end
 
-  context 'with feature flag show_admin_mode_within_active_sessions enabled' do
-    it 'admin sees if the session is with admin mode', :enable_admin_mode do
-      Capybara::Session.new(:admin_session)
-
-      using_session :admin_session do
-        gitlab_sign_in(admin)
-        visit user_settings_active_sessions_path
-        expect(page).to have_content('with Admin Mode')
-      end
-    end
-
-    it 'does not display admin mode text in case its not' do
-      Capybara::Session.new(:admin_session)
-
-      using_session :admin_session do
-        gitlab_sign_in(admin)
-        visit user_settings_active_sessions_path
-        expect(page).not_to have_content('with Admin Mode')
-      end
+  it 'does not display admin mode text in case its not' do
+    using_session :admin_session do
+      gitlab_sign_in(admin)
+      visit user_settings_active_sessions_path
+      expect(page).not_to have_content('with Admin Mode')
     end
   end
 
   it 'user can revoke a session', :js do
-    Capybara::Session.new(:session1)
-    Capybara::Session.new(:session2)
-
     # set an additional session in another browser
     using_session :session2 do
       gitlab_sign_in(user)

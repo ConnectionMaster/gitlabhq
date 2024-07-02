@@ -23,7 +23,7 @@ import {
 import TotalTime from './total_time.vue';
 
 const DEFAULT_WORKFLOW_TITLE_PROPERTIES = {
-  thClass: 'gl-w-half',
+  thClass: 'gl-w-1/2',
   key: FIELD_KEY_TITLE,
   sortable: false,
 };
@@ -188,7 +188,7 @@ export default {
 };
 </script>
 <template>
-  <div data-testid="vsa-stage-table" :class="{ 'gl-min-h-100vh': isLoading || !isEmptyStage }">
+  <div data-testid="vsa-stage-table" :class="{ 'gl-min-h-screen': isLoading || !isEmptyStage }">
     <gl-loading-icon v-if="isLoading" class="gl-mt-4" size="lg" />
     <gl-empty-state
       v-else-if="isEmptyStage"
@@ -211,9 +211,7 @@ export default {
     >
       <template v-if="stageCount" #head(title)="data">
         <span>{{ data.label }}</span
-        ><gl-badge class="gl-ml-3" size="sm"
-          ><formatted-stage-count :stage-count="stageCount"
-        /></gl-badge>
+        ><gl-badge class="gl-ml-3"><formatted-stage-count :stage-count="stageCount" /></gl-badge>
       </template>
       <template #head(duration)="data">
         <span data-testid="vsa-stage-header-duration">{{ data.label }}</span>
@@ -256,7 +254,7 @@ export default {
             </p>
           </div>
           <div v-else>
-            <h5 class="gl-font-weight-bold gl-my-1" data-testid="vsa-stage-event-title">
+            <h5 class="gl-font-bold gl-my-1" data-testid="vsa-stage-event-title">
               <gl-link class="gl-text-black-normal" :href="item.url">{{ itemTitle(item) }}</gl-link>
             </h5>
             <p class="gl-m-0">

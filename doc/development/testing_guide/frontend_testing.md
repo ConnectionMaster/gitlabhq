@@ -204,7 +204,6 @@ possible selectors include:
 - A semantic attribute like `name` (also verifies that `name` was setup properly)
 - A `data-testid` attribute ([recommended by maintainers of `@vue/test-utils`](https://github.com/vuejs/vue-test-utils/issues/1498#issuecomment-610133465))
   optionally combined with [`shallowMountExtended` or `mountExtended`](#shallowmountextended-and-mountextended)
-- a Vue `ref` (if using `@vue/test-utils`)
 
 ```javascript
 import { shallowMountExtended } from 'helpers/vue_test_utils_helper'
@@ -223,9 +222,9 @@ it('exists', () => {
   wrapper.find('input[name=foo]');
   wrapper.find('[data-testid="my-foo-id"]');
   wrapper.findByTestId('my-foo-id'); // with shallowMountExtended or mountExtended – check below
-  wrapper.find({ ref: 'foo'});
 
   // Bad
+  wrapper.find({ ref: 'foo'});
   wrapper.find('.js-foo');
   wrapper.find('.btn-primary');
 });
@@ -234,6 +233,7 @@ it('exists', () => {
 You should use `kebab-case` for `data-testid` attribute.
 
 It is not recommended that you add `.js-*` classes just for testing purposes. Only do this if there are no other feasible options available.
+Avoid using Vue template refs to query DOM elements in tests because they're an implementation detail of the component, not a public API.
 
 ### Querying for child components
 
@@ -622,8 +622,6 @@ it('calls setActiveBoardItemMutation on close', async () => {
 ```
 
 ### Jest best practices
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/34209) in GitLab 13.2.
 
 #### Prefer `toBe` over `toEqual` when comparing primitive values
 
@@ -1216,7 +1214,7 @@ Some regressions only affect a specific browser version. We can install and test
 ### BrowserStack
 
 [BrowserStack](https://www.browserstack.com/) allows you to test more than 1200 mobile devices and browsers.
-You can use it directly through the [live app](https://www.browserstack.com/live) or you can install the [chrome extension](https://chrome.google.com/webstore/detail/browserstack/nkihdmlheodkdfojglpcjjmioefjahjb) for easy access.
+You can use it directly through the [live app](https://www.browserstack.com/live) or you can install the [chrome extension](https://chromewebstore.google.com/detail/browserstack/nkihdmlheodkdfojglpcjjmioefjahjb) for easy access.
 Sign in to BrowserStack with the credentials saved in the **Engineering** vault of the GitLab
 [shared 1Password account](https://handbook.gitlab.com/handbook/security/password-guidelines/#1password-for-teams).
 
@@ -1540,6 +1538,8 @@ Feature tests live in `spec/features` folder. You should look for existing files
 
 You can also prefix this command with `WEBDRIVER_HEADLESS=0` which will run the test by opening an actual browser on your computer that you can see, which is very useful for debugging.
 
+To use Firefox, instead of Chrome, prefix the command with `WEBDRIVER=firefox`.
+
 ### How to write a test
 
 #### Basic file structure
@@ -1757,6 +1757,10 @@ To avoid this problem, you can write `binding.pry` on the line where you want Ca
 - Execute selectors inside the browser console.
 
 Inside the terminal, where capybara is running, you can also execute `next` which goes line by line through the test. This way you can check every single interaction one by one to see what might be causing an issue.
+
+### Improving execution time on the GDK
+
+Running the Jest test suite, the number of workers is set to use 60% of the available cores of your machine; this results in faster execution times but higher memory consumption. For more benchmarks on how this works please refer to this [issue](https://gitlab.com/gitlab-org/gitlab/-/issues/456885).
 
 ### Updating ChromeDriver
 

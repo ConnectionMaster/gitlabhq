@@ -13,8 +13,7 @@ module Projects
         end
 
         @tag_names = params[:tags]
-        return error('not tags specified') if @tag_names.blank?
-        return error('repository importing') if cancel_while_importing?
+        return error('no tags specified') if @tag_names.blank?
 
         delete_tags
       end
@@ -51,19 +50,11 @@ module Projects
         end
       end
 
-      def cancel_while_importing?
-        return true if @container_repository.importing?
-
-        if container_expiration_policy?
-          return @container_repository.pre_importing? || @container_repository.pre_import_done?
-        end
-
-        false
-      end
-
       def container_expiration_policy?
         params[:container_expiration_policy].present?
       end
     end
   end
 end
+
+Projects::ContainerRepository::DeleteTagsService.prepend_mod_with('Projects::ContainerRepository::DeleteTagsService')

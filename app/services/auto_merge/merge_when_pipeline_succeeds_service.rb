@@ -9,13 +9,13 @@ module AutoMerge
     end
 
     def process(merge_request)
-      logger.info("Processing Automerge")
+      logger.info("Processing Automerge - MWPS")
       return unless merge_request.diff_head_pipeline_success?
 
-      logger.info("Pipeline Success")
+      logger.info("Pipeline Success - MWPS")
       return unless merge_request.mergeable?
 
-      logger.info("Merge request mergeable")
+      logger.info("Merge request mergeable - MWPS")
 
       merge_request.merge_async(merge_request.merge_user_id, merge_request.merge_params)
     end
@@ -34,7 +34,9 @@ module AutoMerge
 
     def available_for?(merge_request)
       super do
-        check_availability(merge_request)
+        next false if Feature.enabled?(:merge_when_checks_pass, merge_request.project)
+
+        merge_request.diff_head_pipeline_considered_in_progress?
       end
     end
 
@@ -42,10 +44,6 @@ module AutoMerge
 
     def add_system_note(merge_request)
       SystemNoteService.merge_when_pipeline_succeeds(merge_request, project, current_user, merge_request.diff_head_pipeline.sha) if merge_request.saved_change_to_auto_merge_enabled?
-    end
-
-    def check_availability(merge_request)
-      merge_request.diff_head_pipeline&.active?
     end
 
     def notify(merge_request)

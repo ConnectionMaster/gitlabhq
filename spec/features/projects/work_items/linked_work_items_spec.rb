@@ -27,7 +27,6 @@ RSpec.describe 'Work item linked items', :js, feature_category: :team_planning d
       sign_in(user)
 
       stub_feature_flags(work_items: true)
-      stub_feature_flags(linked_work_items: true)
 
       visit work_items_path
 
@@ -70,24 +69,29 @@ RSpec.describe 'Work item linked items', :js, feature_category: :team_planning d
       end
     end
 
-    it 'links a new item with work item text', :aggregate_failures do
+    it 'links a new item with work item text', :aggregate_failures,
+      quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/444980' do
       verify_linked_item_added(task.title)
     end
 
-    it 'links a new item with work item iid', :aggregate_failures do
+    it 'links a new item with work item iid', :aggregate_failures,
+      quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/444751' do
       verify_linked_item_added(task.iid)
     end
 
-    it 'links a new item with work item wildcard iid', :aggregate_failures do
+    it 'links a new item with work item wildcard iid', :aggregate_failures,
+      quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/444914' do
       verify_linked_item_added("##{task.iid}")
     end
 
-    it 'links a new item with work item reference', :aggregate_failures do
+    it 'links a new item with work item reference', :aggregate_failures,
+      quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/445635' do
       verify_linked_item_added(task.to_reference(full: true))
     end
 
-    it 'links a new item with work item url', :aggregate_failures do
-      verify_linked_item_added("#{task.project.web_url}/-/work_items/#{task.iid}")
+    it 'links a new item with work item url', :aggregate_failures,
+      quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/438014' do
+      verify_linked_item_added("#{Gitlab.config.gitlab.url}/#{task.project.full_path}/-/work_items/#{task.iid}")
     end
 
     it 'removes a linked item', :aggregate_failures do

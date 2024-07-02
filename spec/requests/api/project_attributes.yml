@@ -100,7 +100,10 @@ ci_cd_settings:
     - auto_rollback_enabled
     - inbound_job_token_scope_enabled
     - restrict_pipeline_cancellation_role
+    - push_repository_for_job_token_allowed
   remapped_attributes:
+    pipeline_variables_minimum_override_role: ci_pipeline_variables_minimum_override_role
+    push_repository_for_job_token_allowed: ci_push_repository_for_job_token_allowed
     default_git_depth: ci_default_git_depth
     forward_deployment_enabled: ci_forward_deployment_enabled
     forward_deployment_rollback_allowed: ci_forward_deployment_rollback_allowed
@@ -200,5 +203,6 @@ build_service_desk_setting: # service_desk_setting
     - custom_email_smtp_password
     - add_external_participants_from_cc
     - reopen_issue_on_external_participant_note
+    - tickets_confidential_by_default
   remapped_attributes:
     project_key: service_desk_address

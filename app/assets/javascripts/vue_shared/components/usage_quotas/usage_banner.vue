@@ -32,7 +32,7 @@ export default {
                 'left-primary-text'
               ]
             "
-            class="gl-display-flex gl-align-items-center gl-text-body gl-font-weight-bold gl-min-h-6 gl-min-w-0"
+            class="gl-display-flex gl-align-items-center gl-text-body gl-font-bold gl-min-h-6 gl-min-w-0"
           >
             <slot name="left-primary-text"></slot>
           </div>
@@ -42,7 +42,7 @@ export default {
                 'left-secondary-text'
               ]
             "
-            class="gl-display-flex gl-align-items-center gl-text-gray-500 gl-min-h-6 gl-min-w-0 gl-flex-grow-1 gl-w-70p gl-md-max-w-70p"
+            class="gl-display-flex gl-align-items-center gl-text-gray-500 gl-min-h-6 gl-min-w-0 gl-flex-grow-1 gl-w-7/10 gl-md-max-w-70p"
           >
             <slot name="left-secondary-text"></slot>
           </div>
@@ -56,7 +56,7 @@ export default {
                 'right-primary-text'
               ]
             "
-            class="gl-display-flex gl-align-items-center gl-sm-text-body gl-sm-font-weight-bold gl-min-h-6"
+            class="gl-display-flex gl-align-items-center gl-sm-text-body sm:gl-font-bold gl-min-h-6"
           >
             <slot name="right-primary-text"></slot>
           </div>

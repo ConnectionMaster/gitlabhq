@@ -8,8 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 The API fuzzing behavior can be changed through CI/CD variables.
 
-From GitLab 13.12 and later, the default API fuzzing configuration file is `.gitlab/gitlab-api-fuzzing-config.yml`. In GitLab 14.0 and later, API fuzzing configuration files must be in your repository's
-`.gitlab` directory instead of your repository's root.
+The API fuzzing configuration files must be in your repository's `.gitlab` directory.
 
 WARNING:
 All customization of GitLab security scanning tools should be tested in a merge request before
@@ -421,9 +420,11 @@ container that has Python 3 and Bash installed.
 You have to set the environment variable `FUZZAPI_OVERRIDES_CMD` to the program or script you would like
 to execute. The provided command creates the overrides JSON file as defined previously.
 
-You might want to install other scripting runtimes like NodeJS or Ruby, or maybe you need to install a dependency for
-your overrides command. In this case, we recommend setting the `FUZZAPI_PRE_SCRIPT` to the file path of a script which
-provides those prerequisites. The script provided by `FUZZAPI_PRE_SCRIPT` is executed once, before the analyzer starts.
+You might want to install other scripting runtimes like NodeJS or Ruby, or maybe you need to install a dependency for your overrides command. In this case, you should set the `FUZZAPI_PRE_SCRIPT` to the file path of a script that provides those prerequisites. The script provided by `FUZZAPI_PRE_SCRIPT` is executed once, before the analyzer starts.
+
+NOTE:
+When performing actions that require elevated permissions, make use of the `sudo` command.
+For example, `sudo apk add nodejs`.
 
 See the [Alpine Linux package management](https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management)
 page for information about installing Alpine Linux packages.
@@ -439,7 +440,7 @@ Optionally:
 - `FUZZAPI_PRE_SCRIPT`: Script to install runtimes or dependencies before the analyzer starts.
 
 WARNING:
-To execute scripts in Alpine Linux you must first use the command [`chmod`](https://www.gnu.org/software/coreutils/manual/html_node/chmod-invocation.html) to set the [execution permission](https://www.gnu.org/software/coreutils/manual/html_node/Setting-Permissions.html). For example, to set the execution permission of `script.py` for everyone, use the command: `chmod a+x script.py`. If needed, you can version your `script.py` with the execution permission already set.
+To execute scripts in Alpine Linux you must first use the command [`chmod`](https://www.gnu.org/software/coreutils/manual/html_node/chmod-invocation.html) to set the [execution permission](https://www.gnu.org/software/coreutils/manual/html_node/Setting-Permissions.html). For example, to set the execution permission of `script.py` for everyone, use the command: `sudo chmod a+x script.py`. If needed, you can version your `script.py` with the execution permission already set.
 
 ```yaml
 stages:
@@ -458,8 +459,6 @@ variables:
 ```
 
 ### Debugging overrides
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/334578) in GitLab 14.8.
 
 By default the output of the overrides command is hidden. If the overrides command returns a non zero exit code, the command is displayed as part of your job output. Optionally, you can set the variable `FUZZAPI_OVERRIDES_CMD_VERBOSE` to any value to display overrides command output as it is generated. This is useful when testing your overrides script, but should be disabled afterwards as it slows down testing.
 
@@ -585,9 +584,7 @@ As for example, the following script `user-pre-scan-set-up.sh`:
 
 echo "**** install python dependencies ****"
 
-python3 -m ensurepip
-pip3 install --no-cache --upgrade \
-    pip \
+sudo pip3 install --no-cache --upgrade --break-system-packages \
     requests \
     backoff
 
@@ -618,8 +615,6 @@ variables:
 In the previous sample, you could use the script `user-pre-scan-set-up.sh` to also install new runtimes or applications that later on you could use in your overrides command.
 
 ## Exclude Paths
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/211892) in GitLab 14.0.
 
 When testing an API it can be useful to exclude certain paths. For example, you might exclude testing of an authentication service or an older version of the API. To exclude paths, use the `FUZZAPI_EXCLUDE_PATHS` CI/CD variable . This variable is specified in your `.gitlab-ci.yml` file. To exclude multiple paths, separate entries using the `;` character. In the provided paths you can use a single character wildcard `?` and `*` for a multiple character wildcard.
 
@@ -659,8 +654,6 @@ variables:
 ```
 
 ## Exclude parameters
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/292196) in GitLab 14.10.
 
 While testing an API you may might want to exclude a parameter (query string, header, or body element) from testing. This may be needed because a parameter always causes a failure, slows down testing, or for other reasons. To exclude parameters you can use one of the following variables: `FUZZAPI_EXCLUDE_PARAMETER_ENV` or `FUZZAPI_EXCLUDE_PARAMETER_FILE`.
 
@@ -888,8 +881,6 @@ variables:
 The `api-fuzzing-exclude-parameters.json` is a JSON document that follows the structure of [exclude parameters document](#exclude-parameters-using-a-json-document).
 
 ## Exclude URLs
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/357195) in GitLab 14.10.
 
 As an alternative to excluding by paths, you can filter by any other component in the URL by using the `FUZZAPI_EXCLUDE_URLS` CI/CD variable. This variable can be set in your `.gitlab-ci.yml` file. The variable can store multiple values, separated by commas (`,`). Each value is a regular expression. Because each entry is a regular expression, an entry such as `.*` excludes all URLs because it is a regular expression that matches everything.
 

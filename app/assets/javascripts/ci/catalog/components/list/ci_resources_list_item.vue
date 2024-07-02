@@ -1,10 +1,23 @@
 <script>
-import { GlAvatar, GlBadge, GlButton, GlLink, GlSprintf, GlTooltipDirective } from '@gitlab/ui';
+import {
+  GlAvatar,
+  GlBadge,
+  GlButton,
+  GlIcon,
+  GlLink,
+  GlSprintf,
+  GlTooltipDirective,
+  GlTruncate,
+} from '@gitlab/ui';
 import { s__, n__ } from '~/locale';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import { formatDate, getTimeago } from '~/lib/utils/datetime_utility';
+import { toNounSeriesText } from '~/lib/utils/grammar';
 import { cleanLeadingSeparator } from '~/lib/utils/url_utility';
+import Markdown from '~/vue_shared/components/markdown/non_gfm_markdown.vue';
 import { CI_RESOURCE_DETAILS_PAGE_NAME } from '../../router/constants';
+import { VERIFICATION_LEVEL_UNVERIFIED } from '../../constants';
+import CiVerificationBadge from '../shared/ci_verification_badge.vue';
 
 export default {
   i18n: {
@@ -13,11 +26,15 @@ export default {
     releasedMessage: s__('CiCatalog|Released %{timeAgo} by %{author}'),
   },
   components: {
+    CiVerificationBadge,
     GlAvatar,
     GlBadge,
     GlButton,
+    GlIcon,
     GlLink,
     GlSprintf,
+    GlTruncate,
+    Markdown,
   },
   directives: {
     GlTooltip: GlTooltipDirective,
@@ -41,9 +58,14 @@ export default {
     authorProfileUrl() {
       return this.latestVersion.author.webUrl;
     },
-    componentNames() {
-      const components = this.latestVersion?.components?.nodes;
-      return components?.map((component) => component.name).join(', ') || null;
+    components() {
+      return this.resource.versions?.nodes[0]?.components?.nodes || [];
+    },
+    componentNamesSprintfMessage() {
+      return toNounSeriesText(
+        this.components.map((name, index) => `%{componentStart}${index}%{componentEnd}`),
+        { onlyCommas: true },
+      );
     },
     detailsPageHref() {
       return decodeURIComponent(this.detailsPageResolved.href);
@@ -61,10 +83,13 @@ export default {
       return formatDate(this.latestVersion?.createdAt);
     },
     hasComponents() {
-      return Boolean(this.componentNames);
+      return Boolean(this.components.length);
     },
     hasReleasedVersion() {
       return Boolean(this.latestVersion?.createdAt);
+    },
+    isVerified() {
+      return this.resource?.verificationLevel !== VERIFICATION_LEVEL_UNVERIFIED;
     },
     latestVersion() {
       return this.resource?.versions?.nodes[0] || [];
@@ -76,13 +101,21 @@ export default {
       return getTimeago().format(this.latestVersion?.createdAt);
     },
     resourceId() {
-      return cleanLeadingSeparator(this.resource.webPath);
+      return this.resource?.fullPath;
     },
     starCount() {
       return this.resource?.starCount || 0;
     },
     starCountText() {
       return n__('Star', 'Stars', this.starCount);
+    },
+    usageCount() {
+      return this.resource?.last30DayUsageCount || 0;
+    },
+    usageText() {
+      return s__(
+        'CiCatalog|The number of projects that used a component from this project in a pipeline, by using "include:component", in the last 30 days.',
+      );
     },
     webPath() {
       return cleanLeadingSeparator(this.resource?.webPath);
@@ -92,6 +125,9 @@ export default {
     },
   },
   methods: {
+    getComponent(index) {
+      return this.components[Number(index)];
+    },
     navigateToDetailsPage(e) {
       // Open link in a new tab if any of these modifier key is held down.
       if (e?.ctrlKey || e?.metaKey) {
@@ -101,7 +137,6 @@ export default {
       // Override the <a> tag if no modifier key is held down to use Vue router and not
       // open a new tab.
       e.preventDefault();
-
       // Push to the decoded URL to avoid all the / being encoded
       this.$router.push({ path: decodeURIComponent(this.resourceId) });
     },
@@ -114,7 +149,7 @@ export default {
     data-testid="catalog-resource-item"
   >
     <gl-avatar
-      class="gl-mr-4"
+      class="gl-mr-4 gl-align-self-start"
       :entity-id="entityId"
       :entity-name="resource.name"
       shape="rect"
@@ -123,7 +158,14 @@ export default {
       @click="navigateToDetailsPage"
     />
     <div class="gl-display-flex gl-flex-direction-column gl-flex-grow-1">
-      <span class="gl-font-sm gl-mb-1">{{ webPath }}</span>
+      <div>
+        <span class="gl-font-sm gl-mb-1">{{ webPath }}</span>
+        <ci-verification-badge
+          v-if="isVerified"
+          :resource-id="resource.id"
+          :verification-level="resource.verificationLevel"
+        />
+      </div>
       <div class="gl-display-flex gl-flex-wrap gl-gap-2 gl-mb-1">
         <gl-link
           class="gl-text-gray-900! gl-mr-1"
@@ -134,33 +176,57 @@ export default {
           <b> {{ resource.name }}</b>
         </gl-link>
         <div class="gl-display-flex gl-flex-grow-1 gl-md-justify-content-space-between">
-          <gl-badge size="sm" class="gl-h-5 gl-align-self-center">{{ name }}</gl-badge>
-          <gl-button
-            v-gl-tooltip.top
-            data-testid="stats-favorites"
-            class="gl-reset-color!"
-            icon="star-o"
-            :title="starCountText"
-            :href="starsHref"
-            size="small"
-            variant="link"
-          >
-            {{ starCount }}
-          </gl-button>
+          <gl-badge class="gl-h-5 gl-align-self-center" variant="info">{{ name }}</gl-badge>
+          <div class="gl-display-flex gl-align-items-center gl-ml-3">
+            <div
+              v-gl-tooltip.top
+              class="gl-display-flex gl-align-items-center gl-mr-3"
+              :title="usageText"
+            >
+              <gl-icon name="chart" :size="16" />
+              <span class="gl-ml-2" data-testid="stats-usage">
+                {{ usageCount }}
+              </span>
+            </div>
+            <gl-button
+              v-gl-tooltip.top
+              data-testid="stats-favorites"
+              class="!gl-text-inherit"
+              icon="star-o"
+              :title="starCountText"
+              :href="starsHref"
+              size="small"
+              variant="link"
+            >
+              {{ starCount }}
+            </gl-button>
+          </div>
         </div>
       </div>
       <div
         class="gl-display-flex gl-flex-direction-column gl-md-flex-direction-row gl-justify-content-space-between gl-font-sm"
       >
         <div>
-          <span class="gl-display-flex gl-flex-basis-two-thirds">{{ resource.description }}</span>
+          <markdown
+            class="gl-display-flex gl-flex-basis-two-thirds"
+            :markdown="resource.description"
+          />
           <div
             v-if="hasComponents"
             data-testid="ci-resource-component-names"
-            class="gl-font-sm gl-mt-1"
+            class="gl-font-sm gl-mt-1 gl-inline-flex gl-flex-wrap gl-text-gray-900"
           >
-            <span class="gl-font-weight-bold"> &#8226; {{ $options.i18n.components }} </span>
-            <span class="gl-text-gray-900">{{ componentNames }}</span>
+            <span class="gl-font-bold"> &#8226; {{ $options.i18n.components }} </span>
+            <gl-sprintf :message="componentNamesSprintfMessage">
+              <template #component="{ content }">
+                <gl-truncate
+                  class="gl-max-w-30 gl-ml-2"
+                  :text="getComponent(content).name"
+                  position="end"
+                  with-tooltip
+                />
+              </template>
+            </gl-sprintf>
           </div>
         </div>
         <div class="gl-display-flex gl-justify-content-end">

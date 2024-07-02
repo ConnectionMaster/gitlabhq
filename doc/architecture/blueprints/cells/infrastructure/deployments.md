@@ -133,6 +133,123 @@ The general rule is that:
    - A `graduated` package is rolled out to the rest of the rings automatically.
    - Deployments must be automated: inside the perimeter are responsibility of Release Managers, outside of it are responsibility of Team:Ops.
 
+#### Application changes lifecycle
+
+In this section, we describe how new packages are deployed in the new infrastructure, explaining the interactions and hooks with the existing tooling and processes.
+
+GitLab.com deployment process is described in great detail in [the handbook](https://handbook.gitlab.com/handbook/engineering/deployments-and-releases/deployments/), we are going to make some simplifications here to reduce the cognitive load to what is necessary to talk about ring deployments.
+
+##### Today's process
+
+Today GitLab.com deployments consist of two main processes:
+
+1. The **release-tools coordinator pipeline** for auto-deploy packages is responsible for sequencing deployments and QA through staging and production environments. The timeline of this process depends on the available release managers, but it usually happens ten times a day.
+1. The **Post Deployment Migrations** pipeline executes the post-deployment migrations of the current package running in production, completing the quality assurance of the deployed changes. This process is usually executed only once a day because it marks a point where it is no longer possible to rollback an environment.
+
+```mermaid
+flowchart TB
+    subgraph release_tools [Release-tools coordinator pipeline]
+        direction LR
+        gstg_cny[GSTG\n Canary] --> gstg_cny_qa[QA]
+        gstg_cny_qa --> gprd_cny[GPRD\n Canary]
+        gprd_cny --> gprd_cny_qa[QA]
+        gprd_cny_qa --> baking_time[1hr\n baking time]
+        baking_time --> promotion[▶️\n manual\npromotion]
+        promotion --> gstg[GSTG\nMain] --> gstg_qa[QA]
+        promotion --> |delay 30m|gprd[GPRD\nMain]
+    end
+    pkg((Auto-deploy\npackage\ntagging)) --> release_tools
+    subgraph pdm [Post Deployment Migrations]
+        direction LR
+        pdm_gstg[GSTG] --> pdm_gstg_qa[QA] --> pdm_gprd[GPRD]
+    end
+    %% invisible link to help content layout
+    release_tools ~~~ pdm
+```
+
+A package can be released to self-managed customers only after running its post deployment migrations.
+
+##### Co-existence of the legacy infrastructure and Cells
+
+For some time the existing (legacy) deployment and Cells will co-exist. Initially our ring deployment implementation will only consist of three rings:
+
+- Ring 0: hosting a QA Cell and eventually other experimental builds, this ring is kept in sync with the legacy production canary stage.
+- Ring 1: an empty placeholder for the legacy production main stage. As we will be able to begin extracting existing users from the legacy deployment, this ring could host ourselves, our free users, and more in general every organization interested in having a fast track to our new features.
+- Ring 2: hosting our first cell for customers.
+
+Because of the nature of our release process, those first rings will be controlled by the existing release-tools tooling.
+
+```mermaid
+flowchart LR
+    subgraph release_tools [Release-tools coordinator pipeline]
+        direction LR
+        gstg_cny[GSTG\n Canary] --> gstg_cny_qa[QA]
+        gstg_cny_qa --> gprd_cny[GPRD\n Canary]
+        gprd_cny --> gprd_cny_qa[QA]
+        gprd_cny_qa --> baking_time[1hr\n baking time]
+        baking_time --> promotion[▶️\n manual\npromotion]
+        promotion --> gstg[GSTG\nMain] --> gstg_qa[QA]
+        promotion --> |delay 30m|gprd[GPRD\nMain]
+    end
+    subgraph pdm [Post Deployment Migrations]
+        direction LR
+        pdm_gstg[GSTG] --> pdm_gstg_qa[QA] --> pdm_gprd[GPRD]
+    end
+    subgraph Ring Deployment
+        direction LR
+        ring_0[Ring 0] --> ring_0_qa[QA]
+        ring_1[Ring 1]
+        ring_2[Ring 2]
+
+        %%% invisible link to help content layout
+        ring_1 ~~~ ring_2
+    end
+    pkg((Auto-deploy\npackage\ntagging)) --> release_tools
+    %% ring deployment hooks
+    gstg_cny_qa --> ring_0
+    ring_0_qa --> baking_time
+    pdm_gprd ---> |pkg graduation|ring_2
+    promotion --> |delay 30m| ring_1
+```
+
+##### Future - Only Cells
+
+For the sake of completeness we are also describing a potential future scenario where the legacy infrastructure is decommissioned and all of our users are migrated to a new cell.
+
+This is subject to change as the project evolves, as an example, the future of our staging environment will likely be affected by the development of Cells, but here we leave it in place to reduce the scope of this document.
+
+```mermaid
+flowchart LR
+    subgraph release_tools [Release-tools coordinator pipeline]
+        direction LR
+        gstg_cny[GSTG\n Canary] --> gstg_cny_qa[QA]
+        baking_time[1hr\n baking time] --> promotion[▶️\n manual\npromotion]
+        promotion --> gstg[GSTG\nMain] --> gstg_qa[QA]
+    end
+    subgraph Post Deployment Migrations
+        direction LR
+        pdm_gstg[GSTG] --> pdm_gstg_qa[QA] --> pdm_gprd[Ring 1]
+    end
+    subgraph Ring Deployment
+        direction LR
+        ring_0[Ring 0] --> ring_0_qa[QA]
+        ring_1[Ring 1]
+        ring_2[Ring 2] --> ring_3[Ring 3] --> ring_N[Ring N]
+    end
+    pkg((Auto-deploy\npackage\ntagging)) --> release_tools
+    %% ring deployment hooks
+    gstg_cny_qa --> ring_0
+    ring_0_qa --> baking_time
+    pdm_gprd ---> |pkg graduation|ring_2
+    promotion ---> |delay 30m| ring_1
+```
+
+The changes from the co-existing scenario are the following ones:
+
+1. New rings exist after Ring 2. The progression of packages is coordinated by the ring-deployment engine enforcing the gates on each ring.
+1. The release-tools coordinator pipeline only manage rings, there is no longer a concept of canary and main stage in production.
+1. The post deployment migration pipeline controls the execution of the migrations in Ring 1 (Subject to further discussion that are not necessary at this stage of the project).
+
 ### Reference materials
 
 - [Cell 1.0 blueprint](https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/architecture/blueprints/cells/iterations/cells-1.0.md)
@@ -166,7 +283,7 @@ Before we can integrate Secondary Cells to our deployment pipeline, we need a fe
    - This is required for appropriate testing. As noted below, we'll need a QA cell to direct a deployment to for which QA will execute tests against. A router will need to route QA tests to the appropriate Cell.
 1. Assets Deployment
    - This already exists today for .com. Today this is handled via HAProxy, but with Cells, the routing layer will become the responsible party to redirect assets in a similar fashion.
-   - If assets are chosen to be managed differently, this changes both how Delivery need to deploy said assets in order to provide as close to Zero Downtime Upgrades as possible, and configuration to the Cell installation to support routing to assets properly.
+   - If assets are chosen to be managed differently, this changes both how Delivery need to deploy said assets in order to provide as close to Zero-Downtime Upgrades as possible, and configuration to the Cell installation to support routing to assets properly.
 1. Feature Flags
    - We are assuming that the current Feature Flags workflows and tooling will just work on the Primary Cell and that Secondary Cells will not be affected.
    - The use of feature flags to mitigate incidents is limited to only the Primary Cell.
@@ -344,7 +461,7 @@ Auto-deploy shall continue to work as it does today as our Primary Cell is equiv
   - Ring 1 contains main stage of the .com infra - this is the cut off for release tools
   - All cells will deploy the same way; this eliminates needing to deal with differing deployment technologies
   - `release-tools` will interact with the Coordinator to pilot the deployments to Ring 0 as part of its coordinator pipeline
-- Release-tools must be able to  `graduate` a package:
+- Release-tools must be able to `graduate` a package:
   - A `graduate` version of GitLab is any `auto-deploy` version which has a successful deploy onto the Main Stage of Production and the [Post Deploy Migration (PDM)](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/post_deploy_migration/readme.md) has completed.
   - This could mean we expect to see a single package deploy each day to our Secondary Cells. Currently, the PDM is only run 1 time per day. Note that there are exceptions to this rule.
   - This will enable us to use our existing procedures to remediate high severity incidents where application code may be at fault.
@@ -374,7 +491,19 @@ Feature Flags are discussed in [data-stores#83](https://gitlab.com/gitlab-org/en
 
 #### Package Rollout Policy
 
-We have an implicit procedure driven by our current use of auto-deploys. This will become more prominent with Cells. As implied in various formats above, auto-deploy shall operate relatively similarly to how it operates today. Cells becomes an addition to the existing `release-tools` pipeline with triggers in differing areas. When and what we trigger will need to be keenly defined. It is expected that Secondary Cells only receive `graduated` versions of GitLab. Thus, we'll leverage the use of our Post Deployment Migration pipeline as the gatekeeper for when a package is considered `graduated`. In an ideal world, when the PDM is executed successfully on the Primary Cell, that package is then considered `graduated` and can be deployed to any outer ring. This same concept is already leveraged when we build releases for self managed customers. This break point is already natural to Release Managers and thus is a good carry over for Cell deployments.
+We have an implicit procedure driven by our current use of auto-deploys. This
+will become more prominent with Cells. As implied in various formats above,
+auto-deploy shall operate relatively similarly to how it operates today. Cells
+becomes an addition to the existing `release-tools` pipeline with triggers in
+differing areas. When and what we trigger will need to be keenly defined. It is
+expected that Secondary Cells only receive `graduated` versions of GitLab. Thus,
+we'll leverage the use of our Post Deployment Migration pipeline as the
+gatekeeper for when a package is considered `graduated`. In an ideal world, when
+the PDM is executed successfully on the Primary Cell, that package is then
+considered `graduated` and can be deployed to any outer ring. This same concept
+is already leveraged when we build releases for self managed customers. This
+break point is already natural to Release Managers and thus is a good carry over
+for Cell deployments.
 
 We should aim to deploy to Cells as quickly as possible. For all Cells that exist in a single ring, we should have the ability to deploy in parallel. Doing so minimizes the version drift between Cells and reduces potential issues. If the version drifts too greatly, auto-deploy shall pause itself and an investigation into the reason why we are too far behind begins. Ideally we know about this situation ahead of time. We should aim to be no greater than 1 `graduate` package behind our PDM. Thus the expectation is that for every PDM, is a deployment to our Cells, every day. There are days which the PDM is skipped. We'll need to evaluate on a case-by-case basis why the PDM is halted to determine the detriment this will incur on our Cell deployments.
 
@@ -388,30 +517,62 @@ No. Our current labeling schema is primarily to showcase that the commit landed 
 
 **A P1/S1 issue exists, how do we mitigate this on Cells?**
 
-Cells are still a part of .com, thus our existing [bug](https://handbook.gitlab.com/handbook/engineering/infrastructure/engineering-productivity/issue-triage/#severity-slos) and [vulnerability](https://handbook.gitlab.com/handbook/security/threat-management/vulnerability-management/#remediation-slas) SLA's for remediation apply. We can deploy whatever we want to secondary cells so long as it's considered `graduated`. If a high priority issue comes about, we should be able to freely leverage our existing procedures to update our code base and any given auto-deploy branch for mitigation, and maybe after some extra rounds of testing, or perhaps a slower roll out, we can deploy that auto-deploy package into our cells. This provides us with the same mitigation methods that we leverage today. The problem that this causes is that there could exist some code that may not have been fully vetted. We can still rely on rollbacks in this case and revisit any necessary patch for the next round of auto-deployments and evaluate the fix for another attempt to remediate our cells.
+Cells are still a part of .com, thus our existing
+[bug](https://handbook.gitlab.com/handbook/engineering/infrastructure/engineering-productivity/issue-triage/#severity-slos)
+and [vulnerability](https://handbook.gitlab.com/handbook/security/threat-management/vulnerability-management/#remediation-slas)
+SLA's for remediation apply. We can deploy whatever we want to secondary cells
+so long as it's considered `graduated`. If a high priority issue comes about, we
+should be able to freely leverage our existing procedures to update our code
+base and any given auto-deploy branch for mitigation, and maybe after some extra
+rounds of testing, or perhaps a slower roll out, we can deploy that auto-deploy
+package into our cells. This provides us with the same mitigation methods that
+we leverage today. The problem that this causes is that there could exist some
+code that may not have been fully vetted. We can still rely on rollbacks in this
+case and revisit any necessary patch for the next round of auto-deployments and
+evaluate the fix for another attempt to remediate our cells.
 
 **What changes are expected from a Developers perspective**
 
-Release and Auto-Deploy procedures should largely remain the same. We're shifting where code lands. Any changes in this realm would increase the most the closer we are to Iteration 2.0 when various environments or stages to GitLab begin to change.
+Release and Auto-Deploy procedures should largely remain the same. We're
+shifting where code lands. Any changes in this realm would increase the most the
+closer we are to Iteration 2.0 when various environments or stages to GitLab
+begin to change.
 
 **All tiers but one have a failed deploy, what triggers a rollback of that package for all cells?**
 
-This depends on various characteristics that we'll probably want to iterate on and develop processes for. Example, if we fail on the very first cell on the first Tier, we should investigate that cell, but also ensure that this is not systemic to all cells. This can only be handled on a case-by-case basis. If we reach the last tier and last cell and some failure would occur, there should be no reason to rollback any other cell as enough time should have passed by for us to catch application failures.
+This depends on various characteristics that we'll probably want to iterate on
+and develop processes for. Example, if we fail on the very first cell on the
+first Tier, we should investigate that cell, but also ensure that this is not
+systemic to all cells. This can only be handled on a case-by-case basis. If we
+reach the last tier and last cell and some failure would occur, there should be
+no reason to rollback any other cell as enough time should have passed by for us
+to catch application failures.
 
 **What happens with self-managed releases?**
 
-Theoretically not much changes. Currently we use Production, or .com's Main Stage as our proving grounds for changes that are destined to be releasable for self-managed. This does not change as in the Cellular architecture, this notion for this exists in the same place. The vocabulary changes, in this case, a `graduated` package is now considered safe for a release.
+Theoretically not much changes. Currently we use Production, or .com's Main
+Stage as our proving grounds for changes that are destined to be releasable for
+self-managed. This does not change as in the Cellular architecture, this notion
+for this exists in the same place. The vocabulary changes, in this case, a
+`graduated` package is now considered safe for a release.
 
 **What happens to PreProd**
 
-This instance specifically tests the hybrid installation of a GitLab package and Helm chart when we create release candidates. It's our last step prior to a release being tagged. This is not impacted by the Cells work. Though we may change how preprod is managed.
+This instance specifically tests the hybrid installation of a GitLab package and
+Helm chart when we create release candidates. It's our last step prior to a
+release being tagged. This is not impacted by the Cells work. Though we may
+change how preprod is managed.
 
 **What happens with Staging**
 
-Staging is crucial for long term instance testing of a deployment alongside QA. Hypothetically staging could completely go away in favor of a deployment to Tier 0. Reference the above Iteration 3 {+TODO add proper link+}
+Staging is crucial for long term instance testing of a deployment alongside QA.
+Hypothetically staging could completely go away in favor of a deployment to Tier
+0. Reference the above Iteration 3 {+TODO add proper link+}
 
 **What happens to Ops**
 
-No need to change. But if Cell management becomes easy, it would be prudent to make this installation operate as similar as possible to avoid overloading operations teams with unique knowledge for our many instances.
+No need to change. But if Cell management becomes easy, it would be prudent to
+make this installation operate as similar as possible to avoid overloading
+operations teams with unique knowledge for our many instances.
 
 This same answer could be provided for the Dev instance.

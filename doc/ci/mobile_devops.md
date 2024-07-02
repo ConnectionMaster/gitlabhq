@@ -43,7 +43,7 @@ test:
 
 ### iOS build environments
 
-[GitLab hosted runners on macOS](../ci/runners/hosted_runners/macos.md) are in Beta.
+[GitLab hosted runners on macOS](../ci/runners/hosted_runners/macos.md) are in beta.
 
 [Choose an image](../ci/runners/hosted_runners/macos.md#supported-macos-images) to run a job on a macOS GitLab-hosted runner and add it to your `.gitlab-ci.yml` file.
 
@@ -293,7 +293,7 @@ For an overview, see [Google Play integration demo](https://youtu.be/Fxaj3hna4uk
 #### Enable Google Play Integration
 
 Use the [Google Play integration](../user/project/integrations/google_play.md),
-to configure your CI/CD pipelines to connect to the [Google Play Console](https://play.google.com/console)
+to configure your CI/CD pipelines to connect to the [Google Play Console](https://play.google.com/console/developers)
 to build and release Android apps. To enable the integration:
 
 1. On the left sidebar, select **Search or go to** and find your project.
@@ -427,13 +427,6 @@ For an overview, see [Review apps for mobile setup instructions](https://youtu.b
 
 To get started, see the [setup instructions](https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/readme/-/issues/15).
 
-## Mobile SAST
-
-You can use [Static Application Security Testing (SAST)](../user/application_security/sast/index.md)
-to run static analyzers on code to check for known security vulnerabilities. Mobile SAST
-expands this functionality for mobile teams with an [experimental SAST feature](../user/application_security/sast/index.md#experimental-features)
-based on [Mobile Security Framework (MobSF)](https://github.com/MobSF/Mobile-Security-Framework-MobSF).
-
 ## Sample Reference Projects
 
 See the sample reference projects below for complete build, sign, and release pipeline examples for various platforms. A list of all available projects can be found in [the Mobile DevOps Demo Projects group](https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/demo-projects/).
@@ -444,4 +437,4 @@ See the sample reference projects below for complete build, sign, and release pi
 
 ## Mobile DevOps Blog
 
-Additional reference material can be found in the [#mobile section](https://about.gitlab.com/blog/tags.html#mobile) of the GitLab blog.
+Additional reference material can be found in the [DevOps section](https://about.gitlab.com/blog/categories/devops/) of the GitLab blog.

@@ -50,7 +50,6 @@ function normalizeNewlines(str) {
   return str.replace(/\r\n/g, '\n');
 }
 
-const MAX_VISIBLE_COMMIT_LIST_COUNT = 3;
 const REGEX_QUICK_ACTIONS = /^\/\w+.*$/gm;
 
 export default class Notes {
@@ -109,7 +108,6 @@ export default class Notes {
       fieldName: 'note',
       selector: '.notes',
     });
-    this.collapseLongCommitList();
     this.setViewType(view);
 
     // We are in the merge requests page so we need another edit form for Changes tab
@@ -395,7 +393,6 @@ export default class Notes {
     // Update datetime format on the recent note
     localTimeAgo($note.find('.js-timeago').get(), false);
 
-    this.collapseLongCommitList();
     this.taskList.init();
 
     // This stops the note highlight, #note_xxx`, from being removed after real time update
@@ -1369,34 +1366,6 @@ export default class Notes {
     $closestSystemCommitList.toggleClass('hide-shade');
   }
 
-  /**
-   * Scans system notes with `ul` elements in system note body
-   * then collapse long commit list pushed by user to make it less
-   * intrusive.
-   */
-  collapseLongCommitList() {
-    const systemNotes = $('#notes-list').find('li.system-note').has('ul');
-
-    $.each(systemNotes, (index, systemNote) => {
-      const $systemNote = $(systemNote);
-      const headerMessage = $systemNote
-        .find('.note-text')
-        .find('p')
-        .first()
-        .text()
-        .replace(':', '');
-
-      $systemNote.find('.note-header .system-note-message').html(headerMessage);
-
-      if ($systemNote.find('li').length > MAX_VISIBLE_COMMIT_LIST_COUNT) {
-        $systemNote.find('.note-text').addClass('system-note-commit-list');
-        $systemNote.find('.system-note-commit-list-toggler').show();
-      } else {
-        $systemNote.find('.note-text').addClass('system-note-commit-list hide-shade');
-      }
-    });
-  }
-
   addAlert(...alertParams) {
     this.alert = createAlert(...alertParams);
   }
@@ -1572,7 +1541,7 @@ export default class Notes {
                <div class="note-header">
                   <div class="note-header-info">
                      <a href="/${escape(currentUsername)}">
-                       <span class="gl-display-none gl-sm-display-inline-block bold">${escape(
+                       <span class="gl-hidden sm:gl-inline-block bold">${escape(
                          currentUsername,
                        )}</span>
                        <span class="note-headline-light">${escape(currentUsername)}</span>
@@ -1589,7 +1558,7 @@ export default class Notes {
       </li>`,
     );
 
-    $tempNote.find('.gl-display-none.gl-sm-display-inline-block').text(escape(currentUserFullname));
+    $tempNote.find('.gl-hidden.sm:gl-inline-block').text(escape(currentUserFullname));
     $tempNote.find('.note-headline-light').text(`@${escape(currentUsername)}`);
 
     return $tempNote;

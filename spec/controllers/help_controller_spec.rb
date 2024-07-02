@@ -235,7 +235,7 @@ RSpec.describe HelpController do
 
       context 'when requested file exists' do
         before do
-          stub_doc_file_read(file_name: 'user/ssh.md', content: fixture_file('blockquote_fence_after.md'))
+          stub_doc_file_read(file_name: 'user/ssh.md', content: fixture_file('blockquote_fence_legacy_after.md'))
           stub_application_setting(help_page_documentation_base_url: '')
 
           subject
@@ -400,6 +400,34 @@ RSpec.describe HelpController do
           expect(subject).to be_successful
           expect(assigns[:markdown]).to eq "# Test heading\n\nTest content"
         end
+      end
+    end
+  end
+
+  describe 'GET #docs' do
+    subject { get :redirect_to_docs }
+
+    before do
+      stub_application_setting(help_page_documentation_base_url: custom_docs_url)
+    end
+
+    context 'with no custom docs URL configured' do
+      let(:custom_docs_url) { nil }
+
+      it 'redirects to docs.gitlab.com' do
+        subject
+
+        expect(response).to redirect_to('https://docs.gitlab.com')
+      end
+    end
+
+    context 'with a custom docs URL configured' do
+      let(:custom_docs_url) { 'https://foo.example.com' }
+
+      it 'redirects to the configured docs URL' do
+        subject
+
+        expect(response).to redirect_to(custom_docs_url)
       end
     end
   end

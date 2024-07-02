@@ -28,7 +28,7 @@ export default {
 
 <template>
   <div :id="popoverId">
-    <span class="gl-font-style-italic">
+    <span class="gl-italic">
       {{ errorContent.tableText }}
     </span>
 
@@ -36,7 +36,7 @@ export default {
 
     <gl-popover :container="popoverId" :target="popoverId" placement="top">
       <template #title>
-        <span class="gl-display-block gl-text-left">{{ errorContent.title }}</span>
+        <span class="gl-block gl-text-left">{{ errorContent.title }}</span>
       </template>
 
       <p class="gl-text-left">{{ errorContent.description }}</p>

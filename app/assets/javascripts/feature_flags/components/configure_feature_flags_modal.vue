@@ -208,7 +208,7 @@ export default {
     </gl-form-group>
     <div
       v-if="hasRotateError"
-      class="gl-text-red-500 gl-display-flex gl-align-items-center gl-font-weight-normal gl-mb-3"
+      class="gl-text-red-500 gl-display-flex gl-align-items-center gl-font-normal gl-mb-3"
       data-testid="rotate-error"
     >
       <gl-icon name="warning" class="gl-mr-2" />
@@ -221,12 +221,12 @@ export default {
       <gl-sprintf
         :message="
           s__(
-            'FeatureFlags|To prevent accidental actions we ask you to confirm your intention. Please type %{projectName} to proceed or close this modal to cancel.',
+            'FeatureFlags|To prevent accidental actions we ask you to confirm your intention. Please type %{projectName} to proceed or close this dialog to cancel.',
           )
         "
       >
         <template #projectName>
-          <span class="gl-font-weight-bold gl-text-red-500">{{ projectName }}</span>
+          <span class="gl-font-bold gl-text-red-500">{{ projectName }}</span>
         </template>
       </gl-sprintf>
     </p>

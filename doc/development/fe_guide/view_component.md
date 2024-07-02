@@ -1,6 +1,6 @@
 ---
 stage: Manage
-group: Foundations
+group: Design System
 info: Any user with at least the Maintainer role can merge updates to this content. For details, see https://docs.gitlab.com/ee/development/development_processes.html#development-guidelines-review.
 ---
 
@@ -194,7 +194,7 @@ The `Pajamas::ToggleComponent` follows the [Pajamas Toggle](https://design.gitla
 = render Pajamas::ToggleComponent.new(classes: 'js-force-push-toggle',
   label: s_("ProtectedBranch|Toggle allowed to force push"),
   is_checked: protected_branch.allow_force_push,
-  label_position: :hidden)
+  label_position: :hidden) do
   Leverage this block to render a rich help text. To render a plain text help text, prefer the `help` parameter.
 ```
 
@@ -210,6 +210,21 @@ For the full list of options, see its
 Layout components can be used to create common layout patterns used in GitLab.
 
 ### Available components
+
+#### Page heading
+
+A standard page header with a page title and optional actions.
+
+**Example:**
+
+```haml
+= render ::Layouts::PageHeadingComponent.new(_('Page title')) do |c|
+  - c.with_actions do
+    = buttons
+```
+
+For the full list of options, see its
+[source](https://gitlab.com/gitlab-org/gitlab/-/blob/master/app/components/layouts/page_heading_component.rb).
 
 #### Horizontal section
 
@@ -240,3 +255,13 @@ For the full list of options, see its
   button that is still implemented with plain Haml, consider migrating it to use a ViewComponent.
 - If you decide to create a new component, consider creating [previews](https://viewcomponent.org/guide/previews.html) for it, too.
   This will help others to discover your component with Lookbook, also it makes it much easier to test its different states.
+
+### Preview layouts
+
+If you need to have a custom layout for your ViewComponent preview consider using these paths for the layout code:
+
+- `app/views/layouts/lookbook` — for your layout HAML file
+- `app/assets/javascripts/entrypoints/lookbook` — for your custom JavaScript code
+- `app/assets/stylesheets/lookbook` — for your custom SASS code
+
+Please note that JavaScript and SASS code has to be manually included in the layout.

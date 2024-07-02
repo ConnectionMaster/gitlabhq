@@ -10,30 +10,28 @@ DETAILS:
 **Tier:** Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/275991) in GitLab 13.7.
-> - Lead time for changes [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/291746) in GitLab 13.10.
-
 The [DevOps Research and Assessment (DORA)](https://cloud.google.com/blog/products/devops-sre/using-the-four-keys-to-measure-your-devops-performance)
 team has identified four metrics that measure DevOps performance.
 Using these metrics helps improve DevOps efficiency and communicate performance to business stakeholders, which can accelerate business results.
 
 DORA includes four key metrics, divided into two core areas of DevOps:
 
-- [Deployment frequency](#deployment-frequency) and [Lead time for changes](#lead-time-for-changes) measure team velocity.
-- [Change failure rate](#change-failure-rate) and [Time to restore service](#time-to-restore-service) measure stability.
+- [Deployment frequency](#deployment-frequency) and [Lead time for changes](#lead-time-for-changes) measure team *velocity*.
+- [Change failure rate](#change-failure-rate) and [Time to restore service](#time-to-restore-service) measure *stability*.
 
 For software leaders, tracking velocity alongside quality metrics ensures they're not sacrificing quality for speed.
 
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 For a video explanation, see [DORA metrics: User analytics](https://www.youtube.com/watch?v=jYQSH4EY6_U) and [GitLab speed run: DORA metrics](https://www.youtube.com/watch?v=1BrcMV6rCDw).
 
-## DORA metrics in Value Stream Analytics
+## DORA metrics in GitLab
 
-The four DORA metrics are available out-of-the-box in the [Value Streams Dashboard](value_streams_dashboard.md).
-This helps you visualize the engineering work in the context of end-to-end value delivery.
+GitLab provides different analytics and insights about DORA metrics, which are available in the following Analytics features:
 
-The One DevOps Platform [Value Stream Management](https://gitlab.com/gitlab-org/gitlab/-/value_stream_analytics) provides end-to-end visibility into the entire software delivery lifecycle.
-This enables teams and managers to understand all aspects of productivity, quality, and delivery, without the ["toolchain tax"](https://about.gitlab.com/solutions/value-stream-management/).
+- DORA metrics in the [Value Streams Dashboard](value_streams_dashboard.md), which are available out-of-the-box and help you identify trends, patterns, and opportunities for improvement. These metrics are displayed in the [metrics comparison panel](value_streams_dashboard.md#devsecops-metrics-comparison-panel) and the [DORA Performers score panel](value_streams_dashboard.md#dora-performers-score-panel).
+- DORA metrics in [CI/CD analytics charts](ci_cd_analytics.md), which show pipeline success rates and duration, and the history of DORA metrics over time.
+- DORA metrics in [Insights reports](../project/insights/index.md), where you can also use [DORA query parameters](../../user/project/insights/index.md#dora-query-parameters) to create custom charts.
+- [(DORA) key metrics API](../../api/dora/metrics.md), which includes all metrics.
 
 ## Deployment frequency
 
@@ -70,7 +68,7 @@ Over time, the lead time for changes should decrease, while your team's performa
 
 ### How lead time for changes is calculated
 
-GitLab calculates lead time for changes based on the number of seconds to successfully deliver a commit into production: from merge request merge time (when the merge button is clicked) to code successfully running in production, without adding the `coding_time` to the calculation. Data is aggregated right after the deployment is finished, with a slight delay.
+GitLab calculates lead time for changes based on the number of seconds to successfully deliver a merge request into production: from merge request merge time (when the merge button is clicked) to code successfully running in production, without adding the `coding_time` to the calculation. Data is aggregated right after the deployment is finished, with a slight delay.
 
 By default, lead time for changes supports measuring only one branch operation with multiple deployment jobs (for example, from development to staging to production on the default branch). When a merge request gets merged on staging, and then on production, GitLab interprets them as two deployed merge requests, not one.
 
@@ -138,13 +136,13 @@ DETAILS:
 **Offering:** Self-managed
 **Status:** Experiment
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/96561) in GitLab 15.4 [with a flag](../../administration/feature_flags.md) named `dora_configuration`. Disabled by default. This feature is an [Experiment](../../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/96561) in GitLab 15.4 [with a flag](../../administration/feature_flags.md) named `dora_configuration`. Disabled by default. This feature is an [experiment](../../policy/experiment-beta-support.md).
 
 FLAG:
 On self-managed GitLab, by default this feature is not available. To make it available per project or for your entire instance, an administrator can [enable the feature flag](../../administration/feature_flags.md) named `dora_configuration`.
 On GitLab.com and GitLab Dedicated, this feature is not available.
 
-This feature is an [Experiment](../../policy/experiment-beta-support.md).
+This feature is an [experiment](../../policy/experiment-beta-support.md).
 To join the list of users testing this feature, [here is a suggested test flow](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/96561#steps-to-check-on-localhost).
 If you find a bug, [open an issue here](https://gitlab.com/groups/gitlab-org/-/epics/11490).
 To share your use cases and feedback, comment in [epic 11490](https://gitlab.com/groups/gitlab-org/-/epics/11490).
@@ -164,7 +162,17 @@ This feature supports only project-level propagation.
 To do this, in the Rails console run the following command:
 
 ```ruby
+my_project = Project.find_by_full_path('group/subgroup/project')
 Dora::Configuration.create!(project: my_project, branches_for_lead_time_for_changes: ['master', 'main'])
+```
+
+To update an existing configuration, run the following command:
+
+```ruby
+my_project = Project.find_by_full_path('group/subgroup/project')
+record = Dora::Configuration.where(project: my_project).first
+record.branches_for_lead_time_for_changes = ['development', 'staging', 'master', 'main']
+record.save!
 ```
 
 ## Retrieve DORA metrics data
@@ -178,13 +186,15 @@ The following example uses the GraphQL API to retrieve the monthly deployment fr
   project(fullPath: "gitlab-org/gitlab") {
     dora {
       metrics(
-        metric: DEPLOYMENT_FREQUENCY
         startDate: "2023-12-01"
-        endDate: "2024-02-01"
+        endDate: "2024-01-31"
         interval: MONTHLY
       ) {
         date
-        value
+        deploymentFrequency
+        leadTimeForChanges
+        timeToRestoreService
+        changeFailureRate
       }
     }
   }
@@ -221,26 +231,18 @@ and use it to automatically:
 1. [Create an incident when an alert is triggered](../../operations/incident_management/manage_incidents.md#automatically-when-an-alert-is-triggered).
 1. [Close incidents via recovery alerts](../../operations/incident_management/manage_incidents.md#automatically-close-incidents-via-recovery-alerts).
 
-## DORA metrics in GitLab
+## DORA metrics availability
 
-GitLab supports the following DORA metrics:
+The table below provides an overview of the DORA metrics' availability at project and group level:
 
-| Metric                    | Level             | API                                                 | UI chart               | Comments |
-|---------------------------|-------------------|-----------------------------------------------------|------------------------|----------|
-| `deployment_frequency`    | Project           | [GitLab 13.7 and later](../../api/dora/metrics.md)  | GitLab 14.8 and later  | The previous API endpoint was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/323713) in 13.10. |
-| `deployment_frequency`    | Group             | [GitLab 13.10 and later](../../api/dora/metrics.md) | GitLab 13.12 and later |          |
-| `lead_time_for_changes`   | Project           | [GitLab 13.10 and later](../../api/dora/metrics.md) | GitLab 13.11 and later | Unit in seconds. Aggregation method is median. |
-| `lead_time_for_changes`   | Group             | [GitLab 13.10 and later](../../api/dora/metrics.md) | GitLab 14.0 and later  | Unit in seconds. Aggregation method is median. |
-| `time_to_restore_service` | Project and group | [GitLab 14.9 and later](../../api/dora/metrics.md)  | GitLab 15.1 and later  | Unit in days. Aggregation method is median. |
-| `change_failure_rate`     | Project and group | [GitLab 14.10 and later](../../api/dora/metrics.md) | GitLab 15.2 and later  | Percentage of deployments. |
-
-### DORA metrics charts
-
-The DORA metrics are displayed on the following charts:
-
-- [Value Streams Dashboard](value_streams_dashboard.md), which helps you identify trends, patterns, and opportunities for improvement. DORA metrics are displayed in the [metrics comparison panel](value_streams_dashboard.md#devsecops-metrics-comparison-panel) and the [DORA Performers score panel](value_streams_dashboard.md#dora-performers-score-panel).
-- [CI/CD analytics charts](ci_cd_analytics.md), which show pipeline success rates and duration, and the history of DORA metrics over time.
-- Insights reports for [groups](../group/insights/index.md) and [projects](../group/value_stream_analytics/index.md), where you can also use [DORA query parameters](../../user/project/insights/index.md#dora-query-parameters) to create custom charts.
+| Metric                    | Level             | Comments |
+|---------------------------|-------------------|----------|
+| `deployment_frequency`    | Project           |          |
+| `deployment_frequency`    | Group             |          |
+| `lead_time_for_changes`   | Project           | Unit in seconds. Aggregation method is median. |
+| `lead_time_for_changes`   | Group             | Unit in seconds. Aggregation method is median. |
+| `time_to_restore_service` | Project and group | Unit in days. Aggregation method is median. (Available in UI chart in GitLab 15.1 and later) |
+| `change_failure_rate`     | Project and group | Percentage of deployments. (Available in UI chart in GitLab 15.2 and later) |
 
 ### DORA metrics data aggregation
 

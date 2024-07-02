@@ -16,9 +16,6 @@ DETAILS:
 
 ## Burndown charts
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/6903) [fixed burndown charts](#fixed-burndown-charts) in GitLab 13.6.
-> - Moved to GitLab Premium in 13.9.
-
 Burndown charts show the number of issues over the course of a milestone.
 
 ![burndown chart](img/burndown_chart_v15_3.png)
@@ -104,10 +101,6 @@ Reopened issues are considered as having been opened on the day after they were 
 
 ## Burnup charts
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/6903) in GitLab 13.6.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/268350) in GitLab 13.7.
-> - Moved to GitLab Premium in 13.9.
-
 Burnup charts show the assigned and completed work for a milestone.
 
 ![burnup chart](img/burnup_chart_v15_3.png)
@@ -142,6 +135,63 @@ To switch between the two settings, select either **Issues** or **Issue weight**
 
 When sorting by weight, make sure all your issues
 have weight assigned, because issues with no weight don't show on the chart.
+
+## Roll up weights
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/381879) in GitLab 16.11 [with a flag](../../../administration/feature_flags.md) named `rollup_timebox_chart`. Disabled by default.
+
+FLAG:
+On self-managed GitLab, by default this feature is not available. To make it available, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `rollup_timebox_chart`.
+On GitLab.com and GitLab Dedicated, this feature is not available.
+This feature is not ready for production use.
+
+With [tasks](../../tasks.md), a more granular planning is possible.
+If this feature is enabled, the weight of issues that have tasks is derived from the tasks in the
+same milestone.
+Issues with tasks are not counted separately in burndown or burnup charts.
+
+How issue weight is counted in charts:
+
+- If an issue's tasks do not have weights assigned, the issue's weight is used instead.
+- If an issue has multiple tasks, and some tasks are completed in a prior iteration, only tasks in
+  this iteration are shown and counted.
+- If a task is directly assigned to an iteration, without its parent, it's the top level item and
+  contributes its own weight. The parent issue is not shown.
+
+### Weight rollup examples
+
+**Example 1**
+
+- Issue has weight 5 and is assigned to Milestone 2.
+- Task 1 has weight 2 and is assigned to Milestone 1.
+- Task 2 has weight 2 and is assigned to Milestone 2.
+- Task 3 has weight 2 and is assigned to Milestone 2.
+
+The charts for Milestone 1 would show Task 1 as having weight 2.
+
+The charts for Milestone 2 would show Issue as having weight 4.
+
+**Example 2**
+
+- Issue has weight 5 and is assigned to Milestone 2.
+- Task 1 is assigned to Milestone 1 without any weight.
+- Task 2 is assigned to Milestone 2 without any weight.
+- Task 3 is assigned to Milestone 2 without any weight.
+
+The charts for Milestone 1 would show Task 1 as having weight 0.
+
+The charts for Milestone 2 would show Issue as having weight 5.
+
+**Example 3**
+
+- Issue is assigned to Milestone 2 without any weight.
+- Task 1 has weight 2 and is assigned to Milestone 1
+- Task 2 has weight 2 and is assigned to Milestone 2
+- Task 3 has weight 2 and is assigned to Milestone 2
+
+The charts for Milestone 1 would show Task 1 as having weight 2.
+
+The charts for Milestone 2 would show Issue as having weight 4.
 
 ## Troubleshooting
 

@@ -27,6 +27,18 @@ module RenderAccessTokens
   end
 
   def page
-    (params[:page] || 1).to_i
+    (pagination_params[:page] || 1).to_i
+  end
+
+  def expiry_ics(tokens)
+    cal = Icalendar::Calendar.new
+    tokens.each do |token|
+      cal.event do |event|
+        event.dtstart = Icalendar::Values::Date.new(token[:expires_at].delete('-'))
+        event.dtend = Icalendar::Values::Date.new(token[:expires_at].delete('-'))
+        event.summary = "Token #{token[:name]} expires today"
+      end
+    end
+    cal.to_ical
   end
 end

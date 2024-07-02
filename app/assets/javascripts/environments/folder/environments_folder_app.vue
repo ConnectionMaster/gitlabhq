@@ -191,7 +191,7 @@ export default {
     <stop-environment-modal :environment="environmentToStop" graphql />
     <confirm-rollback-modal :environment="environmentToRollback" graphql />
     <canary-update-modal :environment="environmentToChangeCanary" :weight="weight" />
-    <h4 class="gl-font-weight-normal" data-testid="folder-name">
+    <h4 class="gl-font-normal" data-testid="folder-name">
       {{ $options.i18n.pageTitle }} /
       <b>{{ folderName }}</b>
     </h4>
@@ -202,7 +202,7 @@ export default {
       >
         <template #title>
           <span>{{ $options.i18n.active }}</span>
-          <gl-badge size="sm" class="gl-tab-counter-badge">
+          <gl-badge class="gl-tab-counter-badge">
             {{ activeCount }}
           </gl-badge>
         </template>
@@ -213,7 +213,7 @@ export default {
       >
         <template #title>
           <span>{{ $options.i18n.stopped }}</span>
-          <gl-badge size="sm" class="gl-tab-counter-badge">
+          <gl-badge class="gl-tab-counter-badge">
             {{ stoppedCount }}
           </gl-badge>
         </template>

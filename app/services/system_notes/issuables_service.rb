@@ -210,7 +210,7 @@ module SystemNotes
       params = hierarchy_note_params(action, noteable, work_item)
 
       create_note(NoteSummary.new(noteable, project, author, params[:parent_note_body], action: params[:parent_action]))
-      create_note(NoteSummary.new(work_item, project, author, params[:child_note_body], action: params[:child_action]))
+      create_note(NoteSummary.new(work_item, work_item.project, author, params[:child_note_body], action: params[:child_action]))
     end
 
     # Called when the description of a Noteable is changed
@@ -440,7 +440,7 @@ module SystemNotes
     end
 
     def email_participants(body)
-      create_note(NoteSummary.new(noteable, project, author, body))
+      create_note(NoteSummary.new(noteable, project, author, body, action: 'issue_email_participants'))
     end
 
     def discussion_lock
@@ -519,18 +519,23 @@ module SystemNotes
 
       child_type = child.issue_type.humanize(capitalize: false)
       parent_type = parent.issue_type.humanize(capitalize: false)
+      child_reference, parent_reference = if child.namespace_id == parent.namespace_id
+                                            [child.to_reference, parent.to_reference]
+                                          else
+                                            [child.to_reference(full: true), parent.to_reference(full: true)]
+                                          end
 
       if action == 'relate'
         {
-          parent_note_body: "added #{child.to_reference} as child #{child_type}",
-          child_note_body: "added #{parent.to_reference} as parent #{parent_type}",
+          parent_note_body: "added #{child_reference} as child #{child_type}",
+          child_note_body: "added #{parent_reference} as parent #{parent_type}",
           parent_action: 'relate_to_child',
           child_action: 'relate_to_parent'
         }
       else
         {
-          parent_note_body: "removed child #{child_type} #{child.to_reference}",
-          child_note_body: "removed parent #{parent_type} #{parent.to_reference}",
+          parent_note_body: "removed child #{child_type} #{child_reference}",
+          child_note_body: "removed parent #{parent_type} #{parent_reference}",
           parent_action: 'unrelate_from_child',
           child_action: 'unrelate_from_parent'
         }

@@ -2,6 +2,7 @@
 stage: Create
 group: IDE
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Configure the GitLab agent for remote development as part of setting up a workspace."
 ---
 
 # GitLab agent configuration
@@ -14,26 +15,29 @@ DETAILS:
 > - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/391543) in GitLab 16.0.
 > - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/136744) in GitLab 16.7. Feature flag `remote_development_feature_flag` removed.
 
-When you [set up a workspace](configuration.md#set-up-a-workspace),
-you must configure the GitLab agent for remote development.
-The remote development settings are available in the agent
+When you [set up workspace infrastructure](configuration.md#set-up-workspace-infrastructure),
+you must configure the GitLab agent.
+The workspace settings are available in the agent
 configuration file under `remote_development`.
 
-You can use any agent defined under the root group of your project,
-provided that the agent is properly configured for remote development.
+You can use any agent in the top-level group of your workspace project
+and in the subgroups of the top-level group, provided that the agent
+is properly configured for remote development.
+For example, if the path to your workspace project is `top-group/subgroup-1/subgroup-2/workspace-project`,
+you can use any configured agent in `top-group` and in any of its subgroups.
 
-## Remote development settings
+## Workspace settings
 
-| Setting                                                                                   | Required | Description |
-|-------------------------------------------------------------------------------------------|----------|-------------|
-| [`enabled`](#enabled)                                                                     | Yes      | Indicates whether remote development is enabled for the GitLab agent. |
-| [`dns_zone`](#dns_zone)                                                                   | Yes      | DNS zone where workspaces are available. |
-| [`gitlab_workspaces_proxy`](#gitlab_workspaces_proxy)                                     | No       | Namespace where [`gitlab-workspaces-proxy`](https://gitlab.com/gitlab-org/remote-development/gitlab-workspaces-proxy) is installed. |
-| [`network_policy`](#network_policy)                                                       | No       | Firewall rules for workspaces. |
-| [`default_resources_per_workspace_container`](#default_resources_per_workspace_container) | No       | Default requests and limits for CPU and memory per workspace container. |
-| [`max_resources_per_workspace`](#max_resources_per_workspace)                             | No       | Maximum requests and limits for CPU and memory per workspace. |
-| [`workspaces_quota`](#workspaces_quota)                                                   | No       | Maximum number of workspaces for the GitLab agent. |
-| [`workspaces_per_user_quota`](#workspaces_per_user_quota)                                 | No       | Maximum number of workspaces per user. |
+| Setting                                                                                   | Required | Default value                           | Description |
+|-------------------------------------------------------------------------------------------|----------|-----------------------------------------|-------------|
+| [`enabled`](#enabled)                                                                     | Yes      | `false`                                 | Indicates whether remote development is enabled for the GitLab agent. |
+| [`dns_zone`](#dns_zone)                                                                   | Yes      | None                                    | DNS zone where workspaces are available. |
+| [`gitlab_workspaces_proxy`](#gitlab_workspaces_proxy)                                     | No       | `gitlab-workspaces`                     | Namespace where [`gitlab-workspaces-proxy`](set_up_workspaces_proxy.md) is installed. |
+| [`network_policy`](#network_policy)                                                       | No       | See [`network_policy`](#network_policy) | Firewall rules for workspaces. |
+| [`default_resources_per_workspace_container`](#default_resources_per_workspace_container) | No       | `{}`                                    | Default requests and limits for CPU and memory per workspace container. |
+| [`max_resources_per_workspace`](#max_resources_per_workspace)                             | No       | `{}`                                    | Maximum requests and limits for CPU and memory per workspace. |
+| [`workspaces_quota`](#workspaces_quota)                                                   | No       | `-1`                                    | Maximum number of workspaces for the GitLab agent. |
+| [`workspaces_per_user_quota`](#workspaces_per_user_quota)                                 | No       | `-1`                                    | Maximum number of workspaces per user. |
 
 NOTE:
 If a setting has an invalid value, it's not possible to update any setting until you fix that value.
@@ -43,7 +47,7 @@ If a setting has an invalid value, it's not possible to update any setting until
 Use this setting to define whether:
 
 - The GitLab agent can communicate with the GitLab instance.
-- You can [create a workspace](configuration.md#set-up-a-workspace) with the GitLab agent.
+- You can [create a workspace](configuration.md#create-a-workspace) with the GitLab agent.
 
 The default value is `false`.
 
@@ -71,7 +75,7 @@ remote_development:
 ### `gitlab_workspaces_proxy`
 
 Use this setting to define the namespace where
-[`gitlab-workspaces-proxy`](https://gitlab.com/gitlab-org/remote-development/gitlab-workspaces-proxy) is installed.
+[`gitlab-workspaces-proxy`](set_up_workspaces_proxy.md) is installed.
 The default value for `gitlab_workspaces_proxy.namespace` is `gitlab-workspaces`.
 
 **Example configuration:**

@@ -52,7 +52,7 @@ Other providers can work with GitLab but they have not been tested and are not s
 
 ### Configure Microsoft Entra ID (formerly Azure Active Directory)
 
-> - Updated to Microsoft Entra ID terminology in 16.10.
+> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/143146) to Microsoft Entra ID terminology in GitLab 16.10.
 
 Prerequisites:
 
@@ -90,7 +90,7 @@ Under the **Mappings** section, first provision the groups:
    Entra ID SCIM provisioning log that may be confusing and misleading.
 
    NOTE:
-   Even when **Provision Microsoft Entra ID Groups** is disabled, the mappings section may display "Enabled: Yes". This behavior is a display bug that you can safely ignored.
+   Even when **Provision Microsoft Entra ID Groups** is disabled, the mappings section may display "Enabled: Yes". This behavior is a display bug that you can safely ignore.
 
 1. Select **Save**.
 
@@ -226,7 +226,11 @@ During the synchronization process, all new users:
 The following diagram describes what happens when you add users to your SCIM app:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 graph TD
+accTitle: Adding users to your SCIM application
+accDescr: How GitLab determines whether or not to associate a SCIM identity with a user.
+
   A[Add User to SCIM app] -->|IdP sends user info to GitLab| B(GitLab: Does the email exist?)
   B -->|No| C[GitLab creates user with SCIM identity]
   B -->|Yes| D(GitLab: Is the user part of the group?)
@@ -285,7 +289,11 @@ NOTE:
 Deprovisioning does not delete the GitLab user account.
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 graph TD
+accTitle: Deprovisioning users
+accDescr: How removing users from your SCIM app removes them from GitLab groups.
+
   A[Remove User from SCIM app] -->|IdP sends request to GitLab| B(GitLab: Is the user part of the group?)
   B -->|No| C[Nothing to do]
   B -->|Yes| D[GitLab removes user from GitLab group]

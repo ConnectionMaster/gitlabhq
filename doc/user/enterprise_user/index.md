@@ -11,7 +11,7 @@ DETAILS:
 **Offering:** GitLab.com
 
 Enterprise users have user accounts that are administered by an organization that
-has [verified their email domain](../project/pages/custom_domains_ssl_tls_certification/index.md) and purchased a [GitLab subscription](../../subscriptions/index.md).
+has [verified their email domain](#verified-domains-for-groups) and purchased a [GitLab subscription](../../subscriptions/index.md).
 
 Enterprise users are identified by the **Enterprise** badge
 next to their names on the [Members list](../group/index.md#filter-and-sort-members-in-a-group).
@@ -60,7 +60,7 @@ Providing the ability to group Owners to change their enterprise users' primary 
 
 ## Verified domains for groups
 
-The following automated processes use [verified domains](../project/pages/custom_domains_ssl_tls_certification/index.md) to run:
+The following automated processes use verified domains to run:
 
 - [Automatic claims of enterprise users](#automatic-claims-of-enterprise-users).
 - [Bypass email confirmation for provisioned users](#bypass-email-confirmation-for-provisioned-users).
@@ -71,7 +71,7 @@ Prerequisites:
 
 - A custom domain name `example.com` or subdomain `subdomain.example.com`.
 - Access to your domain's server control panel to set up a DNS `TXT` record to verify your domain's ownership.
-- A project in the group.
+- A project in the group. This project will be linked to the verified domains, and should not be deleted.
 - You must have the Owner role in the top-level group.
 
 Domain verification applies at the top-level group and to all subgroups and projects
@@ -87,7 +87,7 @@ Setting up a verified domain is similar to [setting up a custom domain on GitLab
 - Must link the domain to a single project, despite domain verification applying
   at the top-level group and to all nested subgroups and projects, because domain
   verification:
-  - Is tied to the project you choose.
+  - Is tied to the project you choose. If the project is deleted, the domain verification is removed.
   - Reuses the GitLab Pages custom domain verification feature, which requires a project.
 - Must configure the `TXT` only in the DNS record to verify the domain's ownership.
 

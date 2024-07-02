@@ -10,8 +10,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/6655) in GitLab 14.5.
-
 Infrastructure as Code (IaC) scanning runs in your CI/CD pipeline, checking your infrastructure
 definition files for known vulnerabilities. Identify vulnerabilities before they're committed to
 the default branch to proactively address the risk to your application.
@@ -90,8 +88,6 @@ DETAILS:
 **Tier:** Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> Support for overriding rules [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/235359) in GitLab 14.8.
-
 You can customize the default IaC scanning rules provided with GitLab.
 
 The following customization options can be used separately, or together:
@@ -142,6 +138,16 @@ the `kics` analyzer by matching the `type` and `value` of identifiers:
       type = "kics_id"
       value = "b03a748a-542d-44f4-bb86-9199ab4fd2d5"
 ```
+
+### Disable scanning using comments
+
+You can use [KICS annotations](https://docs.kics.io/latest/running-kics/#using_commands_on_scanned_files_as_comments) to control how the KICS-based GitLab IaC Scanning analyzer scans your codebase. For example:
+
+- To skip scanning an entire file, you can add `# kics-scan ignore` as a comment at the top of the file.
+- To disable a specific rule in an entire file, you can add `# kics-scan disable=<kics_id>` as a comment at the top of the file.
+
+NOTE:
+This feature is only available for some types of IaC files. See the [KICS documentation](https://docs.kics.io/latest/running-kics/#using_commands_on_scanned_files_as_comments) for a list of supported file types.
 
 ### Override rules
 
@@ -216,8 +222,6 @@ kics-iac-sast:
 GitLab scanners are provided with a base Alpine image for size and maintainability.
 
 ### Use FIPS-enabled images
-
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/6479) in GitLab 14.10.
 
 GitLab provides [FIPS-enabled Red Hat UBI](https://www.redhat.com/en/blog/introducing-red-hat-universal-base-image)
 versions of the scanners' images, in addition to the standard images.

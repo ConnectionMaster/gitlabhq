@@ -10,17 +10,21 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-As your count of issues, merge requests, and epics grows in GitLab, it gets more challenging
-to keep track of those items. Especially as your organization grows from just a few people to
+Labels are a way to categorize and filter issues, merge requests, and epics in GitLab.
+
+As your projects grow in GitLab, it gets more challenging to keep track of the work that's done.
+Especially as your organization grows from just a few people to
 hundreds or thousands. With labels, you can organize and tag your work, and track the work items
 you're interested in.
 
-Labels are a key part of [issue boards](issue_board.md). With labels you can:
+Labels are a key part of [issue boards](issue_board.md).
 
-- Categorize [epics](../group/epics/index.md), issues, and merge requests using colors and descriptive titles like
-  `bug`, `feature request`, or `docs`.
-- Dynamically filter and manage [epics](../group/epics/index.md), issues, and merge requests.
-- Search lists of issues, merge requests, and epics, as well as issue boards.
+Use labels on [epics](../group/epics/index.md), issues, and merge requests to:
+
+- Categorize items using colors and descriptive titles like `bug`, `feature request`, or `docs`.
+- Dynamically filter and manage items to view work that's in progress or completed.
+- Search lists and boards.
+- Communicate priority or severity of items, using [scoped labels](#scoped-labels).
 
 ## Types of labels
 
@@ -343,8 +347,6 @@ the previous `key` label is replaced with the new label.
 
 ### Filter by scoped labels
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/12285) in GitLab 14.4.
-
 To filter issue, merge request, or epic lists by a given scope, enter
 `<scope>::*` in the searched label name.
 
@@ -470,7 +472,7 @@ DETAILS:
 **Offering:** GitLab.com
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/408676) in GitLab 16.3 [with a flag](../../administration/feature_flags.md) named `enforce_locked_labels_on_merge`. This feature is [Beta](../../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/408676) in GitLab 16.3 [with a flag](../../administration/feature_flags.md) named `enforce_locked_labels_on_merge`. This feature is [beta](../../policy/experiment-beta-support.md).
 
 FLAG:
 On self-managed GitLab and GitLab Dedicated, this feature is not available.
@@ -502,16 +504,3 @@ Practice working with labels in the following tutorials:
 
 - [Set up a single project for issue triage](../../tutorials/issue_triage/index.md)
 - [Set up issue boards for team hand-off](../../tutorials/boards_for_teams/index.md)
-
-## Troubleshooting
-
-### Some label titles end with `_duplicate<number>`
-
-In specific circumstances it was possible to create labels with duplicate titles in the same
-namespace.
-
-To resolve the duplication, [in GitLab 13.2](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/21384)
-and later, some duplicate labels have `_duplicate<number>` appended to their titles.
-
-You can safely change these labels' titles if you prefer.
-For details of the original problem, see [issue 30390](https://gitlab.com/gitlab-org/gitlab/-/issues/30390).

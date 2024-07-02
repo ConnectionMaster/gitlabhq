@@ -357,7 +357,7 @@ export default {
     <gl-tab :title="$options.i18n.settingsTabs.currentIntegrations">
       <gl-alert
         v-if="showSuccessfulCreateAlert"
-        class="gl-mt-n2"
+        class="-gl-mt-2"
         :primary-button-text="$options.i18n.integrationCreated.btnCaption"
         :title="$options.i18n.integrationCreated.title"
         @primaryAction="viewCreatedIntegration"
@@ -369,7 +369,7 @@ export default {
       <gl-card
         class="gl-new-card gl-mt-2"
         header-class="gl-new-card-header"
-        body-class="gl-new-card-body gl-px-0 gl-overflow-hidden"
+        body-class="gl-new-card-body"
       >
         <template #header>
           <div class="gl-new-card-title-wrapper">

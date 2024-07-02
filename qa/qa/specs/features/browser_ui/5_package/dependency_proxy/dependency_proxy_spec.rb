@@ -8,12 +8,11 @@ module QA
 
       let(:project) { create(:project, :private, name: 'dependency-proxy-project') }
       let!(:runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.name = "qa-runner-#{Time.now.to_i}"
-          runner.tags = ["runner-for-#{project.name}"]
-          runner.executor = :docker
-          runner.project = project
-        end
+        create(:project_runner,
+          name: "qa-runner-#{Time.now.to_i}",
+          tags: ["runner-for-#{project.name}"],
+          executor: :docker,
+          project: project)
       end
 
       let(:group_deploy_token) do
@@ -139,7 +138,7 @@ module QA
           Page::Group::Menu.perform(&:go_to_dependency_proxy)
 
           Page::Group::DependencyProxy.perform do |index|
-            expect(index).to have_blob_count("Contains 1 blobs of images")
+            expect(index).to have_blob_count(/Contains [1-9]\d* blobs of images/)
           end
         end
       end

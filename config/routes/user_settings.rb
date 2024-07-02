@@ -7,6 +7,7 @@ namespace :user_settings do
   end
   resources :active_sessions, only: [:index, :destroy]
   resource :profile, only: [:show, :update]
+  resource :identities, only: [:new, :create]
   resource :password, only: [:new, :create, :edit, :update] do
     member do
       put :reset
@@ -15,6 +16,16 @@ namespace :user_settings do
   resources :personal_access_tokens, only: [:index, :create] do
     member do
       put :revoke
+    end
+  end
+  resources :gpg_keys, only: [:index, :create, :destroy] do
+    member do
+      put :revoke
+    end
+  end
+  resources :ssh_keys, only: [:index, :show, :create, :destroy] do
+    member do
+      delete :revoke
     end
   end
 end
@@ -38,4 +49,14 @@ resource :profile, only: [] do
   end
   get 'password/new', to: redirect(path: '-/user_settings/password/new')
   get "password/edit", to: redirect(path: '-/user_settings/password/edit')
+
+  get 'gpg_keys', to: redirect(path: '-/user_settings/gpg_keys#index')
+  post 'gpg_keys', to: redirect(path: '-/user_settings/gpg_keys#create')
+  get 'gpg_keys/:id', to: redirect(path: '-/user_settings/gpg_keys#show')
+  delete 'gpg_keys/:id', to: redirect(path: '-/user_settings/gpg_keys#destroy')
+
+  get 'keys', to: redirect(path: '-/user_settings/ssh_keys#index')
+  post 'keys', to: redirect(path: '-/user_settings/ssh_keys#create')
+  get 'keys/:id', to: redirect(path: '-/user_settings/ssh_keys#show')
+  delete 'keys/:id', to: redirect(path: '-/user_settings/ssh_keys#destroy')
 end

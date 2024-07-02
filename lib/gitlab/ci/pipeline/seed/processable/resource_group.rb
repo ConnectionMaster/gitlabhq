@@ -28,7 +28,7 @@ module Gitlab
 
             def expanded_resource_group_key
               strong_memoize(:expanded_resource_group_key) do
-                ExpandVariables.expand(resource_group_key, -> { variables })
+                ExpandVariables.expand(resource_group_key, -> { variables.sort_and_expand_all })
               end
             end
 

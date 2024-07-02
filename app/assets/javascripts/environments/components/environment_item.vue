@@ -550,7 +550,7 @@ export default {
     upcomingDeploymentCellClasses() {
       return [
         this.tableData.upcoming.spacing,
-        { 'gl-display-none gl-md-display-block': !this.upcomingDeployment },
+        { '!gl-hidden md:!gl-block': !this.upcomingDeployment },
       ];
     },
     tableNameSpacingClass() {
@@ -643,7 +643,7 @@ export default {
 
     <div
       v-if="!isFolder"
-      class="table-section deployment-column d-none d-md-block"
+      class="table-section deployment-column gl-hidden md:gl-block"
       :class="tableData.deploy.spacing"
       role="gridcell"
       data-testid="environment-deployment-id-cell"
@@ -654,7 +654,7 @@ export default {
 
       <span
         v-if="!isFolder && deploymentHasUser"
-        class="text-break-word gl-display-inline-flex gl-align-items-center"
+        class="text-break-word gl-inline-flex gl-align-items-center"
       >
         <gl-sprintf :message="s__('Environments|by %{avatar}')">
           <template #avatar>
@@ -678,7 +678,7 @@ export default {
 
     <div
       v-if="!isFolder"
-      class="table-section d-none d-md-block"
+      class="table-section gl-hidden md:gl-block"
       :class="tableData.build.spacing"
       role="gridcell"
       data-testid="environment-build-cell"
@@ -757,7 +757,7 @@ export default {
         </div>
         <span
           v-if="upcomingDeployment.user"
-          class="text-break-word gl-display-inline-flex gl-align-items-center gl-mt-2"
+          class="text-break-word gl-inline-flex gl-align-items-center gl-mt-2"
         >
           <gl-sprintf :message="s__('Environments|by %{avatar}')">
             <template #avatar>
@@ -814,7 +814,7 @@ export default {
         <stop-component
           v-if="canStopEnvironment"
           :environment="model"
-          class="gl-z-index-2"
+          class="gl-z-2"
           data-track-action="click_button"
           data-track-label="environment_stop"
         />
@@ -824,7 +824,7 @@ export default {
           no-caret
           icon="ellipsis_v"
           category="secondary"
-          placement="right"
+          placement="bottom-end"
           :toggle-text="__('More actions')"
         >
           <rollback-component

@@ -26,8 +26,8 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
     end
   end
 
-  describe '.qa:rules:manual-omnibus-and-follow-up-e2e' do
-    let(:base_rules) { config.dig('.qa:rules:manual-omnibus-and-follow-up-e2e', 'rules') }
+  describe '.qa:rules:manual-e2e' do
+    let(:base_rules) { config.dig('.qa:rules:manual-e2e', 'rules') }
 
     context 'with .qa:rules:follow-up-e2e' do
       let(:derived_rules) { config.dig('.qa:rules:follow-up-e2e', 'rules') }
@@ -62,7 +62,8 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
           # .review:rules:review-stop don't set variables
           base.delete('variables')
           base_with_manual_and_allowed_to_fail =
-            if base['when'] == 'never'
+            # base can be an array when we're using !reference
+            if base.is_a?(Array) || base['when'] == 'never'
               base
             else
               base.merge('when' => 'manual', 'allow_failure' => true)
@@ -74,14 +75,12 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
     end
   end
 
-  describe '.rails:rules:ee-and-foss-default-rules' do
-    let(:base_rules) { config.dig('.rails:rules:ee-and-foss-default-rules', 'rules') }
-
-    context 'with .rails:rules:rspec-predictive' do
-      let(:derived_rules) { config.dig('.rails:rules:rspec-predictive', 'rules') }
-
+  shared_examples 'predictive is inverse of non-predictive' do
+    context 'with derived rules' do
       it 'has the "when: never" in reverse compared to the base' do
-        base_rules.zip(derived_rules).each do |(base, derived)|
+        rules_pairs = base_rules.zip(derived_rules)
+
+        cut_point = rules_pairs.each.with_index do |(base, derived), index|
           # exception: `.if-merge-request-labels-pipeline-expedite` should both be set to "never",
           #            because when we set this label on an MR, we don't want to run either jobs.
           if base['if'] == config['.if-merge-request-labels-pipeline-expedite']['if']
@@ -96,14 +95,39 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
           if base['if'] == config['.if-merge-request-not-approved']['if']
             expect(derived).to eq(base.merge(config['.if-merge-request-approved']))
             expect(derived['when']).to eq('never')
-            next
+
+            # The following rules should match exactly, because after the
+            # approval rules, the logic is flipped.
+            break index
           end
 
           if base['when'] == 'never'
             expect(derived).to eq(base.except('when'))
+          elsif base['if'].start_with?('$ENABLE_')
+            derived_if = base['if'].sub('RSPEC', 'RSPEC_PREDICTIVE_TRIGGER')
+            expect(derived).to eq(base.merge('if' => derived_if))
           elsif base['when'].nil?
             expect(derived).to eq(base.merge('when' => 'never'))
           end
+        end
+
+        # Match the remaining rules that should be the same
+        rules_pairs.drop(cut_point + 1).each do |(base, derived)|
+          expect(derived).to eq(base)
+        end
+      end
+    end
+  end
+
+  describe '.rails:rules:ee-and-foss-default-rules' do
+    it_behaves_like 'predictive is inverse of non-predictive' do
+      let(:base_rules) { config.dig('.rails:rules:ee-and-foss-default-rules', 'rules') }
+
+      let(:derived_rules) do
+        config.dig('.rails:rules:rspec-predictive', 'rules').reject do |rule|
+          # This happens in each specific rspec,
+          # which is outside of .rails:rules:ee-and-foss-default-rules
+          rule['if'].start_with?('$ENABLE_')
         end
       end
 
@@ -116,6 +140,20 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
         expect(base_rules).not_to include(expected_rule)
         expect(derived_rules).to include(expected_rule)
       end
+    end
+  end
+
+  describe '.rails:rules:single-db' do
+    it_behaves_like 'predictive is inverse of non-predictive' do
+      let(:base_rules) { config.dig('.rails:rules:single-db', 'rules') }
+      let(:derived_rules) { config.dig('.rails:rules:rspec-predictive:single-db', 'rules') }
+    end
+  end
+
+  describe '.rails:rules:single-db-ci-connection' do
+    it_behaves_like 'predictive is inverse of non-predictive' do
+      let(:base_rules) { config.dig('.rails:rules:single-db-ci-connection', 'rules') }
+      let(:derived_rules) { config.dig('.rails:rules:rspec-predictive:single-db-ci-connection', 'rules') }
     end
   end
 
@@ -211,7 +249,6 @@ RSpec.describe '.gitlab/ci/rules.gitlab-ci.yml', feature_category: :tooling do
       Dir.glob('*.md') +
       Dir.glob('changelogs/*') +
       Dir.glob('doc/.{markdownlint,vale}/**/*', File::FNM_DOTMATCH) +
-      Dir.glob('keeps/**/*') +
       Dir.glob('node_modules/**/*', File::FNM_DOTMATCH) +
       Dir.glob('patches/*') +
       Dir.glob('public/assets/**/.*') +

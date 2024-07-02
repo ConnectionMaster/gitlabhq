@@ -22,22 +22,7 @@ module Gitlab
 
           merge_request = project.merge_requests.find_by(iid: object[:iid]) # rubocop: disable CodeReuse/ActiveRecord
 
-          if merge_request
-            activities = client.activities(project_key, repository_slug, merge_request.iid)
-
-            comments, other_activities = activities.partition(&:comment?)
-
-            merge_event = other_activities.find(&:merge_event?)
-            import_merge_event(merge_request, merge_event) if merge_event
-
-            inline_comments, pr_comments = comments.partition(&:inline_comment?)
-
-            import_inline_comments(inline_comments.map(&:comment), merge_request)
-            import_standalone_pr_comments(pr_comments.map(&:comment), merge_request)
-
-            approved_events = other_activities.select(&:approved_event?)
-            approved_events.each { |event| import_approved_event(merge_request, event) }
-          end
+          import_notes_in_batch(merge_request) if merge_request
 
           log_info(import_stage: 'import_pull_request_notes', message: 'finished', iid: object[:iid])
         end
@@ -45,6 +30,23 @@ module Gitlab
         private
 
         attr_reader :object, :project, :formatter, :user_finder, :mentions_converter
+
+        def import_notes_in_batch(merge_request)
+          activities = client.activities(project_key, repository_slug, merge_request.iid)
+
+          comments, other_activities = activities.partition(&:comment?)
+
+          merge_event = other_activities.find(&:merge_event?)
+          import_merge_event(merge_request, merge_event) if merge_event
+
+          inline_comments, pr_comments = comments.partition(&:inline_comment?)
+
+          import_inline_comments(inline_comments.map(&:comment), merge_request)
+          import_standalone_pr_comments(pr_comments.map(&:comment), merge_request)
+
+          approved_events = other_activities.select(&:approved_event?)
+          approved_events.each { |event| import_approved_event(merge_request, event) }
+        end
 
         def import_data_valid?
           project.import_data&.credentials && project.import_data&.data
@@ -74,8 +76,11 @@ module Gitlab
             event_id: approved_event.id
           )
 
-          user_id = user_finder.find_user_id(by: :username, value: approved_event.approver_username) ||
-            user_finder.find_user_id(by: :email, value: approved_event.approver_email)
+          user_id = if Feature.enabled?(:bitbucket_server_user_mapping_by_username, project, type: :ops)
+                      user_finder.find_user_id(by: :username, value: approved_event.approver_username)
+                    else
+                      user_finder.find_user_id(by: :email, value: approved_event.approver_email)
+                    end
 
           return unless user_id
 
@@ -193,7 +198,11 @@ module Gitlab
             note = "*By #{comment.author_username} (#{comment.author_email})*\n\n"
           end
 
-          comment_note = mentions_converter.convert(comment.note)
+          comment_note = if Feature.enabled?(:bitbucket_server_convert_mentions_to_users, project.creator)
+                           mentions_converter.convert(comment.note)
+                         else
+                           comment.note
+                         end
 
           note +=
             # Provide some context for replying
@@ -208,7 +217,8 @@ module Gitlab
             note: note,
             author_id: author,
             created_at: comment.created_at,
-            updated_at: comment.updated_at
+            updated_at: comment.updated_at,
+            imported_from: ::Import::SOURCE_BITBUCKET_SERVER
           }
         end
 

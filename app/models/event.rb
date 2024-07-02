@@ -10,6 +10,10 @@ class Event < ApplicationRecord
   include UsageStatistics
   include ShaAttribute
   include EachBatch
+  include Import::HasImportSource
+  include IgnorableColumns
+
+  ignore_column :imported, remove_with: '17.2', remove_after: '2024-07-22'
 
   ACTIONS = HashWithIndifferentAccess.new(
     created: 1,

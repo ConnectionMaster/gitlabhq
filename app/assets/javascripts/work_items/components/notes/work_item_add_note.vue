@@ -112,7 +112,7 @@ export default {
         };
       },
       update(data) {
-        return data.workspace.workItems.nodes[0] ?? {};
+        return data.workspace.workItem ?? {};
       },
       skip() {
         return !this.workItemIid;
@@ -172,8 +172,8 @@ export default {
       return {
         'timeline-entry note-form': this.isNewDiscussion,
         // eslint-disable-next-line @gitlab/require-i18n-strings
-        'note note-wrapper note-comment discussion-reply-holder gl-border-t-0! clearfix': !this
-          .isNewDiscussion,
+        'note note-wrapper note-comment discussion-reply-holder gl-border-t-0! clearfix':
+          !this.isNewDiscussion,
         'gl-pt-0! is-replying': this.isEditing,
         'internal-note': this.isInternalThread,
       };
@@ -287,6 +287,8 @@ export default {
             :comment-button-text="commentButtonText"
             :is-discussion-locked="isDiscussionLocked"
             :is-work-item-confidential="isWorkItemConfidential"
+            :full-path="fullPath"
+            :work-item-iid="workItemIid"
             @submitForm="updateWorkItem"
             @cancelEditing="cancelEditing"
             @error="$emit('error', $event)"

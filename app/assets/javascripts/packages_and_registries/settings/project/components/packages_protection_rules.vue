@@ -8,7 +8,9 @@ import {
   GlKeysetPagination,
   GlModal,
   GlModalDirective,
+  GlTooltipDirective,
   GlFormSelect,
+  GlSprintf,
 } from '@gitlab/ui';
 import packagesProtectionRuleQuery from '~/packages_and_registries/settings/project/graphql/queries/get_packages_protection_rules.query.graphql';
 import { getPackageTypeLabel } from '~/packages_and_registries/package_registry/utils';
@@ -20,9 +22,7 @@ import { s__, __ } from '~/locale';
 
 const PAGINATION_DEFAULT_PER_PAGE = 10;
 
-const I18N_PUSH_PROTECTED_UP_TO_ACCESS_LEVEL = s__(
-  'PackageRegistry|Push protected up to access level',
-);
+const I18N_MINIMUM_ACCESS_LEVEL_FOR_PUSH = s__('PackageRegistry|Minimum access level for push');
 
 export default {
   components: {
@@ -36,23 +36,28 @@ export default {
     GlKeysetPagination,
     GlModal,
     GlFormSelect,
+    GlSprintf,
   },
   directives: {
     GlModal: GlModalDirective,
+    GlTooltip: GlTooltipDirective,
   },
   inject: ['projectPath'],
   i18n: {
-    settingBlockTitle: s__('PackageRegistry|Package protection rules'),
+    settingBlockTitle: s__('PackageRegistry|Protected packages'),
     settingBlockDescription: s__(
-      'PackageRegistry|When a package is protected then only certain user roles are able to update and delete the protected package. This helps to avoid tampering with the package.',
+      'PackageRegistry|When a package is protected, only certain user roles can push, update, and delete the protected package, which helps to avoid tampering with the package.',
     ),
     protectionRuleDeletionConfirmModal: {
-      title: s__('PackageRegistry|Are you sure you want to delete the package protection rule?'),
-      description: s__(
-        'PackageRegistry|Users with at least the Developer role for this project will be able to publish, edit, and delete packages.',
+      title: s__('PackageRegistry|Delete package protection rule?'),
+      descriptionWarning: s__(
+        'PackageRegistry|You are about to delete the package protection rule for %{packageNamePattern}.',
+      ),
+      descriptionConsequence: s__(
+        'PackageRegistry|Users with at least the Developer role for this project will be able to publish, edit, and delete packages with this package name.',
       ),
     },
-    pushProtectedUpToAccessLevel: I18N_PUSH_PROTECTED_UP_TO_ACCESS_LEVEL,
+    minimumAccessLevelForPush: I18N_MINIMUM_ACCESS_LEVEL_FOR_PUSH,
   },
   data() {
     return {
@@ -70,7 +75,7 @@ export default {
       return this.packageProtectionRulesQueryResult.map((packagesProtectionRule) => {
         return {
           id: packagesProtectionRule.id,
-          pushProtectedUpToAccessLevel: packagesProtectionRule.pushProtectedUpToAccessLevel,
+          minimumAccessLevelForPush: packagesProtectionRule.minimumAccessLevelForPush,
           col_1_package_name_pattern: packagesProtectionRule.packageNamePattern,
           col_2_package_type: getPackageTypeLabel(packagesProtectionRule.packageType),
         };
@@ -90,7 +95,7 @@ export default {
     },
     modalActionPrimary() {
       return {
-        text: __('Delete'),
+        text: s__('PackageRegistry|Delete package protection rule'),
         attributes: {
           variant: 'danger',
         },
@@ -101,11 +106,11 @@ export default {
         text: __('Cancel'),
       };
     },
-    pushProtectedUpToAccessLevelOptions() {
+    minimumAccessLevelOptions() {
       return [
-        { value: 'DEVELOPER', text: __('Developer') },
         { value: 'MAINTAINER', text: __('Maintainer') },
         { value: 'OWNER', text: __('Owner') },
+        { value: 'ADMIN', text: s__('AdminUsers|Administrator') },
       ];
     },
   },
@@ -190,7 +195,7 @@ export default {
           variables: {
             input: {
               id: packageProtectionRule.id,
-              pushProtectedUpToAccessLevel: packageProtectionRule.pushProtectedUpToAccessLevel,
+              minimumAccessLevelForPush: packageProtectionRule.minimumAccessLevelForPush,
             },
           },
         })
@@ -216,7 +221,7 @@ export default {
       this.protectionRuleMutationItem = null;
       this.protectionRuleMutationInProgress = false;
     },
-    isProtectionRulePushProtectedUpToAccessLevelFormSelectDisabled(item) {
+    isProtectionRuleMinimumAccessLevelFormSelectDisabled(item) {
       return this.isProtectionRuleMutationInProgress(item);
     },
     isProtectionRuleDeleteButtonDisabled(item) {
@@ -229,24 +234,24 @@ export default {
   fields: [
     {
       key: 'col_1_package_name_pattern',
-      label: s__('PackageRegistry|Package name pattern'),
-      tdClass: 'gl-w-30',
+      label: s__('PackageRegistry|Name pattern'),
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'col_2_package_type',
-      label: s__('PackageRegistry|Package type'),
-      tdClass: 'gl-w-10',
+      label: s__('PackageRegistry|Type'),
+      tdClass: '!gl-align-middle',
     },
     {
-      key: 'col_3_push_protected_up_to_access_level',
-      label: I18N_PUSH_PROTECTED_UP_TO_ACCESS_LEVEL,
-      tdClass: 'gl-w-15',
+      key: 'col_3_minimum_access_level_for_push',
+      label: I18N_MINIMUM_ACCESS_LEVEL_FOR_PUSH,
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'col_4_actions',
-      label: '',
-      thClass: 'gl-display-none',
-      tdClass: 'gl-w-10',
+      label: __('Actions'),
+      thClass: 'gl-text-right',
+      tdClass: '!gl-align-middle gl-text-right',
     },
   ],
   modal: { id: 'delete-package-protection-rule-confirmation-modal' },
@@ -276,7 +281,7 @@ export default {
                 :disabled="isAddProtectionRuleButtonDisabled"
                 @click="showProtectionRuleForm"
               >
-                {{ s__('PackageRegistry|Add package protection rule') }}
+                {{ s__('PackageRegistry|Add protection rule') }}
               </gl-button>
             </div>
           </div>
@@ -310,35 +315,36 @@ export default {
               <gl-loading-icon size="sm" class="gl-my-5" />
             </template>
 
-            <template #cell(col_3_push_protected_up_to_access_level)="{ item }">
+            <template #cell(col_3_minimum_access_level_for_push)="{ item }">
               <gl-form-select
-                v-model="item.pushProtectedUpToAccessLevel"
+                v-model="item.minimumAccessLevelForPush"
+                class="gl-max-w-34"
                 required
-                :aria-label="$options.i18n.pushProtectedUpToAccessLevel"
-                :options="pushProtectedUpToAccessLevelOptions"
-                :disabled="isProtectionRulePushProtectedUpToAccessLevelFormSelectDisabled(item)"
+                :aria-label="$options.i18n.minimumAccessLevelForPush"
+                :options="minimumAccessLevelOptions"
+                :disabled="isProtectionRuleMinimumAccessLevelFormSelectDisabled(item)"
                 @change="updatePackageProtectionRule(item)"
               />
             </template>
 
             <template #cell(col_4_actions)="{ item }">
               <gl-button
+                v-gl-tooltip
                 v-gl-modal="$options.modal.id"
-                category="secondary"
-                variant="danger"
-                size="small"
+                category="tertiary"
+                icon="remove"
+                :title="__('Delete')"
+                :aria-label="__('Delete')"
                 :disabled="isProtectionRuleDeleteButtonDisabled(item)"
                 @click="showProtectionRuleDeletionConfirmModal(item)"
-                >{{ __('Delete') }}</gl-button
-              >
+              />
             </template>
           </gl-table>
 
-          <div class="gl-display-flex gl-justify-content-center gl-mb-3">
+          <div class="gl-display-flex gl-justify-content-center">
             <gl-keyset-pagination
               v-bind="packageProtectionRulesQueryPageInfo"
-              :prev-text="__('Previous')"
-              :next-text="__('Next')"
+              class="gl-mb-3"
               @prev="onPrevPage"
               @next="onNextPage"
             />
@@ -347,6 +353,7 @@ export default {
       </gl-card>
 
       <gl-modal
+        v-if="protectionRuleMutationItem"
         :modal-id="$options.modal.id"
         size="sm"
         :title="$options.i18n.protectionRuleDeletionConfirmModal.title"
@@ -354,7 +361,16 @@ export default {
         :action-cancel="modalActionCancel"
         @primary="deleteProtectionRule(protectionRuleMutationItem)"
       >
-        <p>{{ $options.i18n.protectionRuleDeletionConfirmModal.description }}</p>
+        <p>
+          <gl-sprintf
+            :message="$options.i18n.protectionRuleDeletionConfirmModal.descriptionWarning"
+          >
+            <template #packageNamePattern>
+              <strong>{{ protectionRuleMutationItem.col_1_package_name_pattern }}</strong>
+            </template>
+          </gl-sprintf>
+        </p>
+        <p>{{ $options.i18n.protectionRuleDeletionConfirmModal.descriptionConsequence }}</p>
       </gl-modal>
     </template>
   </settings-block>

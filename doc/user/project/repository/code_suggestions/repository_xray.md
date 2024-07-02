@@ -2,12 +2,13 @@
 stage: Create
 group: Code Creation
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Repository X-Ray gives Code Suggestions more insight into your project's codebase and dependencies."
 ---
 
 # Repository X-Ray
 
 DETAILS:
-**Tier:** Premium, Ultimate
+**Tier:** Premium or Ultimate with [GitLab Duo Pro](../../../../subscriptions/subscription-add-ons.md)
 **Offering:** GitLab.com, Self-managed
 
 > - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/12060) in GitLab 16.7.

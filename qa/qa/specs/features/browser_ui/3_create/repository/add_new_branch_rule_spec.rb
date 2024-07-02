@@ -19,14 +19,13 @@ module QA
           ])
       end
 
-      it 'adds a new branch rule', testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/397587' do
+      it 'adds a new branch rule', :blocking,
+        testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/397587' do
         project.visit!
 
         Page::Project::Menu.perform(&:go_to_repository_settings)
 
-        Page::Project::Settings::Repository.perform(&:expand_branch_rules)
-
-        Page::Project::Settings::BranchRules.perform(&:click_add_branch_rule)
+        Page::Project::Settings::Repository.perform(&:expand_protected_branches)
 
         Page::Project::Settings::ProtectedBranches.perform do |settings|
           settings.select_branch(branch_name)

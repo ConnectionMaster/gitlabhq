@@ -16,7 +16,7 @@ namespace :gitlab do
             error_message += " Did you mean '#{potential_projects.first.full_path}'?"
           end
 
-          puts error_message.color(:red)
+          puts Rainbow(error_message).red
           exit 1
         end
 
@@ -37,7 +37,7 @@ namespace :gitlab do
         puts "\nSeeding issues for the '#{project.full_path}' project"
         seeder = Quality::Seeders::Issues.new(project: project)
         issues_created = seeder.seed(backfill_weeks: args.backfill_weeks.to_i,
-                                     average_issues_per_week: args.average_issues_per_week.to_i)
+          average_issues_per_week: args.average_issues_per_week.to_i)
         puts "\n#{issues_created} issues created!"
       end
     end
@@ -57,7 +57,7 @@ namespace :gitlab do
               error_message += " Did you mean '#{potential_groups.first.full_path}'?"
             end
 
-            puts error_message.color(:red)
+            puts Rainbow(error_message).red
             exit 1
           end
 

@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe MergeWorker, feature_category: :source_code_management do
+RSpec.describe MergeWorker, feature_category: :code_review_workflow do
   describe "remove source branch" do
     let!(:merge_request) { create(:merge_request, source_branch: "markdown") }
     let!(:source_project) { merge_request.source_project }
@@ -35,8 +35,8 @@ RSpec.describe MergeWorker, feature_category: :source_code_management do
         [
           merge_request.id,
           merge_request.author_id,
-          commit_message: 'wow such merge',
-          sha: merge_request.diff_head_sha
+          { commit_message: 'wow such merge',
+            sha: merge_request.diff_head_sha }
         ]
       end
 

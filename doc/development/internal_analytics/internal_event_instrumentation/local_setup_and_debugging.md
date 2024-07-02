@@ -6,19 +6,78 @@ info: Any user with at least the Maintainer role can merge updates to this conte
 
 # Local setup and debugging
 
-Internal events are using a tool called Snowplow under the hood. To develop and test internal events, there are several tools related to Snowplow to test frontend and backend events:
+NOTE:
+To track user interactions in the browser, Do-Not-Track (“DNT”) needs to be disabled. DNT is disabled by default for most browsers.
 
-| Testing Tool                                 | Frontend Tracking  | Backend Tracking    | Local Development Environment | Production Environment | Production Environment |
+Internal events are using a tool called Snowplow under the hood. To develop and test internal events, there are several tools to test frontend and backend events:
+
+| Testing Tool                                 | Frontend Tracking  | Backend Tracking    | Local Development Environment | Production Environment | Shows individual events |
 |----------------------------------------------|--------------------|---------------------|-------------------------------|------------------------|------------------------|
-| Snowplow Analytics Debugger Chrome Extension | Yes | No | Yes            | Yes     | Yes     |
-| Snowplow Micro                               | Yes | Yes  | Yes            | No    | No    |
+| [Internal Events Monitor](#internal-events-monitor) | Yes | Yes | Yes  | Yes     | Yes, if running [Snowplow Micro](#snowplow-micro)    |
+| [Snowplow Micro](#snowplow-micro) | Yes | Yes  | Yes            | No    | Yes    |
+| [Manual check in GDK](#manual-check-in-gdk) | Yes | Yes | Yes            | Yes     | No     |
+| [Snowplow Analytics Debugger Chrome Extension](#snowplow-analytics-debugger-chrome-extension) | Yes | No | Yes            | Yes     | Yes     |
+| [Remote event collector](#remote-event-collector) | Yes | No | Yes   | No     | Yes     |
 
-For local development you will have to either [setup a local event collector](#setup-local-event-collector) or [configure a remote event collector](#configure-a-remote-event-collector).
-We recommend using the local setup together with the [internal events monitor](#internal-events-monitor) when actively developing new events.
+For local development we recommend using the [internal events monitor](#internal-events-monitor) when actively developing new events.
 
-## Setup local event collector
+## Internal Events Monitor
 
-By default, self-managed instances do not collect event data via Snowplow. We can use [Snowplow Micro](https://docs.snowplow.io/docs/testing-debugging/snowplow-micro/what-is-micro/), a Docker based Snowplow collector, to test events locally:
+<div class="video-fallback">
+  Watch the demo video about the <a href="https://www.youtube.com/watch?v=R7vT-VEzZOI">Internal Events Tracking Monitor</a>
+</div>
+<figure class="video-container">
+  <iframe src="https://www.youtube-nocookie.com/embed/R7vT-VEzZOI" frameborder="0" allowfullscreen> </iframe>
+</figure>
+
+To understand how events are triggered and metrics are updated while you use the GitLab application locally or `rails console`,
+you can use the monitor.
+
+Start the monitor and list one or more events that you would like to monitor. In this example we would like to monitor `i_code_review_user_create_mr`.
+
+```shell
+rails runner scripts/internal_events/monitor.rb i_code_review_user_create_mr
+```
+
+The monitor can show two tables:
+
+- The `RELEVANT METRICS` table lists all the metrics that are defined on the `i_code_review_user_create_mr` event.
+   The second right-most column shows the value of each metric when the monitor was started and the right most column shows the current value of each metric.
+
+- The `SNOWPLOW EVENTS` table lists a selection of properties from all Snowplow events that match the event name. This table is only visible if you also set up [Snowplow Micro](#snowplow-micro).
+
+If a new `i_code_review_user_create_mr` event is fired, the metrics values get updated and a new event appears in the `SNOWPLOW EVENTS` table.
+
+The monitor looks like below.
+
+```plaintext
+Updated at 2023-10-11 10:17:59 UTC
+Monitored events: i_code_review_user_create_mr
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                          RELEVANT METRICS                                                                          |
++-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
+| Key Path                                                                    | Monitored Events             | Instrumentation Class | Initial Value | Current Value |
++-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
+| counts_monthly.aggregated_metrics.code_review_category_monthly_active_users | i_code_review_user_create_mr | RedisHLLMetric        | 13            | 14            |
+| counts_monthly.aggregated_metrics.code_review_group_monthly_active_users    | i_code_review_user_create_mr | RedisHLLMetric        | 13            | 14            |
+| counts_weekly.aggregated_metrics.code_review_category_monthly_active_users  | i_code_review_user_create_mr | RedisHLLMetric        | 0             | 1             |
+| counts_weekly.aggregated_metrics.code_review_group_monthly_active_users     | i_code_review_user_create_mr | RedisHLLMetric        | 0             | 1             |
+| redis_hll_counters.code_review.i_code_review_user_create_mr_monthly         | i_code_review_user_create_mr | RedisHLLMetric        | 8             | 9             |
+| redis_hll_counters.code_review.i_code_review_user_create_mr_weekly          | i_code_review_user_create_mr | RedisHLLMetric        | 0             | 1             |
++-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
++---------------------------------------------------------------------------------------------------------+
+|                                             SNOWPLOW EVENTS                                             |
++------------------------------+--------------------------+---------+--------------+------------+---------+
+| Event Name                   | Collector Timestamp      | user_id | namespace_id | project_id | plan    |
++------------------------------+--------------------------+---------+--------------+------------+---------+
+| i_code_review_user_create_mr | 2023-10-11T10:17:15.504Z | 29      | 93           |            | default |
++------------------------------+--------------------------+---------+--------------+------------+---------+
+```
+
+## Snowplow Micro
+
+By default, self-managed instances do not collect event data through Snowplow. We can use [Snowplow Micro](https://docs.snowplow.io/docs/testing-debugging/snowplow-micro/what-is-micro/), a Docker based Snowplow collector, to test events locally:
 
 1. Ensure [Docker is installed and working](https://www.docker.com/get-started/).
 
@@ -34,7 +93,7 @@ By default, self-managed instances do not collect event data via Snowplow. We ca
    gdk config set snowplow_micro.port 9092
    ```
 
-1. Regenerate your Procfile and YAML config by reconfiguring GDK:
+1. Regenerate your Procfile and YAML configuration by reconfiguring GDK:
 
    ```shell
    gdk reconfigure
@@ -57,7 +116,35 @@ By default, self-managed instances do not collect event data via Snowplow. We ca
   <iframe src="https://www.youtube-nocookie.com/embed/netZ0TogNcA" frameborder="0" allowfullscreen> </iframe>
 </figure>
 
-## Configure a remote event collector
+## Manual check in GDK
+
+As a quick test of whether an event is getting triggered & metric is updated, you can check the latest values in the rails console.
+Make sure to load the helpers below so that the most recent events & records are included in the output.
+
+To view the entire service ping payload:
+
+```ruby
+require_relative 'spec/support/helpers/service_ping_helpers.rb'
+ServicePingHelpers.get_current_service_ping_payload
+```
+
+To view the current value for a specific metric:
+
+```ruby
+require_relative 'spec/support/helpers/service_ping_helpers.rb'
+ServicePingHelpers.get_current_usage_metric_value(key_path)
+```
+
+## Snowplow Analytics Debugger Chrome Extension
+
+[Snowplow Analytics Debugger](https://chromewebstore.google.com/detail/snowplow-analytics-debugg/jbnlcgeengmijcghameodeaenefieedm) is a browser extension for testing frontend events.
+It works in production, staging, and local development environments. It is especially suited to verifying correct events are getting sent in a deployed environment.
+
+1. Install the [Snowplow Analytics Debugger](https://chromewebstore.google.com/detail/snowplow-analytics-debugg/jbnlcgeengmijcghameodeaenefieedm) Chrome browser extension.
+1. Open Chrome DevTools to the Snowplow Debugger tab.
+1. Any event triggered on a GitLab page should appear in the Snowplow Debugger tab.
+
+## Remote event collector
 
 On GitLab.com events are sent to a collector configured by GitLab. By default, self-managed instances do not have a collector configured and do not collect data with Snowplow.
 
@@ -66,7 +153,7 @@ You can configure your self-managed GitLab instance to use a custom Snowplow col
 1. On the left sidebar, at the bottom, select **Admin Area**.
 1. Select **Settings > General**.
 1. Expand **Snowplow**.
-1. Select **Enable Snowplow tracking** and enter your Snowplow configuration information. For example:
+1. Select **Enable Snowplow tracking** and enter your Snowplow configuration information. For example if your custom snowplow collector is available at `your-snowplow-collector.net`:
 
    | Name               | Value                         |
    |--------------------|-------------------------------|
@@ -75,63 +162,3 @@ You can configure your self-managed GitLab instance to use a custom Snowplow col
    | Cookie domain      | `.your-gitlab-instance.com`   |
 
 1. Select **Save changes**.
-
-## Internal Events Monitor
-
-<div class="video-fallback">
-  Watch the demo video about the <a href="https://www.youtube.com/watch?v=R7vT-VEzZOI">Internal Events Tracking Monitor</a>
-</div>
-<figure class="video-container">
-  <iframe src="https://www.youtube-nocookie.com/embed/R7vT-VEzZOI" frameborder="0" allowfullscreen> </iframe>
-</figure>
-
-To understand how events are triggered and metrics are updated while you use the Rails app locally or `rails console`,
-you can use the monitor.
-
-Start the monitor and list one or more events that you would like to monitor. In this example we would like to monitor `i_code_review_user_create_mr`.
-
-```shell
-rails runner scripts/internal_events/monitor.rb i_code_review_user_create_mr
-```
-
-The monitor shows two tables. The top table lists all the metrics that are defined on the `i_code_review_user_create_mr` event.
-The second right-most column shows the value of each metric when the monitor was started and the right most column shows the current value of each metric.
-The bottom table has a list selected properties of all Snowplow events that matches the event name.
-
-If a new `i_code_review_user_create_mr` event is fired, the metrics values will get updated and a new event will appear in the `SNOWPLOW EVENTS` table.
-
-The monitor looks like below.
-
-```plaintext
-Updated at 2023-10-11 10:17:59 UTC
-Monitored events: i_code_review_user_create_mr
-
-+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|                                                                          RELEVANT METRICS                                                                          |
-+-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
-| Key Path                                                                    | Monitored Events             | Instrumentation Class | Initial Value | Current Value |
-+-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
-| counts_monthly.aggregated_metrics.code_review_category_monthly_active_users | i_code_review_user_create_mr | AggregatedMetric      | 13            | 14            |
-| counts_monthly.aggregated_metrics.code_review_group_monthly_active_users    | i_code_review_user_create_mr | AggregatedMetric      | 13            | 14            |
-| counts_weekly.aggregated_metrics.code_review_category_monthly_active_users  | i_code_review_user_create_mr | AggregatedMetric      | 0             | 1             |
-| counts_weekly.aggregated_metrics.code_review_group_monthly_active_users     | i_code_review_user_create_mr | AggregatedMetric      | 0             | 1             |
-| redis_hll_counters.code_review.i_code_review_user_create_mr_monthly         | i_code_review_user_create_mr | RedisHLLMetric        | 8             | 9             |
-| redis_hll_counters.code_review.i_code_review_user_create_mr_weekly          | i_code_review_user_create_mr | RedisHLLMetric        | 0             | 1             |
-+-----------------------------------------------------------------------------+------------------------------+-----------------------+---------------+---------------+
-+---------------------------------------------------------------------------------------------------------+
-|                                             SNOWPLOW EVENTS                                             |
-+------------------------------+--------------------------+---------+--------------+------------+---------+
-| Event Name                   | Collector Timestamp      | user_id | namespace_id | project_id | plan    |
-+------------------------------+--------------------------+---------+--------------+------------+---------+
-| i_code_review_user_create_mr | 2023-10-11T10:17:15.504Z | 29      | 93           |            | default |
-+------------------------------+--------------------------+---------+--------------+------------+---------+
-```
-
-## Snowplow Analytics Debugger Chrome Extension
-
-[Snowplow Analytics Debugger](https://chrome.google.com/webstore/detail/snowplow-analytics-debugg/jbnlcgeengmijcghameodeaenefieedm) is a browser extension for testing frontend events.
-It works in production, staging, and local development environments. It is especially suited to verifying correct events are getting sent in a deployed environment.
-
-1. Install the [Snowplow Analytics Debugger](https://chrome.google.com/webstore/detail/snowplow-analytics-debugg/jbnlcgeengmijcghameodeaenefieedm) Chrome browser extension.
-1. Open Chrome DevTools to the Snowplow Debugger tab.
-1. Any event triggered on a GitLab page should appear in the Snowplow Debugger tab.

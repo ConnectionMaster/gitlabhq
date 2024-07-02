@@ -38,58 +38,47 @@ NOTE:
 
 CPU requirements are dependent on the number of users and expected workload. Your exact needs may be more, depending on your workload. Your workload is influenced by factors such as - but not limited to - how active your users are, how much automation you use, mirroring, and repository/change size.
 
-The following is the recommended minimum CPU hardware guidance for a handful of example GitLab user base sizes.
+Refer below for CPU recommendations depending on user count / load:
 
-- **4 cores** is the **recommended** minimum number of cores and supports up to 500 users
-- 8 cores supports up to 1000 users
-- More users? Consult the [reference architectures page](../administration/reference_architectures/index.md)
+- Up to 20 Requests per Second (RPS) or 1000 users - 8 vCPU.
+- More users or load? Consult the [reference architectures page](../administration/reference_architectures/index.md).
 
 ### Memory
 
 Memory requirements are dependent on the number of users and expected workload. Your exact needs may be more, depending on your workload. Your workload is influenced by factors such as - but not limited to - how active your users are, how much automation you use, mirroring, and repository/change size.
 
-The following is the recommended minimum Memory hardware guidance for a handful of example GitLab user base sizes.
+Refer below for Memory recommendations depending on user count / load:
 
-- **4 GB RAM** is the **required** minimum memory size and supports up to 500 users
-- 8 GB RAM supports up to 1000 users
-- More users? Consult the [reference architectures page](../administration/reference_architectures/index.md)
-
-For smaller installations, you should:
-
-- Have at least 2 GB of swap on your server, even if you have enough available RAM. Having swap helps to reduce the chance of
-  errors occurring if your available memory changes.
-- Configure the kernel's swappiness setting to a low value like `10` to make the most of your RAM while still having the swap available when needed.
-
-For larger installations that follow our reference architectures, you [shouldn't configure swap](../administration/reference_architectures/index.md#no-swap).
+- Up to 20 Requests per Second (RPS) or 1000 users - 8 GB (Minimum), 16 GB (Recommended).
+- More users or load? Consult the [reference architectures page](../administration/reference_architectures/index.md).
 
 NOTE:
-Although excessive swapping is undesired and degrades performance, it is an
-extremely important last resort against out-of-memory conditions. During
-unexpected system load, such as OS updates or other services on the same host,
-peak memory load spikes could be much higher than average. Having plenty of swap
-helps avoid the Linux OOM killer unsafely terminating a potentially critical
-process, such as PostgreSQL, which can have disastrous consequences.
+While not recommended, in certain circumstances GitLab may run in a [memory constrained environment](https://docs.gitlab.com/omnibus/settings/memory_constrained_envs.html).
 
 ## Database
 
 PostgreSQL is the only supported database, which is bundled with the Linux package.
 You can also use an [external PostgreSQL database](https://docs.gitlab.com/omnibus/settings/database.html#using-a-non-packaged-postgresql-database-management-server).
 
-### PostgreSQL Requirements
+### PostgreSQL requirements
 
-The server running PostgreSQL should have _at least_ 5-10 GB of storage
-available, though the exact requirements [depend on the number of users](../administration/reference_architectures/index.md). For Ultimate customers the server should have _at least_ 12 GB of storage available, as 1 GB of vulnerability data needs to be imported.
+The server running PostgreSQL should have a certain amount of storage available, though the exact amount
+[depends on the number of users](../administration/reference_architectures/index.md). For:
 
-We highly recommend using at least the minimum PostgreSQL versions (as specified in
-the following table) as these were used for development and testing:
+- Most GitLab self-managed instances, at least 5 to 10 GB of storage available.
+- GitLab self-managed instance at the Ultimate tier, at least 12 GB of storage available, because 1 GB of vulnerability
+  data must be imported.
+
+You should use the versions of PostgreSQL specified in the following table for your version of GitLab because these were
+used for development and testing:
 
 | GitLab version | Minimum PostgreSQL version<sup>1</sup> | Maximum PostgreSQL version<sup>2</sup> |
-|----------------|----------------------------------------|----------------------------------------|
-| 13.0           | 11                                     | <sup>2</sup>                                       |
-| 14.0           | 12.7                                   | <sup>2</sup>                                       |
-| 15.0           | 12.10                                  | 13.x (14.x<sup>3</sup>)                |
-| 16.0           | 13.6                                   | 15.x<sup>4</sup>                       |
-| 17.0 (planned) | 14.9                                   | 15.x<sup>4</sup>                       |
+|:---------------|:---------------------------------------|:---------------------------------------|
+| 15.x           | 12.10                                  | 13.x (14.x<sup>3</sup>)                |
+| 16.x           | 13.6                                   | 15.x<sup>4</sup>                       |
+| 17.x           | 14.9                                   | 15.x<sup>4</sup>                       |
+
+**Footnotes:**
 
 1. PostgreSQL minor release upgrades (for example 14.8 to 14.9) [include only bug and security fixes](https://www.postgresql.org/support/versioning/).
    Patch levels in this table are not prescriptive. Always deploy the most recent patch level
@@ -115,9 +104,6 @@ The following managed PostgreSQL services are known to be incompatible and shoul
 |----------------|-------------------------------------------------------|
 | 14.4+          | Amazon Aurora (see [14.4.0](../update/versions/gitlab_14_changes.md#1440)) |
 
-NOTE:
-Support for [PostgreSQL 9.6 and 10 was removed in GitLab 13.0](https://about.gitlab.com/releases/2020/05/22/gitlab-13-0-released/#postgresql-11-is-now-the-minimum-required-version-to-install-gitlab) so that GitLab can benefit from PostgreSQL 11 improvements, such as partitioning.
-
 #### Additional requirements for GitLab Geo
 
 If you're using [GitLab Geo](../administration/geo/index.md), we strongly recommend running instances installed by using the Linux package or using
@@ -132,12 +118,14 @@ It is recommended to review the [full requirements for running Geo](../administr
 Changes to locale data in `glibc` means that PostgreSQL database files are not fully compatible
 between different OS releases.
 
-To avoid index corruption, [check for locale compatibility](../administration/geo/replication/troubleshooting/index.md#check-os-locale-data-compatibility)
+To avoid index corruption, [check for locale compatibility](../administration/geo/replication/troubleshooting/common.md#check-os-locale-data-compatibility)
 when:
 
 - Moving binary PostgreSQL data between servers.
 - Upgrading your Linux distribution.
 - Updating or changing third party container images.
+
+For more information, see how to [upgrade operating systems for PostgreSQL](../administration/postgresql/upgrading_os.md).
 
 #### Gitaly Cluster database requirements
 
@@ -263,7 +251,7 @@ Redis stores all user sessions and the background task queue.
 The requirements for Redis are as follows:
 
 - Redis 6.x or 7.x is required in GitLab 16.0 and later. However, you should upgrade to
-Redis 6.2 or later as [Redis 6.0 is no longer supported](https://endoflife.date/redis).
+  Redis 6.2.14 or later as [Redis 6.0 is no longer supported](https://endoflife.date/redis).
 - Redis Cluster mode is not supported. Redis Standalone must be used, with or without HA.
 - Storage requirements for Redis are minimal, about 25 kB per user on average.
 - [Redis eviction mode](../administration/redis/replication_and_failover_external.md#setting-the-eviction-policy) set appropriately.
@@ -308,7 +296,7 @@ The GitLab Runner server requirements depend on:
 
 Because the nature of the jobs varies for each use case, you must experiment by adjusting the job concurrency to get the optimum setting.
 
-For reference, the [SaaS runners on Linux](../ci/runners/saas/linux_saas_runner.md)
+For reference, the [SaaS runners on Linux](../ci/runners/hosted_runners/linux.md)
 are configured so that a **single job** runs in a **single instance** with:
 
 - 1 vCPU.
@@ -316,16 +304,13 @@ are configured so that a **single job** runs in a **single instance** with:
 
 ## Supported web browsers
 
-WARNING:
-With GitLab 13.0 (May 2020) we have removed official support for Internet Explorer 11.
-
 GitLab supports the following web browsers:
 
 - [Mozilla Firefox](https://www.mozilla.org/en-US/firefox/new/)
 - [Google Chrome](https://www.google.com/chrome/)
 - [Chromium](https://www.chromium.org/getting-involved/dev-channel/)
 - [Apple Safari](https://www.apple.com/safari/)
-- [Microsoft Edge](https://www.microsoft.com/en-us/edge?form=MA13FJ)
+- [Microsoft Edge](https://www.microsoft.com/en-us/edge?form=MA13QK)
 
 For the listed web browsers, GitLab supports:
 

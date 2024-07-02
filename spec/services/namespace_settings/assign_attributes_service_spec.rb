@@ -50,14 +50,46 @@ RSpec.describe NamespaceSettings::AssignAttributesService, feature_category: :gr
       let(:expected) { ::Gitlab::Access::BranchProtection.protected_against_developer_pushes.stringify_keys }
       let(:settings) { { default_branch_protection: ::Gitlab::Access::PROTECTION_DEV_CAN_MERGE } }
 
-      before do
-        group.add_owner(user)
+      context 'when the user has the ability to update' do
+        before do
+          allow(Ability).to receive(:allowed?).with(user, :update_default_branch_protection, group).and_return(true)
+        end
+
+        context 'when group is root' do
+          before do
+            allow(group).to receive(:root?).and_return(true)
+          end
+
+          it "updates default_branch_protection_defaults from the default_branch_protection param" do
+            expect { service.execute }
+              .to change { namespace_settings.default_branch_protection_defaults }
+                    .from(::Gitlab::Access::BranchProtection.protection_none.stringify_keys).to(expected)
+          end
+        end
+
+        context 'when group is not root' do
+          before do
+            allow(group).to receive(:root?).and_return(false)
+          end
+
+          it "updates default_branch_protection_defaults from the default_branch_protection param" do
+            expect { service.execute }
+              .to change { namespace_settings.default_branch_protection_defaults }
+                    .from(::Gitlab::Access::BranchProtection.protection_none.stringify_keys).to(expected)
+          end
+        end
       end
 
-      it "updates default_branch_protection_defaults from the default_branch_protection param" do
-        expect { service.execute }
-          .to change { namespace_settings.default_branch_protection_defaults }
-                .from({}).to(expected)
+      context 'when the user does not have the ability to update' do
+        before do
+          allow(Ability).to receive(:allowed?).with(user, :update_default_branch_protection, group).and_return(false)
+        end
+
+        it "does not update default_branch_protection_defaults and adds an error to the namespace_settings",
+          :aggregate_failures do
+          expect { service.execute }.not_to change { namespace_settings.default_branch_protection_defaults }
+          expect(group.namespace_settings.errors[:default_branch_protection]).to include('can only be changed by a group admin.')
+        end
       end
     end
 
@@ -80,7 +112,7 @@ RSpec.describe NamespaceSettings::AssignAttributesService, feature_category: :gr
           it "updates default_branch_protection_defaults from the default_branch_protection param" do
             expect { service.execute }
               .to change { namespace_settings.default_branch_protection_defaults }
-                    .from({}).to(expected)
+                    .from(::Gitlab::Access::BranchProtection.protection_none.stringify_keys).to(expected)
           end
         end
 
@@ -89,10 +121,10 @@ RSpec.describe NamespaceSettings::AssignAttributesService, feature_category: :gr
             allow(group).to receive(:root?).and_return(false)
           end
 
-          it "does not update default_branch_protection_defaults and adds an error to the namespace_settings",
-            :aggregate_failures do
-            expect { service.execute }.not_to change { namespace_settings.default_branch_protection_defaults }
-            expect(group.namespace_settings.errors[:default_branch_protection_defaults]).to include('only available on top-level groups.')
+          it "updates default_branch_protection_defaults from the default_branch_protection param" do
+            expect { service.execute }
+              .to change { namespace_settings.default_branch_protection_defaults }
+                    .from(::Gitlab::Access::BranchProtection.protection_none.stringify_keys).to(expected)
           end
         end
       end
@@ -106,6 +138,58 @@ RSpec.describe NamespaceSettings::AssignAttributesService, feature_category: :gr
           :aggregate_failures do
           expect { service.execute }.not_to change { namespace_settings.default_branch_protection_defaults }
           expect(group.namespace_settings.errors[:default_branch_protection_defaults]).to include('can only be changed by a group admin.')
+        end
+      end
+    end
+
+    context 'when early_access_program_joined_by_id is updated' do
+      let(:is_participating) { false }
+      let!(:namespace_settings) do
+        group.namespace_settings.update!(early_access_program_participant: is_participating)
+        group.namespace_settings
+      end
+
+      context 'with true' do
+        let(:settings) { { early_access_program_participant: true } }
+
+        context 'with previously unset' do
+          it 'sets early_access_program_joined_by' do
+            expect { service.execute }
+              .to change { namespace_settings.early_access_program_participant }.from(false).to(true)
+              .and change { namespace_settings.early_access_program_joined_by_id }.from(nil).to(user.id)
+          end
+        end
+
+        context 'with previously true' do
+          let(:is_participating) { true }
+
+          it "doesn't change early_access_program_joined_by" do
+            expect { service.execute }
+              .to not_change { namespace_settings.early_access_program_participant }
+              .and not_change { namespace_settings.early_access_program_joined_by_id }
+          end
+        end
+      end
+
+      context 'with false' do
+        let(:settings) { { early_access_program_participant: false } }
+
+        context 'with previously unset' do
+          it "doesn't change early_access_program_joined_by" do
+            expect { service.execute }
+              .to not_change { namespace_settings.early_access_program_participant }
+              .and not_change { namespace_settings.early_access_program_joined_by_id }
+          end
+        end
+
+        context 'with previously true' do
+          let(:is_participating) { true }
+
+          it "doesn't change early_access_program_joined_by" do
+            expect { service.execute }
+              .to change { namespace_settings.early_access_program_participant }.from(true).to(false)
+              .and not_change { namespace_settings.early_access_program_joined_by_id }
+          end
         end
       end
     end

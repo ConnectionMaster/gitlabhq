@@ -85,7 +85,8 @@ export default {
       },
       update({ project: { jobs: { nodes = [], pageInfo = {} } = {} } }) {
         this.pageInfo = pageInfo;
-        return nodes
+
+        const jobNodes = nodes
           .map(mapArchivesToJobNodes)
           .map(mapBooleansToJobNodes)
           .map((jobNode) => {
@@ -96,6 +97,12 @@ export default {
               _showDetails: this.expandedJobs.includes(jobNode.id),
             };
           });
+
+        if (jobNodes.some((jobNode) => !jobNode.hasArtifacts)) {
+          this.$apollo.queries.jobArtifacts.refetch();
+        }
+
+        return jobNodes;
       },
       error() {
         createAlert({
@@ -142,7 +149,7 @@ export default {
         this.canBulkDestroyArtifacts && {
           key: 'checkbox',
           label: '',
-          thClass: 'gl-w-5p',
+          thClass: 'gl-w-1/20',
         },
         ...this.$options.fields,
       ];
@@ -328,29 +335,29 @@ export default {
     {
       key: 'artifacts',
       label: I18N_ARTIFACTS,
-      thClass: 'gl-w-eighth',
+      thClass: 'gl-w-1/8',
     },
     {
       key: 'job',
       label: I18N_JOB,
-      thClass: 'gl-w-35p',
+      thClass: 'gl-w-7/20',
     },
     {
       key: 'size',
       label: I18N_SIZE,
-      thClass: 'gl-w-15p gl-text-right',
+      thClass: 'gl-w-3/20 gl-text-right',
       tdClass: 'gl-text-right',
     },
     {
       key: 'created',
       label: I18N_CREATED,
-      thClass: 'gl-w-eighth gl-text-center',
+      thClass: 'gl-w-1/8 gl-text-center',
       tdClass: 'gl-text-center',
     },
     {
       key: 'actions',
       label: '',
-      thClass: 'gl-w-20p',
+      thClass: 'gl-w-4/20',
       tdClass: 'gl-text-right',
     },
   ],
@@ -366,6 +373,9 @@ export default {
     sizeLabel: I18N_SIZE,
     createdLabel: I18N_CREATED,
     artifactsCount: I18N_ARTIFACTS_COUNT,
+  },
+  TBODY_TR_ATTR: {
+    'data-testid': 'job-artifact-table-row',
   },
 };
 </script>
@@ -391,6 +401,7 @@ export default {
       :busy="$apollo.queries.jobArtifacts.loading"
       stacked="sm"
       details-td-class="gl-bg-gray-10! gl-p-0! gl-overflow-auto"
+      :tbody-tr-attr="$options.TBODY_TR_ATTR"
     >
       <template #table-busy>
         <gl-skeleton-loader v-for="i in 20" :key="i" :width="1000" :height="75">
@@ -448,7 +459,7 @@ export default {
         </span>
       </template>
       <template #cell(job)="{ item }">
-        <div class="gl-display-inline-flex gl-align-items-center gl-mb-3 gl-gap-3">
+        <div class="gl-inline-flex gl-align-items-center gl-mb-3 gl-gap-3">
           <span data-testid="job-artifacts-job-status">
             <ci-icon :status="item.detailedStatus" />
           </span>

@@ -1,4 +1,4 @@
-import { GlButton, GlDisclosureDropdown, GlDrawer } from '@gitlab/ui';
+import { GlButton, GlDisclosureDropdown } from '@gitlab/ui';
 import { mount, shallowMount } from '@vue/test-utils';
 import AxiosMockAdapter from 'axios-mock-adapter';
 import { cloneDeep } from 'lodash';
@@ -8,6 +8,8 @@ import VueRouter from 'vue-router';
 import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import getIssuesQuery from 'ee_else_ce/issues/list/queries/get_issues.query.graphql';
 import getIssuesCountsQuery from 'ee_else_ce/issues/list/queries/get_issues_counts.query.graphql';
+import IssueCardStatistics from 'ee_else_ce/issues/list/components/issue_card_statistics.vue';
+import IssueCardTimeInfo from 'ee_else_ce/issues/list/components/issue_card_time_info.vue';
 import createMockApollo from 'helpers/mock_apollo_helper';
 import setWindowLocation from 'helpers/set_window_location_helper';
 import { TEST_HOST } from 'helpers/test_constants';
@@ -38,6 +40,7 @@ import EmptyStateWithoutAnyIssues from '~/issues/list/components/empty_state_wit
 import IssuesListApp from '~/issues/list/components/issues_list_app.vue';
 import LocalStorageSync from '~/vue_shared/components/local_storage_sync.vue';
 import NewResourceDropdown from '~/vue_shared/components/new_resource_dropdown/new_resource_dropdown.vue';
+import WorkItemDrawer from '~/work_items/components/work_item_drawer.vue';
 import {
   CREATED_DESC,
   RELATIVE_POSITION,
@@ -73,7 +76,6 @@ import {
   TOKEN_TYPE_CREATED,
   TOKEN_TYPE_CLOSED,
 } from '~/vue_shared/components/filtered_search_bar/constants';
-import WorkItemDetail from '~/work_items/components/work_item_detail.vue';
 import deleteWorkItemMutation from '~/work_items/graphql/delete_work_item.mutation.graphql';
 import {
   workItemResponseFactory,
@@ -110,7 +112,6 @@ describe('CE IssuesListApp component', () => {
     canCreateProjects: false,
     canReadCrmContact: false,
     canReadCrmOrganization: false,
-    emptyStateSvgPath: 'empty-state.svg',
     exportCsvPath: 'export/csv/path',
     fullPath: 'path/to/project',
     hasAnyIssues: true,
@@ -127,7 +128,6 @@ describe('CE IssuesListApp component', () => {
     isProject: true,
     isPublicVisibilityRestricted: false,
     isSignedIn: true,
-    jiraIntegrationPath: 'jira/integration/path',
     newIssuePath: 'new/issue/path',
     newProjectPath: 'new/project/path',
     releasesPath: 'releases/path',
@@ -144,6 +144,9 @@ describe('CE IssuesListApp component', () => {
     defaultQueryResponse.data.project.issues.nodes[0].blockingCount = 1;
     defaultQueryResponse.data.project.issues.nodes[0].healthStatus = null;
     defaultQueryResponse.data.project.issues.nodes[0].weight = 5;
+    defaultQueryResponse.data.project.issues.nodes[0].epic = {
+      id: 'gid://gitlab/Epic/1',
+    };
   }
 
   const mockIssuesQueryResponse = jest.fn().mockResolvedValue(defaultQueryResponse);
@@ -165,8 +168,9 @@ describe('CE IssuesListApp component', () => {
   const findNewResourceDropdown = () => wrapper.findComponent(NewResourceDropdown);
   const findCalendarButton = () => wrapper.findByTestId('subscribe-calendar');
   const findRssButton = () => wrapper.findByTestId('subscribe-rss');
-  const findIssuableDrawer = () => wrapper.findComponent(GlDrawer);
-  const findDrawerWorkItem = () => wrapper.findComponent(WorkItemDetail);
+  const findWorkItemDrawer = () => wrapper.findComponent(WorkItemDrawer);
+  const findIssueCardTimeInfo = () => wrapper.findComponent(IssueCardTimeInfo);
+  const findIssueCardStatistics = () => wrapper.findComponent(IssueCardStatistics);
 
   const findLabelsToken = () =>
     findIssuableList()
@@ -494,7 +498,7 @@ describe('CE IssuesListApp component', () => {
 
         it('shows an alert to tell the user that manual reordering is disabled', () => {
           expect(createAlert).toHaveBeenCalledWith({
-            message: IssuesListApp.i18n.issueRepositioningMessage,
+            message: 'Issues are being rebalanced at the moment, so manual reordering is disabled.',
             variant: VARIANT_INFO,
           });
         });
@@ -563,6 +567,16 @@ describe('CE IssuesListApp component', () => {
       },
     );
 
+    it('tracks IssuableByEmail', () => {
+      wrapper = mountComponent({ provide: { initialEmail: true, canCreateIssue: true } });
+
+      expect(findIssuableByEmail().attributes()).toMatchObject({
+        'data-track-action': 'click_email_issue_project_issues_empty_list_page',
+        'data-track-label': 'email_issue_project_issues_empty_list',
+        'data-track-experiment': 'issues_mrs_empty_state',
+      });
+    });
+
     describe('when issues_mrs_empty_state candidate experiment', () => {
       beforeEach(() => {
         stubExperiments({ issues_mrs_empty_state: 'candidate' });
@@ -579,39 +593,69 @@ describe('CE IssuesListApp component', () => {
     });
   });
 
-  describe('empty states', () => {
-    describe('when there are issues', () => {
-      beforeEach(() => {
-        wrapper = mountComponent({
-          provide: { hasAnyIssues: true },
-          mountFn: mount,
-          issuesQueryResponse: getIssuesQueryEmptyResponse,
+  describe('slots', () => {
+    describe('empty states', () => {
+      describe('when there are issues', () => {
+        beforeEach(() => {
+          wrapper = mountComponent({
+            provide: { hasAnyIssues: true },
+            mountFn: mount,
+            issuesQueryResponse: jest.fn().mockResolvedValue(getIssuesQueryEmptyResponse),
+          });
+          return waitForPromises();
         });
-        return waitForPromises();
+
+        it('shows EmptyStateWithAnyIssues empty state', () => {
+          expect(wrapper.findComponent(EmptyStateWithAnyIssues).props()).toEqual({
+            hasSearch: false,
+            isEpic: false,
+            isOpenTab: true,
+          });
+        });
       });
 
-      it('shows EmptyStateWithAnyIssues empty state', () => {
-        expect(wrapper.findComponent(EmptyStateWithAnyIssues).props()).toEqual({
-          hasSearch: false,
-          isOpenTab: true,
+      describe('when there are no issues', () => {
+        beforeEach(() => {
+          wrapper = mountComponent({ provide: { hasAnyIssues: false } });
+        });
+
+        it('shows EmptyStateWithoutAnyIssues empty state', () => {
+          expect(wrapper.findComponent(EmptyStateWithoutAnyIssues).props()).toEqual({
+            currentTabCount: 0,
+            exportCsvPathWithQuery: defaultProvide.exportCsvPath,
+            showCsvButtons: true,
+            showIssuableByEmail: false,
+            showNewIssueDropdown: false,
+          });
+        });
+      });
+
+      describe('when there are errors', () => {
+        beforeEach(() => {
+          wrapper = mountComponent({
+            provide: { hasAnyIssues: true },
+            mountFn: mount,
+            issuesQueryResponse: jest.fn().mockRejectedValue(getIssuesQueryEmptyResponse),
+          });
+          return waitForPromises();
+        });
+
+        it('does not show empty state', () => {
+          expect(wrapper.findComponent(EmptyStateWithAnyIssues).exists()).toBe(false);
         });
       });
     });
 
-    describe('when there are no issues', () => {
-      beforeEach(() => {
-        wrapper = mountComponent({ provide: { hasAnyIssues: false } });
-      });
+    it('includes IssueCardStatistics component', async () => {
+      wrapper = mountComponent();
+      await nextTick();
+      expect(findIssueCardStatistics().exists()).toBe(true);
+    });
 
-      it('shows EmptyStateWithoutAnyIssues empty state', () => {
-        expect(wrapper.findComponent(EmptyStateWithoutAnyIssues).props()).toEqual({
-          currentTabCount: 0,
-          exportCsvPathWithQuery: defaultProvide.exportCsvPath,
-          showCsvButtons: true,
-          showIssuableByEmail: false,
-          showNewIssueDropdown: false,
-        });
-      });
+    it('includes IssuseCardTimeInfo component', async () => {
+      wrapper = mountComponent();
+      await nextTick();
+      expect(findIssueCardTimeInfo().exists()).toBe(true);
     });
   });
 
@@ -698,8 +742,8 @@ describe('CE IssuesListApp component', () => {
   describe('errors', () => {
     describe.each`
       error                      | mountOption                    | message
-      ${'fetching issues'}       | ${'issuesQueryResponse'}       | ${IssuesListApp.i18n.errorFetchingIssues}
-      ${'fetching issue counts'} | ${'issuesCountsQueryResponse'} | ${IssuesListApp.i18n.errorFetchingCounts}
+      ${'fetching issues'}       | ${'issuesQueryResponse'}       | ${'An error occurred while loading issues'}
+      ${'fetching issue counts'} | ${'issuesCountsQueryResponse'} | ${'An error occurred while getting issue counts'}
     `('when there is an error $error', ({ mountOption, message }) => {
       beforeEach(() => {
         wrapper = mountComponent({
@@ -868,7 +912,9 @@ describe('CE IssuesListApp component', () => {
           findIssuableList().vm.$emit('reorder', { oldIndex: 0, newIndex: 1 });
           await waitForPromises();
 
-          expect(findIssuableList().props('error')).toBe(IssuesListApp.i18n.reorderError);
+          expect(findIssuableList().props('error')).toBe(
+            'An error occurred while reordering issues.',
+          );
           expect(Sentry.captureException).toHaveBeenCalledWith(
             new Error('Request failed with status code 500'),
           );
@@ -913,7 +959,7 @@ describe('CE IssuesListApp component', () => {
 
         it('shows an alert to tell the user that manual reordering is disabled', () => {
           expect(createAlert).toHaveBeenCalledWith({
-            message: IssuesListApp.i18n.issueRepositioningMessage,
+            message: 'Issues are being rebalanced at the moment, so manual reordering is disabled.',
             variant: VARIANT_INFO,
           });
         });
@@ -1073,18 +1119,15 @@ describe('CE IssuesListApp component', () => {
             issuesListDrawer: true,
           },
         },
-        stubs: {
-          GlDrawer,
-        },
       });
     });
 
     it('renders issuable drawer component', () => {
-      expect(findIssuableDrawer().exists()).toBe(true);
+      expect(findWorkItemDrawer().exists()).toBe(true);
     });
 
     it('renders issuable drawer closed by default', () => {
-      expect(findIssuableDrawer().props('open')).toBe(false);
+      expect(findWorkItemDrawer().props('open')).toBe(false);
     });
 
     describe('on selecting an issuable', () => {
@@ -1097,7 +1140,7 @@ describe('CE IssuesListApp component', () => {
       });
 
       it('opens issuable drawer', () => {
-        expect(findIssuableDrawer().props('open')).toBe(true);
+        expect(findWorkItemDrawer().props('open')).toBe(true);
       });
 
       it('selects active issuable', () => {
@@ -1108,14 +1151,14 @@ describe('CE IssuesListApp component', () => {
 
       describe('when closing the drawer', () => {
         it('closes the drawer on drawer `close` event', async () => {
-          findIssuableDrawer().vm.$emit('close');
+          findWorkItemDrawer().vm.$emit('close');
           await nextTick();
 
-          expect(findIssuableDrawer().props('open')).toBe(false);
+          expect(findWorkItemDrawer().props('open')).toBe(false);
         });
 
         it('removes active issuable', async () => {
-          findIssuableDrawer().vm.$emit('close');
+          findWorkItemDrawer().vm.$emit('close');
           await nextTick();
 
           expect(findIssuableList().props('activeIssuable')).toBe(null);
@@ -1127,7 +1170,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789', state: 'CLOSED' });
-          findDrawerWorkItem().vm.$emit('work-item-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-updated', workItem);
 
           await waitForPromises();
 
@@ -1139,7 +1182,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789' });
-          findDrawerWorkItem().vm.$emit('work-item-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-updated', workItem);
 
           await waitForPromises();
 
@@ -1155,7 +1198,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789' });
-          findDrawerWorkItem().vm.$emit('work-item-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-updated', workItem);
 
           await waitForPromises();
 
@@ -1169,15 +1212,15 @@ describe('CE IssuesListApp component', () => {
         });
 
         it('updates the upvotes count of active issuable', async () => {
-          const workItem = workItemByIidResponseFactory({
+          const { workItem } = workItemByIidResponseFactory({
             iid: '789',
             awardEmoji: {
               ...mockAwardsWidget,
               nodes: [mockAwardEmojiThumbsUp],
             },
-          }).data.workspace.workItems.nodes[0];
+          }).data.workspace;
 
-          findDrawerWorkItem().vm.$emit('work-item-emoji-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-emoji-updated', workItem);
 
           await waitForPromises();
 
@@ -1188,7 +1231,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789' });
-          findDrawerWorkItem().vm.$emit('work-item-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-updated', workItem);
 
           await waitForPromises();
 
@@ -1204,7 +1247,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789', confidential: true });
-          findDrawerWorkItem().vm.$emit('work-item-updated', workItem);
+          findWorkItemDrawer().vm.$emit('work-item-updated', workItem);
 
           await waitForPromises();
 
@@ -1213,7 +1256,7 @@ describe('CE IssuesListApp component', () => {
         });
 
         it('refetches the list if new child was added to active issuable', async () => {
-          findDrawerWorkItem().vm.$emit('addChild');
+          findWorkItemDrawer().vm.$emit('addChild');
 
           await waitForPromises();
 
@@ -1222,7 +1265,7 @@ describe('CE IssuesListApp component', () => {
         });
 
         it('updates issuable type to objective if promoted to objective', async () => {
-          findDrawerWorkItem().vm.$emit('promotedToObjective', '789');
+          findWorkItemDrawer().vm.$emit('promotedToObjective', '789');
 
           await waitForPromises();
           // required for cache updates
@@ -1238,7 +1281,7 @@ describe('CE IssuesListApp component', () => {
           const {
             data: { workItem },
           } = workItemResponseFactory({ iid: '789' });
-          findDrawerWorkItem().vm.$emit('deleteWorkItem', workItem);
+          findWorkItemDrawer().vm.$emit('deleteWorkItem', workItem);
 
           await waitForPromises();
         });
@@ -1249,7 +1292,7 @@ describe('CE IssuesListApp component', () => {
         });
 
         it('should close the issue drawer', () => {
-          expect(findIssuableDrawer().props('open')).toBe(false);
+          expect(findWorkItemDrawer().props('open')).toBe(false);
         });
       });
     });
@@ -1267,9 +1310,6 @@ describe('CE IssuesListApp component', () => {
           issuesListDrawer: true,
         },
       },
-      stubs: {
-        GlDrawer,
-      },
       deleteMutationHandler: errorHandler,
     });
 
@@ -1279,7 +1319,7 @@ describe('CE IssuesListApp component', () => {
     );
     await nextTick();
 
-    findDrawerWorkItem().vm.$emit('deleteWorkItem', workItem);
+    findWorkItemDrawer().vm.$emit('deleteWorkItem', workItem);
     await waitForPromises();
 
     expect(Sentry.captureException).toHaveBeenCalled();

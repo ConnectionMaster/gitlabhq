@@ -7,12 +7,12 @@ module QA
         class Show < QA::Page::Base
           include Component::CiIcon
 
-          view 'app/assets/javascripts/ci/pipeline_details/header/pipeline_details_header.vue' do
-            element 'pipeline-details-header', required: true
+          view 'app/assets/javascripts/ci/pipeline_details/header/pipeline_header.vue' do
+            element 'pipeline-header', required: true
           end
 
           view 'app/assets/javascripts/ci/pipeline_details/graph/components/job_item.vue' do
-            element 'job-with-link', required: true
+            element 'ci-job-item'
           end
 
           view 'app/assets/javascripts/ci/common/private/job_action_component.vue' do
@@ -27,36 +27,34 @@ module QA
 
           view 'app/assets/javascripts/ci/pipeline_details/graph/components/job_group_dropdown.vue' do
             element 'job-dropdown-container'
-            element 'jobs-dropdown-menu'
           end
 
           view 'app/assets/javascripts/ci/pipeline_details/graph/components/stage_column_component.vue' do
-            element 'job-item-container', required: true
             element 'stage-column-title'
           end
 
           def running?(wait: 0)
-            within_element('pipeline-details-header') do
+            within_element('pipeline-header') do
               page.has_content?('running', wait: wait)
             end
           end
 
           def has_build?(name, status: :success, wait: nil)
             if status
-              within_element('job-item-container', text: name) do
+              within_element('ci-job-item', text: name) do
                 has_selector?("[data-testid='status_#{status}_borderless-icon']", **{ wait: wait }.compact)
               end
             else
-              has_element?('job-item-container', text: name)
+              has_element?('ci-job-item', text: name)
             end
           end
 
           def has_job?(job_name)
-            has_element?('job-with-link', text: job_name)
+            has_element?('ci-job-item', text: job_name)
           end
 
           def has_no_job?(job_name)
-            has_no_element?('job-with-link', text: job_name)
+            has_no_element?('ci-job-item', text: job_name)
           end
 
           def linked_pipelines
@@ -98,20 +96,20 @@ module QA
           alias_method :expand_child_pipeline, :expand_linked_pipeline
 
           def click_on_first_job
-            first('.js-pipeline-graph-job-link', wait: QA::Support::Repeater::DEFAULT_MAX_WAIT_TIME).click
+            first('[data-testid="ci-job-item"]', wait: QA::Support::Repeater::DEFAULT_MAX_WAIT_TIME).click
           end
 
           def click_job(job_name)
             # Retry due to transient bug https://gitlab.com/gitlab-org/gitlab/-/issues/347126
             QA::Support::Retrier.retry_on_exception do
-              click_element('job-with-link', Project::Job::Show, text: job_name)
+              click_element('ci-job-item', Project::Job::Show, text: job_name)
             end
           end
 
           def click_job_action(job_name)
             wait_for_requests
 
-            within_element('job-item-container', text: job_name) do
+            within_element('ci-job-item', text: job_name) do
               click_element('ci-action-button')
             end
           end
@@ -121,16 +119,16 @@ module QA
           end
 
           def has_skipped_job_in_group?
-            within_element('jobs-dropdown-menu') do
-              all_elements('job-with-link', minimum: 1).all? do
+            within_element('disclosure-content') do
+              all_elements('ci-job-item', minimum: 1).all? do
                 has_selector?('.ci-status-icon-skipped')
               end
             end
           end
 
           def has_no_skipped_job_in_group?
-            within_element('jobs-dropdown-menu') do
-              all_elements('job-with-link', minimum: 1).all? do
+            within_element('disclosure-content') do
+              all_elements('ci-job-item', minimum: 1).all? do
                 has_no_selector?('.ci-status-icon-skipped')
               end
             end

@@ -11,6 +11,7 @@ module Gitlab
       lambda do |chain|
         # Size limiter should be placed at the top
         chain.add ::Gitlab::SidekiqMiddleware::SizeLimiter::Server
+        chain.add ::Gitlab::SidekiqMiddleware::ShardAwarenessValidator
         chain.add ::Gitlab::SidekiqMiddleware::Monitor
 
         # Labkit wraps the job in the `Labkit::Context` resurrected from
@@ -19,6 +20,9 @@ module Gitlab
         # `::Gitlab::SidekiqMiddleware::ServerMetrics` (if we're using
         # that).
         chain.add ::Labkit::Middleware::Sidekiq::Server
+        chain.add ::Gitlab::SidekiqMiddleware::RequestStoreMiddleware
+
+        chain.add ::Gitlab::QueryLimiting::SidekiqMiddleware if ::Gitlab::QueryLimiting.enabled_for_env?
 
         if metrics
           chain.add ::Gitlab::SidekiqMiddleware::ServerMetrics
@@ -27,10 +31,10 @@ module Gitlab
         end
 
         chain.add ::Gitlab::SidekiqMiddleware::ArgumentsLogger if arguments_logger
-        chain.add ::Gitlab::SidekiqMiddleware::RequestStoreMiddleware
         chain.add ::Gitlab::SidekiqMiddleware::ExtraDoneLogMetadata
         chain.add ::Gitlab::SidekiqMiddleware::BatchLoader
         chain.add ::Gitlab::SidekiqMiddleware::InstrumentationLogger
+        chain.add ::Gitlab::SidekiqMiddleware::SetIpAddress
         chain.add ::Gitlab::SidekiqMiddleware::AdminMode::Server
         chain.add ::Gitlab::SidekiqMiddleware::QueryAnalyzer
         chain.add ::Gitlab::SidekiqVersioning::Middleware
@@ -69,3 +73,5 @@ module Gitlab
     end
   end
 end
+
+Gitlab::SidekiqMiddleware.prepend_mod

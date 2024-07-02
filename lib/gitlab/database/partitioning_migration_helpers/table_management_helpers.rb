@@ -8,7 +8,8 @@ module Gitlab
         include ::Gitlab::Database::MigrationHelpers
         include ::Gitlab::Database::MigrationHelpers::LooseForeignKeyHelpers
 
-        ALLOWED_TABLES = %w[audit_events web_hook_logs merge_request_diff_files merge_request_diff_commits].freeze
+        ALLOWED_TABLES = %w[group_audit_events project_audit_events instance_audit_events user_audit_events
+          audit_events web_hook_logs merge_request_diff_files merge_request_diff_commits].freeze
 
         ERROR_SCOPE = 'table partitioning'
 
@@ -59,7 +60,7 @@ module Gitlab
 
           max_id = Gitlab::Database::QueryAnalyzers::RestrictAllowedSchemas.with_suppressed do
             Gitlab::Database::QueryAnalyzers::GitlabSchemasValidateConnection.with_suppressed do
-              define_batchable_model(table_name, connection: connection).maximum(column_name) || partition_size * PARTITION_BUFFER
+              define_batchable_model(table_name, connection: connection).maximum(column_name) || (partition_size * PARTITION_BUFFER)
             end
           end
 
@@ -100,7 +101,7 @@ module Gitlab
           max_date ||= Date.today + 1.month
 
           Gitlab::Database::QueryAnalyzers::RestrictAllowedSchemas.with_suppressed do
-            min_date ||= connection.select_one(<<~SQL)['minimum'] || max_date - 1.month
+            min_date ||= connection.select_one(<<~SQL)['minimum'] || (max_date - 1.month)
               SELECT date_trunc('MONTH', MIN(#{column_name})) AS minimum
               FROM #{table_name}
             SQL
@@ -315,11 +316,11 @@ module Gitlab
 
           Gitlab::Database::Partitioning::List::ConvertTable
             .new(migration_context: self,
-                 table_name: table_name,
-                 parent_table_name: parent_table_name,
-                 partitioning_column: partitioning_column,
-                 zero_partition_value: initial_partitioning_value
-                ).prepare_for_partitioning(async: async)
+              table_name: table_name,
+              parent_table_name: parent_table_name,
+              partitioning_column: partitioning_column,
+              zero_partition_value: initial_partitioning_value
+            ).prepare_for_partitioning(async: async)
         end
 
         def revert_preparing_constraint_for_list_partitioning(table_name:, partitioning_column:, parent_table_name:, initial_partitioning_value:)
@@ -327,11 +328,11 @@ module Gitlab
 
           Gitlab::Database::Partitioning::List::ConvertTable
             .new(migration_context: self,
-                 table_name: table_name,
-                 parent_table_name: parent_table_name,
-                 partitioning_column: partitioning_column,
-                 zero_partition_value: initial_partitioning_value
-                ).revert_preparation_for_partitioning
+              table_name: table_name,
+              parent_table_name: parent_table_name,
+              partitioning_column: partitioning_column,
+              zero_partition_value: initial_partitioning_value
+            ).revert_preparation_for_partitioning
         end
 
         def convert_table_to_first_list_partition(table_name:, partitioning_column:, parent_table_name:, initial_partitioning_value:, lock_tables: [])
@@ -339,11 +340,11 @@ module Gitlab
 
           Gitlab::Database::Partitioning::List::ConvertTable
             .new(migration_context: self,
-                 table_name: table_name,
-                 parent_table_name: parent_table_name,
-                 partitioning_column: partitioning_column,
-                 zero_partition_value: initial_partitioning_value
-                ).partition
+              table_name: table_name,
+              parent_table_name: parent_table_name,
+              partitioning_column: partitioning_column,
+              zero_partition_value: initial_partitioning_value
+            ).partition
         end
 
         def revert_converting_table_to_first_list_partition(table_name:, partitioning_column:, parent_table_name:, initial_partitioning_value:)
@@ -351,11 +352,11 @@ module Gitlab
 
           Gitlab::Database::Partitioning::List::ConvertTable
             .new(migration_context: self,
-                 table_name: table_name,
-                 parent_table_name: parent_table_name,
-                 partitioning_column: partitioning_column,
-                 zero_partition_value: initial_partitioning_value
-                ).revert_partitioning
+              table_name: table_name,
+              parent_table_name: parent_table_name,
+              partitioning_column: partitioning_column,
+              zero_partition_value: initial_partitioning_value
+            ).revert_partitioning
         end
 
         private
@@ -389,8 +390,8 @@ module Gitlab
 
         def create_range_id_partitioned_copy(source_table_name, partitioned_table_name, partition_column, primary_keys)
           if table_exists?(partitioned_table_name)
-            Gitlab::AppLogger.warn "Partitioned table not created because it already exists" \
-              " (this may be due to an aborted migration or similar): table_name: #{partitioned_table_name} "
+            Gitlab::AppLogger.warn "Partitioned table not created because it already exists " \
+              "(this may be due to an aborted migration or similar): table_name: #{partitioned_table_name} "
             return
           end
 
@@ -417,8 +418,8 @@ module Gitlab
 
         def create_range_partitioned_copy(source_table_name, partitioned_table_name, partition_column, primary_key)
           if table_exists?(partitioned_table_name)
-            Gitlab::AppLogger.warn "Partitioned table not created because it already exists" \
-              " (this may be due to an aborted migration or similar): table_name: #{partitioned_table_name} "
+            Gitlab::AppLogger.warn "Partitioned table not created because it already exists " \
+              "(this may be due to an aborted migration or similar): table_name: #{partitioned_table_name} "
             return
           end
 
@@ -469,7 +470,7 @@ module Gitlab
           lower_bound = min_id
           upper_bound = min_id + partition_size
 
-          end_id = max_id + PARTITION_BUFFER * partition_size # Adds a buffer of 6 partitions
+          end_id = max_id + (PARTITION_BUFFER * partition_size) # Adds a buffer of 6 partitions
 
           while lower_bound < end_id
             create_range_partition_safely("#{table_name}_#{lower_bound}", table_name, lower_bound, upper_bound)
@@ -485,8 +486,8 @@ module Gitlab
 
         def create_range_partition_safely(partition_name, table_name, lower_bound, upper_bound)
           if table_exists?(table_for_range_partition(partition_name))
-            Gitlab::AppLogger.warn "Partition not created because it already exists" \
-              " (this may be due to an aborted migration or similar): partition_name: #{partition_name}"
+            Gitlab::AppLogger.warn "Partition not created because it already exists " \
+              "(this may be due to an aborted migration or similar): partition_name: #{partition_name}"
             return
           end
 
@@ -503,8 +504,8 @@ module Gitlab
 
         def create_sync_function(name, partitioned_table_name, unique_key)
           if function_exists?(name)
-            Gitlab::AppLogger.warn "Partitioning sync function not created because it already exists" \
-              " (this may be due to an aborted migration or similar): function name: #{name}"
+            Gitlab::AppLogger.warn "Partitioning sync function not created because it already exists " \
+              "(this may be due to an aborted migration or similar): function name: #{name}"
             return
           end
 
@@ -513,9 +514,9 @@ module Gitlab
           delimiter = ",\n    "
           column_names = connection.columns(partitioned_table_name).map(&:name)
           set_statements = build_set_statements(column_names, unique_key)
-          insert_values = column_names.map { |name| "NEW.#{name}" }
-          delete_where_statement = unique_key.map { |unique_key| "#{unique_key} = OLD.#{unique_key}" }.join(' AND ')
-          update_where_statement = unique_key.map { |unique_key| "#{partitioned_table_name}.#{unique_key} = NEW.#{unique_key}" }.join(' AND ')
+          insert_values = column_names.map { |name| "NEW.#{connection.quote_column_name(name)}" }
+          delete_where_statement = unique_key.map { |unique_key| "#{connection.quote_column_name(unique_key)} = OLD.#{connection.quote_column_name(unique_key)}" }.join(' AND ')
+          update_where_statement = unique_key.map { |unique_key| "#{partitioned_table_name}.#{connection.quote_column_name(unique_key)} = NEW.#{connection.quote_column_name(unique_key)}" }.join(' AND ')
 
           create_trigger_function(name, replace: false) do
             <<~SQL
@@ -526,7 +527,7 @@ module Gitlab
                 SET #{set_statements.join(delimiter)}
                 WHERE #{update_where_statement};
               ELSIF (TG_OP = 'INSERT') THEN
-                INSERT INTO #{partitioned_table_name} (#{column_names.join(delimiter)})
+                INSERT INTO #{partitioned_table_name} (#{column_names.map { |name| connection.quote_column_name(name).to_s }.join(delimiter)})
                 VALUES (#{insert_values.join(delimiter)});
               END IF;
               RETURN NULL;
@@ -543,13 +544,14 @@ module Gitlab
         end
 
         def build_set_statements(column_names, unique_key)
-          column_names.reject { |name| unique_key.include?(name) }.map { |name| "#{name} = NEW.#{name}" }
+          column_names.reject { |name| unique_key.include?(name) }
+            .map { |name| "#{connection.quote_column_name(name)} = NEW.#{connection.quote_column_name(name)}" }
         end
 
         def create_sync_trigger(table_name, trigger_name, function_name)
           if trigger_exists?(table_name, trigger_name)
-            Gitlab::AppLogger.warn "Partitioning sync trigger not created because it already exists" \
-              " (this may be due to an aborted migration or similar): trigger name: #{trigger_name}"
+            Gitlab::AppLogger.warn "Partitioning sync trigger not created because it already exists " \
+              "(this may be due to an aborted migration or similar): trigger name: #{trigger_name}"
             return
           end
 
@@ -558,7 +560,7 @@ module Gitlab
 
         def replace_table(original_table_name, replacement_table_name, replaced_table_name, primary_key_name)
           replace_table = Gitlab::Database::Partitioning::ReplaceTable.new(connection,
-              original_table_name.to_s, replacement_table_name, replaced_table_name, primary_key_name)
+            original_table_name.to_s, replacement_table_name, replaced_table_name, primary_key_name)
 
           transaction do
             drop_sync_trigger(original_table_name)

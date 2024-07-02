@@ -53,9 +53,11 @@ RSpec.describe Ci::RunnersFinder, feature_category: :fleet_visibility do
           context 'by upgrade status' do
             let(:upgrade_status) {}
 
-            let_it_be(:runner1) { create(:ci_runner, version: 'a') }
-            let_it_be(:runner2) { create(:ci_runner, version: 'b') }
-            let_it_be(:runner3) { create(:ci_runner, version: 'c') }
+            let_it_be(:runner1) { create(:ci_runner) }
+            let_it_be(:runner2) { create(:ci_runner) }
+            let_it_be(:runner_manager_1) { create(:ci_runner_machine, runner: runner1, version: 'a') }
+            let_it_be(:runner_manager_2) { create(:ci_runner_machine, runner: runner2, version: 'b') }
+            let_it_be(:runner_manager_3) { create(:ci_runner_machine, runner: runner2, version: 'c') }
             let_it_be(:runner_version_recommended) do
               create(:ci_runner_version, version: 'a', status: :recommended)
             end
@@ -137,7 +139,7 @@ RSpec.describe Ci::RunnersFinder, feature_category: :fleet_visibility do
             Ci::Runner.runner_types.each_key do |runner_type|
               context "when runner type is #{runner_type}" do
                 it "calls the corresponding scope on Ci::Runner" do
-                  expect(Ci::Runner).to receive(:with_runner_type).with(runner_type).and_call_original
+                  expect(Ci::Runner).to receive(:with_runner_type).with(runner_type.to_sym).and_call_original
 
                   described_class.new(current_user: admin, params: { type_type: runner_type }).execute
                 end
@@ -317,11 +319,11 @@ RSpec.describe Ci::RunnersFinder, feature_category: :fleet_visibility do
     let_it_be(:project_5) { create(:project, group: sub_group_3) }
     let_it_be(:project_6) { create(:project, group: sub_group_4) }
     let_it_be(:runner_instance) { create(:ci_runner, :instance, contacted_at: 13.minutes.ago) }
-    let_it_be(:runner_group) { create(:ci_runner, :group, contacted_at: 12.minutes.ago) }
-    let_it_be(:runner_sub_group_1) { create(:ci_runner, :group, active: false, contacted_at: 11.minutes.ago) }
-    let_it_be(:runner_sub_group_2) { create(:ci_runner, :group, contacted_at: 10.minutes.ago) }
-    let_it_be(:runner_sub_group_3) { create(:ci_runner, :group, contacted_at: 9.minutes.ago) }
-    let_it_be(:runner_sub_group_4) { create(:ci_runner, :group, contacted_at: 8.minutes.ago) }
+    let_it_be(:runner_group) { create(:ci_runner, :group, contacted_at: 12.minutes.ago, groups: [group]) }
+    let_it_be(:runner_sub_group_1) { create(:ci_runner, :group, :inactive, contacted_at: 11.minutes.ago, groups: [sub_group_1]) }
+    let_it_be(:runner_sub_group_2) { create(:ci_runner, :group, contacted_at: 10.minutes.ago, groups: [sub_group_2]) }
+    let_it_be(:runner_sub_group_3) { create(:ci_runner, :group, contacted_at: 9.minutes.ago, groups: [sub_group_3]) }
+    let_it_be(:runner_sub_group_4) { create(:ci_runner, :group, contacted_at: 8.minutes.ago, groups: [sub_group_4]) }
     let_it_be(:runner_project_1) { create(:ci_runner, :project, contacted_at: 7.minutes.ago, projects: [project]) }
     let_it_be(:runner_project_2) { create(:ci_runner, :project, contacted_at: 6.minutes.ago, projects: [project_2]) }
     let_it_be(:runner_project_3) { create(:ci_runner, :project, contacted_at: 5.minutes.ago, description: 'runner_project_search', projects: [project, project_2]) }
@@ -337,14 +339,6 @@ RSpec.describe Ci::RunnersFinder, feature_category: :fleet_visibility do
     let(:membership) { nil }
     let(:extra_params) { {} }
     let(:params) { { group: target_group, membership: membership }.merge(extra_params).reject { |_, v| v.nil? } }
-
-    before do
-      group.runners << runner_group
-      sub_group_1.runners << runner_sub_group_1
-      sub_group_2.runners << runner_sub_group_2
-      sub_group_3.runners << runner_sub_group_3
-      sub_group_4.runners << runner_sub_group_4
-    end
 
     describe '#execute' do
       subject(:execute) { described_class.new(current_user: user, params: params).execute }

@@ -5,59 +5,46 @@ import {
   GlBadge,
   GlDisclosureDropdown,
   GlDisclosureDropdownItem,
+  GlLink,
   GlTooltipDirective,
 } from '@gitlab/ui';
-import { __ } from '~/locale';
+import { __, s__, sprintf } from '~/locale';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import { cleanLeadingSeparator } from '~/lib/utils/url_utility';
-import CiIcon from '~/vue_shared/components/ci_icon/ci_icon.vue';
+import { formatDate } from '~/lib/utils/datetime_utility';
 import AbuseCategorySelector from '~/abuse_reports/components/abuse_category_selector.vue';
-import CiResourceAbout from './ci_resource_about.vue';
+import Markdown from '~/vue_shared/components/markdown/non_gfm_markdown.vue';
+import { VERIFICATION_LEVEL_UNVERIFIED } from '../../constants';
+import CiVerificationBadge from '../shared/ci_verification_badge.vue';
 import CiResourceHeaderSkeletonLoader from './ci_resource_header_skeleton_loader.vue';
 
 export default {
   i18n: {
     moreActionsLabel: __('More actions'),
-    reportAbuse: __('Report abuse to administrator'),
+    reportAbuse: __('Report abuse'),
+    lastRelease: s__('CiCatalog|Released %{date}'),
+    lastReleaseMissing: s__('CiCatalog|No release available'),
   },
   components: {
     AbuseCategorySelector,
-    CiIcon,
-    CiResourceAbout,
     CiResourceHeaderSkeletonLoader,
+    CiVerificationBadge,
     GlAvatar,
     GlAvatarLink,
+    GlBadge,
     GlDisclosureDropdown,
     GlDisclosureDropdownItem,
-    GlBadge,
+    GlLink,
+    Markdown,
   },
   directives: {
     GlTooltip: GlTooltipDirective,
   },
   inject: ['reportAbusePath'],
   props: {
-    isLoadingDetails: {
+    isLoadingData: {
       type: Boolean,
       required: true,
-    },
-    isLoadingSharedData: {
-      type: Boolean,
-      required: true,
-    },
-    openIssuesCount: {
-      type: Number,
-      required: false,
-      default: 0,
-    },
-    openMergeRequestsCount: {
-      type: Number,
-      required: false,
-      default: 0,
-    },
-    pipelineStatus: {
-      type: Object,
-      required: false,
-      default: () => ({}),
     },
     resource: {
       type: Object,
@@ -81,8 +68,16 @@ export default {
     hasLatestVersion() {
       return this.latestVersion?.name;
     },
-    hasPipelineStatus() {
-      return this.pipelineStatus?.text;
+    isVerified() {
+      return this.resource?.verificationLevel !== VERIFICATION_LEVEL_UNVERIFIED;
+    },
+    lastReleaseText() {
+      if (this.latestVersion?.createdAt) {
+        const date = formatDate(this.latestVersion.createdAt);
+        return sprintf(this.$options.i18n.lastRelease, { date });
+      }
+
+      return this.$options.i18n.lastReleaseMissing;
     },
     latestVersion() {
       return this.resource?.versions?.nodes[0] || {};
@@ -109,7 +104,7 @@ export default {
 </script>
 <template>
   <div>
-    <ci-resource-header-skeleton-loader v-if="isLoadingSharedData" class="gl-py-5" />
+    <ci-resource-header-skeleton-loader v-if="isLoadingData" class="gl-py-5" />
     <div v-else class="gl-display-flex gl-justify-content-space-between gl-py-5">
       <div class="gl-display-flex">
         <gl-avatar-link :href="resource.webPath">
@@ -129,21 +124,28 @@ export default {
             {{ webPath }}
           </div>
           <span class="gl-display-flex">
-            <div class="gl-font-lg gl-font-weight-bold">{{ resource.name }}</div>
+            <gl-link
+              class="gl-font-lg gl-font-bold gl-text-gray-900 gl-hover-text-gray-900"
+              :href="resource.webPath"
+            >
+              {{ resource.name }}
+            </gl-link>
             <gl-badge
               v-if="hasLatestVersion"
-              size="sm"
+              v-gl-tooltip
               class="gl-ml-3 gl-my-1"
+              variant="info"
               :href="latestVersion.path"
+              :title="lastReleaseText"
             >
               {{ versionBadgeText }}
             </gl-badge>
           </span>
-          <ci-icon
-            v-if="hasPipelineStatus"
-            :status="pipelineStatus"
-            show-status-text
-            class="gl-mt-2"
+          <ci-verification-badge
+            v-if="isVerified"
+            :verification-level="resource.verificationLevel"
+            :resource-id="resource.id"
+            show-text
           />
         </div>
       </div>
@@ -155,7 +157,7 @@ export default {
           text-sr-only
           icon="ellipsis_v"
           category="tertiary"
-          placement="right"
+          placement="bottom-end"
           class="note-action-button more-actions-toggle"
           no-caret
         >
@@ -170,21 +172,11 @@ export default {
         </gl-disclosure-dropdown>
       </div>
     </div>
-    <ci-resource-about
-      :is-loading-details="isLoadingDetails"
-      :is-loading-shared-data="isLoadingSharedData"
-      :open-issues-count="openIssuesCount"
-      :open-merge-requests-count="openMergeRequestsCount"
-      :latest-version="latestVersion"
-      :web-path="resource.webPath"
-    />
     <div
-      v-if="isLoadingSharedData"
+      v-if="isLoadingData"
       class="gl-animate-skeleton-loader gl-h-4 gl-rounded-base gl-my-3 gl-max-w-20!"
     ></div>
-    <p v-else class="gl-mt-3">
-      {{ resource.description }}
-    </p>
+    <markdown v-else class="gl-mb-5" :markdown="resource.description" />
     <abuse-category-selector
       v-if="hasLatestVersion && isReportAbuseDrawerOpen && reportAbusePath"
       :reported-user-id="authorId"

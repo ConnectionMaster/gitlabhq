@@ -47,7 +47,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets"
 ```
 
 Example response:
@@ -60,6 +61,8 @@ Example response:
         "file_name": "mclaughlin.rb",
         "description": null,
         "visibility": "internal",
+        "imported": false,
+        "imported_from": "none",
         "author": {
             "id": 22,
             "name": "User 0",
@@ -80,6 +83,8 @@ Example response:
         "file_name": "ondrickaemard.rb",
         "description": null,
         "visibility": "internal",
+        "imported": false,
+        "imported_from": "none",
         "author": {
             "id": 22,
             "name": "User 0",
@@ -114,7 +119,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/1"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/1"
 ```
 
 Example response:
@@ -126,6 +132,8 @@ Example response:
   "file_name": "add.rb",
   "description": "Ruby test snippet",
   "visibility": "private",
+  "imported": false,
+  "imported_from": "none",
   "author": {
     "id": 1,
     "username": "john_smith",
@@ -160,7 +168,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/1/raw"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/1/raw"
 ```
 
 Example response:
@@ -188,7 +197,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/1/files/main/snippet%2Erb/raw"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/1/files/main/snippet%2Erb/raw"
 ```
 
 Example response:
@@ -254,6 +264,8 @@ Example response:
   "title": "This is a snippet",
   "description": "Hello World snippet",
   "visibility": "internal",
+  "imported": false,
+  "imported_from": "none",
   "author": {
     "id": 1,
     "username": "john_smith",
@@ -339,6 +351,8 @@ Example response:
   "title": "test",
   "description": "description of snippet",
   "visibility": "internal",
+  "imported": false,
+  "imported_from": "none",
   "author": {
     "id": 1,
     "username": "john_smith",
@@ -382,7 +396,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/1"
+curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/1"
 ```
 
 The following are possible return codes:
@@ -412,7 +427,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/public?per_page=2&page=1"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/public?per_page=2&page=1"
 ```
 
 Example response:
@@ -484,7 +500,8 @@ Parameters:
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/all?per_page=2&page=1"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/all?per_page=2&page=1"
 ```
 
 Example response:
@@ -496,6 +513,8 @@ Example response:
     "title": "Internal Project Snippet",
     "description": null,
     "visibility": "internal",
+    "imported": false,
+    "imported_from": "none",
     "author": {
       "id": 17,
       "username": "tim_kreiger",
@@ -518,6 +537,8 @@ Example response:
     "title": "Private Personal Snippet",
     "description": null,
     "visibility": "private",
+    "imported": false,
+    "imported_from": "none",
     "author": {
       "id": 1,
       "username": "root",
@@ -540,6 +561,8 @@ Example response:
     "title": "Public Personal Snippet",
     "description": null,
     "visibility": "public",
+    "imported": false,
+    "imported_from": "none",
     "author": {
       "id": 17,
       "username": "tim_kreiger",
@@ -576,7 +599,8 @@ GET /snippets/:id/user_agent_detail
 Example request:
 
 ```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/snippets/1/user_agent_detail"
+curl --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/snippets/1/user_agent_detail"
 ```
 
 Example response:

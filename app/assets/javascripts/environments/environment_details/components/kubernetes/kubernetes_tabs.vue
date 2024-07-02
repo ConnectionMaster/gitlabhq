@@ -2,22 +2,26 @@
 import { GlTabs, GlDrawer } from '@gitlab/ui';
 import { DRAWER_Z_INDEX } from '~/lib/utils/constants';
 import { getContentWrapperHeight } from '~/lib/utils/dom_utils';
+import glFeatureFlagMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import { k8sResourceType } from '~/environments/graphql/resolvers/kubernetes/constants';
 import WorkloadDetails from '~/kubernetes_dashboard/components/workload_details.vue';
 import KubernetesPods from './kubernetes_pods.vue';
 import KubernetesServices from './kubernetes_services.vue';
+import KubernetesSummary from './kubernetes_summary.vue';
 
-const tabs = [k8sResourceType.k8sPods, k8sResourceType.k8sServices];
+const defaultTabs = [k8sResourceType.k8sPods, k8sResourceType.k8sServices];
+const tabsWithSummary = ['summary', ...defaultTabs];
 
 export default {
   components: {
     GlTabs,
     KubernetesPods,
     KubernetesServices,
+    KubernetesSummary,
     GlDrawer,
     WorkloadDetails,
   },
-
+  mixins: [glFeatureFlagMixin()],
   props: {
     configuration: {
       required: true,
@@ -31,10 +35,17 @@ export default {
       required: true,
       type: String,
     },
+    fluxKustomization: {
+      required: false,
+      type: Object,
+      default: () => ({}),
+    },
   },
   data() {
     return {
-      activeTabIndex: tabs.indexOf(this.value),
+      activeTabIndex: this.glFeatures.k8sTreeView
+        ? tabsWithSummary.indexOf(this.value)
+        : defaultTabs.indexOf(this.value),
       selectedItem: {},
       showDetailsDrawer: false,
     };
@@ -43,10 +54,16 @@ export default {
     drawerHeaderHeight() {
       return getContentWrapperHeight();
     },
+    renderTreeView() {
+      return this.glFeatures.k8sTreeView;
+    },
+    tabs() {
+      return this.renderTreeView ? tabsWithSummary : defaultTabs;
+    },
   },
   watch: {
     activeTabIndex(newValue) {
-      this.$emit('input', tabs[newValue]);
+      this.$emit('input', this.tabs[newValue]);
     },
   },
   methods: {
@@ -64,6 +81,13 @@ export default {
 <template>
   <div>
     <gl-tabs v-model="activeTabIndex">
+      <kubernetes-summary
+        v-if="renderTreeView"
+        :flux-kustomization="fluxKustomization"
+        :namespace="namespace"
+        :configuration="configuration"
+      />
+
       <kubernetes-pods
         :namespace="namespace"
         :configuration="configuration"
@@ -90,7 +114,7 @@ export default {
       @close="closeDetailsDrawer"
     >
       <template #title>
-        <h4 class="gl-font-weight-bold gl-font-size-h2 gl-m-0 gl-word-break-word">
+        <h4 class="gl-font-bold gl-font-size-h2 gl-m-0 gl-break-anywhere">
           {{ selectedItem.name }}
         </h4>
       </template>

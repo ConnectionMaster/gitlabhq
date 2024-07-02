@@ -20,7 +20,7 @@ RSpec.describe 'Create an issue', feature_category: :team_planning do
       'title' => 'new title',
       'description' => 'new description',
       'confidential' => true,
-      'dueDate' => Date.tomorrow.strftime('%Y-%m-%d'),
+      'dueDate' => Date.tomorrow.iso8601,
       'type' => 'ISSUE'
     }
   end
@@ -84,6 +84,18 @@ RSpec.describe 'Create an issue', feature_category: :team_planning do
         expect(response).to have_gitlab_http_status(:success)
         expect(mutation_response['issue']['relativePosition']).to be < existing_issue.relative_position
       end
+    end
+
+    context 'when both labels and labelIds params are provided' do
+      before do
+        input.merge!(
+          labels: [project_label1.name],
+          label_ids: [project_label1.to_global_id.to_s]
+        )
+      end
+
+      it_behaves_like 'a mutation that returns top-level errors',
+        errors: ['Only one of [labels, labelIds] arguments is allowed at the same time.']
     end
   end
 end

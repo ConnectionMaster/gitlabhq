@@ -43,8 +43,8 @@ module Gitlab
     ALL_COMMANDS = DOWNLOAD_COMMANDS + PUSH_COMMANDS
 
     attr_reader :actor, :protocol, :authentication_abilities,
-                :repository_path, :redirected_path, :auth_result_type,
-                :cmd, :changes
+      :repository_path, :redirected_path, :auth_result_type,
+      :cmd, :changes, :push_options
     attr_accessor :container
 
     def self.error_message(key)
@@ -57,7 +57,7 @@ module Gitlab
       raise ArgumentError, "No error message defined for #{key}"
     end
 
-    def initialize(actor, container, protocol, authentication_abilities:, repository_path: nil, redirected_path: nil, auth_result_type: nil)
+    def initialize(actor, container, protocol, authentication_abilities:, repository_path: nil, redirected_path: nil, auth_result_type: nil, push_options: nil)
       @actor     = actor
       @container = container
       @protocol  = protocol
@@ -65,6 +65,7 @@ module Gitlab
       @repository_path = repository_path
       @redirected_path = redirected_path
       @auth_result_type = auth_result_type
+      @push_options = Gitlab::PushOptions.new(push_options)
     end
 
     def check(cmd, changes)
@@ -141,6 +142,10 @@ module Gitlab
     # when accessing via the CI_JOB_TOKEN
     def build_can_download_code?
       authentication_abilities.include?(:build_download_code) && user_access.can_do_action?(:build_download_code)
+    end
+
+    def build_can_push?
+      authentication_abilities.include?(:build_push_code) && user_access.can_do_action?(:build_push_code)
     end
 
     def build_can_download?
@@ -230,7 +235,7 @@ module Gitlab
           raise ForbiddenError, error_message(:auth_download)
         end
       when *PUSH_COMMANDS
-        unless authentication_abilities.include?(:push_code)
+        unless authentication_abilities.include?(:push_code) || authentication_abilities.include?(:build_push_code)
           raise ForbiddenError, error_message(:auth_upload)
         end
       end
@@ -333,12 +338,14 @@ module Gitlab
     end
 
     def user_can_push?
-      user_access.can_do_action?(push_ability)
+      authentication_abilities.include?(:push_code) &&
+        user_access.can_do_action?(push_ability)
     end
 
     def check_change_access!
       if changes == ANY
         can_push = deploy_key? ||
+          build_can_push? ||
           user_can_push? ||
           project&.any_branch_allows_collaboration?(user_access.user)
 
@@ -356,7 +363,8 @@ module Gitlab
         user_access: user_access,
         project: project,
         protocol: protocol,
-        logger: logger
+        logger: logger,
+        push_options: push_options
       ).validate!
     rescue Checks::TimedLogger::TimeoutError
       raise TimeoutError, logger.full_message

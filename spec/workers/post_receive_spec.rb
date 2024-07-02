@@ -124,6 +124,17 @@ RSpec.describe PostReceive, feature_category: :source_code_management do
       end
     end
 
+    context 'when identifier is for a deploy key' do
+      let(:deploy_key) { create(:deploy_key, user: project.first_owner) }
+      let!(:key_id) { deploy_key.shell_id }
+
+      it 'calls Git::ProcessRefChangesService' do
+        expect(Git::ProcessRefChangesService).to receive(:new).with(project, project.first_owner, kind_of(Hash)).and_call_original
+
+        perform
+      end
+    end
+
     context 'with changes' do
       let(:push_service) { double(execute: true) }
 
@@ -269,22 +280,10 @@ RSpec.describe PostReceive, feature_category: :source_code_management do
           perform
         end
 
-        it 'increments the usage data counter of pushes event' do
-          counter = Gitlab::UsageDataCounters::SourceCodeCounter
-
-          expect { perform }.to change { counter.read(:pushes) }.by(1)
-        end
-
-        it_behaves_like 'Snowplow event tracking' do
-          let(:action) { :push }
-          let(:category) { described_class.name }
-          let(:namespace) { project.namespace }
-          let(:user) { project.creator }
-          let(:label) { 'counts.source_code_pushes' }
-          let(:property) { 'source_code_pushes' }
-          let(:context) { [Gitlab::Usage::MetricDefinition.context_for(label).to_h] }
-
-          subject(:post_receive) { perform }
+        it_behaves_like 'internal event tracking' do
+          let(:event) { 'source_code_pushed' }
+          let(:user) { project.first_owner }
+          subject(:perform_action) { perform }
         end
       end
     end

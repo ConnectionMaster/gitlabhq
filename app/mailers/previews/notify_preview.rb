@@ -65,7 +65,7 @@ class NotifyPreview < ActionMailer::Preview
   end
 
   def resource_access_token_about_to_expire_email
-    Notify.resource_access_tokens_about_to_expire_email(user, group, ['token_name'])
+    Notify.bot_resource_access_token_about_to_expire_email(user, group, 'token_name')
   end
 
   def access_token_created_email
@@ -185,10 +185,6 @@ class NotifyPreview < ActionMailer::Preview
     ).message
   end
 
-  def member_invited_email
-    Notify.member_invited_email('project', member.id, '1234').message
-  end
-
   def member_about_to_expire_email
     cleanup do
       member = project.add_member(user, Gitlab::Access::GUEST, expires_at: 7.days.from_now.to_date)
@@ -241,17 +237,14 @@ class NotifyPreview < ActionMailer::Preview
   end
 
   def service_desk_new_note_email
-    # TODO: create support_bot outside of the transaction
-    # The exclusive lease is obtained when creating support_bot in app/mailers/emails/service_desk.rb
-    # The `cleanup` method wraps the email-generating-block in a transaction.
-    # See issue: https://gitlab.com/gitlab-org/gitlab/-/issues/441523
-    Gitlab::ExclusiveLease.skipping_transaction_check do
-      cleanup do
-        note = create_note(noteable_type: 'Issue', noteable_id: issue.id, note: 'Issue note content')
-        participant = IssueEmailParticipant.create!(issue: issue, email: 'user@example.com')
+    ensure_support_bot_exists
+    ensure_visual_review_bot_exists
 
-        Notify.service_desk_new_note_email(issue.id, note.id, participant).message
-      end
+    cleanup do
+      note = create_note(noteable_type: 'Issue', noteable_id: issue.id, note: 'Issue note content')
+      participant = IssueEmailParticipant.create!(issue: issue, email: 'user@example.com')
+
+      Notify.service_desk_new_note_email(issue.id, note.id, participant).message
     end
   end
 
@@ -259,17 +252,23 @@ class NotifyPreview < ActionMailer::Preview
     Notify.service_desk_thank_you_email(issue.id).message
   end
 
-  def service_desk_custom_email_verification_email
-    # TODO: create support_bot outside of the transaction
-    # The exclusive lease is obtained when creating support_bot in app/mailers/emails/service_desk.rb
-    # The `cleanup` method wraps the email-generating-block in a transaction.
-    # See issue: https://gitlab.com/gitlab-org/gitlab/-/issues/441523
-    Gitlab::ExclusiveLease.skipping_transaction_check do
-      cleanup do
-        setup_service_desk_custom_email_objects
+  def service_desk_new_participant_email
+    ensure_support_bot_exists
 
-        Notify.service_desk_custom_email_verification_email(service_desk_setting).message
-      end
+    cleanup do
+      participant = IssueEmailParticipant.create!(issue: issue, email: 'user@example.com')
+
+      Notify.service_desk_new_participant_email(issue.id, participant).message
+    end
+  end
+
+  def service_desk_custom_email_verification_email
+    ensure_support_bot_exists
+
+    cleanup do
+      setup_service_desk_custom_email_objects
+
+      Notify.service_desk_custom_email_verification_email(service_desk_setting).message
     end
   end
 
@@ -352,6 +351,20 @@ class NotifyPreview < ActionMailer::Preview
 
   def github_gists_import_errors_email
     Notify.github_gists_import_errors_email(user.id, { '12345' => 'Snippet maximum file count exceeded', '67890' => 'error message 2' }).message
+  end
+
+  def bulk_import_complete
+    bulk_import = BulkImport.last
+
+    Notify.bulk_import_complete(user.id, bulk_import.id)
+  end
+
+  def bulk_import_csv_user_mapping_success
+    Notify.bulk_import_csv_user_mapping(user.id, group.id, 94125, 0)
+  end
+
+  def bulk_import_csv_user_mapping_failed
+    Notify.bulk_import_csv_user_mapping(user.id, group.id, 71249, 824)
   end
 
   private
@@ -452,10 +465,10 @@ class NotifyPreview < ActionMailer::Preview
   end
 
   def note_email(method)
-    # TODO: create support_bot outside of the transaction
-    # The exclusive lease is obtained when creating support_bot in app/mailers/emails/service_desk.rb
-    # The `cleanup` method wraps the email-generating-block in a transaction.
-    # See issue: https://gitlab.com/gitlab-org/gitlab/-/issues/441523
+    ensure_visual_review_bot_exists
+    # NOTE: This code path is only accessible in development mode so
+    # using Gitlab::ExclusiveLease.skipping_transaction_check doesn't cause
+    # production issues.
     Gitlab::ExclusiveLease.skipping_transaction_check do
       cleanup do
         note = yield
@@ -463,6 +476,21 @@ class NotifyPreview < ActionMailer::Preview
         Notify.public_send(method, user.id, note) # rubocop:disable GitlabSecurity/PublicSend
       end
     end
+  end
+
+  def ensure_support_bot_exists
+    # If not called before cleanup creating support bot in app/mailers/emails/service_desk.rb
+    # will obtain an exclusive lease.
+    # The `cleanup` method wraps the email-generating-block in a transaction.
+    # See issue: https://gitlab.com/gitlab-org/gitlab/-/issues/441523
+    Users::Internal.support_bot
+  end
+
+  def ensure_visual_review_bot_exists
+    # If not called before cleanup creating visual_review_bot in
+    # app/services/notes/create_service.rb:191 will obtain an exclusive lease.
+    # visual_review_bot is a EE only method.
+    Users::Internal.try(:visual_review_bot)
   end
 
   def cleanup

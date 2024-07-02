@@ -10,8 +10,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-foss/-/issues/2772) in GitLab 9.0.
-
 You can organize GitLab [groups](../index.md) into subgroups. You can use subgroups to:
 
 - Separate internal and external content. Because every subgroup can have its own
@@ -35,7 +33,11 @@ Subgroups can:
 For example:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 graph TD
+accTitle: Parent and subgroup nesting
+accDescr: How parent groups, subgroups, and projects nest.
+
     subgraph "Parent group"
       subgraph "Subgroup A"
         subgraph "Subgroup A1"
@@ -121,10 +123,11 @@ For more information, view the [permissions table](../../permissions.md#group-me
 ## Subgroup membership
 
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to display invited group members on the Members tab of the Members page in GitLab 16.10 [with a flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../../../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 When you add a member to a group, that member is also added to all subgroups of that group.
 The member's permissions are inherited from the group into all subgroups.
@@ -137,7 +140,11 @@ Subgroup members can be:
 1. [Indirect members](../../project/members/index.md#indirect-membership) include [inherited members](../../project/members/index.md#inherited-membership) and members of a group that was [invited to the subgroup or its ancestors](../manage.md#share-a-group-with-another-group).
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 flowchart RL
+accTitle: Subgroup membership
+accDescr: How users become members of a subgroup - through direct, indirect, or inherited membership.
+
   subgraph Group A
     A(Direct member)
     B{{Shared member}}

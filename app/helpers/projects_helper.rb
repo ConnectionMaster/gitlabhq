@@ -5,6 +5,8 @@ module ProjectsHelper
   include CompareHelper
   include Gitlab::Allowable
 
+  BANNED = 'banned'
+
   def project_incident_management_setting
     @project_incident_management_setting ||= @project.incident_management_setting ||
       @project.build_incident_management_setting
@@ -194,6 +196,13 @@ module ProjectsHelper
     can?(current_user, :set_emails_disabled, project)
   end
 
+  def can_set_diff_preview_in_email?(project, current_user)
+    return false unless Feature.enabled?(:diff_preview_in_email, project.group)
+    return false if project.group&.show_diff_preview_in_email?.equal?(false)
+
+    can?(current_user, :set_show_diff_preview_in_email, project)
+  end
+
   def last_push_event
     current_user&.recent_push(@project)
   end
@@ -233,6 +242,13 @@ module ProjectsHelper
       cookies[:hide_no_ssh_message].blank? &&
       !current_user.hide_no_ssh_key &&
       current_user.require_ssh_key?
+  end
+
+  def show_invalid_gpg_key_message?(project)
+    return false unless project.beyond_identity_integration&.active?
+    return false if current_user.gpg_keys.externally_valid.exists?
+
+    true
   end
 
   def show_no_password_message?
@@ -329,7 +345,7 @@ module ProjectsHelper
     setting = @project.error_tracking_setting
 
     return if setting.blank? || setting.project_slug.blank? ||
-        setting.organization_slug.blank?
+      setting.organization_slug.blank?
 
     {
       sentry_project_id: setting.sentry_project_id,
@@ -387,6 +403,7 @@ module ProjectsHelper
       packagesHelpPath: help_page_path('user/packages/index'),
       currentSettings: project_permissions_settings(project),
       canAddCatalogResource: can_add_catalog_resource?(project),
+      canSetDiffPreviewInEmail: can_set_diff_preview_in_email?(project, current_user),
       canChangeVisibilityLevel: can_change_visibility_level?(project, current_user),
       canDisableEmails: can_disable_emails?(project, current_user),
       allowedVisibilityOptions: project_allowed_visibility_levels(project),
@@ -491,12 +508,18 @@ module ProjectsHelper
     notification_attributes = notification_data_attributes(project) || {}
     star_count_attributes = star_count_data_attributes(project)
     admin_path = admin_project_path(project) if current_user&.can_admin_all_resources?
+    cicd_catalog_path = explore_catalog_path(project.catalog_resource) if project.catalog_resource
 
     {
       admin_path: admin_path,
       can_read_project: can?(current_user, :read_project, project).to_s,
+      cicd_catalog_path: cicd_catalog_path,
+      is_project_archived: project.archived.to_s,
       is_project_empty: project.empty_repo?.to_s,
-      project_id: project.id
+      project_avatar: project.avatar_url,
+      project_name: project.name,
+      project_id: project.id,
+      project_visibility_level: visibility_level_name(project)
     }.merge(
       dropdown_attributes,
       fork_button_attributes,
@@ -617,7 +640,24 @@ module ProjectsHelper
     'manual-ordering'
   end
 
+  def projects_explore_filtered_search_and_sort_app_data
+    {
+      initial_sort: project_list_sort_by,
+      programming_languages: programming_languages,
+      starred_explore_projects_path: starred_explore_projects_path,
+      explore_root_path: explore_root_path
+    }.to_json
+  end
+
   private
+
+  def visibility_level_name(project)
+    if project.created_and_owned_by_banned_user? && Feature.enabled?(:hide_projects_of_banned_users)
+      BANNED
+    else
+      Gitlab::VisibilityLevel.string_level(project.visibility_level)
+    end
+  end
 
   def can_admin_project_clusters?(project)
     project.clusters.any? && can?(current_user, :admin_cluster, project)
@@ -767,6 +807,7 @@ module ProjectsHelper
       containerRegistryEnabled: !!project.container_registry_enabled,
       lfsEnabled: !!project.lfs_enabled,
       emailsEnabled: project.emails_enabled?,
+      showDiffPreviewInEmail: project.show_diff_preview_in_email?,
       monitorAccessLevel: feature.monitor_access_level,
       showDefaultAwardEmojis: project.show_default_award_emojis?,
       warnAboutPotentiallyUnwantedCharacters: project.warn_about_potentially_unwanted_characters?,
@@ -784,7 +825,7 @@ module ProjectsHelper
 
   def project_allowed_visibility_levels(project)
     Gitlab::VisibilityLevel.values.select do |level|
-      project.visibility_level_allowed?(level) && !restricted_levels.include?(level)
+      project.visibility_level_allowed?(level) && restricted_levels.exclude?(level)
     end
   end
 
@@ -877,9 +918,9 @@ module ProjectsHelper
   def build_project_breadcrumb_link(project)
     project_name = simple_sanitize(project.name)
 
-    push_to_schema_breadcrumb(project_name, project_path(project))
+    push_to_schema_breadcrumb(project_name, project_path(project), project.try(:avatar_url))
 
-    link_to project_path(project), class: 'gl-display-inline-flex!' do
+    link_to project_path(project), class: '!gl-inline-flex' do
       icon = render Pajamas::AvatarComponent.new(project, alt: project.name, size: 16, class: 'avatar-tile') if project.avatar_url && !Rails.env.test?
       [icon, content_tag("span", project_name, class: "js-breadcrumb-item-text")].join.html_safe
     end

@@ -28,7 +28,7 @@ RSpec.describe GitlabSchema.types['MergeRequest'], feature_category: :code_revie
       in_progress_merge_commit_sha
       merge_error allow_collaboration should_be_rebased rebase_commit_sha
       rebase_in_progress default_merge_commit_message
-      merge_ongoing mergeable_discussions_state web_url
+      merge_ongoing mergeable_discussions_state web_path web_url
       source_branch_exists target_branch_exists diverged_from_target_branch
       upvotes downvotes head_pipeline pipelines task_completion_status
       milestone assignees reviewers participants subscribed labels discussion_locked time_estimate
@@ -38,7 +38,7 @@ RSpec.describe GitlabSchema.types['MergeRequest'], feature_category: :code_revie
       has_ci mergeable commits committers commits_without_merge_commits squash security_auto_fix default_squash_commit_message
       auto_merge_strategy merge_user award_emoji prepared_at codequality_reports_comparer supports_lock_on_merge
       mergeability_checks
-      allows_multiple_assignees allows_multiple_reviewers
+      allows_multiple_assignees allows_multiple_reviewers retargeted
     ]
 
     expect(described_class).to have_graphql_fields(*expected_fields).at_least

@@ -2,11 +2,10 @@
 stage: Create
 group: Code Review
 info: Any user with at least the Maintainer role can merge updates to this content. For details, see https://docs.gitlab.com/ee/development/development_processes.html#development-guidelines-review.
+description: "Developer documentation for extending the merge request report widget with additional features."
 ---
 
 # Merge request widget extensions
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/44616) in GitLab 13.6.
 
 Extensions in the merge request widget enable you to add new features
 into the merge request widget that match the design framework.
@@ -333,7 +332,7 @@ To generate these known events for a single widget:
      1. `product_group` = `code_review`
      1. `introduced_by_url` = `'[your MR]'`
      1. `options.events` = (the event in the command from above that generated this file, like `i_code_review_merge_request_widget_test_reports_count_view`)
-         - This value is how the telemetry events are linked to "metrics" so this is probably one of the more important values.
+        - This value is how the telemetry events are linked to "metrics" so this is probably one of the more important values.
      1. `data_source` = `redis`
      1. `data_category` = `optional`
 1. Generate known HLL events on the command line with the following command.
@@ -354,10 +353,10 @@ To generate these known events for a single widget:
 
 1. Add each event (those listed in the command in step 7, replacing `test_reports`
    with the appropriate name slug) to the aggregate files:
-    1. `config/metrics/counts_7d/{timestamp}_code_review_category_monthly_active_users.yml`
-    1. `config/metrics/counts_7d/{timestamp}_code_review_group_monthly_active_users.yml`
-    1. `config/metrics/counts_28d/{timestamp}_code_review_category_monthly_active_users.yml`
-    1. `config/metrics/counts_28d/{timestamp}_code_review_group_monthly_active_users.yml`
+   1. `config/metrics/counts_7d/{timestamp}_code_review_category_monthly_active_users.yml`
+   1. `config/metrics/counts_7d/{timestamp}_code_review_group_monthly_active_users.yml`
+   1. `config/metrics/counts_28d/{timestamp}_code_review_category_monthly_active_users.yml`
+   1. `config/metrics/counts_28d/{timestamp}_code_review_group_monthly_active_users.yml`
 
 ### Add new events
 
@@ -402,11 +401,11 @@ adds the start and end tags with the correct styling classes.
 
 | Placeholder | Style                                   |
 |-------------|-----------------------------------------|
-| success     | `gl-font-weight-bold gl-text-green-500` |
-| danger      | `gl-font-weight-bold gl-text-red-500`   |
-| critical    | `gl-font-weight-bold gl-text-red-800`   |
-| same        | `gl-font-weight-bold gl-text-gray-700`  |
-| strong      | `gl-font-weight-bold`                   |
+| success     | `gl-font-bold gl-text-green-500` |
+| danger      | `gl-font-bold gl-text-red-500`   |
+| critical    | `gl-font-bold gl-text-red-800`   |
+| same        | `gl-font-bold gl-text-gray-700`  |
+| strong      | `gl-font-bold`                   |
 | small       | `gl-font-sm`                            |
 
 ## Action buttons

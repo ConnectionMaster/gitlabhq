@@ -17,17 +17,17 @@ export default {
     {
       key: 'freezeStart',
       label: s__('DeployFreeze|Freeze start'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'freezeEnd',
       label: s__('DeployFreeze|Freeze end'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'cronTimezone',
       label: s__('DeployFreeze|Time zone'),
-      tdClass: 'gl-vertical-align-middle!',
+      tdClass: '!gl-align-middle',
     },
     {
       key: 'actions',
@@ -127,7 +127,7 @@ export default {
         {{ item.cronTimezone.formattedTimezone }}
       </template>
       <template #cell(actions)="{ item }">
-        <div class="gl-display-flex gl-justify-content-end gl-mt-n2 gl-mb-n2">
+        <div class="gl-display-flex gl-justify-content-end -gl-mt-2 -gl-mb-2">
           <gl-button
             v-gl-modal.deploy-freeze-modal
             icon="pencil"

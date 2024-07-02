@@ -109,6 +109,24 @@ RSpec.describe Gitlab::Ci::Config, feature_category: :pipeline_composition do
         it { is_expected.to eq %w[.pre stage1 stage2 .post] }
       end
     end
+
+    context 'when pipeline ref is provided' do
+      let_it_be(:project) { create(:project, :repository) }
+      let(:ref) { 'master' }
+
+      let(:yml) do
+        <<-EOS
+          rspec:
+            script: exit 0
+        EOS
+      end
+
+      it 'sets the ref in the pipeline' do
+        expect(Ci::Pipeline).to receive(:new).with(hash_including(ref: ref)).and_call_original
+
+        described_class.new(yml, project: project, ref: ref, user: user)
+      end
+    end
   end
 
   describe '#included_templates' do
@@ -192,8 +210,8 @@ RSpec.describe Gitlab::Ci::Config, feature_category: :pipeline_composition do
     it 'returns only components included with `include:component`' do
       expect(config.metadata[:includes].size).to eq(3)
       expect(included_components).to contain_exactly(
-        { component_project: project1, component_sha: project1.commit.sha, component_name: 'dast' },
-        { component_project: project2, component_sha: project2.commit.sha, component_name: 'template' }
+        { project: project1, sha: project1.commit.sha, name: 'dast' },
+        { project: project2, sha: project2.commit.sha, name: 'template' }
       )
     end
 
@@ -209,7 +227,7 @@ RSpec.describe Gitlab::Ci::Config, feature_category: :pipeline_composition do
       it 'returns only unique components' do
         expect(config.metadata[:includes].size).to eq(2)
         expect(included_components).to contain_exactly(
-          { component_project: project1, component_sha: project1.commit.sha, component_name: 'dast' }
+          { project: project1, sha: project1.commit.sha, name: 'dast' }
         )
       end
     end
@@ -734,7 +752,7 @@ RSpec.describe Gitlab::Ci::Config, feature_category: :pipeline_composition do
             job1: {
               script: ["echo 'hello from main file'"],
               variables: {
-               VARIABLE_DEFINED_IN_MAIN_FILE: 'some value'
+                VARIABLE_DEFINED_IN_MAIN_FILE: 'some value'
               }
             }
           })

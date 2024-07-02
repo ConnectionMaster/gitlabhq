@@ -208,7 +208,7 @@ It should execute the `list` task we defined earlier, which connects to the serv
 
 Envoy is not a dependency of Laravel, therefore you can use it for any PHP application.
 
-### Zero downtime deployment
+### Zero-downtime deployment
 
 Every time we deploy to the production server, Envoy downloads the latest release of our app from GitLab repository and replace it with preview's release.
 Envoy does this without any [downtime](https://en.wikipedia.org/wiki/Downtime),
@@ -632,7 +632,7 @@ Select it to see the runner's output.
 
 ![pipeline page](img/pipeline_page.png)
 
-After our code passed through the pipeline successfully, we can deploy to our production server by selecting the **play** button on the right side.
+After our code passed through the pipeline successfully, we can deploy to our production server by selecting **Run** (**{play}**) on the right side.
 
 ![pipelines page deploy button](img/pipelines_page_deploy_button.png)
 

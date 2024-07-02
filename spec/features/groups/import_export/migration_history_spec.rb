@@ -22,11 +22,11 @@ RSpec.describe 'Import/Export - GitLab migration history', :js, feature_category
   end
 
   it 'successfully displays import history' do
-    click_link 'History'
+    click_link 'View import history'
 
     wait_for_requests
 
-    expect(page).to have_content 'Direct transfer history'
+    expect(page).to have_content 'Migration history'
     expect(page.find('tbody')).to have_css('tr', count: 2)
   end
 end

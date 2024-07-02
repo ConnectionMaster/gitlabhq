@@ -130,7 +130,11 @@ describe('BaseToken', () => {
     it('calls `getRecentlyUsedSuggestions` to populate `recentSuggestions` when `recentSuggestionsStorageKey` is defined', () => {
       wrapper = createComponent();
 
-      expect(getRecentlyUsedSuggestions).toHaveBeenCalledWith(mockStorageKey);
+      expect(getRecentlyUsedSuggestions).toHaveBeenCalledWith(
+        mockStorageKey,
+        expect.anything(),
+        expect.anything(),
+      );
     });
   });
 
@@ -355,8 +359,9 @@ describe('BaseToken', () => {
         it(`${
           shouldRenderFilteredSearchSuggestion ? 'should' : 'should not'
         } render GlFilteredSearchSuggestion`, () => {
-          const filteredSearchSuggestions = wrapper.findAllComponents(GlFilteredSearchSuggestion)
-            .wrappers;
+          const filteredSearchSuggestions = wrapper.findAllComponents(
+            GlFilteredSearchSuggestion,
+          ).wrappers;
 
           if (shouldRenderFilteredSearchSuggestion) {
             expect(filteredSearchSuggestions.map((c) => c.props())).toMatchObject(

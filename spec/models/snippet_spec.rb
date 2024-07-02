@@ -16,6 +16,7 @@ RSpec.describe Snippet, feature_category: :source_code_management do
   end
 
   describe 'associations' do
+    it { is_expected.to belong_to(:organization) }
     it { is_expected.to belong_to(:author).class_name('User') }
     it { is_expected.to belong_to(:project) }
     it { is_expected.to have_many(:notes).dependent(:destroy) }
@@ -515,6 +516,15 @@ RSpec.describe Snippet, feature_category: :source_code_management do
     it { is_expected.to match_array(snippet) }
   end
 
+  describe 'with loose foreign keys' do
+    context 'on organization_id' do
+      it_behaves_like 'cleanup by a loose foreign key' do
+        let_it_be(:parent) { create(:organization) }
+        let_it_be(:model) { create(:snippet, organization: parent) }
+      end
+    end
+  end
+
   describe '#participants' do
     let_it_be(:project) { create(:project, :public) }
     let_it_be(:snippet) { create(:snippet, content: 'foo', project: project) }
@@ -834,30 +844,31 @@ RSpec.describe Snippet, feature_category: :source_code_management do
   end
 
   describe '#hook_attrs' do
-    let_it_be(:snippet) { create(:personal_snippet, secret_token: 'foo') }
+    let_it_be(:snippet) { create(:personal_snippet) }
 
     subject(:attrs) { snippet.hook_attrs }
 
     it 'includes the expected attributes' do
       is_expected.to match(
-        'id' => snippet.id,
-        'title' => snippet.title,
-        'content' => snippet.content,
-        'description' => snippet.description,
-        'file_name' => snippet.file_name,
-        'author_id' => snippet.author_id,
-        'project_id' => snippet.project_id,
-        'visibility_level' => snippet.visibility_level,
-        'encrypted_secret_token' => snippet.encrypted_secret_token,
-        'encrypted_secret_token_iv' => snippet.encrypted_secret_token_iv,
-        'secret' => false,
-        'secret_token' => nil,
-        'repository_read_only' => snippet.repository_read_only?,
-        'url' => Gitlab::UrlBuilder.build(snippet),
-        'type' => 'PersonalSnippet',
-        'created_at' => be_like_time(snippet.created_at),
-        'updated_at' => be_like_time(snippet.updated_at)
+        id: snippet.id,
+        title: snippet.title,
+        description: snippet.description,
+        content: snippet.content,
+        file_name: snippet.file_name,
+        author_id: snippet.author.id,
+        project_id: nil,
+        visibility_level: snippet.visibility_level,
+        url: Gitlab::UrlBuilder.build(snippet),
+        type: 'PersonalSnippet',
+        created_at: snippet.created_at,
+        updated_at: snippet.updated_at
       )
+    end
+
+    context 'when snippet is for a project' do
+      let_it_be(:snippet) { create(:project_snippet) }
+
+      it { is_expected.to include(project_id: snippet.project.id) }
     end
   end
 

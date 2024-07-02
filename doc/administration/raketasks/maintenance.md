@@ -83,9 +83,6 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** Self-managed
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/20501) in GitLab 12.6.
-> - Moved to GitLab Premium in 13.9.
-
 This command shows information about your [GitLab license](../../administration/license.md) and
 how many seats are used. It is only available on GitLab Enterprise
 installations: a license cannot be installed into GitLab Community Edition.
@@ -130,7 +127,7 @@ The `gitlab:check` Rake task runs the following Rake tasks:
 It checks that each component was set up according to the installation guide and suggest fixes
 for issues found. This command must be run from your application server and doesn't work correctly on
 component servers like [Gitaly](../gitaly/configure_gitaly.md#run-gitaly-on-its-own-server).
-If you're running Geo, see also the [Geo Health check Rake task](../geo/replication/troubleshooting/index.md#health-check-rake-task).
+If you're running Geo, see also the [Geo Health check Rake task](../geo/replication/troubleshooting/common.md#health-check-rake-task).
 
 You may also have a look at our troubleshooting guides for:
 
@@ -438,6 +435,17 @@ To determine if there are any differences:
 1. Go to the [`db/structure.sql`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/db/structure.sql) file in the [`gitlab`](https://gitlab.com/gitlab-org/gitlab) project.
    Select the branch that matches your GitLab version. For example, the file for GitLab 16.2: <https://gitlab.com/gitlab-org/gitlab/-/blob/16-2-stable-ee/db/structure.sql>.
 1. Compare `/tmp/structure.sql` with the `db/structure.sql` file for your version.
+
+## Check the database for schema inconsistencies
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/390719) in GitLab 15.11. 
+
+This Rake task checks the database schema for any inconsistencies
+and prints them in the terminal.
+
+```shell
+gitlab-rake gitlab:db:schema_checker:run
+```
 
 ## Import common metrics
 

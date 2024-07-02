@@ -72,7 +72,7 @@ export default {
         v-for="(color, index) in suggestedColors"
         :key="index"
         v-gl-tooltip:tooltipcontainer
-        class="gl-display-block color-palette"
+        class="gl-block color-palette"
         :style="getStyle(color)"
         :title="getColorName(color)"
         @click.prevent="handleColorClick(getColorCode(color))"
@@ -82,7 +82,7 @@ export default {
       <gl-form-group class="gl-mb-0!">
         <gl-form-input
           v-model.trim="selectedColor"
-          class="gl-mr-n1 gl-mb-2 gl-w-8"
+          class="-gl-mr-1 gl-mb-2 gl-w-8"
           type="color"
           :value="selectedColor"
           :placeholder="__('Select color')"

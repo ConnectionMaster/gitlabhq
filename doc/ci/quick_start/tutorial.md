@@ -37,9 +37,7 @@ Before adding the pipeline configuration, you must first set up a Docusaurus pro
 on GitLab.com:
 
 1. Create a new project under your username (not a group):
-   1. On the left sidebar, select **Search or go to**.
-   1. Select **View all my projects**.
-   1. On the right of the page, select **New project**.
+   1. On the left sidebar, at the top, select **Create new** (**{plus}**) and **New project/repository**.
    1. Select **Create blank project**.
    1. Enter the project details:
       - In the **Project name** field, enter the name of your project, for example `My Pipeline Tutorial Project`.
@@ -225,7 +223,7 @@ To view your site:
 - Under **Access pages**, select the link. The URL format should be similar to: `https://<my-username>.gitlab.io/<project-name>`. For more information, see [GitLab Pages default domain names](../../user/project/pages/getting_started_part_one.md#gitlab-pages-default-domain-names).
 
 NOTE:
-If you need to [use unique domains](../../user/project/pages/introduction.md#enable-unique-domains), in `docusaurus.config.js`, set `baseUrl`: to `/`.
+If you need to [use unique domains](../../user/project/pages/index.md#unique-domains), in `docusaurus.config.js`, set `baseUrl`: to `/`.
 
 ## Add test jobs
 

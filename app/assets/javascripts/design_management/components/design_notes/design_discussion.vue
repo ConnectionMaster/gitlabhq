@@ -291,7 +291,7 @@ export default {
   <div class="design-discussion-wrapper" @click="$emit('update-active-discussion')">
     <design-note-pin :is-resolved="discussion.resolved" :label="discussion.index" />
     <ul
-      class="design-discussion bordered-box gl-relative gl-p-0 gl-list-style-none"
+      class="design-discussion bordered-box gl-relative gl-p-0 gl-list-none"
       :class="{ 'gl-bg-blue-50': isDiscussionActive }"
       data-testid="design-discussion-content"
     >
@@ -371,7 +371,7 @@ export default {
             <template v-if="discussion.resolvable" #resolve-checkbox>
               <gl-form-checkbox
                 v-model="shouldChangeResolvedStatus"
-                class="gl-mt-5 gl-mb-n3"
+                class="gl-mt-5 -gl-mb-3"
                 data-testid="resolve-checkbox"
               >
                 {{ resolveCheckboxText }}

@@ -8,6 +8,8 @@ import Tracking from '~/tracking';
 import { TEST_HOST } from 'helpers/test_constants';
 import setWindowLocation from 'helpers/set_window_location_helper';
 import waitForPromises from 'helpers/wait_for_promises';
+import { renderWebIdeError } from '~/ide/render_web_ide_error';
+import { getMockCallbackUrl } from './helpers';
 
 jest.mock('@gitlab/web-ide');
 jest.mock('~/lib/utils/confirm_via_gl_modal/confirm_action');
@@ -17,6 +19,7 @@ jest.mock('~/lib/utils/csrf', () => ({
   headerKey: 'mock-csrf-header',
 }));
 jest.mock('~/tracking');
+jest.mock('~/ide/render_web_ide_error');
 
 const ROOT_ELEMENT_ID = 'ide';
 const TEST_NONCE = 'test123nonce';
@@ -29,6 +32,7 @@ const TEST_FILE_PATH = 'foo/README.md';
 const TEST_MR_ID = '7';
 const TEST_MR_TARGET_PROJECT = 'gitlab-org/the-real-gitlab';
 const TEST_SIGN_IN_PATH = 'sign-in';
+const TEST_SIGN_OUT_PATH = 'sign-out';
 const TEST_FORK_INFO = { fork_path: '/forky' };
 const TEST_IDE_REMOTE_PATH = '/-/ide/remote/:remote_host/:remote_path';
 const TEST_START_REMOTE_PARAMS = {
@@ -36,12 +40,19 @@ const TEST_START_REMOTE_PARAMS = {
   remotePath: '/test/projects/f oo',
   connectionToken: '123abc',
 };
+const TEST_EXTENSIONS_GALLERY_SETTINGS = {
+  enabled: true,
+  vscode_settings: {
+    item_url: 'https://gitlab.test/vscode/marketplace/item/url',
+    service_url: 'https://gitlab.test/vscode/marketplace/service/url',
+  },
+};
 const TEST_EDITOR_FONT_SRC_URL = 'http://gitlab.test/assets/gitlab-mono/GitLabMono.woff2';
 const TEST_EDITOR_FONT_FORMAT = 'woff2';
 const TEST_EDITOR_FONT_FAMILY = 'GitLab Mono';
 
 const TEST_OAUTH_CLIENT_ID = 'oauth-client-id-123abc';
-const TEST_OAUTH_CALLBACK_URL = 'https://example.com/oauth_callback';
+const TEST_OAUTH_CALLBACK_URL = getMockCallbackUrl();
 
 describe('ide/init_gitlab_web_ide', () => {
   let resolveConfirm;
@@ -74,6 +85,7 @@ describe('ide/init_gitlab_web_ide', () => {
       ],
     });
     el.dataset.signInPath = TEST_SIGN_IN_PATH;
+    el.dataset.signOutPath = TEST_SIGN_OUT_PATH;
 
     document.body.append(el);
   };
@@ -136,6 +148,7 @@ describe('ide/init_gitlab_web_ide', () => {
         },
         featureFlags: {
           settingsSync: true,
+          crossOriginExtensionHost: false,
         },
         editorFont: {
           fallbackFontFamily: 'monospace',
@@ -162,7 +175,7 @@ describe('ide/init_gitlab_web_ide', () => {
 
       // why: Snapshot to test that the element was cleaned including `test-class`
       expect(rootEl.outerHTML).toBe(
-        '<div id="ide" class="gl--flex-center gl-relative gl-h-full"></div>',
+        '<div id="ide" class="gl-flex gl-justify-center gl-items-center gl-relative gl-h-full"></div>',
       );
     });
 
@@ -241,7 +254,7 @@ describe('ide/init_gitlab_web_ide', () => {
   describe('when oauth info is in dataset', () => {
     beforeEach(() => {
       findRootElement().dataset.clientId = TEST_OAUTH_CLIENT_ID;
-      findRootElement().dataset.callbackUrl = TEST_OAUTH_CALLBACK_URL;
+      findRootElement().dataset.callbackUrls = [TEST_OAUTH_CALLBACK_URL];
 
       createSubject();
     });
@@ -261,5 +274,90 @@ describe('ide/init_gitlab_web_ide', () => {
         }),
       );
     });
+  });
+
+  describe('on start error', () => {
+    const mockError = new Error('error');
+
+    beforeEach(() => {
+      jest.mocked(start).mockImplementationOnce(() => {
+        throw mockError;
+      });
+
+      createSubject();
+    });
+
+    it('shows alert', () => {
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(renderWebIdeError).toHaveBeenCalledTimes(1);
+      expect(renderWebIdeError).toHaveBeenCalledWith({
+        error: mockError,
+        signOutPath: TEST_SIGN_OUT_PATH,
+      });
+    });
+  });
+
+  describe('when extensionsGallerySettings is in dataset', () => {
+    function setMockExtensionGallerySettingsDataset(
+      mockSettings = TEST_EXTENSIONS_GALLERY_SETTINGS,
+    ) {
+      findRootElement().dataset.extensionsGallerySettings = JSON.stringify(mockSettings);
+
+      createSubject();
+    }
+
+    it('calls start with element and extensionsGallerySettings', () => {
+      setMockExtensionGallerySettingsDataset();
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(start).toHaveBeenCalledWith(
+        findRootElement(),
+        expect.objectContaining({
+          extensionsGallerySettings: {
+            enabled: true,
+            vscodeSettings: {
+              itemUrl: 'https://gitlab.test/vscode/marketplace/item/url',
+              serviceUrl: 'https://gitlab.test/vscode/marketplace/service/url',
+            },
+          },
+        }),
+      );
+    });
+
+    it('calls start with element and crossOriginExtensionHost flag if extensionsGallerySettings is enabled', () => {
+      setMockExtensionGallerySettingsDataset();
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(start).toHaveBeenCalledWith(
+        findRootElement(),
+        expect.objectContaining({
+          featureFlags: {
+            settingsSync: true,
+            crossOriginExtensionHost: true,
+          },
+        }),
+      );
+    });
+
+    it.each(['opt_in_unset', 'opt_in_disabled'])(
+      'calls start with element and crossOriginExtensionHost flag if extensionsGallerySettings reason is $reason',
+      (reason) => {
+        const TEST_EXTENSIONS_GALLERY_SETTINGS_WITH_REASON = {
+          ...TEST_EXTENSIONS_GALLERY_SETTINGS,
+          enabled: false,
+          reason,
+        };
+        setMockExtensionGallerySettingsDataset(TEST_EXTENSIONS_GALLERY_SETTINGS_WITH_REASON);
+
+        expect(start).toHaveBeenCalledTimes(1);
+        expect(start).toHaveBeenCalledWith(
+          findRootElement(),
+          expect.objectContaining({
+            featureFlags: {
+              settingsSync: true,
+              crossOriginExtensionHost: true,
+            },
+          }),
+        );
+      },
+    );
   });
 });

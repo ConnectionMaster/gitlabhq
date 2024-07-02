@@ -66,7 +66,7 @@ module Gitlab
       end
 
       def assignees
-        found_user_id = map_user_id(jira_issue.assignee&.attrs)
+        found_user_id = map_user_id(jira_issue.assignee.try(:attrs))
 
         return unless found_user_id
 
@@ -83,7 +83,7 @@ module Gitlab
       end
 
       def logger
-        @logger ||= Gitlab::Import::Logger.build
+        @logger ||= ::Import::Framework::Logger.build
       end
     end
   end

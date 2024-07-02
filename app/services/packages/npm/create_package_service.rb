@@ -41,7 +41,7 @@ module Packages
       end
 
       def create_npm_package!
-        package = create_package!(:npm, create_package_params)
+        package = create_package!(:npm, name: name, version: version, status: :processing)
 
         package_file = ::Packages::CreatePackageFileService.new(package, file_params).execute
         ::Packages::CreateDependencyService.new(package, package_dependencies).execute
@@ -74,6 +74,7 @@ module Packages
 
       def current_package_protected?
         return false if Feature.disabled?(:packages_protected_packages, project)
+        return false if current_user.is_a?(DeployToken)
 
         user_project_authorization_access_level = current_user.max_member_access_for_project(project.id)
         project.package_protection_rules.for_push_exists?(access_level: user_project_authorization_access_level,
@@ -178,14 +179,6 @@ module Packages
 
       def field_sizes_for_error_tracking
         filtered_field_sizes.empty? ? largest_fields : filtered_field_sizes
-      end
-
-      def create_package_params
-        params = { name: name, version: version }
-
-        params[:status] = :processing if ::Feature.enabled?(:upload_npm_packages_async, project)
-
-        params
       end
     end
   end

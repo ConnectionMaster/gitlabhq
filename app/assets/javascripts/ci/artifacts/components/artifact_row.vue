@@ -85,7 +85,7 @@ export default {
     class="gl-py-4"
     :class="{ 'gl-border-b-solid gl-border-b-1 gl-border-gray-100': !isLastRow }"
   >
-    <div class="gl-display-inline-flex gl-align-items-center gl-w-full">
+    <div class="gl-inline-flex gl-align-items-center gl-w-full">
       <span v-if="canBulkDestroyArtifacts" class="gl-pl-5">
         <gl-form-checkbox
           v-gl-tooltip.right
@@ -96,23 +96,23 @@ export default {
         />
       </span>
       <span
-        class="gl-w-half gl-pl-8 gl-display-flex gl-align-items-center"
+        class="gl-w-1/2 gl-pl-8 gl-display-flex gl-align-items-center"
         data-testid="job-artifact-row-name"
       >
         <gl-friendly-wrap :text="artifact.name" />
-        <gl-badge size="sm" variant="neutral" class="gl-ml-2">
+        <gl-badge variant="neutral" class="gl-ml-2">
           {{ artifact.fileType.toLowerCase() }}
         </gl-badge>
-        <gl-badge v-if="isExpired" size="sm" variant="warning" icon="expire" class="gl-ml-2">
+        <gl-badge v-if="isExpired" variant="warning" icon="expire" class="gl-ml-2">
           {{ $options.i18n.expired }}
         </gl-badge>
       </span>
 
-      <span class="gl-w-quarter gl-text-right gl-pr-5" data-testid="job-artifact-row-size">
+      <span class="gl-w-1/4 gl-text-right gl-pr-5" data-testid="job-artifact-row-size">
         {{ artifactSize }}
       </span>
 
-      <span class="gl-w-quarter gl-text-right gl-pr-5">
+      <span class="gl-w-1/4 gl-text-right gl-pr-5">
         <gl-button-group>
           <gl-button
             category="tertiary"

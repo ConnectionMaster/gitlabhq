@@ -70,6 +70,23 @@ For other pages, descriptions are not actively maintained. However, if you want 
 use a short description of what the page is about.
 See the Google [Best practices for creating quality meta descriptions](https://developers.google.com/search/docs/appearance/snippet#meta-descriptions) for tips.
 
+## Avoid pages being added to global navigation
+
+If a specific page shouldn't be added to the global navigation (have an entry added to
+[`navigation.yaml`](https://gitlab.com/gitlab-org/gitlab-docs/-/blob/main/content/_data/navigation.yaml)), add
+the following to the page's metadata:
+
+```yaml
+ignore_in_report: true
+```
+
+When this metadata is set on a page:
+
+- The [`pages_not_in_nav.js`](https://gitlab.com/gitlab-org/gitlab-docs/-/blob/main/scripts/pages_not_in_nav.js)
+  script ignores the page when processing the documentation.
+- Technical writers doing the Technical Writing team's monthly tasks aren't prompted to add the page to the global
+  navigation.
+
 ## Additional metadata
 
 The following metadata is optional and is not actively maintained.
@@ -90,12 +107,16 @@ When a merge request contains documentation, the information in the `CODEOWNERS`
 - The list of users in the **Approvers** section.
 - The technical writer that the GitLab Bot pings for community contributions.
 
-You can use a Rake task to update the `CODEOWNERS` file.
+You can use a Rake task to [update the `CODEOWNERS` file](#update-the-codeowners-file).
 
 ### Update the `CODEOWNERS` file
 
 When groups or [TW assignments](https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments)
-change, you must update the `CODEOWNERS` file:
+change, you must update the `CODEOWNERS` file. To do this, you run the `codeowners.rake` Rake task.
+This task checks all files in the `doc` directory, reads the metadata, and uses the information in
+the `codeowners.rake` file to populate the `CODEOWNERS` file.
+
+To update the `CODEOWNERS` file:
 
 1. Update the [stage and group metadata](#stage-and-group-metadata) for any affected doc pages, if necessary. If there are many changes, you can do this step in a separate MR.
 1. Update the [`codeowners.rake`](https://gitlab.com/gitlab-org/gitlab/blob/master/lib/tasks/gitlab/tw/codeowners.rake) file with the changes.

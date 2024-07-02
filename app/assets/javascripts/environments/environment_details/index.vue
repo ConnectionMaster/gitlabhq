@@ -79,7 +79,7 @@ export default {
   },
   methods: {
     linkClass(index) {
-      return index === this.currentTabIndex ? 'gl-inset-border-b-2-theme-accent' : '';
+      return index === this.currentTabIndex ? 'gl-shadow-inner-b-2-theme-accent' : '';
     },
     updateCurrentTab() {
       const hasKubernetesIntegration = this.environment?.clusterAgent;
@@ -117,9 +117,7 @@ export default {
     <gl-tab :query-param-value="$options.params.deployments" :title-link-class="linkClass(1)">
       <template #title>
         {{ $options.i18n.deploymentHistory }}
-        <gl-badge size="sm" class="gl-tab-counter-badge">{{
-          environment.deploymentsDisplayCount
-        }}</gl-badge>
+        <gl-badge class="gl-tab-counter-badge">{{ environment.deploymentsDisplayCount }}</gl-badge>
       </template>
 
       <deployment-history

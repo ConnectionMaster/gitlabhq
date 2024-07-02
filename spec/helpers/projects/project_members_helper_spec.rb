@@ -28,7 +28,8 @@ RSpec.describe Projects::ProjectMembersHelper do
             invited: present_members(invited),
             access_requests: present_members(access_requests),
             include_relations: [:inherited, :direct],
-            search: nil
+            search: nil,
+            pending_members: []
           )
         )
       end
@@ -44,7 +45,8 @@ RSpec.describe Projects::ProjectMembersHelper do
           can_manage_members: true,
           can_manage_access_requests: true,
           group_name: project.group.name,
-          group_path: project.group.path
+          group_path: project.group.path,
+          can_approve_access_requests: true
         }.as_json
 
         expect(subject).to include(expected)
@@ -134,7 +136,8 @@ RSpec.describe Projects::ProjectMembersHelper do
                 invited: present_members(invited),
                 access_requests: present_members(access_requests),
                 include_relations: include_relations,
-                search: nil
+                search: nil,
+                pending_members: []
               )
             )
           end

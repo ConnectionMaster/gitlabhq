@@ -132,7 +132,7 @@ export default {
     },
     computedLinkClasses() {
       return {
-        'gl-px-2 gl-mx-2 gl-line-height-normal': this.isSubitem,
+        'gl-px-2 gl-mx-2 gl-leading-normal': this.isSubitem,
         'gl-px-3': !this.isSubitem,
         'gl-pl-5! gl-rounded-small': this.isFlyout,
         'gl-rounded-base': !this.isFlyout,
@@ -234,7 +234,7 @@ export default {
     >
       <div
         :class="[isActive ? 'gl-opacity-10' : 'gl-opacity-0']"
-        class="active-indicator gl-absolute gl-left-2 gl-top-2 gl-bottom-2 gl-transition-slow"
+        class="active-indicator gl-absolute gl-left-2 gl-top-2 gl-bottom-2 gl-transition-all gl-duration-slow"
         aria-hidden="true"
         :style="activeIndicatorStyle"
         data-testid="active-indicator"
@@ -261,7 +261,7 @@ export default {
           />
         </slot>
       </div>
-      <div class="gl-flex-grow-1 gl-text-gray-900" :class="{ 'gl-w-max-content': isFlyout }">
+      <div class="gl-flex-grow-1 gl-text-gray-900" :class="{ 'gl-w-max': isFlyout }">
         {{ item.title }}
         <div v-if="item.subtitle" class="gl-font-sm gl-text-gray-500 gl-truncate-end">
           {{ item.subtitle }}
@@ -274,7 +274,6 @@ export default {
       >
         <gl-badge
           v-if="hasPill"
-          size="sm"
           variant="neutral"
           :class="{
             'hide-on-focus-or-hover--target transition-opacity-on-hover--target': isPinnable,
@@ -290,7 +289,7 @@ export default {
         v-gl-tooltip.noninteractive.right.viewport="$options.i18n.unpinItem"
         :aria-label="unpinAriaLabel"
         category="tertiary"
-        class="show-on-focus-or-hover--target transition-opacity-on-hover--target always-animate gl-absolute gl-right-3 gl-translate-y-n50 gl-top-1/2"
+        class="show-on-focus-or-hover--target transition-opacity-on-hover--target always-animate gl-absolute gl-right-3 -gl-translate-y-1/2 gl-top-1/2"
         :class="{ 'gl-pointer-events-none': !canClickPinButton }"
         data-testid="nav-item-unpin"
         icon="thumbtack-solid"
@@ -303,7 +302,7 @@ export default {
         v-gl-tooltip.noninteractive.right.viewport="$options.i18n.pinItem"
         :aria-label="pinAriaLabel"
         category="tertiary"
-        class="show-on-focus-or-hover--target transition-opacity-on-hover--target always-animate gl-absolute gl-right-3 gl-translate-y-n50 gl-top-1/2"
+        class="show-on-focus-or-hover--target transition-opacity-on-hover--target always-animate gl-absolute gl-right-3 -gl-translate-y-1/2 gl-top-1/2"
         :class="{ 'gl-pointer-events-none': !canClickPinButton }"
         data-testid="nav-item-pin"
         icon="thumbtack"

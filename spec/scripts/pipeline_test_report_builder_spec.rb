@@ -51,19 +51,19 @@ RSpec.describe PipelineTestReportBuilder, feature_category: :tooling do
 
   let(:test_report_for_build) do
     {
-      "name": "rspec-ee system pg11 geo",
-      "failed_count": 41,
-      "test_cases": [
+      name: "rspec-ee system pg11 geo",
+      failed_count: 41,
+      test_cases: [
         {
-          "status": "failed",
-          "name": "example",
-          "classname": "ee.spec.features.geo_node_spec",
-          "file": "./ee/spec/features/geo_node_spec.rb",
-          "execution_time": 6.324748,
-          "system_output": {
-            "__content__": "\n",
-            "message": "RSpec::Core::MultipleExceptionError",
-            "type": "RSpec::Core::MultipleExceptionError"
+          status: "failed",
+          name: "example",
+          classname: "ee.spec.features.geo_node_spec",
+          file: "./ee/spec/features/geo_node_spec.rb",
+          execution_time: 6.324748,
+          system_output: {
+            __content__: "\n",
+            message: "RSpec::Core::MultipleExceptionError",
+            type: "RSpec::Core::MultipleExceptionError"
           }
         }
       ]
@@ -160,7 +160,7 @@ RSpec.describe PipelineTestReportBuilder, feature_category: :tooling do
 
         context 'when receiving a server error' do
           let(:response) { instance_double('Net::HTTPResponse') }
-          let(:error) { Net::HTTPServerException.new('server error', response) }
+          let(:error) { Net::HTTPClientException.new('server error', response) }
           let(:test_report_for_pipeline) { subject.test_report_for_pipeline }
 
           before do

@@ -1,6 +1,6 @@
 ---
-stage: none
-group: Tutorials
+stage: Manage
+group: Personal Productivity
 info: For assistance with this tutorial, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments-to-other-projects-and-subjects.
 ---
 
@@ -11,17 +11,9 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
 > - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/9044) in GitLab 16.0.
+> - In 16.0 through 16.5, you can turn the sidebar off by selecting your avatar and turning off the **New navigation** toggle.
 
 Follow this tutorial to learn how to use the new left sidebar to navigate the UI.
-
-## Enable the new left sidebar
-
-From 16.0 through 16.5, you can turn the new sidebar on and off:
-
-1. On the left sidebar, select your avatar.
-1. Change the **New navigation** toggle.
-
-Return to your avatar to change the setting.
 
 ## Layout of the left sidebar
 

@@ -10,10 +10,6 @@ DETAILS:
 **Tier:** Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/3156) in GitLab 13.9, disabled behind `ff_evaluate_group_level_compliance_pipeline` [feature flag](../../administration/feature_flags.md).
-> - [Enabled by default](https://gitlab.com/gitlab-org/gitlab/-/issues/300324) in GitLab 13.11.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/331231) in GitLab 14.2.
-
 Group owners can configure a compliance pipeline in a project separate to other projects. By default, the compliance
 pipeline configuration (for example, `.compliance-gitlab-ci.yml`) is run instead of the pipeline configuration (for example, `.gitlab-ci.yml`) of labeled
 projects.
@@ -48,12 +44,14 @@ Therefore, communicate with project users about compliance pipeline configuratio
 
 ## Configure a compliance pipeline
 
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/383209) in GitLab 15.11, compliance frameworks moved to compliance center.
+
 To configure a compliance pipeline:
 
 1. On the left sidebar, select **Search or go to** and find your group.
-1. Select **Settings** > **General**.
-1. Expand the **Compliance frameworks** section.
-1. In **Compliance pipeline configuration (optional)**, add the path to the compliance framework configuration. Use the
+1. Select **Secure** > **Compliance Center**.
+1. Select **Frameworks** section.
+1. Select **New framework** section, add information of compliance framework including path to the compliance framework configuration. Use the
    `path/file.y[a]ml@group-name/project-name` format. For example:
 
    - `.compliance-ci.yml@gitlab-org/gitlab`.
@@ -150,7 +148,11 @@ You can leave it out if your compliance pipeline only ever runs in labeled proje
 #### Compliance pipelines and custom pipeline configuration hosted externally
 
 The example above assumes that all projects host their pipeline configuration in the same project.
-If any projects use [configuration hosted externally to the project](../../ci/pipelines/settings.md#specify-a-custom-cicd-configuration-file):
+If any projects use [configuration hosted externally](../../ci/pipelines/settings.md#specify-a-custom-cicd-configuration-file),
+the example configuration does not work. See [issue 393960](https://gitlab.com/gitlab-org/gitlab/-/issues/393960)
+for more details.
+
+With projects that use externally hosted configuration, you can try the this workaround:
 
 - The `include` section in the example compliance pipeline configuration must be adjusted.
   For example, using [`include:rules`](../../ci/yaml/includes.md#use-rules-with-include):
@@ -207,6 +209,38 @@ include:  # Execute individual project's configuration (if project contains .git
       - if: $CI_PIPELINE_SOURCE != 'merge_request_event'
 ```
 
+#### Compliance pipelines in projects with no configuration file
+
+The [example configuration](#example-configuration) above assumes that all projects contain
+a pipeline configuration file (`.gitlab-ci.yml` by default). However, in projects
+with no configuration file (and therefore no pipelines by default), the compliance pipeline
+fails because the file specified in `include:project` is required.
+
+To only include a configuration file if it exists in a target project, use
+[`rules:exists:project`](../../ci/yaml/index.md#rulesexistsproject):
+
+```yaml
+include:  # Execute individual project's configuration
+  - project: '$CI_PROJECT_PATH'
+    file: '$CI_CONFIG_PATH'
+    ref: '$CI_COMMIT_SHA'
+    rules:
+      - exists:
+          paths:
+            - '$CI_CONFIG_PATH'
+          project: '$CI_PROJECT_PATH'
+          ref: '$CI_COMMIT_SHA'
+```
+
+In this example, a configuration file is only included if it exists for the given `ref`
+in the project in `exists:project: $CI_PROJECT_PATH'`.
+
+You cannot use [`rules:exists` with `include`](../../ci/yaml/includes.md#include-with-rulesexists)
+to solve this problem because `include:rules:exists` searches for files in the project
+in which the `include` is defined. In compliance pipelines, the `include` from the example above
+is defined in the project hosting the compliance pipeline configuration file, not the project
+running the pipeline.
+
 ## Ensure compliance jobs are always run
 
 Compliance pipelines [use GitLab CI/CD](../../ci/index.md) to give you an incredible amount of flexibility
@@ -238,24 +272,6 @@ cannot change them:
 - Explicitly set any relevant GitLab pre-defined [job keywords](../../ci/yaml/index.md#job-keywords).
   This ensures that your job uses the settings you intend and that they are not overridden by
   project-level pipelines.
-
-## Avoid parent and child pipelines in GitLab 14.7 and earlier
-
-NOTE:
-This advice does not apply to GitLab 14.8 and later because [a fix](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/78878) added
-compatibility for combining compliance pipelines, and parent and child pipelines.
-
-Compliance pipelines start on the run of _every_ pipeline in a labeled project. This means that if a pipeline in the labeled project
-triggers a child pipeline, the compliance pipeline runs first. This can trigger the parent pipeline, instead of the child pipeline.
-
-Therefore, in projects with compliance frameworks, you should replace
-[parent-child pipelines](../../ci/pipelines/downstream_pipelines.md#parent-child-pipelines) with the following:
-
-- Direct [`include`](../../ci/yaml/index.md#include) statements that provide the parent pipeline with child pipeline configuration.
-- Child pipelines placed in another project that are run using the [trigger API](../../ci/triggers/index.md) rather than the parent-child
-  pipeline feature.
-
-This alternative ensures the compliance pipeline does not re-start the parent pipeline.
 
 ## Troubleshooting
 

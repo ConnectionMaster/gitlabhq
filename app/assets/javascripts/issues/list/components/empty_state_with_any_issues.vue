@@ -1,22 +1,48 @@
 <script>
+import epicEmptyStateSvg from '@gitlab/svgs/dist/illustrations/empty-state/empty-epic-md.svg';
+import issuesEmptyStateSvg from '@gitlab/svgs/dist/illustrations/empty-state/empty-issues-md.svg';
 import { GlButton, GlEmptyState } from '@gitlab/ui';
-import { i18n } from '../constants';
+import { __ } from '~/locale';
 
 export default {
-  i18n,
   components: {
     GlButton,
     GlEmptyState,
   },
-  inject: ['emptyStateSvgPath', 'newIssuePath', 'showNewIssueLink'],
+  inject: {
+    newIssuePath: {
+      default: false,
+    },
+    showNewIssueLink: {
+      default: false,
+    },
+  },
   props: {
     hasSearch: {
       type: Boolean,
-      required: true,
+      required: false,
+      default: false,
+    },
+    isEpic: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
     isOpenTab: {
       type: Boolean,
-      required: true,
+      required: false,
+      default: true,
+    },
+  },
+  computed: {
+    closedTabTitle() {
+      return this.isEpic ? __('There are no closed epics') : __('There are no closed issues');
+    },
+    openTabTitle() {
+      return this.isEpic ? __('There are no open epics') : __('There are no open issues');
+    },
+    svgPath() {
+      return this.isEpic ? epicEmptyStateSvg : issuesEmptyStateSvg;
     },
   },
 };
@@ -25,39 +51,39 @@ export default {
 <template>
   <gl-empty-state
     v-if="hasSearch"
-    :description="$options.i18n.noSearchResultsDescription"
-    :title="$options.i18n.noSearchResultsTitle"
-    :svg-path="emptyStateSvgPath"
-    :svg-height="150"
+    :description="__('To widen your search, change or remove filters above')"
+    :title="__('Sorry, your filter produced no results')"
+    :svg-path="svgPath"
     data-testid="issuable-empty-state"
   >
     <template #actions>
-      <gl-button v-if="showNewIssueLink" :href="newIssuePath" variant="confirm">
-        {{ $options.i18n.newIssueLabel }}
-      </gl-button>
+      <slot name="new-issue-button">
+        <gl-button v-if="showNewIssueLink" :href="newIssuePath" variant="confirm">
+          {{ __('New issue') }}
+        </gl-button>
+      </slot>
     </template>
   </gl-empty-state>
 
   <gl-empty-state
     v-else-if="isOpenTab"
-    :description="$options.i18n.noOpenIssuesDescription"
-    :title="$options.i18n.noOpenIssuesTitle"
-    :svg-path="emptyStateSvgPath"
-    :svg-height="null"
+    :title="openTabTitle"
+    :svg-path="svgPath"
     data-testid="issuable-empty-state"
   >
     <template #actions>
-      <gl-button v-if="showNewIssueLink" :href="newIssuePath" variant="confirm">
-        {{ $options.i18n.newIssueLabel }}
-      </gl-button>
+      <slot name="new-issue-button">
+        <gl-button v-if="showNewIssueLink" :href="newIssuePath" variant="confirm">
+          {{ __('New issue') }}
+        </gl-button>
+      </slot>
     </template>
   </gl-empty-state>
 
   <gl-empty-state
     v-else
-    :title="$options.i18n.noClosedIssuesTitle"
-    :svg-path="emptyStateSvgPath"
-    :svg-height="150"
+    :title="closedTabTitle"
+    :svg-path="svgPath"
     data-testid="issuable-empty-state"
   />
 </template>

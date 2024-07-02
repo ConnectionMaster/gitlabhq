@@ -40,6 +40,8 @@ Example response:
   {
     "id":1,
     "url":"https://gitlab.example.com/hook",
+    "name": "Hook name",
+    "description": "Hook description",
     "created_at":"2016-10-31T12:32:15.192Z",
     "push_events":true,
     "tag_push_events":false,
@@ -51,8 +53,6 @@ Example response:
 ```
 
 ## Get system hook
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/81595) in GitLab 14.9.
 
 Get a system hook by its ID.
 
@@ -77,6 +77,8 @@ Example response:
   {
     "id": 1,
     "url": "https://gitlab.example.com/hook",
+    "name": "Hook name",
+    "description": "Hook description",
     "created_at": "2016-10-31T12:32:15.192Z",
     "push_events": true,
     "tag_push_events": false,
@@ -95,15 +97,19 @@ Add a new system hook.
 POST /hooks
 ```
 
-| Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `url` | string | yes | The hook URL |
-| `token` | string | no | Secret token to validate received payloads; this isn't returned in the response |
-| `push_events` | boolean |  no | When true, the hook fires on push events |
-| `tag_push_events` | boolean | no | When true, the hook fires on new tags being pushed |
-| `merge_requests_events` | boolean | no | Trigger hook on merge requests events |
-| `repository_update_events` | boolean | no | Trigger hook on repository update events |
-| `enable_ssl_verification` | boolean | no | Do SSL verification when triggering the hook |
+| Attribute                   | Type    | Required | Description |
+|-----------------------------|---------|----------|-------------|
+| `url`                       | string  | yes      | The hook URL |
+| `name`                      | string  | no       | Name of the hook ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/460887) in GitLab 17.1) |
+| `description`               | string  | no       | Description of the hook ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/460887) in GitLab 17.1) |
+| `token`                     | string  | no       | Secret token to validate received payloads; this isn't returned in the response |
+| `push_events`               | boolean | no       | When true, the hook fires on push events |
+| `tag_push_events`           | boolean | no       | When true, the hook fires on new tags being pushed |
+| `merge_requests_events`     | boolean | no       | Trigger hook on merge requests events |
+| `repository_update_events`  | boolean | no       | Trigger hook on repository update events |
+| `enable_ssl_verification`   | boolean | no       | Do SSL verification when triggering the hook |
+| `push_events_branch_filter` | string  | no       | Trigger hook on push events for matching branches only |
+| `branch_filter_strategy`    | string  | no       | Filter push events by branch. Possible values are `wildcard` (default), `regex`, and `all_branches` |
 
 Example request:
 
@@ -118,6 +124,8 @@ Example response:
   {
     "id":1,
     "url":"https://gitlab.example.com/hook",
+    "name": "Hook name",
+    "description": "Hook description",
     "created_at":"2016-10-31T12:32:15.192Z",
     "push_events":true,
     "tag_push_events":false,
@@ -127,6 +135,27 @@ Example response:
   }
 ]
 ```
+
+## Update system hook
+
+Update an existing system hook.
+
+```plaintext
+PUT /hooks/:hook_id
+```
+
+| Attribute                   | Type    | Required | Description |
+|-----------------------------|---------|----------|-------------|
+| `hook_id`                   | integer | Yes      | The ID of the system hook |
+| `url`                       | string  | yes      | The hook URL |
+| `token`                     | string  | no       | Secret token to validate received payloads; this isn't returned in the response |
+| `push_events`               | boolean | no       | When true, the hook fires on push events |
+| `tag_push_events`           | boolean | no       | When true, the hook fires on new tags being pushed |
+| `merge_requests_events`     | boolean | no       | Trigger hook on merge requests events |
+| `repository_update_events`  | boolean | no       | Trigger hook on repository update events |
+| `enable_ssl_verification`   | boolean | no       | Do SSL verification when triggering the hook |
+| `push_events_branch_filter` | string  | no       | Trigger hook on push events for matching branches only |
+| `branch_filter_strategy`    | string  | no       | Filter push events by branch. Possible values are `wildcard` (default), `regex`, and `all_branches` |
 
 ## Test system hook
 

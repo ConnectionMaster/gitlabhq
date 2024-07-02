@@ -67,8 +67,8 @@ export default {
     // This method is for backward compat
     // since Graph query would return camelCase
     // props while Rails would return snake_case
-    webUrl(assignee) {
-      return assignee.web_url || assignee.webUrl;
+    assigneeHref(assignee) {
+      return assignee.web_path || assignee.webPath;
     },
     avatarUrl(assignee) {
       return assignee.avatar_url || assignee.avatarUrl;
@@ -81,10 +81,10 @@ export default {
     <user-avatar-link
       v-for="assignee in assigneesToShow"
       :key="assignee.id"
-      :link-href="webUrl(assignee)"
+      :link-href="assigneeHref(assignee)"
       :img-alt="avatarUrlTitle(assignee)"
       :img-css-classes="imgCssClasses"
-      img-css-wrapper-classes="gl-display-inline-flex"
+      img-css-wrapper-classes="gl-inline-flex"
       :img-src="avatarUrl(assignee)"
       :img-size="iconSize"
       class="js-no-trigger author-link"
@@ -92,7 +92,7 @@ export default {
       data-testid="assignee-link"
     >
       <span class="js-assignee-tooltip">
-        <span class="bold d-block">{{ s__('Label|Assignee') }}</span> {{ assignee.name }}
+        <span class="bold gl-block">{{ s__('Label|Assignee') }}</span> {{ assignee.name }}
         <span v-if="assignee.username" class="text-white-50">@{{ assignee.username }}</span>
       </span>
     </user-avatar-link>

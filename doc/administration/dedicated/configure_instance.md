@@ -58,6 +58,36 @@ All users with access to view or edit your tenant in Switchboard will receive a 
 NOTE:
 You will only receive email notifications for changes made by a Switchboard tenant admin. Changes made by a GitLab Operator (e.g. a GitLab version update completed during a maintenance window) will not result in an email notification.
 
+#### View the configuration change log
+
+You can use the configuration change log to track the changes made to your GitLab Dedicated instance, including:
+
+- Configuration change: Name of the configuration setting that changed.
+- User: Email address of the user that made the configuration change. For changes made by a GitLab Operator, this value will appear as `GitLab Operator`.
+- IP: IP address of the user that made the configuration change. For changes made by a GitLab Operator, this value will appear as `Unavailable`.
+- Status: Whether the configuration change is initiated, in progress, completed, or deferred.
+- Start time: Start date and time when the configuration change is initiated, in UTC.
+- End time: End date and time when the configuration change is deployed, in UTC.
+
+Each configuration change has a status:
+
+- Initiated: Configuration change is made in Switchboard, but not yet deployed to the instance.
+- In progress: Configuration change is currently being deployed to the instance.
+- Complete: Configuration change has been deployed to the instance.
+- Delayed: Initial job to deploy a change has failed and the change has not yet been assigned to a new job.
+
+To view the configuration change log:
+
+1. Sign in to [Switchboard](https://console.gitlab-dedicated.com/).
+1. Select your tenant.
+1. At the top of the page, select **Configuration change log**.
+
+### Bring your own domain
+
+You can add a [custom hostname](../../subscriptions/gitlab_dedicated/index.md#bring-your-own-domain) for your GitLab Dedicated instance. Optionally, you can also provide a custom hostname for the bundled container registry and KAS services.
+
+To add a custom hostname after your instance is created, submit a [support ticket](https://support.gitlab.com/hc/en-us/requests/new?ticket_form_id=4414917877650).
+
 ### Inbound Private Link
 
 [AWS Private Link](https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html) allows users and applications in your VPC on AWS to securely connect to the GitLab Dedicated endpoint without network traffic going over the public internet.
@@ -126,7 +156,7 @@ In some cases, the GitLab Dedicated instance can't reach an internal service you
 
 #### Add a custom certificate with Switchboard
 
-1. Log in to [Switchboard](https://console.gitlab-dedicated.com/).
+1. Sign in to [Switchboard](https://console.gitlab-dedicated.com/).
 1. At the top of the page, select **Configuration**.
 1. Expand **Custom Certificate Authorities**.
 1. Select **+ Add Certificate**.
@@ -150,7 +180,7 @@ IP addresses that have been added to your IP allowlist can be viewed on the Conf
 
 #### Add an IP to the allowlist with Switchboard
 
-1. Log in to [Switchboard](https://console.gitlab-dedicated.com/).
+1. Sign in to [Switchboard](https://console.gitlab-dedicated.com/).
 1. At the top of the page, select **Configuration**.
 1. Expand **Allowed Source List Config / IP allowlist**.
 1. Turn on the **Enable** toggle.
@@ -176,7 +206,7 @@ Prerequisites:
 
 To activate SAML for your GitLab Dedicated instance:
 
-1. Log in to [Switchboard](https://console.gitlab-dedicated.com/).
+1. Sign in to [Switchboard](https://console.gitlab-dedicated.com/).
 1. At the top of the page, select **Configuration**.
 1. Expand **SAML Config**.
 1. Turn on the **Enable** toggle.
@@ -271,7 +301,10 @@ An invitation to use Switchboard is sent to the user.
 
 #### Manage notification preferences
 
-You can specify whether or not you want to receive email notifications from Switchboard.
+You can specify whether you want to receive email notifications from Switchboard. You will only receive notifications after you:
+
+- Receive an email invitation and first sign in to Switchboard.
+- Set up a password and two-factor authentication (2FA) for your user account.
 
 To manage your own email notification preferences:
 
@@ -306,3 +339,15 @@ You can use the [AWS CLI](https://aws.amazon.com/cli/) to verify that access to 
 The S3 bucket contains a combination of **infrastructure logs** and **application logs** from the GitLab [log system](../../administration/logs/index.md). The logs in the bucket are encrypted using an AWS KMS key that is managed by GitLab. If you choose to enable [BYOK](../../administration/dedicated/create_instance.md#encrypted-data-at-rest-byok), the application logs are not encrypted with the key you provide.
 
 The logs in the S3 bucket are organized by date in `YYYY/MM/DD/HH` format. For example, there would be a directory like `2023/10/12/13`. That directory would contain the logs from October 12, 2023 at 1300 UTC. The logs are streamed into the bucket with [Amazon Kinesis Data Firehose](https://aws.amazon.com/firehose/).
+
+## Troubleshooting
+
+### Outbound Private Link
+
+If you have trouble establishing a connection after the Outbound Private Link has been set up, there are a few things in your AWS infrastructure that could be the cause of the problem. The specific things to check will vary based on the unexpected behavior you're seeking to fix. Things to check include:
+
+- Ensure that cross-zone load balancing is turned on in your Network Load Balancer (NLB).
+- Ensure that the Inbound Rules section of the appropriate Security Groups permits traffic from the correct IP ranges.
+- Ensure that the inbound traffic is mapped to the correct port on the Endpoint Service.
+- In Switchboard, expand **Reverse Private Link Config** and confirm that the details appear as you expect.
+- Ensure that you have [allowed requests to the local network from webhooks and integrations](../../security/webhooks.md#allow-requests-to-the-local-network-from-webhooks-and-integrations).

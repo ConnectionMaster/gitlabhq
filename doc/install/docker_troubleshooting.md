@@ -53,10 +53,16 @@ sudo docker exec gitlab update-permissions
 sudo docker restart gitlab
 ```
 
-## Windows/Mac: `Error executing action run on resource ruby_block[directory resource: /data/GitLab]`
+## Error executing action run on resource `ruby_block`
 
 This error occurs when using Docker Toolbox with VirtualBox on Windows or Mac,
-and making use of Docker volumes. The `/c/Users` volume is mounted as a
+and making use of Docker volumes:
+
+```plaintext
+Error executing action run on resource ruby_block[directory resource: /data/GitLab]
+```
+
+The `/c/Users` volume is mounted as a
 VirtualBox Shared Folder, and does not support the all POSIX file system features.
 The directory ownership and permissions cannot be changed without remounting, and
 GitLab fails.
@@ -120,7 +126,7 @@ writing value to /dev/shm/gitlab/sidekiq/histogram_sidekiq_0-0.db failed with un
 ```
 
 Other than disabling the Prometheus Metrics from the Admin Area, the recommended
-solution to fix this problem is to increase the size of shared memory to at least 256 MB.
+solution to fix this problem is to [install](docker.md#pre-configure-docker-container) with shared memory set to at least 256 MB.
 If using `docker run`, this can be done by passing the flag `--shm-size 256m`.
 If using a `docker-compose.yml` file, the `shm_size` key can be used for this
 purpose.

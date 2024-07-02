@@ -50,11 +50,11 @@ module SearchHelper
 
   def scope_specific_results(term, scope)
     case scope&.to_sym
-    when :project
+    when :projects
       projects_autocomplete(term)
-    when :user
+    when :users
       users_autocomplete(term)
-    when :issue
+    when :issues
       recent_issues_autocomplete(term)
     else
       []
@@ -204,11 +204,11 @@ module SearchHelper
   end
 
   def search_has_group?
-    search_group&.present? && search_group&.persisted?
+    search_group.present? && search_group&.persisted?
   end
 
   def search_has_project?
-    @project&.present? && @project&.persisted?
+    @project.present? && @project&.persisted?
   end
 
   def header_search_context
@@ -228,7 +228,7 @@ module SearchHelper
       end
 
       hash[:scope] = search_scope if search_has_project? || search_has_group?
-      hash[:for_snippets] = @snippet&.present? || @snippets&.any?
+      hash[:for_snippets] = @snippet.present? || @snippets&.any?
     end
   end
 
@@ -254,7 +254,7 @@ module SearchHelper
   def default_autocomplete
     [
       { category: "Settings", label: _("User settings"),    url: user_settings_profile_path },
-      { category: "Settings", label: _("SSH Keys"),         url: profile_keys_path },
+      { category: "Settings", label: _("SSH Keys"),         url: user_settings_ssh_keys_path },
       { category: "Settings", label: _("Dashboard"),        url: root_path }
     ]
   end
@@ -289,26 +289,26 @@ module SearchHelper
 
       if can?(current_user, :read_code, @project)
         result.concat([
-                        { category: "In this project", label: _("Files"),          url: project_tree_path(@project, ref) },
-                        { category: "In this project", label: _("Commits"),        url: project_commits_path(@project, ref) }
-                      ])
+          { category: "In this project", label: _("Files"),          url: project_tree_path(@project, ref) },
+          { category: "In this project", label: _("Commits"),        url: project_commits_path(@project, ref) }
+        ])
       end
 
       if can?(current_user, :read_repository_graphs, @project)
         result.concat([
-                        { category: "In this project", label: _("Network"),        url: project_network_path(@project, ref) },
-                        { category: "In this project", label: _("Graph"),          url: project_graph_path(@project, ref) }
-                      ])
+          { category: "In this project", label: _("Network"),        url: project_network_path(@project, ref) },
+          { category: "In this project", label: _("Graph"),          url: project_graph_path(@project, ref) }
+        ])
       end
 
       result.concat([
-                      { category: "In this project", label: _("Issues"), url: project_issues_path(@project) },
-                      { category: "In this project", label: _("Merge requests"), url: project_merge_requests_path(@project) },
-                      { category: "In this project", label: _("Milestones"),     url: project_milestones_path(@project) },
-                      { category: "In this project", label: _("Snippets"),       url: project_snippets_path(@project) },
-                      { category: "In this project", label: _("Members"),        url: project_project_members_path(@project) },
-                      { category: "In this project", label: _("Wiki"),           url: project_wikis_path(@project) }
-                    ])
+        { category: "In this project", label: _("Issues"), url: project_issues_path(@project) },
+        { category: "In this project", label: _("Merge requests"), url: project_merge_requests_path(@project) },
+        { category: "In this project", label: _("Milestones"),     url: project_milestones_path(@project) },
+        { category: "In this project", label: _("Snippets"),       url: project_snippets_path(@project) },
+        { category: "In this project", label: _("Members"),        url: project_project_members_path(@project) },
+        { category: "In this project", label: _("Wiki"),           url: project_wikis_path(@project) }
+      ])
 
       if can?(current_user, :read_feature_flag, @project)
         result << { category: "In this project", label: _("Feature Flags"), url: project_feature_flags_path(@project) }
@@ -345,17 +345,16 @@ module SearchHelper
 
     [
       {
-          category: 'In this project',
-          id: issue.id,
-          label: search_result_sanitize("#{issue.title} (#{issue.to_reference})"),
-          url: issue_path(issue),
-          avatar_url: issue.project.avatar_url || ''
+        category: 'In this project',
+        id: issue.id,
+        label: search_result_sanitize("#{issue.title} (#{issue.to_reference})"),
+        url: issue_path(issue),
+        avatar_url: issue.project.avatar_url || ''
       }
     ]
   end
 
   # Autocomplete results for the current user's projects
-  # rubocop: disable CodeReuse/ActiveRecord
   def projects_autocomplete(term, limit = 5)
     current_user.authorized_projects.order_id_desc.search(term, include_namespace: true, use_minimum_char_limit: false)
       .sorted_by_stars_desc.non_archived.limit(limit).map do |p|
@@ -391,13 +390,13 @@ module SearchHelper
   def recent_merge_requests_autocomplete(term)
     return [] unless current_user
 
-    ::Gitlab::Search::RecentMergeRequests.new(user: current_user).search(term).map do |mr|
+    ::Gitlab::Search::RecentMergeRequests.new(user: current_user).search(term).preload_routables.map do |mr|
       {
         category: "Recent merge requests",
         id: mr.id,
         label: search_result_sanitize(mr.title),
         url: merge_request_path(mr),
-        avatar_url: mr.project.avatar_url || '',
+        avatar_url: mr.target_project.avatar_url || '',
         project_id: mr.target_project_id,
         project_name: mr.target_project.name
       }
@@ -407,7 +406,7 @@ module SearchHelper
   def recent_issues_autocomplete(term)
     return [] unless current_user
 
-    ::Gitlab::Search::RecentIssues.new(user: current_user).search(term).map do |i|
+    ::Gitlab::Search::RecentIssues.new(user: current_user).search(term).preload_namespace.preload_routables.map do |i|
       {
         category: "Recent issues",
         id: i.id,
@@ -419,7 +418,6 @@ module SearchHelper
       }
     end
   end
-  # rubocop: enable CodeReuse/ActiveRecord
 
   def search_result_sanitize(str)
     Sanitize.clean(str)
@@ -483,6 +481,7 @@ module SearchHelper
     opts =
       {
         id: "filtered-search-#{type}",
+        'aria-label': _('Add search filter'),
         placeholder: placeholder,
         data: {
           'username-params' => UserSerializer.new.represent(@users)
@@ -551,7 +550,7 @@ module SearchHelper
   def highlight_and_truncate_issuable(issuable, search_term, _search_highlight)
     return unless issuable.description.present?
 
-    simple_search_highlight_and_truncate(issuable.description, search_term, highlighter: '<span class="gl-text-gray-900 gl-font-weight-bold">\1</span>')
+    simple_search_highlight_and_truncate(issuable.description, search_term)
   end
 
   def issuable_state_to_badge_class(issuable)

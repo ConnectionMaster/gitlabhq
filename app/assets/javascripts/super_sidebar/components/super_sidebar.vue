@@ -39,6 +39,10 @@ export default {
       import('ee_component/contextual_sidebar/components/trial_status_widget.vue'),
     TrialStatusPopover: () =>
       import('ee_component/contextual_sidebar/components/trial_status_popover.vue'),
+    DuoProTrialStatusWidget: () =>
+      import('ee_component/contextual_sidebar/components/duo_pro_trial_status_widget.vue'),
+    DuoProTrialStatusPopover: () =>
+      import('ee_component/contextual_sidebar/components/duo_pro_trial_status_popover.vue'),
   },
   mixins: [Tracking.mixin()],
   i18n: {
@@ -46,7 +50,7 @@ export default {
     primaryNavigation: s__('Navigation|Primary navigation'),
     adminArea: s__('Navigation|Admin Area'),
   },
-  inject: ['showTrialStatusWidget'],
+  inject: ['showTrialStatusWidget', 'showDuoProTrialStatusWidget'],
   props: {
     sidebarData: {
       type: Object,
@@ -81,7 +85,7 @@ export default {
       handler(collapsed) {
         this.setupFocusTrapListener();
 
-        if (this.isOverlappingAndNotPeeking() && !collapsed) {
+        if (this.isNotPeeking() && !collapsed) {
           this.$nextTick(() => {
             this.firstFocusableElement().focus();
           });
@@ -119,8 +123,8 @@ export default {
     isOverlapping() {
       return GlBreakpointInstance.windowWidth() < breakpoints.xl;
     },
-    isOverlappingAndNotPeeking() {
-      return this.isOverlapping() && !(sidebarState.isHoverPeek || sidebarState.isPeek);
+    isNotPeeking() {
+      return !(sidebarState.isHoverPeek || sidebarState.isPeek);
     },
     setupFocusTrapListener() {
       /**
@@ -137,7 +141,7 @@ export default {
       toggleSuperSidebarCollapsed(true, false);
     },
     handleEscKey() {
-      if (this.isOverlappingAndNotPeeking()) {
+      if (this.isOverlapping() && this.isNotPeeking()) {
         this.collapseSidebar();
         document.querySelector(`.${JS_TOGGLE_EXPAND_CLASS}`)?.focus();
       }
@@ -227,21 +231,27 @@ export default {
       <user-bar ref="userBar" :has-collapse-button="!showOverlay" :sidebar-data="sidebarData" />
       <div v-if="showTrialStatusWidget" class="gl-px-2 gl-py-2">
         <trial-status-widget
-          class="super-sidebar-nav-item gl-rounded-base gl-relative gl-display-flex gl-align-items-center gl-mb-1 gl-px-3 gl-line-height-normal gl-text-black-normal! gl-text-decoration-none! gl-py-3"
+          class="super-sidebar-nav-item gl-rounded-base gl-relative gl-display-flex gl-align-items-center gl-mb-1 gl-px-3 gl-leading-normal gl-text-black-normal! gl-text-decoration-none! gl-py-3"
         />
         <trial-status-popover />
+      </div>
+      <div v-else-if="showDuoProTrialStatusWidget" class="gl-px-2 gl-py-2">
+        <duo-pro-trial-status-widget
+          class="super-sidebar-nav-item gl-rounded-base gl-relative gl-display-flex gl-align-items-center gl-mb-1 gl-px-3 gl-leading-normal gl-text-black-normal! gl-text-decoration-none! gl-py-3"
+        />
+        <duo-pro-trial-status-popover />
       </div>
       <div
         class="contextual-nav gl-display-flex gl-flex-direction-column gl-flex-grow-1 gl-overflow-hidden"
       >
+        <div
+          v-if="sidebarData.current_context_header"
+          id="super-sidebar-context-header"
+          class="gl-px-4 gl-py-3 gl-m-0 gl-leading-reset gl-font-bold super-sidebar-context-header"
+        >
+          {{ sidebarData.current_context_header }}
+        </div>
         <scroll-scrim class="gl-flex-grow-1" data-testid="nav-container">
-          <div
-            v-if="sidebarData.current_context_header"
-            id="super-sidebar-context-header"
-            class="gl-px-5 gl-pt-3 gl-pb-2 gl-m-0 gl-reset-line-height gl-font-weight-bold gl-font-sm super-sidebar-context-header"
-          >
-            {{ sidebarData.current_context_header }}
-          </div>
           <sidebar-menu
             v-if="menuItems.length"
             :items="menuItems"

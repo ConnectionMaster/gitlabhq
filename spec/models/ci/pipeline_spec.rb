@@ -30,6 +30,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
   it { is_expected.to have_many(:trigger_requests).with_foreign_key(:commit_id).inverse_of(:pipeline) }
   it { is_expected.to have_many(:variables) }
   it { is_expected.to have_many(:builds) }
+  it { is_expected.to have_many(:build_execution_configs).class_name('Ci::BuildExecutionConfig').inverse_of(:pipeline) }
 
   it do
     is_expected.to have_many(:statuses_order_id_desc)
@@ -93,6 +94,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
   describe 'validations' do
     it { is_expected.to validate_presence_of(:sha) }
     it { is_expected.to validate_presence_of(:status) }
+    it { is_expected.to validate_presence_of(:project) }
   end
 
   describe 'associations' do
@@ -353,6 +355,15 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
         end
       end
     end
+  end
+
+  describe '.no_tag' do
+    let_it_be(:pipeline) { create(:ci_pipeline) }
+    let_it_be(:tag_pipeline) { create(:ci_pipeline, tag: true) }
+
+    subject { described_class.no_tag }
+
+    it { is_expected.to contain_exactly(pipeline) }
   end
 
   describe '.processables' do
@@ -1486,9 +1497,9 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
     let(:build_b) { create_build('build2', queued_at: 0) }
     let(:build_c) { create_build('build3', queued_at: 0) }
 
-    describe '#canceling' do
+    describe '#start_cancel' do
       it 'transitions to canceling' do
-        expect { pipeline.canceling }.to change { pipeline.status }.from('created').to('canceling')
+        expect { pipeline.start_cancel }.to change { pipeline.status }.from('created').to('canceling')
       end
     end
 
@@ -2976,6 +2987,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
       before do
         allow(build).to receive(:with_resource_group?) { true }
         allow(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async)
+        allow(Ci::ResourceGroups::AssignResourceFromResourceGroupWorkerV2).to receive(:perform_async)
 
         build.enqueue
       end
@@ -3873,7 +3885,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
     context 'when the pipeline is failed' do
       using RSpec::Parameterized::TableSyntax
 
-      where(:drop_reason, :expected) do
+      where(:failure_reason, :expected) do
         :unknown_failure            | false
         :filtered_by_rules          | true
         :filtered_by_workflow_rules | true
@@ -3881,7 +3893,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
 
       with_them do
         before do
-          pipeline.set_failed(drop_reason)
+          pipeline.set_failed(failure_reason)
         end
 
         it { is_expected.to eq expected }
@@ -4852,7 +4864,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
     end
 
     before do
-      create_list(:ci_build, 2, pipeline: pipeline, stage: stage.name)
+      create_list(:ci_build, 2, pipeline: pipeline, ci_stage: stage)
     end
 
     describe '#stage' do
@@ -5794,16 +5806,53 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
   describe '.current_partition_value' do
     subject { described_class.current_partition_value }
 
-    it { is_expected.to eq(101) }
+    context 'when not using ci partitioning automation' do
+      before do
+        stub_feature_flags(ci_partitioning_automation: false)
+      end
 
-    it 'accepts an optional argument' do
-      expect(described_class.current_partition_value(build_stubbed(:project))).to eq(101)
+      it { is_expected.to eq(102) }
+
+      it 'accepts an optional argument' do
+        expect(described_class.current_partition_value(build_stubbed(:project))).to eq(102)
+      end
+
+      it 'returns 100 when the flags are disabled' do
+        stub_feature_flags(ci_current_partition_value_101: false)
+        stub_feature_flags(ci_current_partition_value_102: false)
+
+        is_expected.to eq(100)
+      end
+
+      it 'returns 101 when the 102 flag is disabled' do
+        stub_feature_flags(ci_current_partition_value_102: false)
+
+        is_expected.to eq(101)
+      end
+
+      it 'returns 102 when the 101 flag is disabled' do
+        stub_feature_flags(ci_current_partition_value_101: false)
+
+        is_expected.to eq(102)
+      end
     end
 
-    it 'returns 100 when the flag is disabled' do
-      stub_feature_flags(ci_current_partition_value_101: false)
+    context 'when using ci partitioning automation' do
+      context 'when current ci_partition exists' do
+        before do
+          create(:ci_partition, :current)
+        end
 
-      is_expected.to eq(100)
+        it 'return the current partition value' do
+          expect(subject).to eq(Ci::Partition.current.id)
+        end
+      end
+
+      context 'when current ci_partition does not exist' do
+        it 'return the default initial value' do
+          expect(subject).to eq(102)
+        end
+      end
     end
   end
 
@@ -5949,29 +5998,7 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
       allow(pipeline).to receive(:auto_cancel_on_job_failure).and_return(auto_cancel_on_job_failure)
     end
 
-    shared_examples 'expected behaviour' do
-      it 'cancels the pipeline when expected' do
-        unless errors
-          if cancels
-            expect(::Ci::UserCancelPipelineWorker).to receive(:perform_async)
-          else
-            expect(::Ci::UserCancelPipelineWorker).not_to receive(:perform_async)
-          end
-
-          subject
-        end
-      end
-
-      it 'raises errors when expected' do
-        if errors
-          expect { subject }.to raise_error(ArgumentError, 'Unknown auto_cancel_on_job_failure value: invalid value')
-        else
-          expect { subject }.not_to raise_error
-        end
-      end
-    end
-
-    context 'when the auto_cancel_pipeline_on_job_failure feature flag is enabled' do
+    context 'with different configurations' do
       where(:auto_cancel_on_job_failure, :cancels, :errors) do
         'none'          | false | false
         'all'           | true  | false
@@ -5979,23 +6006,25 @@ RSpec.describe Ci::Pipeline, :mailer, factory_default: :keep, feature_category: 
       end
 
       with_them do
-        it_behaves_like 'expected behaviour'
-      end
-    end
+        it 'cancels the pipeline when expected' do
+          unless errors
+            if cancels
+              expect(::Ci::UserCancelPipelineWorker).to receive(:perform_async)
+            else
+              expect(::Ci::UserCancelPipelineWorker).not_to receive(:perform_async)
+            end
 
-    context 'when the auto_cancel_pipeline_on_job_failure feature flag is disabled' do
-      before do
-        stub_feature_flags(auto_cancel_pipeline_on_job_failure: false)
-      end
+            subject
+          end
+        end
 
-      where(:auto_cancel_on_job_failure, :cancels, :errors) do
-        'none'          | false | false
-        'all'           | false | false
-        'invalid value' | false | false
-      end
-
-      with_them do
-        it_behaves_like 'expected behaviour'
+        it 'raises errors when expected' do
+          if errors
+            expect { subject }.to raise_error(ArgumentError, 'Unknown auto_cancel_on_job_failure value: invalid value')
+          else
+            expect { subject }.not_to raise_error
+          end
+        end
       end
     end
   end

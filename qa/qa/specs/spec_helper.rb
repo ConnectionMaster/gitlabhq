@@ -37,6 +37,7 @@ RSpec.configure do |config|
   config.add_formatter QA::Support::Formatters::QuarantineFormatter
   config.add_formatter QA::Support::Formatters::FeatureFlagFormatter
   config.add_formatter QA::Support::Formatters::TestMetricsFormatter if QA::Runtime::Env.running_in_ci?
+  config.add_formatter QA::Support::Formatters::CoverbandFormatter if QA::Runtime::Env.coverband_enabled?
 
   config.example_status_persistence_file_path = ENV.fetch('RSPEC_LAST_RUN_RESULTS_FILE', 'tmp/examples.txt')
 
@@ -121,26 +122,6 @@ RSpec.configure do |config|
 
   # This option allows to use shorthand aliases for adding :focus metadata - fit, fdescribe and fcontext
   config.filter_run_when_matching :focus
-
-  if ENV['CI'] && !QA::Runtime::Env.disable_rspec_retry?
-    # show retry status in spec process
-    config.verbose_retry = true
-
-    # show exception that triggers a retry if verbose_retry is set to true
-    config.display_try_failure_messages = true
-
-    non_quarantine_retries = QA::Runtime::Env.ci_project_name.match?(/staging|canary|production/) ? 3 : 2
-    config.around do |example|
-      quarantine = example.metadata[:quarantine]
-      different_quarantine_context = QA::Specs::Helpers::Quarantine.quarantined_different_context?(quarantine)
-      focused_quarantine = QA::Specs::Helpers::Quarantine.filters.key?(:quarantine)
-
-      # Do not disable retry when spec is quarantined but on different environment
-      next example.run_with_retry(retry: non_quarantine_retries) if different_quarantine_context && !focused_quarantine
-
-      example.run_with_retry(retry: quarantine ? 1 : non_quarantine_retries)
-    end
-  end
 end
 
 Dir[::File.join(__dir__, "features/shared_examples/**/*.rb")].each { |f| require f }

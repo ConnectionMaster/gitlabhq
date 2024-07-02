@@ -11,16 +11,21 @@ module Gitlab
       class User
         class << self
           # rubocop: disable CodeReuse/ActiveRecord
+
           def find_by_uid_and_provider(uid, provider)
             identity = ::Identity.with_extern_uid(provider, uid).take
 
-            identity && identity.user
+            return unless identity
+            raise IdentityWithUntrustedExternUidError unless identity.trusted_extern_uid?
+
+            identity.user
           end
           # rubocop: enable CodeReuse/ActiveRecord
         end
 
         SignupDisabledError = Class.new(StandardError)
         SigninDisabledForProviderError = Class.new(StandardError)
+        IdentityWithUntrustedExternUidError = Class.new(StandardError)
 
         attr_reader :auth_hash
 
@@ -245,12 +250,7 @@ module Gitlab
         end
 
         def sanitize_username(username)
-          if Feature.enabled?(:extra_slug_path_sanitization)
-            ExternalUsernameSanitizer.new(username).sanitize
-          else
-            valid_username = ::Namespace.clean_path(username)
-            Gitlab::Utils::Uniquify.new.string(valid_username) { |s| !NamespacePathValidator.valid_path?(s) }
-          end
+          ExternalUsernameSanitizer.new(username).sanitize
         end
 
         def sync_profile_from_provider?

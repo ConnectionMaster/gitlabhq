@@ -18,10 +18,10 @@ module Gitlab
 
       it "converts the input using Asciidoctor and default options" do
         expected_asciidoc_opts = {
-            safe: :secure,
-            backend: :gitlab_html5,
-            attributes: described_class::DEFAULT_ADOC_ATTRS.merge({ "kroki-server-url" => nil, "allow-uri-read" => false }),
-            extensions: be_a(Proc)
+          safe: :secure,
+          backend: :gitlab_html5,
+          attributes: described_class::DEFAULT_ADOC_ATTRS.merge({ "kroki-server-url" => nil, "allow-uri-read" => false }),
+          extensions: be_a(Proc)
         }
 
         expect(Asciidoctor).to receive(:convert)
@@ -33,10 +33,10 @@ module Gitlab
       context "with asciidoc_opts" do
         it "merges the options with default ones" do
           expected_asciidoc_opts = {
-              safe: :secure,
-              backend: :gitlab_html5,
-              attributes: described_class::DEFAULT_ADOC_ATTRS.merge({ "kroki-server-url" => nil, "allow-uri-read" => false }),
-              extensions: be_a(Proc)
+            safe: :secure,
+            backend: :gitlab_html5,
+            attributes: described_class::DEFAULT_ADOC_ATTRS.merge({ "kroki-server-url" => nil, "allow-uri-read" => false }),
+            extensions: be_a(Proc)
           }
 
           expect(Asciidoctor).to receive(:convert)
@@ -74,8 +74,8 @@ module Gitlab
             output: "<div>\n<p><a href=\"mylink\">Click Here</a></p>\n</div>"
           },
           'link with unsafe scheme' => {
-              input: 'link:data://danger[Click Here]',
-              output: "<div>\n<p><a>Click Here</a></p>\n</div>"
+            input: 'link:data://danger[Click Here]',
+            output: "<div>\n<p><a>Click Here</a></p>\n</div>"
           },
           'image with onerror' => {
             input: 'image:https://localhost.com/image.png[Alt text" onerror="alert(7)]',
@@ -457,8 +457,8 @@ module Gitlab
             stem:[2+2] is 4
           MD
 
-          expect(render(input, context)).to include('<pre data-math-style="display" class="code math js-render-math" v-pre="true"><code><span id="LC1" class="line" lang="plaintext">eta_x gamma</span></code></pre>')
-          expect(render(input, context)).to include('<p><code data-math-style="inline" class="code math js-render-math">2+2</code> is 4</p>')
+          expect(render(input, context)).to include('<pre data-math-style="display" class="js-render-math" v-pre="true"><code><span id="LC1" class="line" lang="plaintext">eta_x gamma</span></code></pre>')
+          expect(render(input, context)).to include('<p><code data-math-style="inline" class="js-render-math">2+2</code> is 4</p>')
         end
       end
 
@@ -949,6 +949,13 @@ module Gitlab
             message: "Add #{path}", branch_name: 'asciidoc')
         end
       end
+    end
+
+    it 'detects and converts to a wikilink' do
+      tag = '[[text|url]]'
+      html = render("See #{tag}", {})
+
+      expect(html).to include 'See <a href="url" data-wikilink="true">text</a>'
     end
 
     def render(...)

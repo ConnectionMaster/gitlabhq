@@ -40,41 +40,43 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
           ])
       end
 
-      it 'replace the current line when encountering \r' do
+      it 'replaces the current line when encountering \r' do
         expect(convert_json("Hello\rworld")).to eq([{ offset: 0, content: [{ text: 'world' }] }])
       end
     end
 
-    it 'recognizes color changing ANSI sequences' do
-      expect(convert_json("\e[31mHello\e[0m")).to eq(
-        [
-          { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red' }] }
-        ])
-    end
+    context 'with ANSI sequences' do
+      it 'recognizes color changing ANSI sequences' do
+        expect(convert_json("\e[31mHello\e[0m")).to eq(
+          [
+            { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red' }] }
+          ])
+      end
 
-    it 'recognizes color changing ANSI sequences across multiple lines' do
-      expect(convert_json("\e[31mHello\nWorld\e[0m")).to eq(
-        [
-          { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red' }] },
-          { offset: 11, content: [{ text: 'World', style: 'term-fg-red' }] }
-        ])
-    end
+      it 'recognizes color changing ANSI sequences across multiple lines' do
+        expect(convert_json("\e[31mHello\nWorld\e[0m")).to eq(
+          [
+            { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red' }] },
+            { offset: 11, content: [{ text: 'World', style: 'term-fg-red' }] }
+          ])
+      end
 
-    it 'recognizes background and foreground colors' do
-      expect(convert_json("\e[31;44mHello")).to eq(
-        [
-          { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red term-bg-blue' }] }
-        ])
-    end
+      it 'recognizes background and foreground colors' do
+        expect(convert_json("\e[31;44mHello")).to eq(
+          [
+            { offset: 0, content: [{ text: 'Hello', style: 'term-fg-red term-bg-blue' }] }
+          ])
+      end
 
-    it 'recognizes style changes within the same line' do
-      expect(convert_json("\e[31;44mHello\e[0m world")).to eq(
-        [
-          { offset: 0, content: [
-            { text: 'Hello', style: 'term-fg-red term-bg-blue' },
-            { text: ' world' }
-          ] }
-        ])
+      it 'recognizes style changes within the same line' do
+        expect(convert_json("\e[31;44mHello\e[0m world")).to eq(
+          [
+            { offset: 0, content: [
+              { text: 'Hello', style: 'term-fg-red term-bg-blue' },
+              { text: ' world' }
+            ] }
+          ])
+      end
     end
 
     context 'with section markers' do
@@ -95,13 +97,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 5,
               content: [{ text: 'world!' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             }
           ])
       end
 
-      it 'does not marks the other lines of the section as header' do
+      it 'does not mark the other lines of the section as header' do
         expect(convert_json("outside section#{section_start}Hello\nworld!")).to eq(
           [
             {
@@ -111,13 +113,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 15,
               content: [{ text: 'Hello' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             },
             {
               offset: 65,
               content: [{ text: 'world!' }],
-              section: 'prepare-script'
+              section: section_name
             }
           ])
       end
@@ -128,25 +130,25 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 0,
               content: [{ text: 'Good' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             },
             {
               offset: 49,
               content: [{ text: 'morning' }],
-              section: 'prepare-script'
+              section: section_name
             },
             {
               offset: 57,
               content: [{ text: 'world!' }],
-              section: 'prepare-script'
+              section: section_name
             },
             {
               offset: 63,
               content: [],
               section_duration: '01:03',
               section_footer: true,
-              section: 'prepare-script'
+              section: section_name
             }
           ])
       end
@@ -157,13 +159,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 0,
               content: [{ text: 'Hello world!' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             },
             {
               offset: 56,
               content: [],
-              section: 'prepare-script',
+              section: section_name,
               section_duration: '01:03',
               section_footer: true
             }
@@ -176,13 +178,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 0,
               content: [{ text: 'Hello' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             },
             {
               offset: 49,
               content: [],
-              section: 'prepare-script',
+              section: section_name,
               section_duration: '01:03',
               section_footer: true
             },
@@ -262,13 +264,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
             {
               offset: 0,
               content: [{ text: 'section_end:1:2<div>hello</div>' }],
-              section: 'prepare-script',
+              section: section_name,
               section_header: true
             },
             {
               offset: 75,
               content: [],
-              section: 'prepare-script',
+              section: section_name,
               section_duration: '01:03',
               section_footer: true
             }
@@ -295,31 +297,31 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 5,
                 content: [{ text: 'foo' }],
-                section: 'prepare-script',
+                section: section_name,
                 section_header: true
               },
               {
                 offset: 52,
                 content: [{ text: 'bar' }],
-                section: 'prepare-script-nested',
+                section: nested_section_name,
                 section_header: true
               },
               {
                 offset: 106,
                 content: [],
-                section: 'prepare-script-nested',
+                section: nested_section_name,
                 section_duration: '00:02',
                 section_footer: true
               },
               {
                 offset: 155,
                 content: [{ text: 'baz' }],
-                section: 'prepare-script'
+                section: section_name
               },
               {
                 offset: 158,
                 content: [],
-                section: 'prepare-script',
+                section: section_name,
                 section_duration: '01:03',
                 section_footer: true
               },
@@ -342,26 +344,26 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 5,
                 content: [{ text: 'foo', style: 'term-fg-l-red' }],
-                section: 'prepare-script',
+                section: section_name,
                 section_header: true
               },
               {
                 offset: 61,
                 content: [{ text: 'bar' }],
-                section: 'prepare-script-nested',
+                section: nested_section_name,
                 section_header: true
               },
               {
                 offset: 115,
                 content: [],
-                section: 'prepare-script-nested',
+                section: nested_section_name,
                 section_duration: '00:02',
                 section_footer: true
               },
               {
                 offset: 164,
                 content: [],
-                section: 'prepare-script',
+                section: section_name,
                 section_duration: '01:03',
                 section_footer: true
               }
@@ -379,7 +381,7 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 0,
                 content: [{ text: 'hello' }],
-                section: 'prepare-script',
+                section: section_name,
                 section_header: true,
                 section_options: {
                   'collapsed' => 'true',
@@ -389,7 +391,7 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 83,
                 content: [],
-                section: 'prepare-script',
+                section: section_name,
                 section_duration: '01:03',
                 section_footer: true
               }
@@ -420,6 +422,23 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
         end
       end
 
+      context 'with split timestamp' do
+        let(:pre_text) { "2024-05-14T11:19:19." }
+        let(:text) { "899359Z 00O \e[1mHello World" }
+
+        let(:lines) do
+          [
+            { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello World', style: 'term-bold' }] }
+          ]
+        end
+
+        it 'returns the full line after a plain text partial timestamp' do
+          expect(pass1.lines).to contain_exactly({ offset: 0, content: [{ text: "2024-05-14T11:19:19." }] })
+          expect(pass2.lines).to eq(lines)
+          expect(pass2.append).to be_falsey
+        end
+      end
+
       context 'with split word on second line' do
         let(:pre_text) { "Good\nmorning " }
         let(:text) { 'World' }
@@ -433,6 +452,21 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
         it 'returns all lines since last partially processed line' do
           expect(pass2.lines).to eq(lines)
           expect(pass2.append).to be_truthy
+        end
+
+        context 'with timestamps' do
+          let(:pre_text) { "2024-05-14T11:19:19.899359Z 00O Good\n2024-05-14T11:19:19.899359Z 00O morning " }
+
+          let(:lines) do
+            [
+              { offset: 37, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'morning World' }] }
+            ]
+          end
+
+          it 'returns all lines since last partially processed line' do
+            expect(pass2.lines).to eq(lines)
+            expect(pass2.append).to be_truthy
+          end
         end
       end
 
@@ -530,13 +564,13 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 0,
                 content: [{ text: 'this is a header' }],
-                section: 'prepare-script',
+                section: section_name,
                 section_header: true
               },
               {
                 offset: 61,
                 content: [{ text: 'and body' }],
-                section: 'prepare-script'
+                section: section_name
               }
             ]
           end
@@ -556,17 +590,17 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
               {
                 offset: 61,
                 content: [{ text: 'the body' }],
-                section: 'prepare-script'
+                section: section_name
               },
               {
                 offset: 70,
                 content: [{ text: 'the end' }],
-                section: 'prepare-script'
+                section: section_name
               },
               {
                 offset: 77,
                 content: [],
-                section: 'prepare-script',
+                section: section_name,
                 section_duration: '01:03',
                 section_footer: true
               }
@@ -584,18 +618,192 @@ RSpec.describe Gitlab::Ci::Ansi2json, feature_category: :continuous_integration 
     describe 'truncates' do
       let(:text) { 'Hello World' }
       let(:stream) { StringIO.new(text) }
-      let(:subject) { described_class.convert(stream) }
+      let(:convert) { described_class.convert(stream) }
 
       before do
         stream.seek(3, IO::SEEK_SET)
       end
 
       it 'returns truncated output' do
-        expect(subject.truncated).to be_truthy
+        expect(convert.truncated).to be_truthy
       end
 
       it 'does not append output' do
-        expect(subject.append).to be_falsey
+        expect(convert.append).to be_falsey
+      end
+    end
+
+    context 'with timestamps' do
+      it 'captures timestamp' do
+        expect(convert_json('2024-05-14T11:19:19.899359Z 00O Hello')).to eq([
+          { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello' }] }
+        ])
+      end
+
+      context 'new lines' do
+        it 'captures timestamp and adds new line when encountering \n' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello\n2024-05-14T11:19:20.000000Z 00O world")).to eq(
+            [
+              { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello' }] },
+              { offset: 38, timestamp: '2024-05-14T11:19:20.000000Z', content: [{ text: 'world' }] }
+            ])
+        end
+
+        it 'captures timestamp and adds new line when encountering \r\n' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello\r\n2024-05-14T11:19:20.899359Z 00O world")).to eq(
+            [
+              { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello' }] },
+              { offset: 39, timestamp: '2024-05-14T11:19:20.899359Z', content: [{ text: 'world' }] }
+            ])
+        end
+
+        it 'captures timestamp and ignores empty newlines' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello\n\n2024-05-14T11:19:20.899359Z 00O world")).to eq(
+            [
+              { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello' }] },
+              { offset: 39, timestamp: '2024-05-14T11:19:20.899359Z', content: [{ text: 'world' }] }
+            ])
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello\r\n\r\n2024-05-14T11:19:20.899359Z 00O world")).to eq(
+            [
+              { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello' }] },
+              { offset: 41, timestamp: '2024-05-14T11:19:20.899359Z', content: [{ text: 'world' }] }
+            ])
+        end
+
+        it 'captures timestamp and replaces the current line when encountering \r' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello \r2024-05-14T11:19:20.000000Z 00O world!")).to eq([
+            { offset: 0, timestamp: '2024-05-14T11:19:20.000000Z', content: [{ text: 'world!' }] }
+          ])
+        end
+
+        it 'joins lines when following line is marked as continuation' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello \n2024-05-14T11:19:20.000000Z 00O+world!")).to eq([
+            { offset: 0, timestamp: '2024-05-14T11:19:19.899359Z', content: [{ text: 'Hello world!' }] }
+          ])
+        end
+
+        it 'joins lines when following lines are marked as continuation' do
+          text = [
+            '2024-05-14T11:19:19.899359Z 00O Hello ',
+            '2024-05-14T11:19:20.000000Z 00O+world, ',
+            '2024-05-14T11:19:21.000000Z 00O+this is a second continuation',
+            '2024-05-14T11:19:22.000000Z 00O This is a second line'
+          ].join("\n")
+
+          expect(convert_json(text)).to eq([
+            {
+              offset: 0, timestamp: '2024-05-14T11:19:19.899359Z',
+              content: [{ text: 'Hello world, this is a second continuation' }]
+            },
+            {
+              offset: 141, timestamp: '2024-05-14T11:19:22.000000Z',
+              content: [{ text: 'This is a second line' }]
+            }
+          ])
+        end
+      end
+
+      context 'with section markers' do
+        let(:section_name) { 'prepare-script' }
+        let(:section_duration) { 63.seconds }
+        let(:section_start_time) { Time.new(2019, 9, 17).utc }
+        let(:section_end_time) { section_start_time + section_duration }
+        let(:section_start) { "section_start:#{section_start_time.to_i}:#{section_name}\r\033[0K" }
+        let(:section_end) { "section_end:#{section_end_time.to_i}:#{section_name}\r\033[0K" }
+
+        it 'marks the first line of the section as header' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O Hello#{section_start}world!")).to eq(
+            [
+              {
+                offset: 0,
+                timestamp: '2024-05-14T11:19:19.899359Z',
+                content: [{ text: 'Hello' }]
+              },
+              {
+                offset: 37,
+                timestamp: '2024-05-14T11:19:19.899359Z',
+                content: [{ text: 'world!' }],
+                section: 'prepare-script',
+                section_header: true
+              }
+            ])
+        end
+
+        it 'does not mark the other lines of the section as header' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O outside section#{section_start}Hello\n2024-05-14T11:19:20.899359Z 00O world!")).to eq(
+            [
+              {
+                offset: 0,
+                timestamp: '2024-05-14T11:19:19.899359Z',
+                content: [{ text: 'outside section' }]
+              },
+              {
+                offset: 47,
+                timestamp: '2024-05-14T11:19:19.899359Z',
+                content: [{ text: 'Hello' }],
+                section: 'prepare-script',
+                section_header: true
+              },
+              {
+                offset: 97,
+                timestamp: '2024-05-14T11:19:20.899359Z',
+                content: [{ text: 'world!' }],
+                section: 'prepare-script'
+              }
+            ])
+        end
+
+        it 'marks the last line of the section as footer' do
+          expect(convert_json("2024-05-14T11:19:19.899359Z 00O #{section_start}Good\n2024-05-14T11:19:20.899359Z 00O morning\n2024-05-14T11:19:21.899359Z 00O world!\n2024-05-14T11:19:22.899359Z 00O #{section_end}")).to eq(
+            [
+              {
+                offset: 0,
+                timestamp: '2024-05-14T11:19:19.899359Z',
+                content: [{ text: 'Good' }],
+                section: section_name,
+                section_header: true
+              },
+              {
+                offset: 81,
+                timestamp: '2024-05-14T11:19:20.899359Z',
+                content: [{ text: 'morning' }],
+                section: section_name
+              },
+              {
+                offset: 121,
+                timestamp: '2024-05-14T11:19:21.899359Z',
+                content: [{ text: 'world!' }],
+                section: section_name
+              },
+              {
+                offset: 160,
+                timestamp: '2024-05-14T11:19:22.899359Z',
+                content: [],
+                section_duration: '01:03',
+                section_footer: true,
+                section: section_name
+              }
+            ])
+        end
+
+        it 'marks the first line as header and footer if is the only line in the section' do
+          expect(convert_json("#{section_start}Hello world!#{section_end}")).to eq(
+            [
+              {
+                offset: 0,
+                content: [{ text: 'Hello world!' }],
+                section: section_name,
+                section_header: true
+              },
+              {
+                offset: 56,
+                content: [],
+                section: section_name,
+                section_duration: '01:03',
+                section_footer: true
+              }
+            ])
+        end
       end
     end
 

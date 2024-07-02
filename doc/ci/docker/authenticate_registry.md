@@ -12,8 +12,7 @@ do not work, because a fresh Docker daemon is started with the service.
 
 ## Option 1: Run `docker login`
 
-In [`before_script`](../yaml/index.md#before_script), run `docker
-login`:
+In [`before_script`](../yaml/index.md#before_script), run `docker login`:
 
 ```yaml
 default:
@@ -88,7 +87,7 @@ of this file. You can do this with a command like:
 kubectl create configmap docker-client-config --namespace gitlab-runner --from-file /opt/.docker/config.json
 ```
 
-Update the [volume mounts](https://docs.gitlab.com/runner/executors/kubernetes.html#using-volumes)
+Update the [volume mounts](https://docs.gitlab.com/runner/executors/kubernetes/index.html#custom-volume-mount)
 to include the file.
 
 ```toml

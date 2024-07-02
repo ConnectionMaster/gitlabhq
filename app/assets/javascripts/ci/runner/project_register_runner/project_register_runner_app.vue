@@ -1,21 +1,17 @@
 <script>
 import { GlButton } from '@gitlab/ui';
 import { getParameterByName, updateHistory, mergeUrlParams } from '~/lib/utils/url_utility';
-import glFeatureFlagsMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
-import { PARAM_KEY_PLATFORM, DEFAULT_PLATFORM, GOOGLE_CLOUD_PLATFORM } from '../constants';
+import { InternalEvents } from '~/tracking';
+import { PARAM_KEY_PLATFORM, GOOGLE_CLOUD_PLATFORM, DEFAULT_PLATFORM } from '../constants';
 import RegistrationInstructions from '../components/registration/registration_instructions.vue';
-import GoogleCloudRegistrationInstructions from '../components/registration/google_cloud_registration_instructions.vue';
-import PlatformsDrawer from '../components/registration/platforms_drawer.vue';
 
 export default {
   name: 'ProjectRegisterRunnerApp',
   components: {
-    GoogleCloudRegistrationInstructions,
     GlButton,
     RegistrationInstructions,
-    PlatformsDrawer,
   },
-  mixins: [glFeatureFlagsMixin()],
+  mixins: [InternalEvents.mixin()],
   props: {
     runnerId: {
       type: String,
@@ -33,15 +29,7 @@ export default {
   data() {
     return {
       platform: getParameterByName(PARAM_KEY_PLATFORM) || DEFAULT_PLATFORM,
-      isDrawerOpen: false,
     };
-  },
-  computed: {
-    showGoogleCloudRegistration() {
-      return (
-        this.glFeatures.googleCloudSupportFeatureFlag && this.platform === GOOGLE_CLOUD_PLATFORM
-      );
-    },
   },
   watch: {
     platform(platform) {
@@ -54,35 +42,25 @@ export default {
     onSelectPlatform(platform) {
       this.platform = platform;
     },
-    onToggleDrawer(val = !this.isDrawerOpen) {
-      this.isDrawerOpen = val;
+    onRunnerRegistered() {
+      if (this.platform === GOOGLE_CLOUD_PLATFORM) {
+        this.trackEvent('provision_project_runner_on_google_cloud');
+      }
     },
   },
 };
 </script>
 <template>
   <div>
-    <template v-if="showGoogleCloudRegistration">
-      <google-cloud-registration-instructions :runner-id="runnerId" :project-path="projectPath" />
-    </template>
-    <template v-else>
-      <registration-instructions
-        :runner-id="runnerId"
-        :platform="platform"
-        @toggleDrawer="onToggleDrawer"
-      >
-        <template #runner-list-name>{{
-          s__('Runners|Project › CI/CD Settings › Runners')
-        }}</template>
-      </registration-instructions>
-
-      <platforms-drawer
-        :platform="platform"
-        :open="isDrawerOpen"
-        @selectPlatform="onSelectPlatform"
-        @close="onToggleDrawer(false)"
-      />
-    </template>
+    <registration-instructions
+      :runner-id="runnerId"
+      :project-path="projectPath"
+      :platform="platform"
+      @selectPlatform="onSelectPlatform"
+      @runnerRegistered="onRunnerRegistered"
+    >
+      <template #runner-list-name>{{ s__('Runners|Project › CI/CD Settings › Runners') }}</template>
+    </registration-instructions>
 
     <gl-button
       :href="runnersPath"

@@ -207,7 +207,7 @@ export default {
     <template v-if="userCannotMerge" #title>
       <div class="gl-pb-3 gl-display-flex gl-align-items-center" data-testid="cannot-merge">
         <gl-icon name="warning-solid" class="gl-mr-2 gl-text-orange-400" />
-        <span class="gl-font-weight-normal">{{ __('Cannot merge') }}</span>
+        <span class="gl-font-normal">{{ __('Cannot merge') }}</span>
       </div>
     </template>
     <div class="gl-mb-3">
@@ -227,7 +227,7 @@ export default {
         class="gl-w-full"
       >
         <template v-if="isBlocked">
-          <span class="gl-mt-4 gl-font-style-italic">{{ $options.I18N_USER_BLOCKED }}</span>
+          <span class="gl-mt-4 gl-italic">{{ $options.I18N_USER_BLOCKED }}</span>
         </template>
         <template v-else>
           <gl-button
@@ -245,17 +245,17 @@ export default {
         <template #meta>
           <span
             v-if="hasPronouns"
-            class="gl-text-gray-500 gl-font-sm gl-font-weight-normal gl-p-1"
+            class="gl-text-gray-500 gl-font-sm gl-font-normal gl-p-1"
             data-testid="user-popover-pronouns"
             >({{ user.pronouns }})</span
           >
-          <gl-badge v-if="isBusy" size="sm" variant="warning" class="gl-ml-1">
+          <gl-badge v-if="isBusy" variant="warning" class="gl-ml-1">
             {{ $options.I18N_USER_BUSY }}
           </gl-badge>
         </template>
       </gl-avatar-labeled>
     </div>
-    <div class="gl-mt-2 gl-w-full gl-word-break-word">
+    <div class="gl-mt-2 gl-w-full gl-break-anywhere">
       <template v-if="userIsLoading">
         <gl-skeleton-loader
           :lines="$options.maxSkeletonLines"

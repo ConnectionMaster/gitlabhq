@@ -36,17 +36,25 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
     handle_omniauth
   end
 
+  def jwt
+    omniauth_flow(
+      Gitlab::Auth::OAuth,
+      identity_linker: Gitlab::Auth::Jwt::IdentityLinker.new(current_user, oauth, session)
+    )
+  end
+
   # Extend the standard implementation to also increment
   # the number of failed sign in attempts
   def failure
     update_login_counter_metric(failed_strategy.name, 'failed')
     log_saml_response if params['SAMLResponse']
 
-    if params[:username].present? && AuthHelper.form_based_provider?(failed_strategy.name)
-      user = User.find_by_login(params[:username])
+    username = params[:username].to_s
+    if username.present? && AuthHelper.form_based_provider?(failed_strategy.name)
+      user = User.find_by_login(username)
 
       user&.increment_failed_attempts!
-      log_failed_login(params[:username], failed_strategy.name)
+      log_failed_login(username, failed_strategy.name)
     end
 
     super
@@ -140,6 +148,8 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
       end
 
       identity_linker ||= auth_module::IdentityLinker.new(current_user, oauth, session)
+      return redirect_authorize_identity_link(identity_linker) if identity_linker.authorization_required?
+
       link_identity(identity_linker)
 
       current_auth_user = build_auth_user(auth_module::User)
@@ -173,6 +183,17 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
 
   def redirect_identity_linked
     redirect_to profile_account_path, notice: _('Authentication method updated')
+  end
+
+  def redirect_authorize_identity_link(identity_linker)
+    state = SecureRandom.uuid
+    session[:identity_link_state] = state
+
+    redirect_to new_user_settings_identities_path(
+      provider: identity_linker.provider,
+      extern_uid: identity_linker.uid,
+      state: state
+    )
   end
 
   def build_auth_user(auth_user_class)
@@ -221,6 +242,8 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
     else
       fail_login(@user)
     end
+  rescue Gitlab::Auth::OAuth::User::IdentityWithUntrustedExternUidError
+    handle_identity_with_untrusted_extern_uid
   rescue Gitlab::Auth::OAuth::User::SigninDisabledForProviderError
     handle_disabled_provider
   rescue Gitlab::Auth::OAuth::User::SignupDisabledError
@@ -232,7 +255,7 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
     message = [_("Signing in using your %{label} account without a pre-existing GitLab account is not allowed.") % { label: label }]
 
     if Gitlab::CurrentSettings.allow_signup?
-      message << _("Create a GitLab account first, and then connect it to your %{label} account.") % { label: label }
+      message << (_("Create a GitLab account first, and then connect it to your %{label} account.") % { label: label })
     end
 
     flash[:alert] = message.join(' ')
@@ -268,6 +291,13 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
 
   def redirect_unverified_saml_initiation
     redirect_to profile_account_path, notice: _('Request to link SAML account must be authorized')
+  end
+
+  def handle_identity_with_untrusted_extern_uid
+    label = Gitlab::Auth::OAuth::Provider.label_for(oauth['provider'])
+    flash[:alert] = format(_("Signing in using your %{label} account has been disabled for security reasons. Please sign in to your GitLab account using another authentication method and reconnect to your %{label} account."), label: label)
+
+    redirect_to new_user_session_path
   end
 
   def handle_disabled_provider
@@ -361,8 +391,6 @@ class OmniauthCallbacksController < Devise::OmniauthCallbacksController
   end
 
   def log_saml_response
-    return unless Feature.enabled?(:filter_saml_response)
-
     ParameterFilters::SamlResponse.log(params['SAMLResponse'].dup)
   end
 end

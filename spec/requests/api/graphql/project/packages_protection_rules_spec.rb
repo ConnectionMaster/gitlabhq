@@ -37,7 +37,7 @@ RSpec.describe 'getting the packages protection rules linked to a project', :agg
           hash_including(
             'packageNamePattern' => package_protection_rule.package_name_pattern,
             'packageType' => 'NPM',
-            'pushProtectedUpToAccessLevel' => 'DEVELOPER'
+            'minimumAccessLevelForPush' => 'MAINTAINER'
           )
         )
       end
@@ -53,7 +53,7 @@ RSpec.describe 'getting the packages protection rules linked to a project', :agg
   end
 
   context 'with unauthorized user' do
-    let_it_be(:user) { create(:user).tap { |u| project.add_developer(u) } }
+    let_it_be(:user) { create(:user, developer_of: project) }
 
     before do
       subject

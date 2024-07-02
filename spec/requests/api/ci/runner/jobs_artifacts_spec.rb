@@ -13,13 +13,9 @@ RSpec.describe API::Ci::Runner, :clean_gitlab_redis_shared_state, feature_catego
 
   let_it_be(:pipeline) { create(:ci_pipeline, project: project, ref: 'master') }
   let_it_be(:runner) { create(:ci_runner, :project, projects: [project]) }
-  let_it_be(:user) { create(:user) }
+  let_it_be(:user) { create(:user, developer_of: project) }
 
   let(:registration_token) { 'abcdefg123456' }
-
-  before_all do
-    project.add_developer(user)
-  end
 
   before do
     stub_feature_flags(ci_enable_live_trace: true)
@@ -900,6 +896,22 @@ RSpec.describe API::Ci::Runner, :clean_gitlab_redis_shared_state, feature_catego
       describe 'GET /api/v4/jobs/:id/artifacts' do
         let(:token) { job.token }
 
+        def expect_use_primary
+          lb_session = ::Gitlab::Database::LoadBalancing::Session.current
+
+          expect(lb_session).to receive(:use_primary).and_call_original
+
+          allow(::Gitlab::Database::LoadBalancing::Session).to receive(:current).and_return(lb_session)
+        end
+
+        def expect_no_use_primary
+          lb_session = ::Gitlab::Database::LoadBalancing::Session.current
+
+          expect(lb_session).not_to receive(:use_primary)
+
+          allow(::Gitlab::Database::LoadBalancing::Session).to receive(:current).and_return(lb_session)
+        end
+
         it_behaves_like 'API::CI::Runner application context metadata', 'GET /api/:version/jobs/:id/artifacts' do
           let(:send_request) { download_artifact }
         end
@@ -931,7 +943,8 @@ RSpec.describe API::Ci::Runner, :clean_gitlab_redis_shared_state, feature_catego
                 allow(Gitlab::ApplicationContext).to receive(:push).and_call_original
               end
 
-              it 'downloads artifacts' do
+              it 'authenticates with primary and downloads artifacts' do
+                expect_use_primary
                 expect(Gitlab::ApplicationContext).to receive(:push).with(artifact: an_instance_of(Ci::JobArtifact)).once.and_call_original
 
                 download_artifact

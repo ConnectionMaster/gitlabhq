@@ -12,7 +12,7 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
   let(:cli) { described_class.new('/dev/null') }
   let(:timeout) { Gitlab::SidekiqCluster::DEFAULT_SOFT_TIMEOUT_SECONDS }
   let(:default_options) do
-    { env: 'test', directory: Dir.pwd, max_concurrency: 20, min_concurrency: 0, dryrun: false, timeout: timeout, concurrency: 0 }
+    { env: 'test', directory: Dir.pwd, dryrun: false, timeout: timeout, concurrency: 20 }
   end
 
   let(:sidekiq_exporter_enabled) { false }
@@ -60,27 +60,52 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
     context 'with arguments' do
       context 'with routing rules specified' do
         before do
-          stub_config(sidekiq: { routing_rules: [['resource_boundary=cpu', 'foo']] })
+          stub_config(sidekiq: { routing_rules: [
+            ['resource_boundary=cpu', 'foo'],
+            ['urgency=high', 'bar']
+          ] })
         end
 
         it 'starts the Sidekiq workers' do
           expect(Gitlab::SidekiqCluster).to receive(:start)
-                                              .with([['foo']], default_options)
+                                              .with([%w[foo bar]], default_options)
                                               .and_return([])
 
-          cli.run(%w[foo])
+          cli.run(%w[foo,bar])
         end
 
         it 'allows the special * selector' do
-          worker_queues = %w[foo bar baz]
-
-          expect(Gitlab::SidekiqConfig::CliMethods)
-            .to receive(:worker_queues).and_return(worker_queues)
+          expected_queues = %w[foo bar mailers]
 
           expect(Gitlab::SidekiqCluster)
-            .to receive(:start).with([worker_queues], default_options).and_return([])
+            .to receive(:start).with([expected_queues], default_options).and_return([])
 
           cli.run(%w[*])
+        end
+
+        context 'with multi argument queues' do
+          it 'starts with multiple queues' do
+            expected_queues = [%w[foo bar mailers], %w[foo bar]]
+
+            expect(Gitlab::SidekiqCluster)
+              .to receive(:start).with(expected_queues, default_options).and_return([])
+
+            cli.run(%w[* foo,bar])
+          end
+        end
+
+        context 'with shard details in routing rules' do
+          before do
+            stub_config(sidekiq: { routing_rules: [['resource_boundary=cpu', 'foo', 'shard-1']] })
+          end
+
+          it 'starts the Sidekiq workers' do
+            expect(Gitlab::SidekiqCluster).to receive(:start)
+                                                .with([['foo']], default_options)
+                                                .and_return([])
+
+            cli.run(%w[foo])
+          end
         end
 
         it 'raises an error when the arguments contain newlines' do
@@ -95,45 +120,9 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
           end
         end
 
-        context 'with --negate flag' do
-          it 'starts Sidekiq workers for all queues in all_queues.yml except the ones in argv' do
-            expect(Gitlab::SidekiqConfig::CliMethods).to receive(:worker_queues).and_return(['baz'])
-            expect(Gitlab::SidekiqCluster).to receive(:start)
-                                                .with([['baz']], default_options)
-                                                .and_return([])
-
-            cli.run(%w[foo -n])
-          end
-        end
-
-        context 'with --max-concurrency flag' do
-          it 'starts Sidekiq workers for specified queues with a max concurrency' do
-            expected_queues = [%w[foo bar baz], %w[solo]]
-            expect(Gitlab::SidekiqConfig::CliMethods).to receive(:worker_queues).and_return(%w[foo bar baz])
-            expect(Gitlab::SidekiqCluster).to receive(:start)
-                                                .with(expected_queues, default_options.merge(max_concurrency: 2))
-                                                .and_return([])
-
-            cli.run(%w[foo,bar,baz solo -m 2])
-          end
-        end
-
-        context 'with --min-concurrency flag' do
-          it 'starts Sidekiq workers for specified queues with a min concurrency' do
-            expected_queues = [%w[foo bar baz], %w[solo]]
-            expect(Gitlab::SidekiqConfig::CliMethods).to receive(:worker_queues).and_return(%w[foo bar baz])
-            expect(Gitlab::SidekiqCluster).to receive(:start)
-                                                .with(expected_queues, default_options.merge(min_concurrency: 2))
-                                                .and_return([])
-
-            cli.run(%w[foo,bar,baz solo --min-concurrency 2])
-          end
-        end
-
         context 'with --concurrency flag' do
           it 'starts Sidekiq workers for specified queues with the fixed concurrency' do
             expected_queues = [%w[foo bar baz], %w[solo]]
-            expect(Gitlab::SidekiqConfig::CliMethods).to receive(:worker_queues).and_return(%w[foo bar baz])
             expect(Gitlab::SidekiqCluster).to receive(:start)
                                                 .with(expected_queues, default_options.merge(concurrency: 2))
                                                 .and_return([])
@@ -166,143 +155,17 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
             expect { cli.run(%w[foo --list-queues --dryrun]) }.to raise_error(described_class::CommandError)
           end
 
-          it 'prints out a list of queues in alphabetical order' do
-            expected_queues = [
-              'default',
-              'epics:epics_update_epics_dates',
-              'epics_new_epic_issue',
-              'mailers',
-              'new_epic',
-              'todos_destroyer:todos_destroyer_confidential_epic'
+          it 'prints out a list of queues' do
+            expected_queues = %w[
+              bar
+              baz
+              default
+              foo
             ]
-
-            allow(Gitlab::SidekiqConfig::CliMethods).to receive(:query_queues).and_return(expected_queues.shuffle)
 
             expect(cli).to receive(:puts).with([expected_queues])
 
-            cli.run(%w[--queue-selector feature_category=epics --list-queues])
-          end
-        end
-
-        context 'queue namespace expansion' do
-          it 'starts Sidekiq workers for all queues in all_queues.yml with a namespace in argv' do
-            expect(Gitlab::SidekiqConfig::CliMethods).to receive(:worker_queues).and_return(['cronjob:foo', 'cronjob:bar'])
-            expect(Gitlab::SidekiqCluster).to receive(:start)
-                                                .with([['cronjob', 'cronjob:foo', 'cronjob:bar']], default_options)
-                                                .and_return([])
-
-            cli.run(%w[cronjob])
-          end
-        end
-
-        context "with --queue-selector" do
-          where do
-            {
-              'memory-bound queues' => {
-                query: 'resource_boundary=memory',
-                included_queues: %w[project_export],
-                excluded_queues: %w[merge]
-              },
-              'memory- or CPU-bound queues' => {
-                query: 'resource_boundary=memory,cpu',
-                included_queues: %w[auto_merge:auto_merge_process project_export],
-                excluded_queues: %w[merge]
-              },
-              'high urgency CI queues' => {
-                query: 'feature_category=continuous_integration&urgency=high',
-                included_queues: %w[pipeline_default:ci_drop_pipeline],
-                excluded_queues: %w[merge]
-              },
-              'CPU-bound high urgency CI queues' => {
-                query: 'feature_category=continuous_integration&urgency=high&resource_boundary=cpu',
-                included_queues: %w[pipeline_default:ci_create_downstream_pipeline],
-                excluded_queues: %w[pipeline_default:ci_drop_pipeline merge]
-              },
-              'CPU-bound high urgency non-CI queues' => {
-                query: 'feature_category!=continuous_integration&urgency=high&resource_boundary=cpu',
-                included_queues: %w[new_issue],
-                excluded_queues: %w[pipeline_default:ci_create_downstream_pipeline]
-              },
-              'CI and SCM queues' => {
-                query: 'feature_category=continuous_integration|feature_category=source_code_management',
-                included_queues: %w[pipeline_default:ci_drop_pipeline merge],
-                excluded_queues: %w[]
-              }
-            }
-          end
-
-          with_them do
-            it 'expands queues by attributes' do
-              expect(Gitlab::SidekiqCluster).to receive(:start) do |queues, opts|
-                expect(opts).to eq(default_options)
-                expect(queues.first).to include(*included_queues)
-                expect(queues.first).not_to include(*excluded_queues)
-
-                []
-              end
-
-              cli.run(%W[--queue-selector #{query}])
-            end
-
-            it 'works when negated' do
-              expect(Gitlab::SidekiqCluster).to receive(:start) do |queues, opts|
-                expect(opts).to eq(default_options)
-                expect(queues.first).not_to include(*included_queues)
-                expect(queues.first).to include(*excluded_queues)
-
-                []
-              end
-
-              cli.run(%W[--negate --queue-selector #{query}])
-            end
-          end
-
-          it 'expands multiple queue groups correctly' do
-            expected_workers =
-              if Gitlab.ee?
-                [
-                  %w[incident_management_close_incident status_page_publish],
-                  %w[bulk_imports_pipeline bulk_imports_pipeline_batch bulk_imports_relation_batch_export bulk_imports_relation_export project_export projects_import_export_parallel_project_export projects_import_export_relation_export repository_import project_template_export]
-                ]
-              else
-                [
-                  %w[incident_management_close_incident],
-                  %w[bulk_imports_pipeline bulk_imports_pipeline_batch bulk_imports_relation_batch_export bulk_imports_relation_export project_export projects_import_export_parallel_project_export projects_import_export_relation_export repository_import]
-                ]
-              end
-
-            expect(Gitlab::SidekiqCluster)
-              .to receive(:start)
-              .with(expected_workers, default_options)
-              .and_return([])
-
-            cli.run(%w[--queue-selector feature_category=incident_management&has_external_dependencies=true resource_boundary=memory&feature_category=importers])
-          end
-
-          it 'allows the special * selector' do
-            worker_queues = %w[foo bar baz]
-
-            expect(Gitlab::SidekiqConfig::CliMethods)
-              .to receive(:worker_queues).and_return(worker_queues)
-
-            expect(Gitlab::SidekiqCluster)
-              .to receive(:start).with([worker_queues], default_options).and_return([])
-
-            cli.run(%w[--queue-selector *])
-          end
-
-          it 'errors when the selector matches no queues' do
-            expect(Gitlab::SidekiqCluster).not_to receive(:start)
-
-            expect { cli.run(%w[--queue-selector has_external_dependencies=true&has_external_dependencies=false]) }
-              .to raise_error(described_class::CommandError)
-          end
-
-          it 'errors on an invalid query multiple queue groups correctly' do
-            expect(Gitlab::SidekiqCluster).not_to receive(:start)
-
-            expect { cli.run(%w[--queue-selector unknown_field=chatops]) }
-              .to raise_error(Gitlab::SidekiqConfig::WorkerMatcher::QueryError)
+            cli.run(%w[foo,bar,baz,default --list-queues])
           end
         end
       end
@@ -318,13 +181,23 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
           expect { cli.run(%w[foo]) }.not_to raise_error
         end
 
-        it "starts Sidekiq workers with DEFAULT_QUEUES and min_concurrency = max_concurrency" do
-          default_options[:min_concurrency] = default_options[:max_concurrency]
+        it "starts Sidekiq workers with DEFAULT_QUEUES" do
           expect(Gitlab::SidekiqCluster).to receive(:start)
                                               .with([described_class::DEFAULT_QUEUES], default_options)
                                               .and_return([])
 
           cli.run(%w[foo])
+        end
+
+        context 'with multi argument queues' do
+          it 'starts with multiple DEFAULT_QUEUES' do
+            expected_queues = [%w[default mailers], %w[default mailers]]
+
+            expect(Gitlab::SidekiqCluster)
+              .to receive(:start).with(expected_queues, default_options).and_return([])
+
+            cli.run(%w[* foo,bar])
+          end
         end
       end
 
@@ -333,8 +206,7 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
           stub_config(sidekiq: { routing_rules: [] })
         end
 
-        it "starts Sidekiq workers with DEFAULT_QUEUES and min_concurrency = max_concurrency" do
-          default_options[:min_concurrency] = default_options[:max_concurrency]
+        it "starts Sidekiq workers with DEFAULT_QUEUES" do
           expect(Gitlab::SidekiqCluster).to receive(:start)
                                               .with([described_class::DEFAULT_QUEUES], default_options)
                                               .and_return([])
@@ -343,25 +215,12 @@ RSpec.describe Gitlab::SidekiqCluster::CLI, feature_category: :gitlab_cli, stub_
         end
 
         context "with 4 wildcard * as argument" do
-          it "starts 4 Sidekiq workers all with DEFAULT_QUEUES and min_concurrency = max_concurrency" do
-            default_options[:min_concurrency] = default_options[:max_concurrency]
+          it "starts 4 Sidekiq workers all with DEFAULT_QUEUES" do
             expect(Gitlab::SidekiqCluster).to receive(:start)
                                                 .with([described_class::DEFAULT_QUEUES] * 4, default_options)
                                                 .and_return([])
 
             cli.run(%w[* * * *])
-          end
-        end
-
-        context "with min-concurrency flag" do
-          it "starts Sidekiq workers with DEFAULT_QUEUES and min_concurrency as specified" do
-            options = default_options.dup
-            options[:min_concurrency] = 10
-            expect(Gitlab::SidekiqCluster).to receive(:start)
-                                                .with([described_class::DEFAULT_QUEUES] * 4, options)
-                                                .and_return([])
-
-            cli.run(%w[* * * * --min-concurrency 10])
           end
         end
       end

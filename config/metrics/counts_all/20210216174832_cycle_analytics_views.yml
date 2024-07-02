@@ -2,17 +2,13 @@
 data_category: optional
 key_path: counts.cycle_analytics_views
 description: Total visits to VSA (both group- and project-level) all time
-product_section: dev
-product_stage: manage
 product_group: optimize
 value_type: number
 status: active
 time_frame: all
-data_source: redis
-instrumentation_class: RedisMetric
-options:
-  prefix: cycle_analytics
-  event: views
+data_source: internal_events
+events:
+- name: view_cycle_analytics
 distribution:
 - ce
 - ee

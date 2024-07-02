@@ -36,7 +36,7 @@ Prerequisites:
 
 **Limitations**
 
-- The `id_tokens` portion of the CI/CD config file must be located in the project that is being built and signed. AutoDevOps, CI files included from another repository, and child pipelines are not supported. Work to remove this limitation is being tracked in [issue 411317](https://gitlab.com/gitlab-org/gitlab/-/issues/411317).
+- The `id_tokens` portion of the CI/CD configuration file must be located in the project that is being built and signed. AutoDevOps, CI files included from another repository, and child pipelines are not supported. Work to remove this limitation is being tracked in [issue 411317](https://gitlab.com/gitlab-org/gitlab/-/issues/411317).
 
 **Best practices**:
 
@@ -120,6 +120,11 @@ verify_image:
     - cosign verify "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" --certificate-identity "https://gitlab.com/my-group/my-project//path/to/.gitlab-ci.yml@refs/heads/main" --certificate-oidc-issuer "https://gitlab.com"
 ```
 
+**Additional details**:
+
+- The double backslash between the project path and the `.gitlab-ci.yml` path is not an error and is required for verification to succeed. A typical error when a single slash is used is `Error: none of the expected identities matched what was in the certificate, got subjects` followed by the signed URL which has two slashes between the project path and the `.gitlab-ci.yml` path.
+- If the verification is happening in the same pipeline as the signing, then this path can be used: `"${CI_PROJECT_URL}//.gitlab-ci.yml@refs/heads/${CI_COMMIT_REF_NAME}"`
+
 #### Build artifacts
 
 The example below demonstrates how to verify a signed build artifact in GitLab CI. Verifying an artifact requires both
@@ -135,6 +140,11 @@ verify_artifact:
   script:
     - cosign verify-blob artifact.txt --bundle cosign.bundle --certificate-identity "https://gitlab.com/my-group/my-project//path/to/.gitlab-ci.yml@refs/heads/main" --certificate-oidc-issuer "https://gitlab.com"
 ```
+
+**Additional details**:
+
+- The double backslash between the project path and the `.gitlab-ci.yml` path is not an error and is required for verification to succeed. A typical error when a single slash is used is `Error: none of the expected identities matched what was in the certificate, got subjects` followed by the signed URL which has two slashes between the project path and the `.gitlab-ci.yml` path.
+- If the verification is happening in the same pipeline as the signing, then this path can be used: `"${CI_PROJECT_URL}//.gitlab-ci.yml@refs/heads/${CI_COMMIT_REF_NAME}"`
 
 ## Use Sigstore and npm to generate keyless provenance
 
@@ -158,7 +168,7 @@ needed to make it safer to distribute and use open source software.
 **Related topics**:
 
 - [SLSA Provenance definition](https://slsa.dev/provenance/v1)
-- [npm Docs](https://docs.npmjs.com/generating-provenance-statements/)
+- [npm documentation](https://docs.npmjs.com/generating-provenance-statements/)
 - [npm Provenance RFC](https://github.com/npm/rfcs/blob/main/accepted/0049-link-packages-to-source-and-build.md#detailed-steps-to-publish)
 
 ### Generating provenance in GitLab CI/CD

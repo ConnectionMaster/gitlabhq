@@ -1,5 +1,4 @@
 <script>
-import { isNumber } from 'lodash';
 import { sanitize } from '~/lib/dompurify';
 import { n__ } from '~/locale';
 import glFeatureFlagsMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
@@ -55,19 +54,8 @@ export default {
     hasDeploymentMetrics() {
       return this.isPostMerge;
     },
-    visualReviewAppMeta() {
-      return {
-        appUrl: this.mr.appUrl,
-        mergeRequestId: this.mr.iid,
-        sourceProjectId: this.mr.sourceProjectId,
-        sourceProjectPath: this.mr.sourceProjectFullPath,
-      };
-    },
     pipeline() {
       return this.isPostMerge ? this.mr.mergePipeline : this.mr.pipeline;
-    },
-    showMergeTrainPositionIndicator() {
-      return isNumber(this.mr.mergeTrainIndex);
     },
     showCollapsedDeployments() {
       return this.deployments.length > 3;
@@ -102,6 +90,10 @@ export default {
       :mr-troubleshooting-docs-path="mr.mrTroubleshootingDocsPath"
       :ci-troubleshooting-docs-path="mr.ciTroubleshootingDocsPath"
       :merge-strategy="preferredAutoMergeStrategy"
+      :retargeted="mr.retargeted"
+      :target-project-id="mr.targetProjectId"
+      :iid="mr.iid"
+      :detatched-pipeline="mr.detatchedPipeline"
     />
     <template #footer>
       <div v-if="mr.exposedArtifactsPath" class="js-exposed-artifacts">
@@ -113,10 +105,13 @@ export default {
         :deployment-class="deploymentClass"
         :has-deployment-metrics="hasDeploymentMetrics"
       />
+
       <merge-train-position-indicator
-        v-if="showMergeTrainPositionIndicator"
         class="mr-widget-extension"
+        :merge-request-state="mr.mergeRequestState"
         :merge-train-index="mr.mergeTrainIndex"
+        :merge-trains-count="mr.mergeTrainsCount"
+        :merge-trains-path="mr.mergeTrainsPath"
       />
     </template>
   </mr-widget-container>

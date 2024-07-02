@@ -11,6 +11,7 @@ module Ci
       include PgFullTextSearchable
       include Gitlab::VisibilityLevel
       include Sortable
+      include EachBatch
 
       self.table_name = 'catalog_resources'
 
@@ -24,7 +25,7 @@ module Ci
       has_many :sync_events, class_name: 'Ci::Catalog::Resources::SyncEvent', foreign_key: :catalog_resource_id,
         inverse_of: :catalog_resource
 
-      enum verification_level: { unverified: 0, gitlab: 1 }
+      enum verification_level: VerifiedNamespace::VERIFICATION_LEVELS
 
       scope :for_projects, ->(project_ids) { where(project_id: project_ids) }
 
@@ -47,6 +48,10 @@ module Ci
           nullable: :nulls_last
         )
       end
+
+      # The usage counts are updated daily by Ci::Catalog::Resources::AggregateLast30DayUsageWorker
+      scope :order_by_last_30_day_usage_count_desc, -> { reorder(last_30_day_usage_count: :desc) }
+      scope :order_by_last_30_day_usage_count_asc, -> { reorder(last_30_day_usage_count: :asc) }
 
       delegate :avatar_path, :star_count, :full_path, to: :project
 

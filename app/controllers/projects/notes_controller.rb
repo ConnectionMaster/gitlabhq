@@ -8,6 +8,8 @@ class Projects::NotesController < Projects::ApplicationController
   include ToggleAwardEmoji
 
   before_action :disable_query_limiting, only: [:create, :update]
+  before_action :disable_query_limiting_index, only: [:index]
+
   before_action :authorize_read_note!
   before_action :authorize_create_note!, only: [:create]
   before_action :authorize_resolve_note!, only: [:resolve, :unresolve]
@@ -104,11 +106,11 @@ class Projects::NotesController < Projects::ApplicationController
   end
 
   def authorize_admin_note!
-    return access_denied! unless can?(current_user, :admin_note, note)
+    access_denied! unless can?(current_user, :admin_note, note)
   end
 
   def authorize_resolve_note!
-    return access_denied! unless can?(current_user, :resolve_note, note)
+    access_denied! unless can?(current_user, :resolve_note, note)
   end
 
   def authorize_create_note!
@@ -117,7 +119,11 @@ class Projects::NotesController < Projects::ApplicationController
     access_denied! unless can?(current_user, :create_note, noteable)
   end
 
+  def disable_query_limiting_index
+    Gitlab::QueryLimiting.disable!('https://gitlab.com/gitlab-org/gitlab/-/issues/460923')
+  end
+
   def disable_query_limiting
-    Gitlab::QueryLimiting.disable!('https://gitlab.com/gitlab-org/gitlab/-/issues/20800')
+    Gitlab::QueryLimiting.disable!('https://gitlab.com/gitlab-org/gitlab/-/issues/211538', new_threshold: 300)
   end
 end

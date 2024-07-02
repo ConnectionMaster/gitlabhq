@@ -12,9 +12,11 @@ import {
   OPERATOR_AFTER,
   OPERATOR_BEFORE,
   TOKEN_TYPE_ASSIGNEE,
+  TOKEN_TYPE_REVIEWER,
   TOKEN_TYPE_AUTHOR,
   TOKEN_TYPE_CONFIDENTIAL,
   TOKEN_TYPE_CONTACT,
+  TOKEN_TYPE_DRAFT,
   TOKEN_TYPE_EPIC,
   TOKEN_TYPE_HEALTH,
   TOKEN_TYPE_ITERATION,
@@ -23,6 +25,8 @@ import {
   TOKEN_TYPE_MY_REACTION,
   TOKEN_TYPE_ORGANIZATION,
   TOKEN_TYPE_RELEASE,
+  TOKEN_TYPE_SOURCE_BRANCH,
+  TOKEN_TYPE_TARGET_BRANCH,
   TOKEN_TYPE_TYPE,
   TOKEN_TYPE_WEIGHT,
   TOKEN_TYPE_SEARCH_WITHIN,
@@ -83,49 +87,24 @@ export const ISSUES_VIEW_TYPE_KEY = 'issuesViewType';
 export const ISSUES_LIST_VIEW_KEY = 'List';
 export const ISSUES_GRID_VIEW_KEY = 'Grid';
 
+export const CLOSED = __('Closed');
+export const CLOSED_MOVED = __('Closed (moved)');
+
 export const i18n = {
   actionsLabel: __('Actions'),
-  calendarLabel: __('Subscribe to calendar'),
-  closed: __('Closed'),
-  closedMoved: __('Closed (moved)'),
+  closed: CLOSED,
+  closedMoved: CLOSED_MOVED,
   confidentialNo: __('No'),
   confidentialYes: __('Yes'),
   downvotes: __('Downvotes'),
-  editIssues: __('Bulk edit'),
   errorFetchingCounts: __('An error occurred while getting issue counts'),
   errorFetchingIssues: __('An error occurred while loading issues'),
-  importIssues: __('Import issues'),
   issueRepositioningMessage: __(
     'Issues are being rebalanced at the moment, so manual reordering is disabled.',
   ),
-  jiraIntegrationMessage: s__(
-    'JiraService|%{jiraDocsLinkStart}Enable the Jira integration%{jiraDocsLinkEnd} to view your Jira issues in GitLab.',
-  ),
-  jiraIntegrationSecondaryMessage: s__('JiraService|This feature requires a Premium plan.'),
-  jiraIntegrationTitle: s__('JiraService|Using Jira for issue tracking?'),
-  newIssueLabel: __('New issue'),
-  newProjectLabel: __('New project'),
-  noClosedIssuesTitle: __('There are no closed issues'),
-  noGroupIssuesSignedInDescription: __(
-    'Issues exist in projects, so to create an issue, first create a project.',
-  ),
-  noOpenIssuesDescription: __('To keep this project going, create a new issue'),
-  noOpenIssuesTitle: __('There are no open issues'),
-  noIssuesDescription: __('Learn more about issues.'),
-  noIssuesTitle: __('Use issues to collaborate on ideas, solve problems, and plan work'),
-  noIssuesSignedOutButtonText: __('Register / Sign In'),
-  noSearchNoFilterTitle: __('Please select at least one filter to see results'),
-  noSearchResultsDescription: __('To widen your search, change or remove filters above'),
-  noSearchResultsTitle: __('Sorry, your filter produced no results'),
-  relatedMergeRequests: __('Related merge requests'),
-  reorderError: __('An error occurred while reordering issues.'),
-  deleteError: __('An error occurred while deleting an issuable.'),
-  rssLabel: __('Subscribe to RSS feed'),
   upvotes: __('Upvotes'),
   titles: __('Titles'),
   descriptions: __('Descriptions'),
-  listLabel: __('List'),
-  gridLabel: __('Grid'),
 };
 
 export const urlSortParams = {
@@ -219,10 +198,10 @@ export const filtersMap = {
         [NORMAL_FILTER]: 'author_username',
       },
       [OPERATOR_NOT]: {
-        [NORMAL_FILTER]: 'not[author_username]',
+        [NORMAL_FILTER]: 'not[author_username][]',
       },
       [OPERATOR_OR]: {
-        [ALTERNATIVE_FILTER]: 'or[author_username]',
+        [ALTERNATIVE_FILTER]: 'or[author_username][]',
       },
     },
   },
@@ -239,7 +218,8 @@ export const filtersMap = {
   [TOKEN_TYPE_ASSIGNEE]: {
     [API_PARAM]: {
       [NORMAL_FILTER]: 'assigneeUsernames',
-      [SPECIAL_FILTER]: 'assigneeId',
+      [SPECIAL_FILTER]: 'assigneeWildcardId',
+      [ALTERNATIVE_FILTER]: 'assigneeId',
     },
     [URL_PARAM]: {
       [OPERATOR_IS]: {
@@ -252,6 +232,23 @@ export const filtersMap = {
       },
       [OPERATOR_OR]: {
         [NORMAL_FILTER]: 'or[assignee_username][]',
+      },
+    },
+  },
+  [TOKEN_TYPE_REVIEWER]: {
+    [API_PARAM]: {
+      [NORMAL_FILTER]: 'reviewerUsername',
+      [SPECIAL_FILTER]: 'reviewerWildcardId',
+      [ALTERNATIVE_FILTER]: 'reviewerId',
+    },
+    [URL_PARAM]: {
+      [OPERATOR_IS]: {
+        [NORMAL_FILTER]: 'reviewer_username',
+        [SPECIAL_FILTER]: 'reviewer_id',
+        [ALTERNATIVE_FILTER]: 'reviewer_username',
+      },
+      [OPERATOR_NOT]: {
+        [NORMAL_FILTER]: 'not[reviewer_username]',
       },
     },
   },
@@ -288,6 +285,26 @@ export const filtersMap = {
       },
       [OPERATOR_OR]: {
         [ALTERNATIVE_FILTER]: 'or[label_name][]',
+      },
+    },
+  },
+  [TOKEN_TYPE_SOURCE_BRANCH]: {
+    [API_PARAM]: {
+      [NORMAL_FILTER]: 'sourceBranches',
+    },
+    [URL_PARAM]: {
+      [OPERATOR_IS]: {
+        [NORMAL_FILTER]: 'source_branches[]',
+      },
+    },
+  },
+  [TOKEN_TYPE_TARGET_BRANCH]: {
+    [API_PARAM]: {
+      [NORMAL_FILTER]: 'targetBranches',
+    },
+    [URL_PARAM]: {
+      [OPERATOR_IS]: {
+        [NORMAL_FILTER]: 'target_branches[]',
       },
     },
   },
@@ -344,15 +361,27 @@ export const filtersMap = {
       },
     },
   },
+  [TOKEN_TYPE_DRAFT]: {
+    [API_PARAM]: {
+      [NORMAL_FILTER]: 'draft',
+    },
+    [URL_PARAM]: {
+      [OPERATOR_IS]: {
+        [NORMAL_FILTER]: 'draft',
+      },
+    },
+  },
   [TOKEN_TYPE_ITERATION]: {
     [API_PARAM]: {
       [NORMAL_FILTER]: 'iterationId',
       [SPECIAL_FILTER]: 'iterationWildcardId',
+      [ALTERNATIVE_FILTER]: 'iterationCadenceId',
     },
     [URL_PARAM]: {
       [OPERATOR_IS]: {
         [NORMAL_FILTER]: 'iteration_id',
         [SPECIAL_FILTER]: 'iteration_id',
+        [ALTERNATIVE_FILTER]: 'iteration_cadence_id',
       },
       [OPERATOR_NOT]: {
         [NORMAL_FILTER]: 'not[iteration_id]',
@@ -363,7 +392,7 @@ export const filtersMap = {
   [TOKEN_TYPE_EPIC]: {
     [API_PARAM]: {
       [NORMAL_FILTER]: 'epicId',
-      [SPECIAL_FILTER]: 'epicId',
+      [SPECIAL_FILTER]: 'epicWildcardId',
     },
     [URL_PARAM]: {
       [OPERATOR_IS]: {
@@ -378,7 +407,7 @@ export const filtersMap = {
   [TOKEN_TYPE_WEIGHT]: {
     [API_PARAM]: {
       [NORMAL_FILTER]: 'weight',
-      [SPECIAL_FILTER]: 'weight',
+      [SPECIAL_FILTER]: 'weightWildcardId',
     },
     [URL_PARAM]: {
       [OPERATOR_IS]: {

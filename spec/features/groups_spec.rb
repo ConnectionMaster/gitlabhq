@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe 'Group', feature_category: :groups_and_projects do
-  let(:user) { create(:user) }
+  let_it_be(:user) { create(:user) }
 
   before do
     sign_in(user)
@@ -37,7 +37,7 @@ RSpec.describe 'Group', feature_category: :groups_and_projects do
       end
 
       context 'with current organization setting in middleware' do
-        let_it_be(:another_organization) { create(:organization) }
+        let_it_be(:another_organization) { create(:organization, users: [user]) }
 
         before_all do
           create(:organization, :default)
@@ -248,7 +248,7 @@ RSpec.describe 'Group', feature_category: :groups_and_projects do
     let_it_be(:group) { create(:group, path: 'foo') }
 
     context 'as admin' do
-      let(:user) { create(:admin, :without_default_org) }
+      let(:user) { create(:admin) }
 
       before do
         visit new_group_path(parent_id: group.id, anchor: 'create-group-pane')
@@ -402,21 +402,21 @@ RSpec.describe 'Group', feature_category: :groups_and_projects do
       expect(page).to have_content 'successfully updated'
       expect(find('#group_name').value).to eq(new_name)
 
-      page.within ".breadcrumbs" do
+      within_testid "breadcrumb-links" do
         expect(page).to have_content new_name
       end
     end
 
     it 'focuses confirmation field on remove group' do
-      click_button('Remove group')
+      click_button('Delete group')
 
       expect(page).to have_selector '#confirm_name_input:focus'
     end
 
     it 'removes group', :sidekiq_might_not_need_inline do
-      expect { remove_with_confirm('Remove group', group.path) }.to change { Group.count }.by(-1)
+      expect { remove_with_confirm('Delete group', group.path) }.to change { Group.count }.by(-1)
       expect(group.members.all.count).to be_zero
-      expect(page).to have_content "scheduled for deletion"
+      expect(page).to have_content "is being deleted"
     end
   end
 
@@ -580,6 +580,14 @@ RSpec.describe 'Group', feature_category: :groups_and_projects do
 
           within_testid 'group-buttons' do
             expect(page).not_to have_link('New project')
+          end
+        end
+
+        it 'does not display the "New subgroup" button' do
+          visit group_path(group)
+
+          within_testid 'group-buttons' do
+            expect(page).not_to have_link('New subgroup')
           end
         end
       end

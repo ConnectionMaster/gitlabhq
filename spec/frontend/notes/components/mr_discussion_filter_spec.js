@@ -5,7 +5,12 @@ import Vue, { nextTick } from 'vue';
 import Vuex from 'vuex';
 import { mockTracking } from 'helpers/tracking_helper';
 import DiscussionFilter from '~/notes/components/mr_discussion_filter.vue';
-import { MR_FILTER_OPTIONS, MR_FILTER_TRACKING_OPENED } from '~/notes/constants';
+import {
+  MR_FILTER_OPTIONS,
+  MR_FILTER_TRACKING_OPENED,
+  MR_FILTER_TRACKING_USER_COMMENTS,
+  MR_FILTER_TRACKING_BOT_COMMENTS,
+} from '~/notes/constants';
 
 Vue.use(Vuex);
 
@@ -37,6 +42,10 @@ describe('Merge request discussion filter component', () => {
     wrapper = mount(DiscussionFilter, {
       store,
     });
+  }
+
+  function findDropdownItem({ value }) {
+    return wrapper.findComponent(GlCollapsibleListbox).find(`[data-testid=listbox-item-${value}]`);
   }
 
   afterEach(() => {
@@ -154,5 +163,23 @@ describe('Merge request discussion filter component', () => {
         expect.any(Object),
       );
     });
+
+    it.each`
+      item              | trackingEvent
+      ${'comments'}     | ${MR_FILTER_TRACKING_USER_COMMENTS}
+      ${'bot_comments'} | ${MR_FILTER_TRACKING_BOT_COMMENTS}
+    `(
+      'Send the correct event ($trackingEvent) for clicks on the filter item "$item"',
+      ({ item, trackingEvent }) => {
+        const entry = findDropdownItem({ value: item });
+
+        if (entry) {
+          entry.element.click();
+        }
+
+        expect(trackingSpy).toHaveBeenCalledTimes(1);
+        expect(trackingSpy).toHaveBeenCalledWith(undefined, trackingEvent, expect.any(Object));
+      },
+    );
   });
 });

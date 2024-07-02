@@ -34,8 +34,6 @@ already exists for this branch, a link to the existing merge request is shown.
 
 ## From an issue
 
-> - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/349566) the behavior of the **Create merge request** button to open the merge request creation form in GitLab 14.8.
-
 If your development workflow requires an issue for every merge
 request, you can create a branch directly from the issue to speed the process up.
 The new branch, and later its merge request, are marked as related to this issue.
@@ -111,7 +109,7 @@ You can create a merge request when you create a branch.
 1. On the left sidebar, select **Search or go to** and find your project.
 1. Select **Code > Branches**.
 1. Type a branch name and select **New branch**.
-1. Above the file list, on the right side, select **Create merge request**.
+1. Above the file list, select **Create merge request**.
    A merge request is created. The default branch is the target.
 1. Fill out the fields and select **Create merge request**.
 
@@ -136,7 +134,7 @@ You can create a merge request by running Git commands on your local machine.
    git commit -m "My commit message"
    ```
 
-1. [Push your branch and its commits to GitLab](../../../gitlab-basics/start-using-git.md#send-changes-to-gitlab):
+1. Push your branch and its commits to GitLab:
 
    ```shell
    git push origin my-new-branch
@@ -212,7 +210,9 @@ Prerequisites:
 
 - The merge request must target the current project, not an upstream project.
 - A GitLab administrator must configure [incoming email](../../../administration/incoming_email.md).
+  This setting is enabled on GitLab.com.
 - A GitLab administrator must configure [Reply by email](../../../administration/reply_by_email.md).
+  This setting is enabled on GitLab.com.
 - You must have at least the Developer role, or be allowed to create merge requests in the project.
 
 To create a merge request by sending an email:

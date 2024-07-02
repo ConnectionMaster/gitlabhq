@@ -8,8 +8,9 @@ RSpec.describe MergeRequests::PostMergeService, feature_category: :code_review_w
   let_it_be(:user) { create(:user) }
   let_it_be(:merge_request, reload: true) { create(:merge_request, assignees: [user]) }
   let_it_be(:project) { merge_request.project }
+  let(:params) { {} }
 
-  subject { described_class.new(project: project, current_user: user).execute(merge_request) }
+  subject { described_class.new(project: project, current_user: user, params: params).execute(merge_request) }
 
   before do
     project.add_maintainer(user)
@@ -158,12 +159,80 @@ RSpec.describe MergeRequests::PostMergeService, feature_category: :code_review_w
       it 'performs Pages::DeactivateMrDeploymentWorker asynchronously' do
         expect(Pages::DeactivateMrDeploymentsWorker)
           .to receive(:perform_async)
-          .with(merge_request)
+          .with(merge_request.id)
 
         subject
 
         expect(merge_request.reload).to be_merged
       end
+    end
+  end
+
+  context 'when there are auto merge MRs with the branch as target' do
+    context 'when source branch is to be deleted' do
+      let(:params) { { delete_source_branch: true } }
+
+      it 'aborts auto merges' do
+        mr_1 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: merge_request.source_branch,
+          source_branch: "test", source_project: merge_request.project)
+        mr_2 = create(:merge_request, :merge_when_checks_pass, target_branch: merge_request.source_branch,
+          source_branch: "feature", source_project: merge_request.project)
+        mr_3 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: 'feature',
+          source_branch: 'second', source_project: merge_request.project)
+
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_1, mr_2, mr_3)
+        subject
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_3)
+      end
+    end
+
+    context 'when source branch is not be deleted' do
+      it 'does not abort any auto merges' do
+        mr_1 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: merge_request.source_branch,
+          source_branch: "test", source_project: merge_request.project)
+        mr_2 = create(:merge_request, :merge_when_checks_pass, target_branch: merge_request.source_branch,
+          source_branch: "feature", source_project: merge_request.project)
+        mr_3 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: 'feature',
+          source_branch: 'second', source_project: merge_request.project)
+
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_1, mr_2, mr_3)
+        subject
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_1, mr_2, mr_3)
+      end
+    end
+
+    context 'when merge_when_checks_pass is disabled' do
+      before do
+        stub_feature_flags(merge_when_checks_pass: false)
+      end
+
+      it 'does not aborts any auto merges' do
+        mr_1 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: merge_request.source_branch,
+          source_branch: "test", source_project: merge_request.project)
+        mr_2 = create(:merge_request, :merge_when_checks_pass, target_branch: merge_request.source_branch,
+          source_branch: "feature", source_project: merge_request.project)
+        mr_3 = create(:merge_request, :merge_when_pipeline_succeeds, target_branch: 'feature',
+          source_branch: 'second', source_project: merge_request.project)
+
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_1, mr_2, mr_3)
+        subject
+        expect(merge_request.source_project.merge_requests.with_auto_merge_enabled).to contain_exactly(mr_1, mr_2, mr_3)
+      end
+    end
+  end
+
+  context 'when event source is given' do
+    let(:source) { create(:merge_request, :simple, source_project: project) }
+
+    subject { described_class.new(project: project, current_user: user).execute(merge_request, source) }
+
+    it 'creates a resource_state_event as expected' do
+      expect { subject }.to change { ResourceStateEvent.count }.by 1
+
+      event = merge_request.resource_state_events.last
+
+      expect(event.state).to eq 'merged'
+      expect(event.source_merge_request).to eq source
     end
   end
 end

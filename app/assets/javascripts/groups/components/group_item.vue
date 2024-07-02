@@ -1,27 +1,20 @@
 <script>
 import {
-  GlAvatar,
   GlLoadingIcon,
   GlBadge,
   GlButton,
-  GlIcon,
-  GlLabel,
   GlPopover,
   GlLink,
   GlTooltipDirective,
 } from '@gitlab/ui';
 import SafeHtml from '~/vue_shared/directives/safe_html';
 import { visitUrl } from '~/lib/utils/url_utility';
+import ProjectAvatar from '~/vue_shared/components/project_avatar.vue';
 import UserAccessRoleBadge from '~/vue_shared/components/user_access_role_badge.vue';
-import { AVATAR_SHAPE_OPTION_RECT } from '~/vue_shared/constants';
+import VisibilityIcon from '~/vue_shared/components/visibility_icon.vue';
 import { helpPagePath } from '~/helpers/help_page_helper';
 import { __ } from '~/locale';
-import {
-  VISIBILITY_LEVELS_STRING_TO_INTEGER,
-  VISIBILITY_TYPE_ICON,
-  GROUP_VISIBILITY_TYPE,
-  PROJECT_VISIBILITY_TYPE,
-} from '~/visibility_level/constants';
+import { VISIBILITY_LEVELS_STRING_TO_INTEGER } from '~/visibility_level/constants';
 import { ITEM_TYPE, ACTIVE_TAB_SHARED } from '../constants';
 
 import eventHub from '../event_hub';
@@ -36,18 +29,17 @@ export default {
     SafeHtml,
   },
   components: {
-    GlAvatar,
     GlBadge,
     GlButton,
     GlLoadingIcon,
-    GlIcon,
-    GlLabel,
     GlPopover,
     GlLink,
     UserAccessRoleBadge,
     ItemTypeIcon,
     ItemActions,
     ItemStats,
+    ProjectAvatar,
+    VisibilityIcon,
   },
   inject: {
     currentGroupVisibility: {
@@ -96,13 +88,6 @@ export default {
     },
     isGroup() {
       return this.group.type === ITEM_TYPE.GROUP;
-    },
-    visibilityIcon() {
-      return VISIBILITY_TYPE_ICON[this.group.visibility];
-    },
-    visibilityTooltip() {
-      if (this.isGroup) return GROUP_VISIBILITY_TYPE[this.group.visibility];
-      return PROJECT_VISIBILITY_TYPE[this.group.visibility];
     },
     microdata() {
       return this.group.microdata || {};
@@ -156,7 +141,6 @@ export default {
     },
   ),
   safeHtmlConfig: { ADD_TAGS: ['gl-emoji'] },
-  AVATAR_SHAPE_OPTION_RECT,
 };
 </script>
 
@@ -173,9 +157,9 @@ export default {
   >
     <div
       :class="{ 'project-row-contents': !isGroup }"
-      class="group-row-contents d-flex gl-align-items-center py-2 pr-3"
+      class="group-row-contents gl-flex gl-items-center py-2 pr-3"
     >
-      <div class="folder-toggle-wrap gl-mr-2 d-flex gl-align-items-center">
+      <div class="folder-toggle-wrap gl-mr-2 !gl-flex gl-items-center">
         <gl-button
           v-if="hasChildren"
           :aria-label="toggleAriaLabel"
@@ -191,47 +175,45 @@ export default {
       <gl-loading-icon
         v-if="group.isChildrenLoading"
         size="lg"
-        class="d-none d-sm-inline-flex flex-shrink-0 gl-mr-3"
+        class="gl-hidden sm:gl-inline-flex flex-shrink-0 gl-mr-3"
       />
       <a
-        :class="{ 'gl-sm-display-flex': !group.isChildrenLoading }"
-        class="gl-display-none gl-text-decoration-none! gl-mr-3"
+        :class="{ 'sm:gl-flex': !group.isChildrenLoading }"
+        class="gl-hidden gl-text-decoration-none! gl-mr-3"
         :href="group.relativePath"
         :aria-label="group.name"
       >
-        <gl-avatar
-          :shape="$options.AVATAR_SHAPE_OPTION_RECT"
-          :entity-id="group.id"
-          :entity-name="group.name"
-          :src="group.avatarUrl"
+        <project-avatar
           :alt="group.name"
-          :size="32"
           :itemprop="microdata.imageItemprop"
+          :project-avatar-url="group.avatarUrl"
+          :project-id="group.id"
+          :project-name="group.name"
         />
       </a>
-      <div class="group-text-container d-flex flex-fill gl-align-items-center">
+      <div class="group-text-container !gl-flex flex-fill gl-align-items-center">
         <div class="group-text flex-grow-1 flex-shrink-1">
           <div
-            class="gl-display-flex gl-align-items-center gl-flex-wrap title namespace-title gl-font-weight-bold gl-mr-3"
+            class="gl-flex gl-align-items-center gl-flex-wrap title namespace-title gl-font-bold gl-mr-3"
           >
             <a
               v-gl-tooltip.bottom
               data-testid="group-name"
               :href="group.relativePath"
               :title="group.fullName"
-              class="no-expand gl-mr-3 gl-text-gray-900! gl-word-break-word"
+              class="no-expand gl-mr-3 gl-text-gray-900! gl-break-anywhere"
               :itemprop="microdata.nameItemprop"
             >
               <!-- ending bracket must be by closing tag to prevent -->
               <!-- link hover text-decoration from over-extending -->
               {{ group.name }}
             </a>
-            <gl-icon
-              v-gl-tooltip.bottom
-              class="gl-display-inline-flex gl-align-items-center gl-mr-3 gl-text-gray-500"
-              :name="visibilityIcon"
-              :title="visibilityTooltip"
+            <visibility-icon
+              :is-group="isGroup"
+              :visibility-level="group.visibility"
+              class="gl-mr-3"
               data-testid="group-visibility-icon"
+              tooltip-placement="bottom"
             />
             <template v-if="shouldShowVisibilityWarning">
               <gl-button
@@ -257,16 +239,9 @@ export default {
                 </div>
               </gl-popover>
             </template>
-            <user-access-role-badge v-if="group.permission" size="sm" class="gl-mr-2">
+            <user-access-role-badge v-if="group.permission" class="gl-mr-2">
               {{ group.permission }}
             </user-access-role-badge>
-            <gl-label
-              v-if="hasComplianceFramework"
-              :title="complianceFramework.name"
-              :background-color="complianceFramework.color"
-              :description="complianceFramework.description"
-              size="sm"
-            />
           </div>
           <div v-if="group.description" class="description gl-font-sm gl-mt-1">
             <span
@@ -284,11 +259,11 @@ export default {
           <gl-badge variant="info">{{ __('Archived') }}</gl-badge>
         </div>
         <div
-          class="metadata gl-display-flex gl-flex-grow-1 gl-flex-shrink-0 gl-flex-wrap justify-content-md-between"
+          class="metadata gl-flex gl-flex-grow-1 gl-flex-shrink-0 gl-flex-wrap justify-content-md-between"
         >
           <item-stats
             :item="group"
-            class="group-stats gl-display-none gl-md-display-flex gl-align-items-center"
+            class="group-stats gl-hidden md:gl-flex gl-align-items-center"
           />
           <item-actions
             v-if="showActionsMenu"
@@ -299,6 +274,7 @@ export default {
         </div>
       </div>
     </div>
+    <!-- eslint-disable-next-line vue/no-undef-components -->
     <group-folder
       v-if="group.isOpen && hasChildren"
       :parent-group="group"

@@ -64,8 +64,10 @@ module Ci
         end
       end
     rescue StateMachines::InvalidTransition => e
+      error = Ci::Bridge::InvalidTransitionError.new(e.message)
+      error.set_backtrace(caller)
       Gitlab::ErrorTracking.track_exception(
-        Ci::Bridge::InvalidTransitionError.new(e.message),
+        error,
         bridge_id: bridge.id,
         downstream_pipeline_id: pipeline.id)
       ServiceResponse.error(payload: pipeline, message: e.message)
@@ -119,7 +121,7 @@ module Ci
     def can_create_downstream_pipeline?(target_ref)
       can?(current_user, :update_pipeline, project) &&
         can?(current_user, :create_pipeline, downstream_project) &&
-          can_update_branch?(target_ref)
+        can_update_branch?(target_ref)
     end
 
     def can_update_branch?(target_ref)

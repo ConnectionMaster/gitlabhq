@@ -2,13 +2,14 @@
 stage: Create
 group: Code Creation
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Code Suggestions helps you write code in GitLab more efficiently by using AI to suggest code as you type."
 ---
 
 # Code Suggestions
 
 DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** GitLab.com, Self-managed, GitLab Dedicated. GitLab Duo Pro required.
+**Tier:** Premium or Ultimate with [GitLab Duo Pro](../../../../subscriptions/subscription-add-ons.md)
+**Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
 > - [Introduced support for Google Vertex AI Codey APIs](https://gitlab.com/groups/gitlab-org/-/epics/10562) in GitLab 16.1.
 > - [Removed support for GitLab native model](https://gitlab.com/groups/gitlab-org/-/epics/10752) in GitLab 16.2.
@@ -86,10 +87,61 @@ For use cases and best practices, follow the [GitLab Duo examples documentation]
 
 ## Response time
 
+Code Suggestions is powered by a generative AI model.
+
+Your personal access token enables a secure API connection to GitLab.com or to your GitLab instance.
+This API connection securely transmits a context window from your IDE/editor to the [GitLab AI Gateway](https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist), a GitLab hosted service. The [gateway](../../../../development/ai_architecture.md) calls the large language model APIs, and then the generated suggestion is transmitted back to your IDE/editor.
+
 - Code completion suggestions are usually low latency.
 - For code generation:
   - Algorithms or large code blocks might take more than 10 seconds to generate.
   - Streaming of code generation responses is supported in VS Code, leading to faster average response times. Other supported IDEs offer slower response times and will return the generated code in a single block.
+
+### Disable direct connections to the AI Gateway
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/462791) in GitLab 17.2 [with a flag](../../../../administration/feature_flags.md) named `code_suggestions_direct_access`. Disabled by default.
+
+Prerequisites:
+
+- You must be an administrator for the GitLab self-managed instance.
+
+To minimize latency for code completion requests, these requests are sent from the IDE directly to the AI Gateway.
+For this direct connection to work, the IDE must be able to connect to `https://cloud.gitlab.com:443`. If this is not
+possible (for example, because of network restrictions), you can disable direct connections for all users. If you do this,
+code completion requests are sent indirectly through the GitLab self-managed instance, and might result in your requests
+having higher latency.
+
+To disable direct connections to the gateway:
+
+1. On the left sidebar, at the bottom, select **Admin Area**.
+1. Select **Settings > General**.
+1. Expand **AI-powered features**.
+1. Select the **Disable direct connections for code suggestions** checkbox.
+
+## Inference window context
+
+Code Suggestions inferences against the currently opened file, the content before and after the cursor, the filename, and the extension type. For more information on possible future context expansion to improve the quality of suggestions, see [epic 11669](https://gitlab.com/groups/gitlab-org/-/epics/11669).
+
+## Truncation of file content
+
+Because of LLM limits and performance reasons, the content of the currently
+opened file is truncated:
+
+- For code completion: to 2048 tokens (roughly 8192 characters).
+- For code generation: to 142,856 tokens (roughly 500,000 characters).
+
+Content above the cursor is prioritized over content below the cursor. The content
+above the cursor is truncated from the left side, and content below the cursor
+is truncated from the right side. These numbers represent the maximum input context
+size for Code Suggestions.
+
+## Output length
+
+Because of LLM limits and for performance reasons, the output of Code Suggestions
+is limited:
+
+- For code completion: to 64 tokens (roughly 256 characters).
+- For code generation: to 2048 tokens (roughly 7168 characters).
 
 ## Accuracy of results
 
@@ -104,33 +156,13 @@ However, Code Suggestions might generate suggestions that are:
 
 When using Code Suggestions, [code review best practice](../../../../development/code_review.md) still applies.
 
-## Progressive enhancement
-
-This feature is designed as a progressive enhancement to developer IDEs.
-Code Suggestions offer a completion if a suitable recommendation is provided to the user in a timely manner.
-In the event of a connection issue or model inference failure, the feature gracefully degrades.
-Code Suggestions do not prevent you from writing code in your IDE.
-
 ## Disable Code Suggestions
 
 To disable Code Suggestions, disable the feature in your IDE editor extension.
+For details, see the documentation for your extension.
 
-### Disable Code Suggestions for a project
-
-DETAILS:
-**Status:** Experiment
-
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/12404) in GitLab 16.10. This feature is an [Experiment](../../../../policy/experiment-beta-support.md).
-
-Prerequisites:
-
-- You must have at least the Maintainer role in the project.
-
-You can disable Code Suggestions for specific projects.
-
-To do so, use the GraphQL API to [update the `duoFeaturesEnabled` setting in your project](../../../../api/graphql/getting_started.md#update-project-settings).
-
-For more information on this setting, see the [API documentation on the `projectSettingsUpdate` mutation](../../../../api/graphql/reference/index.md#mutationprojectsettingsupdate).
+If you'd prefer, you can
+[turn off GitLab Duo for a group, project, or instance](../../../../user/gitlab_duo/turn_on_off.md).
 
 ## Feedback
 

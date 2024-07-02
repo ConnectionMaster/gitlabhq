@@ -1,6 +1,6 @@
 ---
-stage: Plan
-group: Project Management
+stage: Manage
+group: Personal Productivity
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -50,10 +50,7 @@ Some of the actions that add a to-do item to your To-Do List:
   - You're the author.
   - You're the user that set the merge request to automatically merge after a
     pipeline succeeds.
-- [In GitLab 13.2](https://gitlab.com/gitlab-org/gitlab/-/issues/12136) and later, a
-  merge request is removed from a
-  [merge train](../ci/pipelines/merge_trains.md),
-  and you're the user that added it.
+- A merge request is removed from a [merge train](../ci/pipelines/merge_trains.md), and you're the user that added it.
 - [In GitLab 15.8](https://gitlab.com/gitlab-org/gitlab/-/issues/374725) and later,
   a member access request is raised for a group or project you're an owner of.
 
@@ -63,6 +60,8 @@ To change this behavior, enable
 [multiple to-do items per object](#multiple-to-do-items-per-object).
 
 To-do items aren't affected by [GitLab notification email settings](profile/notifications.md).
+The only exception: If your notification setting is set to **Custom** and **Added as approver** is
+selected, you get a to-do item when you are eligible to approve a merge request.
 
 ### Multiple to-do items per object
 
@@ -80,7 +79,7 @@ FLAG:
 On self-managed GitLab, by default this feature is not available. To make it available per user,
 an administrator can [enable the feature flag](../administration/feature_flags.md) named `multiple_todos`.
 On GitLab.com, this feature is available. On GitLab Dedicated, this feature is not available.
-The feature is not ready for production use.
+This feature is not ready for production use.
 
 When you enable this feature:
 

@@ -6,13 +6,8 @@ RSpec.describe API::Environments, feature_category: :continuous_delivery do
   let_it_be(:user) { create(:user) }
   let_it_be(:developer) { create(:user) }
   let_it_be(:non_member) { create(:user) }
-  let_it_be(:project) { create(:project, :private, :repository, namespace: user.namespace) }
+  let_it_be(:project) { create(:project, :private, :repository, namespace: user.namespace, maintainers: user, developers: developer) }
   let_it_be_with_reload(:environment) { create(:environment, project: project) }
-
-  before do
-    project.add_maintainer(user)
-    project.add_developer(developer)
-  end
 
   describe 'GET /projects/:id/environments', :aggregate_failures do
     context 'as member of the project' do
@@ -416,6 +411,34 @@ RSpec.describe API::Environments, feature_category: :continuous_delivery do
           )
 
           expect(response).to have_gitlab_http_status(:ok)
+        end
+      end
+
+      context "when auto_stop_at is present" do
+        before do
+          environment.update!(auto_stop_at: Time.current)
+        end
+
+        it "returns the expected response" do
+          get api("/projects/#{project.id}/environments/#{environment.id}", user)
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(response).to match_response_schema('public_api/v4/environment')
+          expect(json_response['auto_stop_at']).to be_present
+        end
+      end
+
+      context "when auto_stop_at is not present" do
+        before do
+          environment.update!(auto_stop_at: nil)
+        end
+
+        it "returns the expected response" do
+          get api("/projects/#{project.id}/environments/#{environment.id}", user)
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(response).to match_response_schema('public_api/v4/environment')
+          expect(json_response['auto_stop_at']).to be_nil
         end
       end
     end

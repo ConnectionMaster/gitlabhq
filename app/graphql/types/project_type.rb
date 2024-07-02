@@ -99,6 +99,10 @@ module Types
       null: true,
       description: 'Timestamp of the project creation.'
 
+    field :updated_at, Types::TimeType,
+      null: true,
+      description: 'Timestamp of when the project was last updated.'
+
     field :last_activity_at, Types::TimeType,
       null: true,
       description: 'Timestamp of the project last activity.'
@@ -335,6 +339,7 @@ module Types
       Types::Packages::Protection::RuleType.connection_type,
       null: true,
       description: 'Packages protection rules for the project.',
+      alpha: { milestone: '16.6' },
       resolver: Resolvers::ProjectPackagesProtectionRulesResolver
 
     field :jobs,
@@ -342,7 +347,8 @@ module Types
       null: true,
       authorize: :read_build,
       description: 'Jobs of a project. This field can only be resolved for one project in any single request.',
-      resolver: Resolvers::ProjectJobsResolver
+      resolver: Resolvers::ProjectJobsResolver,
+      connection_extension: ::Gitlab::Graphql::Extensions::ExternallyPaginatedArrayExtension
 
     field :job,
       type: Types::Ci::JobType,
@@ -358,13 +364,13 @@ module Types
       null: true,
       description: 'Build pipelines of the project.',
       extras: [:lookahead],
-      resolver: Resolvers::ProjectPipelinesResolver
+      resolver: Resolvers::Ci::ProjectPipelinesResolver
 
     field :pipeline_schedules,
       type: Types::Ci::PipelineScheduleType.connection_type,
       null: true,
       description: 'Pipeline schedules of the project. This field can only be resolved for one project per request.',
-      resolver: Resolvers::ProjectPipelineSchedulesResolver
+      resolver: Resolvers::Ci::ProjectPipelineSchedulesResolver
 
     field :pipeline_triggers,
       Types::Ci::PipelineTriggerType.connection_type,
@@ -377,7 +383,7 @@ module Types
       null: true,
       description: 'Build pipeline of the project.',
       extras: [:lookahead],
-      resolver: Resolvers::ProjectPipelineResolver
+      resolver: Resolvers::Ci::ProjectPipelineResolver
 
     field :pipeline_counts, Types::Ci::PipelineCountsType,
       null: true,
@@ -538,7 +544,7 @@ module Types
     field :pipeline_analytics, Types::Ci::AnalyticsType,
       null: true,
       description: 'Pipeline analytics.',
-      resolver: Resolvers::ProjectPipelineStatisticsResolver
+      resolver: Resolvers::Ci::ProjectPipelineAnalyticsResolver
 
     field :ci_template, Types::Ci::TemplateType,
       null: true,
@@ -618,8 +624,7 @@ module Types
       resolver: Resolvers::Projects::ForkDetailsResolver,
       description: 'Details of the fork project compared to its upstream project.'
 
-    field :branch_rules,
-      Types::Projects::BranchRuleType.connection_type,
+    field :branch_rules, Types::Projects::BranchRuleType.connection_type,
       null: true,
       description: "Branch rules configured for the project.",
       resolver: Resolvers::Projects::BranchRulesResolver
@@ -726,6 +731,11 @@ module Types
           required: false,
           description: 'Term by which to search deploy key titles'
       end
+
+    field :pages_deployments, Types::PagesDeploymentType.connection_type, null: true,
+      resolver: Resolvers::PagesDeploymentsResolver,
+      connection: true,
+      description: "List of the project's Pages Deployments."
 
     def protectable_branches
       ProtectableDropdown.new(project, :branches).protectable_ref_names

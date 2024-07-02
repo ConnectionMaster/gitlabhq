@@ -14,12 +14,10 @@ You can read more about [group access tokens](../user/group/settings/group_acces
 
 ## List group access tokens
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/77236) in GitLab 14.7.
-
 Get a list of [group access tokens](../user/group/settings/group_access_tokens.md).
 
 ```plaintext
-GET groups/:id/access_tokens
+GET /groups/:id/access_tokens
 ```
 
 | Attribute | Type    | required | Description         |
@@ -50,12 +48,10 @@ curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/a
 
 ## Get a group access token
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/82714) in GitLab 14.10.
-
 Get a [group access token](../user/group/settings/group_access_tokens.md) by ID.
 
 ```plaintext
-GET groups/:id/access_tokens/:token_id
+GET /groups/:id/access_tokens/:token_id
 ```
 
 | Attribute | Type    | required | Description         |
@@ -85,14 +81,13 @@ curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/a
 
 ## Create a group access token
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/77236) in GitLab 14.7.
 > - The `expires_at` attribute default was [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/120213) in GitLab 16.0.
 
 Create a [group access token](../user/group/settings/group_access_tokens.md). You must have the Owner role for the
 group to create group access tokens.
 
 ```plaintext
-POST groups/:id/access_tokens
+POST /groups/:id/access_tokens
 ```
 
 | Attribute | Type    | required | Description         |
@@ -188,12 +183,10 @@ for more information.
 
 ## Revoke a group access token
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/77236) in GitLab 14.7.
-
 Revoke a [group access token](../user/group/settings/group_access_tokens.md).
 
 ```plaintext
-DELETE groups/:id/access_tokens/:token_id
+DELETE /groups/:id/access_tokens/:token_id
 ```
 
 | Attribute | Type    | required | Description         |

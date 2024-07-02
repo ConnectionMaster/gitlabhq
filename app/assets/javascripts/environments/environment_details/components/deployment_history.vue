@@ -104,12 +104,8 @@ export default {
 
       try {
         // TLDR: when we load a page, if there's next and/or previous pages existing, we'll load their data as well to improve percepted performance.
-        const {
-          endCursor,
-          hasPreviousPage,
-          hasNextPage,
-          startCursor,
-        } = newProject.environment.deployments.pageInfo;
+        const { endCursor, hasPreviousPage, hasNextPage, startCursor } =
+          newProject.environment.deployments.pageInfo;
 
         // At the moment we have a limit of deployments being requested only from a signle environment entity per query,
         // and apparently two batched queries count as one on server-side
@@ -174,7 +170,7 @@ export default {
   <div class="gl-relative gl-min-h-6">
     <div
       v-if="isLoading"
-      class="gl-absolute gl-top-0 gl-left-0 gl-w-full gl-h-full gl-z-index-200 gl-bg-gray-10 gl-opacity-3"
+      class="gl-absolute gl-top-0 gl-left-0 gl-w-full gl-h-full gl-z-200 gl-bg-gray-10 gl-opacity-3"
     ></div>
     <gl-loading-icon v-if="isLoading" size="lg" class="gl-absolute gl-top-1/2 gl-left-1/2" />
     <div v-if="isDeploymentTableShown">

@@ -42,6 +42,8 @@ class UserPreference < MainClusterwide::ApplicationRecord
   attribute :use_web_ide_extension_marketplace, default: false
 
   enum visibility_pipeline_id_type: { id: 0, iid: 1 }
+  enum extensions_marketplace_opt_in_status: Enums::WebIde::ExtensionsMarketplaceOptInStatus.statuses
+  enum organization_groups_projects_display: { projects: 0, groups: 1 }
 
   class << self
     def notes_filters
@@ -124,6 +126,22 @@ class UserPreference < MainClusterwide::ApplicationRecord
     else
       super(value)
     end
+  end
+
+  def early_access_event_tracking?
+    early_access_program_participant? && early_access_program_tracking?
+  end
+
+  # NOTE: Despite this returning a boolean, it does not end in `?` out of
+  #       symmetry with the other integration fields like `gitpod_enabled`
+  def extensions_marketplace_enabled
+    extensions_marketplace_opt_in_status == "enabled"
+  end
+
+  def extensions_marketplace_enabled=(value)
+    status = ActiveRecord::Type::Boolean.new.cast(value) ? 'enabled' : 'disabled'
+
+    self.extensions_marketplace_opt_in_status = status
   end
 
   private

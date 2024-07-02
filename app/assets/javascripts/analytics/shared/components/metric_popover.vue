@@ -41,7 +41,7 @@ export default {
         <gl-link
           v-if="metricLink"
           :href="metricLink.url"
-          class="gl-font-sm gl-font-weight-normal"
+          class="gl-font-sm gl-font-normal"
           data-testid="metric-link"
           >{{ $options.metricPopoverLabel }}
           <gl-icon name="chart" />
@@ -56,7 +56,7 @@ export default {
       target="_blank"
       data-testid="metric-docs-link"
       >{{ docsLink.label }}
-      <gl-icon name="external-link" class="gl-vertical-align-middle" />
+      <gl-icon name="external-link" class="gl-align-middle" />
     </gl-link>
   </gl-popover>
 </template>

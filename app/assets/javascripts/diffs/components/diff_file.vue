@@ -323,7 +323,7 @@ export default {
         scrollToElement(contentElement, { duration: 0 });
       }
 
-      if (!this.hasDiff && !collapsingNow) {
+      if (!this.hasDiff && !collapsingNow && this.file?.viewer?.expandable) {
         this.requestDiff();
       }
     },
@@ -420,7 +420,14 @@ export default {
       :show-local-file-reviews="showLocalFileReviews"
       :pinned="isPinnedFile"
       class="js-file-title file-title gl-border-1 gl-border-solid gl-border-gray-100"
-      :class="[hasBodyClasses.header, { 'gl-border-red-500! gl-bg-red-200!': file.conflict_type }]"
+      :class="[
+        hasBodyClasses.header,
+        {
+          'gl-border-red-500! gl-bg-red-200!': file.conflict_type,
+          'gl-rounded-bottom-left-none! gl-rounded-bottom-right-none!':
+            file.conflict_type && isCollapsed,
+        },
+      ]"
       @toggleFile="handleToggle({ viaUserInteraction: true })"
       @showForkMessage="showForkMessage"
     />

@@ -82,6 +82,13 @@ FactoryBot.define do
     server { 'https://packagist.example.comp' }
   end
 
+  factory :phorge_integration, class: 'Integrations::Phorge' do
+    project
+    active { true }
+    project_url { 'http://phorge.example.com' }
+    issues_url { 'http://phorge.example.com/issues/:id' }
+  end
+
   factory :prometheus_integration, class: 'Integrations::Prometheus' do
     project
     active { true }

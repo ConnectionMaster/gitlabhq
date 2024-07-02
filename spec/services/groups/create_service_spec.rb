@@ -21,6 +21,7 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
     specify do
       expect { response }.to change { Group.count }
       expect(response).to be_success
+      expect(created_group.namespace_details.creator).to eq(current_user)
     end
   end
 
@@ -98,48 +99,6 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
     end
   end
 
-  context 'with `emails_disabled` attribute' do
-    context 'when emails_disabled is false' do
-      let(:extra_params) { { emails_disabled: false } }
-
-      it_behaves_like 'creating a group'
-
-      it 'sets emails_enabled to true' do
-        expect(created_group.emails_enabled).to eq(true)
-      end
-    end
-
-    context 'when emails_disabled is true' do
-      let(:extra_params) { { emails_disabled: true } }
-
-      it_behaves_like 'creating a group'
-
-      it 'sets emails_enabled to false' do
-        expect(created_group.emails_enabled).to eq(false)
-      end
-    end
-
-    context 'when emails_disabled is nil' do
-      let(:extra_params) { { emails_disabled: nil } }
-
-      it_behaves_like 'creating a group'
-
-      it 'sets emails_enabled to default true' do
-        expect(created_group.emails_enabled).to eq(true)
-      end
-    end
-
-    context 'when emails_disabled is the string "false"' do
-      let(:extra_params) { { emails_disabled: "false" } }
-
-      it_behaves_like 'creating a group'
-
-      it 'sets emails_enabled to false' do
-        expect(created_group.emails_enabled).to eq(true)
-      end
-    end
-  end
-
   context 'with `allow_mfa_for_subgroups` attribute' do
     let(:extra_params) { { allow_mfa_for_subgroups: false } }
 
@@ -168,6 +127,24 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
 
       context 'with before_commit callback' do
         it_behaves_like 'has sync-ed traversal_ids'
+      end
+
+      describe 'handling of allow_runner_registration_token default' do
+        context 'when on self-managed' do
+          it 'does not disallow runner registration token' do
+            expect(created_group.allow_runner_registration_token?).to eq true
+          end
+        end
+
+        context 'when instance is dedicated' do
+          before do
+            Gitlab::CurrentSettings.update!(gitlab_dedicated_instance: true)
+          end
+
+          it 'does not disallow runner registration token' do
+            expect(created_group.allow_runner_registration_token?).to eq true
+          end
+        end
       end
     end
 
@@ -244,8 +221,6 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
     end
 
     context 'when organization is not set by params', :with_current_organization do
-      let_it_be(:default_organization) { create(:organization, :default) }
-
       context 'and the parent of the group has an organization' do
         let_it_be(:parent_group) { create(:group, organization: other_organization) }
 
@@ -255,11 +230,14 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
           expect(created_group.organization).to eq(other_organization)
         end
       end
+    end
 
-      context 'and has no parent group' do
-        it 'creates group with the current organization' do
-          expect(created_group.organization).to eq(current_organization)
-        end
+    context 'when organization_id is set to nil' do
+      let_it_be(:default_organization) { create(:organization, :default) }
+      let(:extra_params) { { organization_id: nil } }
+
+      it 'creates group in default organization' do
+        expect(created_group.organization).to eq(default_organization)
       end
     end
 
@@ -345,6 +323,30 @@ RSpec.describe Groups::CreateService, '#execute', feature_category: :groups_and_
   context 'for creating a details record' do
     it 'create the details record connected to the group' do
       expect(created_group.namespace_details).to be_persisted
+    end
+  end
+
+  context 'when an instance-level instance specific integration' do
+    let_it_be(:instance_specific_integration) { create(:beyond_identity_integration) }
+
+    it 'creates integration inheriting from the instance level integration' do
+      expect(created_group.integrations.count).to eq(1)
+      expect(created_group.integrations.last.active).to eq(instance_specific_integration.active)
+      expect(created_group.integrations.last.inherit_from_id).to eq(instance_specific_integration.id)
+    end
+
+    context 'when there is a group-level exclusion' do
+      let(:extra_params) { { parent_id: group.id } }
+      let_it_be(:group) { create(:group) { |g| g.add_owner(user) } }
+      let_it_be(:group_integration) do
+        create(:beyond_identity_integration, group: group, instance: false, active: false)
+      end
+
+      it 'creates a service from the group-level integration' do
+        expect(created_group.integrations.count).to eq(1)
+        expect(created_group.integrations.last.active).to eq(group_integration.active)
+        expect(created_group.integrations.last.inherit_from_id).to eq(group_integration.id)
+      end
     end
   end
 

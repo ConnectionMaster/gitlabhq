@@ -1,5 +1,5 @@
 ---
-stage: Service Management
+stage: Monitor
 group: Respond
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
@@ -15,8 +15,6 @@ immediately so they can triage and respond to the problem. Responders can receiv
 notifications using the methods described on this page.
 
 ## Slack notifications
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/216326) in GitLab 13.1.
 
 The GitLab for Slack app can be used to receive important incident notifications.
 

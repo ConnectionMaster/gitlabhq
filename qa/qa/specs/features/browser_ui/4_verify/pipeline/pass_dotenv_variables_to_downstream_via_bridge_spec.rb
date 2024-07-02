@@ -8,14 +8,7 @@ module QA
       let(:group) { create(:group) }
       let(:upstream_project) { create(:project, group: group, name: 'upstream-project-with-bridge') }
       let(:downstream_project) { create(:project, group: group, name: 'downstream-project-with-bridge') }
-
-      let!(:runner) do
-        Resource::GroupRunner.fabricate! do |runner|
-          runner.name = executor
-          runner.tags = [executor]
-          runner.group = group
-        end
-      end
+      let!(:runner) { create(:group_runner, group: group, name: executor, tags: [executor]) }
 
       before do
         Flow::Login.sign_in
@@ -30,7 +23,7 @@ module QA
         [upstream_project, downstream_project].each(&:remove_via_api!)
       end
 
-      it 'runs the pipeline with composed config', :reliable,
+      it 'runs the pipeline with composed config', :blocking,
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/348088' do
         Page::Project::Pipeline::Show.perform do |parent_pipeline|
           Support::Waiter.wait_until { parent_pipeline.has_linked_pipeline? }

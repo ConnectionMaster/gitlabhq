@@ -30,11 +30,10 @@ export default class MergeRequestStore {
 
     this.stateMachine = machine(STATE_MACHINE.definition);
     this.machineValue = this.stateMachine.value;
-    this.mergeDetailsCollapsed =
-      !window.gon?.features?.mergeBlockedComponent && window.innerWidth < 768;
     this.mergeError = data.mergeError;
     this.multipleApprovalRulesAvailable = data.multiple_approval_rules_available || false;
     this.id = data.id;
+    this.autoMergeEnabled = false;
 
     this.setPaths(data);
 
@@ -150,6 +149,8 @@ export default class MergeRequestStore {
     this.exposedArtifactsPath = data.exposed_artifacts_path;
     this.cancelAutoMergePath = data.cancel_auto_merge_path;
     this.canCancelAutomaticMerge = Boolean(data.cancel_auto_merge_path);
+    this.ciIntegrationJenkins = data.jenkins_integration_active;
+    this.retargeted = data.retargeted;
 
     this.newBlobPath = data.new_blob_path;
     this.sourceBranchPath = data.source_branch_path;
@@ -180,6 +181,7 @@ export default class MergeRequestStore {
   setGraphqlData(project) {
     const { mergeRequest } = project;
     const pipeline = mergeRequest.headPipeline;
+    const pipelines = mergeRequest.pipelines?.nodes;
 
     this.updateStatusState(mergeRequest.state);
 
@@ -197,6 +199,7 @@ export default class MergeRequestStore {
       this.ciStatus = `${this.ciStatus}-with-warnings`;
     }
 
+    this.detatchedPipeline = pipelines.length ? pipelines[0].mergeRequestEventType : null;
     this.commitsCount = mergeRequest.commitCount;
     this.branchMissing =
       mergeRequest.detailedMergeStatus !== 'NOT_OPEN' &&
@@ -291,6 +294,7 @@ export default class MergeRequestStore {
     this.isDismissedSuggestPipeline = data.is_dismissed_suggest_pipeline;
     this.securityReportsDocsPath = data.security_reports_docs_path;
     this.securityConfigurationPath = data.security_configuration_path;
+    this.isIntegrationJenkinsDismissed = false;
 
     // code quality
     const blobPath = data.blob_path || {};
@@ -390,7 +394,7 @@ export default class MergeRequestStore {
   }
 
   get preventMerge() {
-    return this.isApprovalNeeded;
+    return this.isApprovalNeeded && this.preferredAutoMergeStrategy !== MWCP_MERGE_STRATEGY;
   }
 
   // Because the state machine doesn't yet handle every state and transition,
@@ -419,13 +423,5 @@ export default class MergeRequestStore {
     }
 
     this.transitionStateMachine(transitionOptions);
-  }
-
-  toggleMergeDetails(val = !this.mergeDetailsCollapsed) {
-    if (window.gon?.features?.mergeBlockedComponent) {
-      return;
-    }
-
-    this.mergeDetailsCollapsed = val;
   }
 }

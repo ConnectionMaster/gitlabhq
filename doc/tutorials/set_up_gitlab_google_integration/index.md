@@ -6,18 +6,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Tutorial: Set up the Google Cloud integration
 
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** GitLab.com
-**Status:** Beta
-
-FLAG:
-On GitLab.com, this feature is available for a subset of users.
-On GitLab Dedicated, this feature is not available.
-
-This feature is in [Beta](../../policy/experiment-beta-support.md).
-To test this feature, join the [waitlist](https://forms.gle/XdxdTxC7DXj4NSaz9).
-
 This tutorial shows you how to integrate Google Cloud with GitLab,
 so that you can deploy directly to Google Cloud.
 
@@ -34,11 +22,11 @@ To set up the integration, you must:
 
 - Have a GitLab project where you have at least the Maintainer role.
 - Have the [Owner](https://cloud.google.com/iam/docs/understanding-roles#owner) IAM role on the
-   Google Cloud projects that you want to use.
+  Google Cloud projects that you want to use.
 - Have [billing enabled for your Google Cloud project](https://cloud.google.com/billing/docs/how-to/verify-billing-enabled#confirm_billing_is_enabled_on_a_project).
 - Have a Google Artifact Registry repository with Docker format and Standard mode.
 - Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
-   and [Terraform](https://developer.hashicorp.com/terraform/install).
+  and [Terraform](https://developer.hashicorp.com/terraform/install).
 
 ## Secure your usage with Google Cloud Identity and Access Management (IAM)
 
@@ -61,7 +49,7 @@ After this step, you can view your Google Cloud artifacts in GitLab.
 1. Under **Enable integration**, select the **Active** checkbox.
 1. Complete the fields:
    - **[Google Cloud project ID](https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects)**:
-   The ID of the Google Cloud project where your Artifact Registry repository is located.
+     The ID of the Google Cloud project where your Artifact Registry repository is located.
    - **Repository name**: The name of your Artifact Registry repository.
    - **Repository location**: The location of your Artifact Registry repository.
 1. In **Configure Google Cloud IAM policies**, follow the onscreen instructions
@@ -85,9 +73,9 @@ a runner manager that creates temporary runners to execute multiple jobs simulta
 1. Complete the fields.
    - In the **Platform** section, select **Google Cloud**.
    - In the **Tags** section, in the **Tags** field, enter the job tags to specify jobs the runner can run.
-      If there are no job tags for this runner, select **Run untagged**.
+     If there are no job tags for this runner, select **Run untagged**.
    - Optional. In the **Runner description** field, add a description for the runner
-      that displays in GitLab.
+     that displays in GitLab.
    - Optional. In the **Configuration** section, add additional configurations.
 1. Select **Create runner**.
 1. Complete the fields in the **Step 1: Specify environment** section to specify the environment in
@@ -105,56 +93,44 @@ You can use the library of components from GitLab and Google to make your GitLab
 interact with Google Cloud resources.
 See the [CI/CD components from Google](https://gitlab.com/google-gitlab-components).
 
-### Push container images to Google Artifact Registry
+### Copy container images to Google Artifact Registry
 
 Before you begin, you must have a working CI/CD configuration that builds and pushes container
-images to your GitLab Container Registry.
+images to your GitLab container registry.
 
-To push container images from your GitLab Container Registry to your Google Artifact Registry,
-you must add the specific configuration to your pipeline.
-After this step, whenever a new container image is pushed to your GitLab Container Registry,
+To copy container images from your GitLab container registry to your Google Artifact Registry,
+include the [CI/CD component from Google](https://gitlab.com/explore/catalog/google-gitlab-components/artifact-registry)
+in your pipeline.
+After this step, whenever a new container image is pushed to your GitLab container registry,
 it is also pushed to your Google Artifact Registry.
 
 1. In your GitLab project, on the left sidebar, select **Build > Pipeline editor**.
-1. In the existing configuration, add the following `copy-image` job.
-   - Replace the placeholders in the job:
-      - `<your_stage>`: Stage where this job runs.
-      - `<your_build_job>`: Job that builds and pushes the image to your GitLab Container Registry.
+1. In the existing configuration, add the component as follows.
+   - Replace `<your_stage>` with the stage where this job runs.
+     It must be after the image is built and pushed to the GitLab container registry.
 
    ```yaml
-   copy-image:
-    stage: <your_stage>
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:466.0.0-alpine
-    identity: google_cloud
-    services:
-      - docker:24.0.5-dind
-    variables:
-      SOURCE_IMAGE: $CI_REGISTRY_IMAGE:v0.1.0
-      TARGET_IMAGE: $GOOGLE_ARTIFACT_REGISTRY_REPOSITORY_LOCATION-docker.pkg.dev/$GOOGLE_ARTIFACT_REGISTRY_PROJECT_ID/$GOOGLE_ARTIFACT_REGISTRY_REPOSITORY_NAME/app:v0.1.0
-      DOCKER_HOST: tcp://docker:2375
-    before_script:
-      - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-      - gcloud auth configure-docker $GOOGLE_ARTIFACT_REGISTRY_REPOSITORY_LOCATION-docker.pkg.dev
-    script:
-      - docker pull $SOURCE_IMAGE
-      - docker tag $SOURCE_IMAGE $TARGET_IMAGE
-      - docker push $TARGET_IMAGE
+   include:
+     - component: gitlab.com/google-gitlab-components/artifact-registry/upload-artifact-registry@main
+       inputs:
+         stage: <your_stage>
+         source: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+         target: $GOOGLE_ARTIFACT_REGISTRY_REPOSITORY_LOCATION-docker.pkg.dev/$GOOGLE_ARTIFACT_REGISTRY_PROJECT_ID/$GOOGLE_ARTIFACT_REGISTRY_REPOSITORY_NAME/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA
    ```
 
 1. Add a descriptive commit message. **Target branch** must be your default branch.
 1. Select **Commit changes**.
 1. Go to **Build > Pipelines** and make sure a new pipeline runs.
-1. Select the pipeline, then select the `copy-image` job to view its log.
-1. After the job finishes successfully, to view the container image that was pushed to Google Artifact Registry,
+1. After the pipeline finishes successfully, to view the container image that was copied to Google Artifact Registry,
    on the left sidebar, select **Deploy > Google Artifact Registry**.
 
 ### Create a Google Cloud Deploy release
 
-To have your pipeline interact with Google Cloud Deploy, you can use the GitLab CI/CD components from Google.
+To integrate your pipeline with Google Cloud Deploy, include the [CI/CD component from Google](https://gitlab.com/explore/catalog/google-gitlab-components/cloud-deploy) in your pipeline.
 After this step, your pipeline creates a Google Cloud Deploy release with your application.
 
 1. In your GitLab project, on the left sidebar, select **Build > Pipeline editor**.
-1. In the existing configuration, add the [Google Cloud Deploy component](https://gitlab.com/google-gitlab-components/cloud-deploy).
+1. In the existing configuration, add the [Google Cloud Deploy component](https://gitlab.com/explore/catalog/google-gitlab-components/cloud-deploy).
 1. Edit the component `inputs`.
 1. Add a descriptive commit message. **Target branch** must be your default branch.
 1. Select **Commit changes**.
@@ -168,5 +144,5 @@ deploys to Google Cloud.
 ## Related topics
 
 - [Google Cloud IAM integration](../../integration/google_cloud_iam.md)
-- [Google Artifact Registry integration](../../user/project/integrations/google_artifact_registry.md)
+- [Google Artifact Management integration](../../user/project/integrations/google_artifact_management.md)
 - [Provisioning runners in Google Cloud](../../ci/runners/provision_runners_google_cloud.md)

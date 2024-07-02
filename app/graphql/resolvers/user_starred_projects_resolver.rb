@@ -5,8 +5,13 @@ module Resolvers
     type Types::ProjectType.connection_type, null: true
 
     argument :search, GraphQL::Types::String,
-             required: false,
-             description: 'Search query.'
+      required: false,
+      description: 'Search query.'
+
+    argument :sort, Types::Projects::ProjectSortEnum,
+      required: false,
+      description: "List starred projects by sort order.",
+      default_value: :name_asc
 
     alias_method :user, :object
 

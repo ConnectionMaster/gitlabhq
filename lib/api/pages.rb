@@ -10,7 +10,7 @@ module API
 
     params do
       requires :id, types: [String, Integer],
-                    desc: 'The ID or URL-encoded path of the project owned by the authenticated user'
+        desc: 'The ID or URL-encoded path of the project owned by the authenticated user'
     end
     resource :projects, requirements: API::NAMESPACE_OR_PROJECT_REQUIREMENTS do
       desc 'Unpublish pages' do
@@ -29,6 +29,34 @@ module API
         ::Pages::DeleteService.new(user_project, current_user).execute
 
         no_content!
+      end
+
+      desc 'Update pages settings' do
+        detail 'Update page settings for a project. User must have administrative access.'
+        success code: 200
+        failure [
+          { code: 401, message: 'Unauthorized' },
+          { code: 404, message: 'Not Found' }
+        ]
+        tags %w[pages]
+      end
+      params do
+        optional :pages_unique_domain_enabled, type: Boolean, desc: 'Whether to use unique domain'
+        optional :pages_https_only, type: Boolean, desc: 'Whether to force HTTPS'
+      end
+      patch ':id/pages' do
+        authenticated_with_can_read_all_resources!
+        authorize! :update_pages, user_project
+
+        break not_found! unless user_project.pages_enabled?
+
+        response = ::Pages::UpdateService.new(user_project, current_user, params).execute
+
+        if response.success?
+          present ::Pages::ProjectSettings.new(response.payload[:project]), with: Entities::Pages::ProjectSettings
+        else
+          forbidden!(response.message)
+        end
       end
 
       desc 'Get pages settings' do

@@ -6,14 +6,7 @@ module QA
       let(:executor) { "qa-runner-#{Time.now.to_i}" }
       let(:pipeline_job_name) { 'rspec' }
       let(:project) { create(:project, name: 'project-with-raw-variable-pipeline') }
-
-      let!(:runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = project
-          runner.name = executor
-          runner.tags = [executor]
-        end
-      end
+      let!(:runner) { create(:project_runner, project: project, name: executor, tags: [executor]) }
 
       let!(:commit_ci_file) do
         create(:commit, project: project, commit_message: 'Add .gitlab-ci.yml', actions: [
@@ -77,7 +70,7 @@ module QA
       end
 
       it(
-        'expands variables according to expand: true/false', :reliable,
+        'expands variables according to expand: true/false', :smoke,
         :aggregate_failures,
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/381487'
       ) do

@@ -936,78 +936,34 @@ RSpec.describe API::MergeRequests, :aggregate_failures, feature_category: :sourc
       context 'filter by merge_user' do
         let(:params) { { scope: :all } }
 
-        context 'when flag `mr_merge_user_filter` is disabled' do
-          before do
-            stub_feature_flags(mr_merge_user_filter: false)
-          end
+        context 'with merge_user_id' do
+          let(:params) { super().merge(merge_user_id: user.id) }
 
-          context 'with merge_user_id' do
-            let(:params) { super().merge(merge_user_id: user.id) }
+          it 'returns merged merge requests for the given user' do
+            get api('/merge_requests', user), params: params
 
-            it 'returns merged merge requests for the given user' do
-              get api('/merge_requests', user), params: params
-
-              expect_response_contain_exactly(
-                merge_request.id,
-                merge_request_closed.id,
-                merge_request_merged.id,
-                merge_request_locked.id,
-                merge_request2.id
-              )
-            end
-          end
-
-          context 'with merge_user_username' do
-            let(:params) { super().merge(merge_user_username: user.username) }
-
-            it 'returns merged merge requests for the given user' do
-              get api('/merge_requests', user), params: params
-
-              expect_response_contain_exactly(
-                merge_request.id,
-                merge_request_closed.id,
-                merge_request_merged.id,
-                merge_request_locked.id,
-                merge_request2.id
-              )
-            end
+            expect_response_contain_exactly(merge_request_merged.id)
           end
         end
 
-        context 'when flag `mr_merge_user_filter` is enabled' do
-          before do
-            stub_feature_flags(mr_merge_user_filter: true)
+        context 'with merge_user_username' do
+          let(:params) { super().merge(merge_user_username: user.username) }
+
+          it 'returns merged merge requests for the given user' do
+            get api('/merge_requests', user), params: params
+
+            expect_response_contain_exactly(merge_request_merged.id)
           end
+        end
 
-          context 'with merge_user_id' do
-            let(:params) { super().merge(merge_user_id: user.id) }
+        context 'with both merge_user_id and merge_user_username' do
+          let(:params) { super().merge(merge_user_id: user.id, merge_user_username: user.username) }
 
-            it 'returns merged merge requests for the given user' do
-              get api('/merge_requests', user), params: params
+          it 'returns a 400' do
+            get api('/merge_requests', user), params: params
 
-              expect_response_contain_exactly(merge_request_merged.id)
-            end
-          end
-
-          context 'with merge_user_username' do
-            let(:params) { super().merge(merge_user_username: user.username) }
-
-            it 'returns merged merge requests for the given user' do
-              get api('/merge_requests', user), params: params
-
-              expect_response_contain_exactly(merge_request_merged.id)
-            end
-          end
-
-          context 'with both merge_user_id and merge_user_username' do
-            let(:params) { super().merge(merge_user_id: user.id, merge_user_username: user.username) }
-
-            it 'returns a 400' do
-              get api('/merge_requests', user), params: params
-
-              expect(response).to have_gitlab_http_status(:bad_request)
-              expect(json_response['error']).to eq('merge_user_id, merge_user_username are mutually exclusive')
-            end
+            expect(response).to have_gitlab_http_status(:bad_request)
+            expect(json_response['error']).to eq('merge_user_id, merge_user_username are mutually exclusive')
           end
         end
       end
@@ -3147,13 +3103,24 @@ RSpec.describe API::MergeRequests, :aggregate_failures, feature_category: :sourc
           squash_commit_message: squash_commit_message
         }
 
+        expect(response).to have_gitlab_http_status(:ok)
         expect(squash_commit.message.chomp).to eq(squash_commit_message)
       end
 
       it "results in a default squash commit message when not set" do
         put api("/projects/#{project.id}/merge_requests/#{merge_request.iid}/merge", user), params: { squash: true }
 
+        expect(response).to have_gitlab_http_status(:ok)
         expect(squash_commit.message.chomp).to eq(merge_request.default_squash_commit_message.chomp)
+      end
+
+      context 'when squash_commit_message is empty' do
+        it 'uses a default squash commit message' do
+          put api("/projects/#{project.id}/merge_requests/#{merge_request.iid}/merge", user), params: { squash: true, squash_commit_message: '' }
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(squash_commit.message.chomp).to eq(merge_request.default_squash_commit_message.chomp)
+        end
       end
     end
 
@@ -3665,6 +3632,99 @@ RSpec.describe API::MergeRequests, :aggregate_failures, feature_category: :sourc
       get api("/projects/#{project.id}/merge_requests/#{merge_request.id}/closes_issues", user)
 
       expect(response).to have_gitlab_http_status(:not_found)
+    end
+  end
+
+  describe 'GET :id/merge_requests/:merge_request_iid/related_issues' do
+    subject(:request) { get api("/projects/#{project.id}/merge_requests/#{mr_iid}/related_issues", requested_by) }
+
+    let(:mr_iid) { merge_request.iid }
+    let(:requested_by) { user }
+
+    context 'when merge request does not reference any issue' do
+      it 'returns an empty array' do
+        request
+
+        expect_empty_array_response
+      end
+    end
+
+    context 'when merge request references issue in title' do
+      let(:issue) { create(:issue, project: project) }
+
+      before do
+        merge_request.update!(title: "References #{issue.to_reference}")
+      end
+
+      it 'returns related issue' do
+        request
+
+        expect_successful_response_with_paginated_array
+        expect(json_response.length).to eq(1)
+        expect(json_response.first['id']).to eq(issue.id)
+      end
+    end
+
+    context 'when merge request references external and internal issue in title' do
+      let_it_be(:project) { create(:project, :with_jira_integration, :public, :repository, name: 'JIR_EXT1') }
+
+      let(:external_issue) { ExternalIssue.new("#{project.name}-123", project) }
+      let(:internal_issue) { create(:issue, project: project) }
+
+      before do
+        merge_request.update!(title: "References #{external_issue.to_reference} and #{internal_issue.to_reference}")
+      end
+
+      it 'returns external and internal issue' do
+        request
+
+        expect_successful_response_with_paginated_array
+        expect(json_response.length).to eq(2)
+
+        internal_issue_data = json_response.first
+        expect(internal_issue_data['id']).to eq(internal_issue.id)
+        expect(internal_issue_data['title']).to eq(internal_issue.title)
+        expect(internal_issue_data).to have_key('confidential')
+
+        external_issue_data = json_response.second
+        expect(external_issue_data['id']).to eq(external_issue.id)
+        expect(external_issue_data['title']).to eq(external_issue.title)
+        expect(external_issue_data).not_to have_key('confidential')
+      end
+    end
+
+    context 'when user has no access to the merge request' do
+      let(:requested_by) { create(:user, guest_of: project) }
+
+      before do
+        project.update!(visibility_level: Gitlab::VisibilityLevel::PRIVATE)
+      end
+
+      it 'returns 403' do
+        request
+
+        expect(response).to have_gitlab_http_status(:forbidden)
+      end
+    end
+
+    context 'when non-existing merge request iid provided' do
+      let(:mr_iid) { non_existing_record_id }
+
+      it 'returns 404' do
+        request
+
+        expect(response).to have_gitlab_http_status(:not_found)
+      end
+    end
+
+    context 'when merge request id instead of iid provided' do
+      let(:mr_iid) { merge_request.id }
+
+      it 'returns 404' do
+        request
+
+        expect(response).to have_gitlab_http_status(:not_found)
+      end
     end
   end
 

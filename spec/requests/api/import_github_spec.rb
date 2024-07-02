@@ -42,16 +42,53 @@ RSpec.describe API::ImportGithub, feature_category: :importers do
       allow(client).to receive_message_chain(:octokit, :repository).and_return({ status: 200 })
     end
 
-    it 'rejects requests when Github Importer is disabled' do
-      stub_application_setting(import_sources: nil)
+    context 'when Github Importer is disabled' do
+      before do
+        stub_application_setting(import_sources: nil)
+        stub_feature_flags(override_github_disabled: false)
+      end
 
-      post api("/import/github", user), params: {
-        target_namespace: user.namespace_path,
-        personal_access_token: token,
-        repo_id: non_existing_record_id
-      }
+      it 'rejects requests' do
+        post api("/import/github", user), params: {
+          target_namespace: user.namespace_path,
+          personal_access_token: token,
+          repo_id: non_existing_record_id
+        }
 
-      expect(response).to have_gitlab_http_status(:forbidden)
+        expect(response).to have_gitlab_http_status(:forbidden)
+      end
+
+      context 'when override_github_disabled ops flag is enabled for the user' do
+        before do
+          stub_feature_flags(override_github_disabled: user)
+        end
+
+        it 'accepts requests' do
+          post api("/import/github", user), params: {
+            target_namespace: user.namespace_path,
+            personal_access_token: token,
+            repo_id: non_existing_record_id
+          }
+
+          expect(response).to have_gitlab_http_status(:created)
+        end
+      end
+
+      context 'when override_github_disabled ops flag is enabled for another user' do
+        before do
+          stub_feature_flags(override_github_disabled: create(:user))
+        end
+
+        it 'rejects requests' do
+          post api("/import/github", user), params: {
+            target_namespace: user.namespace_path,
+            personal_access_token: token,
+            repo_id: non_existing_record_id
+          }
+
+          expect(response).to have_gitlab_http_status(:forbidden)
+        end
+      end
     end
 
     it 'returns 201 response when the project is imported successfully' do
@@ -191,9 +228,8 @@ RSpec.describe API::ImportGithub, feature_category: :importers do
 
           expect(response).to have_gitlab_http_status(:unprocessable_entity)
           expect(json_response['errors']).to eq("Your GitHub personal access token does not have read access to the repository. " \
-                                                "Please use a classic token with the `repo` scope or a fine-grained " \
-                                                "token with `read-only` permissions to Repository, Issues, Metadata, " \
-                                                "Pull Requests, and Contents.")
+                                                "Please use a classic GitHub personal access token with the `repo` scope. " \
+                                                "Fine-grained tokens are not supported.")
         end
       end
 
@@ -214,9 +250,8 @@ RSpec.describe API::ImportGithub, feature_category: :importers do
 
           expect(response).to have_gitlab_http_status(:unprocessable_entity)
           expect(json_response['errors']).to eq("Your GitHub personal access token does not have read access to the repository. " \
-                                                "Please use a classic token with the `repo` scope or a fine-grained " \
-                                                "token with `read-only` permissions to Repository, Issues, Metadata, " \
-                                                "Pull Requests, and Contents.")
+                                                "Please use a classic GitHub personal access token with the `repo` scope. " \
+                                                "Fine-grained tokens are not supported.")
         end
       end
 
@@ -238,8 +273,8 @@ RSpec.describe API::ImportGithub, feature_category: :importers do
 
           expect(response).to have_gitlab_http_status(:unprocessable_entity)
           expect(json_response['errors']).to eq("Your GitHub personal access token does not have read access to collaborators. " \
-                                                "Please use a classic token with the `read:org` scope or a fine-grained " \
-                                                "token with the `administration:read-only` permission.")
+                                                "Please use a classic GitHub personal access token with the `read:org` scope. " \
+                                                "Fine-grained tokens are not supported.")
         end
       end
     end

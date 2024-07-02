@@ -5,6 +5,7 @@ require 'spec_helper'
 RSpec.describe Group, feature_category: :groups_and_projects do
   include ReloadHelpers
   include StubGitlabCalls
+  using RSpec::Parameterized::TableSyntax
 
   let!(:group) { create(:group) }
 
@@ -490,9 +491,7 @@ RSpec.describe Group, feature_category: :groups_and_projects do
   it_behaves_like 'a BulkUsersByEmailLoad model'
 
   it_behaves_like 'ensures runners_token is prefixed' do
-    subject(:record) do
-      create(:group, namespace_settings: create(:namespace_settings, allow_runner_registration_token: true))
-    end
+    subject(:record) { create(:group, :allow_runner_registration_token) }
   end
 
   context 'after initialized' do
@@ -716,32 +715,19 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     it_behaves_like 'namespace traversal'
 
     describe '#self_and_descendants' do
-      it { expect(group.self_and_descendants.to_sql).to include('traversal_ids >=').and(include('traversal_ids <')) }
+      it { expect(group.self_and_descendants.to_sql).to include 'traversal_ids @>' }
     end
 
     describe '#self_and_descendant_ids' do
-      it { expect(group.self_and_descendant_ids.to_sql).to include('traversal_ids >=').and(include('traversal_ids <')) }
+      it { expect(group.self_and_descendant_ids.to_sql).to include 'traversal_ids @>' }
     end
 
     describe '#descendants' do
-      it { expect(group.descendants.to_sql).to include('traversal_ids >=').and(include('traversal_ids <')) }
+      it { expect(group.descendants.to_sql).to include 'traversal_ids @>' }
     end
 
     describe '#self_and_hierarchy' do
-      it { expect(group.self_and_hierarchy.to_sql).to include('traversal_ids >=').and(include('traversal_ids <')) }
-    end
-
-    context 'when optimize_top_bound_lineage_search is off' do
-      before do
-        stub_feature_flags(optimize_top_bound_lineage_search: false)
-      end
-
-      it 'uses @> operator in queries' do
-        expect(group.self_and_descendants.to_sql).to include('traversal_ids @>')
-        expect(group.self_and_descendant_ids.to_sql).to include('traversal_ids @>')
-        expect(group.descendants.to_sql).to include('traversal_ids @>')
-        expect(group.self_and_hierarchy.to_sql).to include('traversal_ids @>')
-      end
+      it { expect(group.self_and_hierarchy.to_sql).to include 'traversal_ids @>' }
     end
 
     describe '#ancestors' do
@@ -864,6 +850,25 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
   end
 
+  describe '.groups_user_can' do
+    let_it_be(:public_group) { create(:group, :public) }
+    let_it_be(:internal_subgroup) { create(:group, :internal, parent: public_group) }
+    let_it_be(:private_subgroup_1) { create(:group, :private, parent: internal_subgroup) }
+    let_it_be(:private_subgroup_2) { create(:group, :private, parent: private_subgroup_1) }
+
+    let_it_be(:user) { create(:user) }
+
+    it 'filters groups based on permissions' do
+      private_subgroup_2.add_guest(user)
+
+      expect(described_class.groups_user_can(public_group.self_and_descendants, user, :read_group)).to contain_exactly(
+        public_group,
+        internal_subgroup,
+        private_subgroup_2
+      )
+    end
+  end
+
   describe '.execute_integrations' do
     let(:integration) { create(:integrations_slack, :group, group: group) }
     let(:test_data) { { 'foo' => 'bar' } }
@@ -911,11 +916,7 @@ RSpec.describe Group, feature_category: :groups_and_projects do
           private_group.add_member(user, Gitlab::Access::DEVELOPER)
         end
 
-        it { is_expected.to match_array([private_group, internal_group, group]) }
-
-        it 'does not have access to subgroups (see accessible_to_user scope)' do
-          is_expected.not_to include(private_subgroup)
-        end
+        it { is_expected.to contain_exactly(private_group, private_subgroup, internal_group, group) }
       end
 
       context 'when user is a member of private subgroup' do
@@ -1965,7 +1966,7 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
 
     context 'evaluating admin access level' do
-      let_it_be(:admin) { create(:admin, :without_default_org) }
+      let_it_be(:admin) { create(:admin) }
 
       context 'when admin mode is enabled', :enable_admin_mode do
         it 'returns OWNER by default' do
@@ -1988,8 +1989,16 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     context 'when organization owner' do
       let_it_be(:admin) { create(:admin) }
 
-      it 'returns OWNER by default' do
-        expect(group.max_member_access_for_user(admin)).to eq(Gitlab::Access::OWNER)
+      context 'when admin mode is enabled', :enable_admin_mode do
+        it 'returns OWNER by default' do
+          expect(group.max_member_access_for_user(admin)).to eq(Gitlab::Access::OWNER)
+        end
+      end
+
+      context 'when admin mode is disabled' do
+        it 'returns NO_ACCESS by default' do
+          expect(group.max_member_access_for_user(admin)).to eq(Gitlab::Access::NO_ACCESS)
+        end
       end
 
       context 'when only concrete members' do
@@ -2816,8 +2825,6 @@ RSpec.describe Group, feature_category: :groups_and_projects do
   end
 
   describe '#first_auto_devops_config' do
-    using RSpec::Parameterized::TableSyntax
-
     let(:group) { create(:group) }
 
     subject(:fetch_config) { group.first_auto_devops_config }
@@ -3767,10 +3774,10 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
   end
 
-  describe '#work_items_mvc_2_feature_flag_enabled?' do
+  describe '#work_items_alpha_feature_flag_enabled?' do
     it_behaves_like 'checks self and root ancestor feature flag' do
-      let(:feature_flag) { :work_items_mvc_2 }
-      let(:feature_flag_method) { :work_items_mvc_2_feature_flag_enabled? }
+      let(:feature_flag) { :work_items_alpha }
+      let(:feature_flag_method) { :work_items_alpha_feature_flag_enabled? }
     end
   end
 
@@ -3795,8 +3802,6 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
 
     describe '#shared_with_group_links.of_ancestors' do
-      using RSpec::Parameterized::TableSyntax
-
       where(:subject_group, :result) do
         ref(:group)         | []
         ref(:sub_group)     | lazy { [shared_group_1].map(&:id) }
@@ -3811,8 +3816,6 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
 
     describe '#shared_with_group_links.of_ancestors_and_self' do
-      using RSpec::Parameterized::TableSyntax
-
       where(:subject_group, :result) do
         ref(:group)         | lazy { [shared_group_1].map(&:id) }
         ref(:sub_group)     | lazy { [shared_group_1, shared_group_2].map(&:id) }
@@ -3872,24 +3875,16 @@ RSpec.describe Group, feature_category: :groups_and_projects do
     end
   end
 
-  describe '#usage_quotas_enabled?', feature_category: :consumables_cost_management, unless: Gitlab.ee? do
-    using RSpec::Parameterized::TableSyntax
-
-    where(:feature_enabled, :root_group, :result) do
-      false | true  | false
-      false | false | false
-      true  | false | false
-      true  | true  | true
-    end
+  describe '#usage_quotas_enabled?', feature_category: :consumables_cost_management do
+    where(root_group: [true, false])
 
     with_them do
       before do
-        stub_feature_flags(usage_quotas_for_all_editions: feature_enabled)
         allow(group).to receive(:root?).and_return(root_group)
       end
 
       it 'returns the expected result' do
-        expect(group.usage_quotas_enabled?).to eq result
+        expect(group.usage_quotas_enabled?).to be root_group
       end
     end
   end

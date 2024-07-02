@@ -33,6 +33,7 @@ import {
   STATE_MACHINE,
   MT_SKIP_TRAIN,
   MT_RESTART_TRAIN,
+  MWCP_MERGE_STRATEGY,
 } from '../../constants';
 import eventHub from '../../event_hub';
 import mergeRequestQueryVariablesMixin from '../../mixins/merge_request_query_variables';
@@ -212,7 +213,7 @@ export default {
       return ['FAILED', 'CANCELED'].indexOf(this.pipeline?.status) !== -1;
     },
     showMergeFailedPipelineConfirmationDialog() {
-      return this.status === PIPELINE_FAILED_STATE && this.isPipelineFailed;
+      return (this.status === PIPELINE_FAILED_STATE && this.isPipelineFailed) || this.mr.retargeted;
     },
     isMergeAllowed() {
       return this.state.mergeable || false;
@@ -243,11 +244,11 @@ export default {
         this.state.availableAutoMergeStrategies,
       );
     },
+    isPreferredAutoMergeStrategyMWPC() {
+      return this.preferredAutoMergeStrategy === MWCP_MERGE_STRATEGY;
+    },
     squashIsSelected() {
       return this.isSquashReadOnly ? this.state.squashOnMerge : this.state.squash;
-    },
-    isPipelineActive() {
-      return this.pipeline?.active || false;
     },
     status() {
       const ciStatus = this.pipeline?.status?.toLowerCase();
@@ -317,7 +318,11 @@ export default {
       return this.preferredAutoMergeStrategy === MT_MERGE_STRATEGY && this.isPipelineFailed;
     },
     shouldShowMergeControls() {
-      return this.state.userPermissions?.canMerge && this.mr.state === 'readyToMerge';
+      return (
+        this.state.userPermissions?.canMerge &&
+        !this.mr.autoMergeEnabled &&
+        this.mr.state === 'readyToMerge'
+      );
     },
     sourceBranchDeletedText() {
       const isPreMerge = this.mr.state !== STATUS_MERGED;
@@ -354,6 +359,9 @@ export default {
     'mr.state': function mrStateWatcher() {
       this.isMakingRequest = false;
     },
+    'state.autoMergeEnabled': function mrAutoMergeEnabledWatcher() {
+      this.isMakingRequest = false;
+    },
   },
   mounted() {
     eventHub.$on('ApprovalUpdated', this.updateGraphqlState);
@@ -386,7 +394,11 @@ export default {
       return this.$apollo.queries.state.refetch();
     },
     handleMergeButtonClick(useAutoMerge, mergeImmediately = false, confirmationClicked = false) {
-      if (this.showMergeFailedPipelineConfirmationDialog && !confirmationClicked) {
+      if (
+        this.preferredAutoMergeStrategy !== MT_MERGE_STRATEGY &&
+        this.showMergeFailedPipelineConfirmationDialog &&
+        !confirmationClicked
+      ) {
         this.isPipelineFailedModalVisibleNormalMerge = true;
         return;
       }
@@ -595,10 +607,10 @@ export default {
                 </gl-form-checkbox>
               </div>
               <div v-if="editCommitMessage" class="gl-w-full" data-testid="edit_commit_message">
-                <ul class="border-top commits-list flex-list gl-list-style-none gl-p-0 gl-pt-4">
+                <ul class="border-top commits-list flex-list gl-list-none gl-p-0 gl-pt-4">
                   <commit-edit
                     v-if="shouldShowSquashEdit"
-                    :value="squashCommitMessage"
+                    v-model="squashCommitMessage"
                     :label="__('Squash commit message')"
                     input-id="squash-message-edit"
                     class="gl-m-0! gl-p-0!"
@@ -610,7 +622,7 @@ export default {
                   </commit-edit>
                   <commit-edit
                     v-if="shouldShowMergeEdit"
-                    :value="commitMessage"
+                    v-model="commitMessage"
                     :label="__('Merge commit message')"
                     input-id="merge-message-edit"
                     class="gl-m-0! gl-p-0!"
@@ -758,14 +770,14 @@ export default {
             </template>
             <div
               v-else
-              class="gl-w-full gl-order-n1 mr-widget-merge-details"
+              class="gl-w-full -gl-order-1 mr-widget-merge-details"
               data-testid="merged-status-content"
             >
               <p v-if="showMergeDetailsHeader" class="gl-mb-2 gl-text-gray-900">
                 {{ __('Merge details') }}
               </p>
               <ul class="gl-pl-4 gl-mb-0 gl-ml-3 gl-text-gray-600">
-                <li v-if="sourceHasDivergedFromTarget" class="gl-line-height-normal">
+                <li v-if="sourceHasDivergedFromTarget" class="gl-leading-normal">
                   <gl-sprintf :message="$options.i18n.sourceDivergedFromTargetText">
                     <template #link>
                       <gl-link :href="mr.targetBranchPath">{{
@@ -774,7 +786,7 @@ export default {
                     </template>
                   </gl-sprintf>
                 </li>
-                <li class="gl-line-height-normal">
+                <li class="gl-leading-normal">
                   <added-commit-message
                     :state="mr.state"
                     :merge-commit-sha="mr.shortMergeCommitSha"
@@ -787,12 +799,12 @@ export default {
                 </li>
                 <li
                   v-if="isNotClosed"
-                  class="gl-line-height-normal"
+                  class="gl-leading-normal"
                   data-testid="source-branch-deleted-text"
                 >
                   {{ sourceBranchDeletedText }}
                 </li>
-                <li v-if="mr.relatedLinks" class="gl-line-height-normal">
+                <li v-if="mr.relatedLinks" class="gl-leading-normal">
                   <related-links
                     :state="mr.state"
                     :related-links="mr.relatedLinks"
@@ -800,7 +812,7 @@ export default {
                     class="mr-ready-merge-related-links gl-display-inline"
                   />
                 </li>
-                <li v-if="state.autoMergeEnabled" class="gl-line-height-normal">
+                <li v-if="state.autoMergeEnabled" class="gl-leading-normal">
                   {{ s__('mrWidget|Auto-merge enabled') }}
                 </li>
               </ul>
@@ -828,6 +840,8 @@ export default {
       />
       <merge-failed-pipeline-confirmation-dialog
         :visible="isPipelineFailedModalVisibleNormalMerge"
+        :target-project-id="mr.targetProjectId"
+        :iid="mr.iid"
         @mergeWithFailedPipeline="onMergeWithFailedPipelineConfirmation"
         @cancel="isPipelineFailedModalVisibleNormalMerge = false"
       />

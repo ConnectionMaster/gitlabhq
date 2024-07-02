@@ -15,6 +15,7 @@ module Ci
     self.table_name = :p_ci_pipeline_variables
     self.sequence_name = :ci_pipeline_variables_id_seq
 
+    query_constraints :id, :partition_id
     partitionable scope: :pipeline, partitioned: true
 
     alias_attribute :secret_value, :value
@@ -23,10 +24,6 @@ module Ci
 
     def hook_attrs
       { key: key, value: value }
-    end
-
-    def self.use_partition_id_filter?
-      Ci::Pipeline.use_partition_id_filter?
     end
   end
 end

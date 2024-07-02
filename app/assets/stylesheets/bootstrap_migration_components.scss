@@ -131,8 +131,8 @@ input[type='file'] {
       gap: 0.25rem;
     }
 
-    &:not(:last-of-type) {
-      border-bottom: 1px solid $gray-100;
+    &:not(:first-of-type) {
+      border-top: 1px solid $gray-100;
     }
 
     p,
@@ -210,14 +210,6 @@ input[type='file'] {
 
 input[type=color].form-control {
   height: $input-height;
-}
-
-.toggle-sidebar-button {
-  .collapse-text,
-  .icon-chevron-double-lg-left,
-  .icon-chevron-double-lg-right {
-    color: $gl-text-color-secondary;
-  }
 }
 
 .project-templates-buttons {

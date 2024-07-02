@@ -8,11 +8,14 @@ import {
   REPORT_TYPE_SAST,
   REPORT_TYPE_SAST_IAC,
   REPORT_TYPE_SECRET_DETECTION,
+  REPORT_TYPE_CONTAINER_SCANNING_FOR_REGISTRY,
 } from '~/vue_shared/security_reports/constants';
 
 import configureSastMutation from './graphql/configure_sast.mutation.graphql';
 import configureSastIacMutation from './graphql/configure_iac.mutation.graphql';
 import configureSecretDetectionMutation from './graphql/configure_secret_detection.mutation.graphql';
+
+import ContainerScanningForRegistry from './components/container_scanning_for_registry.vue';
 
 /**
  * Translations for Security Configuration Page
@@ -39,6 +42,8 @@ export const DEPENDENCY_SCANNING_NAME = __('Dependency Scanning');
 
 export const CONTAINER_SCANNING_NAME = __('Container Scanning');
 
+export const CONTAINER_SCANNING_FOR_REGISTRY_NAME = __('Container Scanning For Registry');
+
 export const COVERAGE_FUZZING_NAME = __('Coverage Fuzzing');
 
 export const CORPUS_MANAGEMENT_NAME = __('Corpus Management');
@@ -47,18 +52,30 @@ export const API_FUZZING_NAME = __('API Fuzzing');
 
 export const CLUSTER_IMAGE_SCANNING_NAME = s__('ciReport|Cluster Image Scanning');
 
+export const PRE_RECEIVE_SECRET_DETECTION = 'pre_receive_secret_detection';
+
+export const PRE_RECEIVE_SECRET_DETECTION_NAME = __('Secret push protection');
+
 export const SCANNER_NAMES_MAP = {
   SAST: SAST_SHORT_NAME,
   SAST_IAC: SAST_IAC_NAME,
   DAST: DAST_SHORT_NAME,
   API_FUZZING: API_FUZZING_NAME,
   CONTAINER_SCANNING: CONTAINER_SCANNING_NAME,
+  CONTAINER_SCANNING_FOR_REGISTRY: CONTAINER_SCANNING_FOR_REGISTRY_NAME,
   COVERAGE_FUZZING: COVERAGE_FUZZING_NAME,
   SECRET_DETECTION: SECRET_DETECTION_NAME,
   DEPENDENCY_SCANNING: DEPENDENCY_SCANNING_NAME,
   BREACH_AND_ATTACK_SIMULATION: BAS_NAME,
   CLUSTER_IMAGE_SCANNING: CLUSTER_IMAGE_SCANNING_NAME,
+  PRE_RECEIVE_SECRET_DETECTION: PRE_RECEIVE_SECRET_DETECTION_NAME,
   GENERIC: s__('ciReport|Manually added'),
+};
+
+export const securityFeatures = {
+  [REPORT_TYPE_CONTAINER_SCANNING_FOR_REGISTRY]: {
+    slotComponent: ContainerScanningForRegistry,
+  },
 };
 
 export const featureToMutationMap = {

@@ -91,7 +91,7 @@ RSpec.describe LabelsHelper do
     context 'with a tooltip argument' do
       context 'set to false' do
         it 'does not include the has-tooltip class' do
-          expect(link_to_label(label_presenter, tooltip: false)).not_to match /has-tooltip/
+          expect(link_to_label(label_presenter, tooltip: false)).not_to match(/has-tooltip/)
         end
       end
     end
@@ -327,7 +327,7 @@ RSpec.describe LabelsHelper do
     end
 
     it 'does not include the color' do
-      expect(wrap_label_html('xss', label: xss_label, small: false)).not_to include('color:')
+      expect(wrap_label_html('xss', label: xss_label)).not_to include('color:')
     end
   end
 

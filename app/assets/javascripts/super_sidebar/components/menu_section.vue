@@ -119,7 +119,7 @@ export default {
     >
       <span
         :class="[isActive ? 'active-indicator gl-bg-blue-500' : 'gl-bg-transparent']"
-        class="gl-absolute gl-left-2 gl-top-2 gl-bottom-2 gl-transition-slow"
+        class="gl-absolute gl-left-2 gl-top-2 gl-bottom-2 gl-transition-all gl-duration-slow"
         aria-hidden="true"
         style="width: 3px; border-radius: 3px; margin-right: 1px"
       ></span>
@@ -156,12 +156,12 @@ export default {
     <gl-collapse
       :id="itemId"
       v-model="isExpanded"
-      class="gl-list-style-none gl-p-0 gl-m-0 gl-transition-duration-medium gl-transition-timing-function-ease"
+      class="gl-list-none gl-p-0 gl-m-0 gl-transition-duration-medium gl-transition-timing-function-ease"
       data-testid="menu-section"
       :data-qa-section-name="item.title"
     >
       <slot>
-        <ul :aria-label="item.title" class="gl-list-style-none gl-p-0 gl-m-0">
+        <ul :aria-label="item.title" class="gl-list-none gl-p-0 gl-m-0">
           <nav-item
             v-for="subItem of item.items"
             :key="`${item.title}-${subItem.title}`"

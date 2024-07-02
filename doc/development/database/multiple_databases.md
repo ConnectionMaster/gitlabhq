@@ -8,8 +8,8 @@ info: Any user with at least the Maintainer role can merge updates to this conte
 
 To allow GitLab to scale further we
 [decomposed the GitLab application database into multiple databases](https://gitlab.com/groups/gitlab-org/-/epics/6168).
-The two databases are `main` and `ci`. GitLab supports being run with either one database or two databases.
-On GitLab.com we are using two separate databases.
+The main databases are `main`, `ci`, and (optionally) `sec`. GitLab supports being run with one, two, or three databases.
+On GitLab.com we are using separate `main` and `ci` databases.
 
 For the purpose of building the [Cells](../../architecture/blueprints/cells/index.md) architecture, we are decomposing
 the databases further, to introduce another database `gitlab_main_clusterwide`.
@@ -29,12 +29,13 @@ Each table of GitLab needs to have a `gitlab_schema` assigned:
 | Database | Description | Notes |
 | -------- | ----------- | ------- |
 | `gitlab_main`| All tables that are being stored in the `main:` database. | Currently, this is being replaced with `gitlab_main_cell`, for the purpose of building the [Cells](../../architecture/blueprints/cells/index.md) architecture. `gitlab_main_cell` schema describes all tables that are local to a cell in a GitLab installation. For example, `projects` and `groups` |
-| `gitlab_main_clusterwide` | All tables that are being stored cluster-wide in a GitLab installation, in the [Cells](../../architecture/blueprints/cells/index.md) architecture. For example, `users` and `application_settings` | |
+| `gitlab_main_clusterwide` | All tables where all rows, or a subset of rows needs to be present across the cluster, in the [Cells](../../architecture/blueprints/cells/index.md) architecture. For example, `users` and `application_settings`.| For the [Cells 1.0 architecture](../../architecture/blueprints/cells/iterations/cells-1.0.md), there are no real clusterwide tables as each cell will have its own database. In effect, these tables will still be stored locally in each cell. |
 | `gitlab_ci` | All CI tables that are being stored in the `ci:` database (for example, `ci_pipelines`, `ci_builds`) | |
 | `gitlab_geo` | All Geo tables that are being stored in the `geo:` database (for example, like `project_registry`, `secondary_usage_data`) | |
 | `gitlab_shared` | All application tables that contain data across all decomposed databases (for example, `loose_foreign_keys_deleted_records`) for models that inherit from `Gitlab::Database::SharedModel`. | |
 | `gitlab_internal` | All internal tables of Rails and PostgreSQL (for example, `ar_internal_metadata`, `schema_migrations`, `pg_*`) | |
-| `gitlab_pm` | All tables that store `package_metadata`| It is an alias for `gitlab_main`|
+| `gitlab_pm` | All tables that store `package_metadata`| It is an alias for `gitlab_main`, to be replaced with `gitlab_sec` |
+| `gitlab_sec` | All Security and Vulnerability feature tables to be stored in the `sec:` database | [Decomposition in progress](https://gitlab.com/groups/gitlab-org/-/epics/13043) |
 
 More schemas to be introduced with additional decomposed databases
 
@@ -46,15 +47,16 @@ The usage of schema enforces the base class to be used:
 - `Geo::TrackingBase` for `gitlab_geo`
 - `Gitlab::Database::SharedModel` for `gitlab_shared`
 - `PackageMetadata::ApplicationRecord` for `gitlab_pm`
+- `Gitlab::Database::SecApplicationRecord` for `gitlab_sec`
 
-### Guidelines on choosing between `gitlab_main_cell` and `gitlab_main_clusterwide` schema
+### Choose either the `gitlab_main_cell` or `gitlab_main_clusterwide` schema
 
 Depending on the use case, your feature may be [cell-local or clusterwide](../../architecture/blueprints/cells/index.md#how-do-i-decide-whether-to-move-my-feature-to-the-cluster-cell-or-organization-level) and hence the tables used for the feature should also use the appropriate schema.
 
 When you choose the appropriate schema for tables, consider the following guidelines as part of the [Cells](../../architecture/blueprints/cells/index.md) architecture:
 
 - Default to `gitlab_main_cell`: We expect most tables to be assigned to the `gitlab_main_cell` schema by default. Choose this schema if the data in the table is related to `projects` or `namespaces`.
-- Consult with the Tenant Scale group: If you believe that the `gitlab_main_clusterwide` schema is more suitable for a table, seek approval from the Tenant Scale group This is crucial because it has scaling implications and may require reconsideration of the schema choice.
+- Consult with the Tenant Scale group: If you believe that the `gitlab_main_clusterwide` schema is more suitable for a table, seek approval from the Tenant Scale group. This is crucial because it has scaling implications and may require reconsideration of the schema choice.
 
 To understand how existing tables are classified, you can use [this dashboard](https://manojmj.gitlab.io/tenant-scale-schema-progress/).
 
@@ -151,7 +153,7 @@ following the
 In that case the `namespace_id` would need to be the ID of the
 `ProjectNamespace` and not the group that the namespace belongs to.
 
-#### Defining a `desired_sharding_key` for automatically backfilling a `sharding_key`
+#### Define a `desired_sharding_key` to automatically backfill a `sharding_key`
 
 We need to backfill a `sharding_key` to hundreds of tables that do not have one.
 This process will involve creating a merge request like
@@ -188,7 +190,7 @@ desired_sharding_key:
 ```
 
 To understand best how this YAML data will be used you can map it onto
-the merge request we created manually in
+the merge request we created manually in GraphQL
 <https://gitlab.com/gitlab-org/gitlab/-/merge_requests/136800>. The idea
 will be to automatically create this. The content of the YAML specifies
 the parent table and its `sharding_key` to backfill from in the batched
@@ -196,7 +198,7 @@ background migration. It also specifies a `belongs_to` relation which
 will be added to the model to automatically populate the `sharding_key` in
 the `before_save`.
 
-##### Defining a `desired_sharding_key` when the parent table also has a `desired_sharding_key`
+##### Define a `desired_sharding_key` when the parent table also has one
 
 By default, a `desired_sharding_key` configuration will validate that the chosen `sharding_key`
 exists on the parent table. However, if the parent table also has a `desired_sharding_key` configuration
@@ -229,13 +231,11 @@ Certain tables can be exempted from having sharding keys by adding
 exempt_from_sharding: true
 ```
 
-to the table's database dictionary file. This is currently the case for tables that do not contain any data for the
-`.com` database, like
+to the table's database dictionary file. This can be used for:
 
-- JiHu specific tables
-- tables that are marked to be dropped soon, like `operations_feature_flag_scopes`
-
-This was implemented in [!145905](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/145905).
+- JiHu specific tables, since they do not have any data on the .com database. [!145905](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/145905)
+- tables that are marked to be dropped soon, like `operations_feature_flag_scopes`. [!147541](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/147541)
+- tables that mandatorily need to be present per cell to support a cell's operations, have unique data per cell, but cannot have a sharding key defined. For example, `zoekt_nodes`.
 
 When tables are exempted from sharding key requirements, they also do not show up in our [progress dashboard](https://cells-progress-tracker-gitlab-org-tenant-scale-g-f4ad96bf01d25f.gitlab.io/sharding_keys).
 
@@ -551,8 +551,8 @@ it does less joins and needs less filtering.
 
 ##### Use `disable_joins` for `has_one` or `has_many` `through:` relations
 
-Sometimes a join query is caused by using `has_one ... through:` or `has_many
-... through:` across tables that span the different databases. These joins
+Sometimes a join query is caused by using `has_one ... through:` or `has_many ... through:`
+across tables that span the different databases. These joins
 sometimes can be solved by adding
 [`disable_joins:true`](https://edgeguides.rubyonrails.org/active_record_multiple_databases.html#handling-associations-with-joins-across-databases).
 This is a Rails feature which we

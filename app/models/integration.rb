@@ -10,7 +10,7 @@ class Integration < ApplicationRecord
   include Integrations::ResetSecretFields
   include FromUnion
   include EachBatch
-  include IgnorableColumns
+  extend SafeFormatHelper
   extend ::Gitlab::Utils::Override
 
   UnknownType = Class.new(StandardError)
@@ -22,7 +22,7 @@ class Integration < ApplicationRecord
     asana assembla bamboo bugzilla buildkite campfire clickup confluence custom_issue_tracker
     datadog diffblue_cover discord drone_ci emails_on_push ewm external_wiki
     gitlab_slack_application hangouts_chat harbor irker jira
-    mattermost mattermost_slash_commands microsoft_teams packagist pipelines_email
+    mattermost mattermost_slash_commands microsoft_teams packagist phorge pipelines_email
     pivotaltracker prometheus pumble pushover redmine slack slack_slash_commands squash_tm teamcity telegram
     unify_circuit webex_teams youtrack zentao
   ].freeze
@@ -129,7 +129,7 @@ class Integration < ApplicationRecord
   scope :with_default_settings, -> { where.not(inherit_from_id: nil) }
   scope :with_custom_settings, -> { where(inherit_from_id: nil) }
   scope :for_group, ->(group) {
-    types = available_integration_types(include_project_specific: false, include_instance_specific: false)
+    types = available_integration_types(include_project_specific: false)
     where(group_id: group, type: types)
   }
 
@@ -155,6 +155,7 @@ class Integration < ApplicationRecord
   scope :deployment, -> { where(category: 'deployment') }
   scope :group_mention_hooks, -> { where(group_mention_events: true, active: true) }
   scope :group_confidential_mention_hooks, -> { where(group_confidential_mention_events: true, active: true) }
+  scope :exclusions_for_project, ->(project) { where(project: project, active: false) }
 
   class << self
     private
@@ -342,6 +343,10 @@ class Integration < ApplicationRecord
     INSTANCE_SPECIFIC_INTEGRATION_NAMES
   end
 
+  def self.instance_specific_integration_types
+    instance_specific_integration_names.map { |name| integration_name_to_type(name) }
+  end
+
   def self.dev_integration_names
     return [] unless Gitlab.dev_or_test_env?
 
@@ -452,17 +457,45 @@ class Integration < ApplicationRecord
   end
   private_class_method :instance_level_integration
 
-  # Returns the number of successfully saved integrations
-  # Duplicate integrations are excluded from this count by their validations.
-  def self.create_from_active_default_integrations(owner, association)
+  def self.default_integrations(owner, scope)
     group_ids = sorted_ancestors(owner).select(:id)
     array = group_ids.to_sql.present? ? "array(#{group_ids.to_sql})" : 'ARRAY[]'
     order = Arel.sql("type_new ASC, array_position(#{array}::bigint[], #{table_name}.group_id), instance DESC")
-
-    from_union([active.where(instance: true), active.where(group_id: group_ids, inherit_from_id: nil)])
+    from_union([scope.where(instance: true), scope.where(group_id: group_ids, inherit_from_id: nil)])
       .order(order)
       .group_by(&:type)
-      .count { |_type, parents| build_from_integration(parents.first, association => owner.id).save }
+      .transform_values(&:first)
+  end
+  private_class_method :default_integrations
+
+  def self.create_from_default_integrations(owner, association)
+    active_default_count = create_from_active_default_integrations(owner, association)
+    default_instance_specific_count = create_from_default_instance_specific_integrations(owner, association)
+    active_default_count + default_instance_specific_count
+  end
+
+  # Returns the number of successfully saved integrations
+  # Duplicate integrations are excluded from this count by their validations.
+  def self.create_from_active_default_integrations(owner, association)
+    default_integrations(
+      owner,
+      active.where.not(type: instance_specific_integration_types)
+    ).count { |_type, integration| build_from_integration(integration, association => owner.id).save }
+  end
+
+  def self.create_from_default_instance_specific_integrations(owner, association)
+    default_integrations(
+      owner,
+      where(type: instance_specific_integration_types)
+    ).count { |_type, integration| build_from_integration(integration, association => owner.id).save }
+  end
+
+  def self.descendants_from_self_or_ancestors_from(integration)
+    scope = where(type: integration.type)
+    from_union([
+      scope.where(group: integration.group.descendants),
+      scope.where(project: Project.in_namespace(integration.group.self_and_descendants))
+    ])
   end
 
   def self.inherited_descendants_from_self_or_ancestors_from(integration)
@@ -577,7 +610,7 @@ class Integration < ApplicationRecord
     fields.reject { _1[:type] == :password || _1[:name] == 'webhook' || (_1.key?(:if) && _1[:if] != true) }.pluck(:name)
   end
 
-  def self.api_fields
+  def self.api_arguments
     fields.filter_map do |field|
       next if field.if != true
 
@@ -588,6 +621,14 @@ class Integration < ApplicationRecord
         desc: field.description
       }
     end
+  end
+
+  def self.instance_specific?
+    false
+  end
+
+  def self.pluck_group_id
+    pluck(:group_id)
   end
 
   def form_fields

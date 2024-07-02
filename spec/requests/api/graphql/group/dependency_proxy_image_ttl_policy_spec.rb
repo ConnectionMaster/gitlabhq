@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 require 'spec_helper'
 
-RSpec.describe 'getting dependency proxy image ttl policy for a group', feature_category: :dependency_proxy do
+RSpec.describe 'getting dependency proxy image ttl policy for a group', feature_category: :virtual_registry do
   using RSpec::Parameterized::TableSyntax
   include GraphqlHelpers
 
@@ -73,20 +73,6 @@ RSpec.describe 'getting dependency proxy image ttl policy for a group', feature_
           expect(dependency_proxy_image_ttl_policy_response).to eq("createdAt" => nil, "enabled" => false, "ttl" => 90, "updatedAt" => nil)
         else
           expect(dependency_proxy_image_ttl_policy_response).to be_blank
-        end
-      end
-
-      context 'when the feature flag is disabled' do
-        before do
-          stub_feature_flags(raise_group_admin_package_permission_to_owner: false)
-        end
-
-        if params[:role] == :maintainer
-          it 'returns the proper response' do
-            subject
-
-            expect(dependency_proxy_image_ttl_policy_response).to eq("createdAt" => nil, "enabled" => false, "ttl" => 90, "updatedAt" => nil)
-          end
         end
       end
     end

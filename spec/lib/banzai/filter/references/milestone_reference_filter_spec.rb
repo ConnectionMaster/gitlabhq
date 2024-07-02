@@ -18,8 +18,8 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
   shared_examples 'reference parsing' do
     %w[pre code a style].each do |elem|
       it "ignores valid references contained inside '#{elem}' element" do
-        exp = act = "<#{elem}>milestone #{reference}</#{elem}>"
-        expect(reference_filter(act).to_html).to eq exp
+        act = "<#{elem}>milestone #{reference}</#{elem}>"
+        expect(reference_filter(act).to_html).to include act
       end
     end
 
@@ -67,9 +67,9 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
     end
 
     it 'ignores invalid milestone IIDs' do
-      exp = act = "Milestone #{invalidate_reference(reference)}"
+      act = "Milestone #{invalidate_reference(reference)}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -98,9 +98,9 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
     end
 
     it 'ignores invalid milestone names' do
-      exp = act = "Milestone #{Milestone.reference_prefix}#{milestone.name.reverse}"
+      act = "Milestone #{Milestone.reference_prefix}#{milestone.name.reverse}"
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -124,9 +124,9 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
     end
 
     it 'ignores invalid milestone names' do
-      exp = act = %(Milestone #{Milestone.reference_prefix}"#{milestone.name.reverse}")
+      act = %(Milestone #{Milestone.reference_prefix}"#{milestone.name.reverse}")
 
-      expect(reference_filter(act).to_html).to eq exp
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -319,7 +319,7 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
     it 'ignores invalid milestone names and escapes entities' do
       act = %(Milestone %"&lt;non valid&gt;")
 
-      expect(reference_filter(act).to_html).to eq act
+      expect(reference_filter(act).to_html).to include act
     end
   end
 
@@ -427,9 +427,9 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
       end
 
       it 'ignores internal references' do
-        exp = act = "See %#{milestone.iid}"
+        act = "See %#{milestone.iid}"
 
-        expect(reference_filter(act, context).to_html).to eq exp
+        expect(reference_filter(act, context).to_html).to include act
       end
 
       it_behaves_like 'absolute references' do
@@ -468,9 +468,9 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
       end
 
       it 'ignores internal references' do
-        exp = act = "See %#{group_milestone.iid}"
+        act = "See %#{group_milestone.iid}"
 
-        expect(reference_filter(act, context).to_html).to eq exp
+        expect(reference_filter(act, context).to_html).to include act
       end
     end
 
@@ -504,7 +504,7 @@ RSpec.describe Banzai::Filter::References::MilestoneReferenceFilter, feature_cat
     context 'when referencing both group and subgroup milestones using absolute references' do
       let(:subgroup) { create(:group, :public, parent: group) }
       let(:group_milestone) { create(:milestone, title: 'group_milestone', group: group) }
-      let(:subgroup_milestone) { create(:milestone, title: 'group_milestone', group: subgroup) }
+      let(:subgroup_milestone) { create(:milestone, title: 'subgroup_milestone', group: subgroup) }
       let(:context) { { project: project, group: nil } }
 
       it 'links to valid references' do

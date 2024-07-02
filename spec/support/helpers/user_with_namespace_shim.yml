@@ -122,7 +122,6 @@
 - ee/spec/finders/security/approval_groups_finder_spec.rb
 - ee/spec/frontend/fixtures/search.rb
 - ee/spec/graphql/ee/resolvers/board_lists_resolver_spec.rb
-- ee/spec/graphql/mutations/namespaces/increase_storage_temporarily_spec.rb
 - ee/spec/graphql/mutations/security_policy/assign_security_policy_project_spec.rb
 - ee/spec/graphql/mutations/security_policy/commit_scan_execution_policy_spec.rb
 - ee/spec/graphql/mutations/security_policy/create_security_policy_project_spec.rb
@@ -132,7 +131,6 @@
 - ee/spec/helpers/subscriptions_helper_spec.rb
 - ee/spec/lib/ee/api/entities/user_with_admin_spec.rb
 - ee/spec/lib/ee/gitlab/background_migration/migrate_approver_to_approval_rules_spec.rb
-- ee/spec/lib/ee/gitlab/background_migration/migrate_vulnerabilities_feedback_to_vulnerabilities_state_transition_spec.rb
 - ee/spec/lib/ee/gitlab/ci/pipeline/chain/validate/external_spec.rb
 - ee/spec/lib/ee/gitlab/import_export/project/tree_restorer_spec.rb
 - ee/spec/lib/ee/gitlab/issuable_metadata_spec.rb
@@ -172,10 +170,8 @@
 - ee/spec/models/ee/pages_domain_spec.rb
 - ee/spec/models/ee/project_member_spec.rb
 - ee/spec/models/ee/project_spec.rb
-- ee/spec/models/ee/project_wiki_spec.rb
 - ee/spec/models/elastic/migration_record_spec.rb
 - ee/spec/models/epic_spec.rb
-- ee/spec/models/factories_spec.rb
 - ee/spec/models/gitlab_subscription_spec.rb
 - ee/spec/models/iteration_spec.rb
 - ee/spec/models/member_spec.rb
@@ -332,7 +328,6 @@
 - spec/features/calendar_spec.rb
 - spec/features/canonical_link_spec.rb
 - spec/features/commits_spec.rb
-- spec/features/contextual_sidebar_spec.rb
 - spec/features/dashboard/datetime_on_tooltips_spec.rb
 - spec/features/dashboard/issuables_counter_spec.rb
 - spec/features/dashboard/issues_filter_spec.rb
@@ -445,11 +440,9 @@
 - spec/features/profiles/chat_names_spec.rb
 - spec/features/profiles/emails_spec.rb
 - spec/features/profiles/gpg_keys_spec.rb
-- spec/features/profiles/keys_spec.rb
 - spec/features/profiles/list_users_comment_template_spec.rb
 - spec/features/profiles/oauth_applications_spec.rb
 - spec/features/profiles/password_spec.rb
-- spec/features/profiles/personal_access_tokens_spec.rb
 - spec/features/profiles/two_factor_auths_spec.rb
 - spec/features/profiles/user_changes_notified_of_own_activity_spec.rb
 - spec/features/profiles/user_creates_comment_template_spec.rb
@@ -548,6 +541,7 @@
 - spec/features/projects/show/redirects_spec.rb
 - spec/features/projects/show/rss_spec.rb
 - spec/features/projects/show/user_interacts_with_auto_devops_banner_spec.rb
+- spec/features/projects/show/user_interacts_with_dropdown_actions_spec.rb
 - spec/features/projects/show/user_interacts_with_stars_spec.rb
 - spec/features/projects/show/user_sees_collaboration_links_spec.rb
 - spec/features/projects/show/user_sees_git_instructions_spec.rb
@@ -599,6 +593,7 @@
 - spec/features/user_settings/active_sessions_spec.rb
 - spec/features/user_settings/password_spec.rb
 - spec/features/user_settings/personal_access_tokens_spec.rb
+- spec/features/user_settings/ssh_keys_spec.rb
 - spec/features/users/login_spec.rb
 - spec/features/users/overview_spec.rb
 - spec/features/users/rss_spec.rb
@@ -656,7 +651,6 @@
 - spec/lib/feature_spec.rb
 - spec/lib/generators/gitlab/partitioning/foreign_keys_generator_spec.rb
 - spec/lib/gitlab/analytics/usage_trends/workers_argument_builder_spec.rb
-- spec/lib/gitlab/background_migration/backfill_environment_tiers_spec.rb
 - spec/lib/gitlab/background_migration/backfill_root_storage_statistics_fork_storage_sizes_spec.rb
 - spec/lib/gitlab/background_migration/backfill_user_details_fields_spec.rb
 - spec/lib/gitlab/background_migration/job_coordinator_spec.rb
@@ -767,7 +761,6 @@
 - spec/migrations/add_namespaces_emails_enabled_column_data_spec.rb
 - spec/migrations/add_okr_hierarchy_restrictions_spec.rb
 - spec/migrations/add_projects_emails_enabled_column_data_spec.rb
-- spec/migrations/cleanup_bigint_conversion_for_merge_request_metrics_for_self_hosts_spec.rb
 - spec/migrations/cleanup_vulnerability_state_transitions_with_same_from_state_to_state_spec.rb
 - spec/migrations/delete_migrate_shared_vulnerability_scanners_spec.rb
 - spec/migrations/ensure_commit_user_mentions_note_id_bigint_backfill_is_finished_for_gitlab_dot_com_spec.rb
@@ -977,7 +970,6 @@
 - spec/services/work_items/update_service_spec.rb
 - spec/tasks/gitlab/backup_rake_spec.rb
 - spec/tasks/gitlab/check_rake_spec.rb
-- spec/tasks/import_rake_spec.rb
 - spec/views/layouts/header/_new_dropdown.haml_spec.rb
 - spec/views/layouts/profile.html.haml_spec.rb
 - spec/views/profiles/preferences/show.html.haml_spec.rb

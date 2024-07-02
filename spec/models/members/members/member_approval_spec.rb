@@ -16,46 +16,89 @@ RSpec.describe Members::MemberApproval, feature_category: :groups_and_projects d
     it { is_expected.to validate_presence_of(:user) }
     it { is_expected.to validate_presence_of(:member_namespace) }
 
-    context 'when uniqness is enforced' do
-      let!(:user) { create(:user) }
-      let!(:group) { create(:group) }
-      let!(:member_approval) { create(:member_approval, user: user, member_namespace: group) }
+    context 'with metadata' do
+      subject { build(:member_approval, metadata: attribute_mapping) }
 
-      context 'with same user, namespace, and access level and pending status' do
-        let(:message) { 'A pending approval for the same user, namespace, and access level already exists.' }
-
-        it 'disallows on create' do
-          duplicate_approval = build(:member_approval, user: user, member_namespace: group)
-
-          expect(duplicate_approval).not_to be_valid
-          expect(duplicate_approval.errors[:base]).to include(message)
+      context 'with valid JSON schemas' do
+        let(:attribute_mapping) do
+          {
+            expires_at: expiry,
+            member_role_id: nil
+          }
         end
 
-        it 'disallows on update' do
-          duplicate_approval = create(:member_approval, user: user, member_namespace: group, status: :approved)
-          expect(duplicate_approval).to be_valid
+        context 'with empty metadata' do
+          let(:attribute_mapping) { {} }
 
-          duplicate_approval.status = ::Members::MemberApproval.statuses[:pending]
-          expect(duplicate_approval).not_to be_valid
-          expect(duplicate_approval.errors[:base]).to include(message)
+          it { is_expected.to be_valid }
+        end
+
+        context 'with valid expiry' do
+          let(:expiry) { "1970-01-01" }
+
+          it { is_expected.to be_valid }
+        end
+
+        context 'with empty expiry' do
+          let(:expiry) { "" }
+
+          it { is_expected.to be_valid }
+        end
+
+        context 'with not null member_role_id' do
+          let(:attribute_mapping) do
+            {
+              member_role_id: 3
+            }
+          end
+
+          it { is_expected.to be_valid }
+        end
+
+        context 'when property has extra attributes' do
+          let(:attribute_mapping) do
+            { access_level: 20 }
+          end
+
+          it { is_expected.to be_valid }
         end
       end
 
-      it 'allows duplicate member approvals with different statuses' do
-        member_approval.update!(status: ::Members::MemberApproval.statuses[:approved])
+      context 'with invalid JSON schemas' do
+        shared_examples 'is invalid record' do
+          it do
+            expect(subject).to be_invalid
+            expect(subject.errors.messages[:metadata]).to eq(['must be a valid json schema'])
+          end
+        end
 
-        pending_approval = build(:member_approval, user: user, member_namespace: group)
+        context 'when property is not an object' do
+          let(:attribute_mapping) do
+            "That is not a valid schema"
+          end
 
-        expect(pending_approval).to be_valid
-      end
+          it_behaves_like 'is invalid record'
+        end
 
-      it 'allows duplicate member approvals with different access levels' do
-        different_approval = build(:member_approval,
-          user: user,
-          member_namespace: group,
-          new_access_level: ::Gitlab::Access::MAINTAINER)
+        context 'with invalid expiry' do
+          let(:attribute_mapping) do
+            {
+              expires_at: "1242"
+            }
+          end
 
-        expect(different_approval).to be_valid
+          it_behaves_like 'is invalid record'
+        end
+
+        context 'with member_role_id' do
+          let(:attribute_mapping) do
+            {
+              member_role_id: "some role"
+            }
+          end
+
+          it_behaves_like 'is invalid record'
+        end
       end
     end
   end

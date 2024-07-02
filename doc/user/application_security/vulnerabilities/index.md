@@ -31,18 +31,21 @@ the Vulnerability Report's [Activity filter](../vulnerability_report/index.md#ac
 ## Explaining a vulnerability
 
 DETAILS:
-**Tier:** Ultimate
+**Tier:** For a limited time, Ultimate. In the future, [GitLab Duo Enterprise](../../../subscriptions/subscription-add-ons.md).
 **Offering:** GitLab.com
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10368) in GitLab 16.0 as an [Experiment](../../../policy/experiment-beta-support.md#experiment) on GitLab.com.
-> - Promoted to [Beta](../../../policy/experiment-beta-support.md#beta) status in GitLab 16.2.
+> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10368) in GitLab 16.0 as an [experiment](../../../policy/experiment-beta-support.md#experiment) on GitLab.com.
+> - Promoted to [beta](../../../policy/experiment-beta-support.md#beta) status in GitLab 16.2.
 
 GitLab can help you with a vulnerability by using a large language model to:
 
 - Summarize the vulnerability.
 - Help developers and security analysts to understand the vulnerability, how it could be exploited, and how to fix it.
 - Provide a suggested mitigation.
+
+For a click-through demo, see [Resolving vulnerabilities with GitLab Duo (AI)](https://tech-marketing.gitlab.io/static-demos/pt-explain-vulnerability.html).
+<!-- Demo published on 2024-02-24 -->
 
 ### Vulnerability explanation
 
@@ -55,7 +58,7 @@ Prerequisites:
 - You must be a member of the project.
 - The vulnerability must be a SAST finding.
 
-Learn more about [how to enable all GitLab Duo features](../../ai_features.md#enable-aiml-features).
+Learn more about [how to enable all GitLab Duo features](../../ai_features_enable.md).
 
 To explain the vulnerability:
 
@@ -89,11 +92,11 @@ The following data is shared with third-party AI APIs:
 ## Vulnerability resolution
 
 DETAILS:
-**Tier:** Ultimate
+**Tier:** For a limited time, Ultimate. In the future, [GitLab Duo Enterprise](../../../subscriptions/subscription-add-ons.md).
 **Offering:** GitLab.com
 **Status:** Experiment
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10779) in GitLab 16.7 as an [Experiment](../../../policy/experiment-beta-support.md#experiment) on GitLab.com.
+> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10779) in GitLab 16.7 as an [experiment](../../../policy/experiment-beta-support.md#experiment) on GitLab.com.
 
 Use GitLab Duo Vulnerability resolution to automatically create a merge request that
 resolves the vulnerability.
@@ -110,7 +113,7 @@ Prerequisites:
 - You must be a member of the project.
 - The vulnerability must be a SAST finding.
 
-Learn more about [how to enable all GitLab Duo features](../../ai_features.md#enable-aiml-features).
+Learn more about [how to enable all GitLab Duo features](../../ai_features_enable.md).
 
 To resolve the vulnerability:
 
@@ -165,7 +168,8 @@ When dismissing a vulnerability, one of the following reasons must be chosen to 
 
 Prerequisites:
 
-- You must have at least the Developer role for the project.
+- You must have at least the Maintainer role for the project, or a custom role with the
+  `admin_vulnerability` permission.
 
 To change a vulnerability's status from its Vulnerability Page:
 
@@ -234,8 +238,8 @@ Be aware of the following conditions between a vulnerability and a linked GitLab
 
 Prerequisites:
 
-- Ensure the Jira issue integration is [configured](../../../integration/jira/configure.md#configure-the-integration) and the
-  **Enable Jira issues** and **Enable Jira issue creation from vulnerabilities** checkboxes are selected.
+- Ensure the Jira issue integration is [configured](../../../integration/jira/configure.md#configure-the-integration)
+  and the **Create Jira issues for vulnerabilities** checkbox is selected.
 
 To link a vulnerability to existing Jira issues, add the following line to the Jira issue's description:
 
@@ -258,8 +262,13 @@ Be aware of the following conditions between a vulnerability and a linked Jira i
 
 ## Resolve a vulnerability
 
-For some vulnerabilities a solution is already known. In those instances, a vulnerability's page
-includes a **Resolve with merge request** option.
+For some vulnerabilities a solution is already known but needs to be implemented manually. The
+**Solution** field in the Vulnerability page is provided by the security scanning tool that
+reported the security finding, or entered during the [manual creation of a vulnerability](../vulnerability_report/index.md#manually-add-a-vulnerability).
+The GitLab tools utilize information from the [GitLab Advisory Database](../gitlab_advisory_database/index.md).
+
+Additionally, some tools may include a software patch to apply the suggested solution. In those instances,
+a vulnerability's page includes a **Resolve with merge request** option.
 
 The following scanners are supported by this feature:
 
@@ -303,11 +312,9 @@ To manually apply the patch that GitLab generated for a vulnerability:
 
 ## Enable security training for vulnerabilities
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/6176) in GitLab 14.9.
-
 NOTE:
 Security training is not accessible in an environment that is offline, meaning computers that are isolated from the public internet as a security measure. Specifically, the GitLab server needs the ability to query the API endpoints for any training provider you choose to enable. Some third-party training vendors may require you to sign up for a _free_ account. Sign up for an account by going to
-any of [Secure Code Warrior](https://www.securecodewarrior.com/), [Kontra](https://application.security/), or [SecureFlag](https://www.secureflag.com/).
+any of [Secure Code Warrior](https://www.securecodewarrior.com/), [Kontra](https://application.security/), or [SecureFlag](https://www.secureflag.com/index.html).
 GitLab does not send any user information to these third-party vendors; we do send the CWE or OWASP identifier and the language name of the file extension.
 
 Security training helps your developers learn how to fix vulnerabilities. Developers can view security training from selected educational providers, relevant to the detected vulnerability.
@@ -322,8 +329,6 @@ To enable security training for vulnerabilities in your project:
 Each integration submits the Vulnerability identifier, for example CWE or OWASP, and the language to the security training vendor. The resulting link to the vendor training is what appears in a GitLab Vulnerability.
 
 ## View security training for a vulnerability
-
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/6176) in GitLab 14.9.
 
 The vulnerability page may include a training link relevant to the detected vulnerability if security training is enabled.
 The availability of training depends on whether the enabled training vendor has content matching the particular vulnerability.

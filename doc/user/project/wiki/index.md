@@ -10,26 +10,20 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - Page loading [changed](https://gitlab.com/gitlab-org/gitlab/-/issues/336792) to asynchronous in GitLab 14.9.
-> - Page slug encoding method [changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/71753) to `ERB::Util.url_encode` in GitLab 14.9.
-
 If you don't want to keep your documentation in your repository, but you want
 to keep it in the same project as your code, you can use the wiki GitLab provides
 in each GitLab project. Every wiki is a separate Git repository, so you can create
 wiki pages in the web interface, or [locally using Git](#create-or-edit-wiki-pages-locally).
 
-GitLab wikis support Markdown, Rdoc, AsciiDoc, and Org for content.
+GitLab wikis support Markdown, RDoc, AsciiDoc, and Org for content.
 Wiki pages written in Markdown support all [Markdown features](../../markdown.md),
 and also provide some [wiki-specific behavior](../../markdown.md#wiki-specific-markdown)
 for links.
 
-In [GitLab 13.5 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/17673/),
-wiki pages display a sidebar, which you [can customize](#customize-sidebar). This
+Wiki pages display a sidebar, which you [can customize](#customize-sidebar). This
 sidebar contains a partial list of pages in the wiki, displayed as a nested tree,
 with sibling pages listed in alphabetical order. To view a list of all pages, select
 **View All Pages** in the sidebar:
-
-![Wiki sidebar](img/wiki_sidebar_v13_5.png)
 
 ## View a project wiki
 
@@ -45,8 +39,6 @@ If **Plan > Wiki** is not listed in the left sidebar of your project, a project 
 has [disabled it](#enable-or-disable-a-project-wiki).
 
 ## Configure a default branch for your wiki
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/221159) in GitLab 14.1.
 
 The default branch for your wiki repository depends on your version of GitLab:
 
@@ -79,11 +71,13 @@ to be used as your wiki's home page. To create it:
 
 ## Create a new wiki page
 
-Users with at least the Developer role can create new wiki pages:
+Prerequisites:
+
+- You must have at least the Developer role.
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
-1. Select **New page** on this page, or any other wiki page.
+1. Select **Wiki actions** (**{ellipsis_v}**), then **New page** on this page, or any other wiki page.
 1. Select a content format.
 1. Add a title for your new page. Page titles use
    [special characters](#special-characters-in-page-titles) for subdirectories and formatting,
@@ -102,7 +96,7 @@ locally:
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
-1. On the right sidebar, select **Clone repository**.
+1. Select **Wiki actions** (**{ellipsis_v}**), then **Clone repository**.
 1. Follow the on-screen instructions.
 
 Files you add to your wiki locally must use one of the following
@@ -126,8 +120,6 @@ Wiki pages are stored as files in a Git repository, so certain characters have a
 
 ### Length restrictions for file and directory names
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/24364) in GitLab 12.8.
-
 Many common file systems have a [limit of 255 bytes](https://en.wikipedia.org/wiki/Comparison_of_file_systems#Limits)
 for file and directory names. Git and GitLab both support paths exceeding
 those limits. However, if your file system enforces these limits, you cannot check out a
@@ -144,13 +136,15 @@ may not be able to check out the wiki locally afterward.
 
 ## Edit a wiki page
 
-You need at least the Developer role to edit a wiki page:
+Prerequisites:
+
+- You must have at least the Developer role.
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
 1. Go to the page you want to edit, and either:
    - Use the <kbd>e</kbd> wiki [keyboard shortcut](../../shortcuts.md#wiki-pages).
-   - Select the edit icon (**{pencil}**).
+   - Select **Edit**.
 1. Edit the content.
 1. Select **Save changes**.
 
@@ -170,11 +164,17 @@ Prerequisites:
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
 1. Go to the page you want to delete.
-1. Select the edit icon (**{pencil}**).
+1. Select **Edit**.
 1. Select **Delete page**.
 1. Confirm the deletion.
 
-## Move a wiki page
+## Move or rename a wiki page
+
+> - Redirects for moved or renamed wiki pages [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/257892) in GitLab 17.1 [with a flag](../../../administration/feature_flags.md) named `wiki_redirection`. Enabled by default.
+
+In GitLab 17.1 and later, when you move or rename a page, a redirect is
+automatically set up from the old page to the new page. A list of redirects
+is stored in the `.gitlab/redirects.yml` file in the Wiki repository.
 
 Prerequisites:
 
@@ -182,11 +182,12 @@ Prerequisites:
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
-1. Go to the page you want to move.
-1. Select the edit icon (**{pencil}**).
-1. Add the new path to the **Title** field. For example, if you have a wiki page
-   called `about` under `company` and you want to move it to the wiki's root,
-   change the **Title** from `about` to `/about`.
+1. Go to the page you want to move or rename.
+1. Select **Edit**.
+1. To move the page, add the new path to the **Title** field. For example,
+   if you have a wiki page called `About` under `Company` and you want to
+   move it to the wiki's root, change the **Title** from `About` to `/About`.
+1. To rename the page, change the **Title**.
 1. Select **Save changes**.
 
 ## Export a wiki page
@@ -200,7 +201,7 @@ You can export a wiki page as a PDF file:
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
 1. Go to the page you want to export.
-1. Select the vertical ellipsis (**{ellipsis_v}**), and then select **Print as PDF**.
+1. On the top right, select **Wiki actions** (**{ellipsis_v}**), then select **Print as PDF**.
 
 A PDF of the wiki page is created.
 
@@ -220,7 +221,7 @@ Prerequisites:
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
-1. On the right sidebar, select **Templates**.
+1. Select **Wiki actions** (**{ellipsis_v}**), then **Templates**.
 1. Select **New Template**.
 1. Enter template title, format and content, as if creating a regular wiki page.
 
@@ -246,8 +247,6 @@ Prerequisites:
 The changes of a wiki page over time are recorded in the wiki's Git repository.
 The history page shows:
 
-![Wiki page history](img/wiki_page_history.png)
-
 - The revision (Git commit SHA) of the page.
 - The page author.
 - The commit message.
@@ -263,8 +262,6 @@ To view the changes for a wiki page:
 
 ### View changes between page versions
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/15242) in GitLab 13.2.
-
 You can see the changes made in a version of a wiki page, similar to versioned diff file views:
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
@@ -273,13 +270,7 @@ You can see the changes made in a version of a wiki page, similar to versioned d
 1. Select **Page history** to see all page versions.
 1. Select the commit message in the **Changes** column for the version you're interested in.
 
-   ![Wiki page changes](img/wiki_page_diffs_v13_2.png)
-
 ## Track wiki events
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/14902) in GitLab 12.10.
-> - Git events were [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/216014) in GitLab 13.0.
-> - [Feature flag for Git events was removed](https://gitlab.com/gitlab-org/gitlab/-/issues/258665) in GitLab 13.5.
 
 GitLab tracks wiki creation, deletion, and update events. These events are displayed on these pages:
 
@@ -292,7 +283,7 @@ Commits to wikis are not counted in [repository analytics](../../analytics/repos
 
 ## Customize sidebar
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/23109) in GitLab 13.8, the sidebar can be customized by selecting the **Edit sidebar** button.
+You can manually edit the contents of the sidebar navigation.
 
 Prerequisites:
 
@@ -303,7 +294,7 @@ replaces the default sidebar navigation:
 
 1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Plan > Wiki**.
-1. In the upper-right corner of the page, select **Edit sidebar**.
+1. In the upper-right corner of the page, select **Add custom sidebar** (**{settings}**).
 1. When complete, select **Save changes**.
 
 A `_sidebar` example, formatted with Markdown:
@@ -379,9 +370,6 @@ to disable the wiki but toggle it on (in blue).
 
 ## Rich text editor
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/5643) in GitLab 14.0.
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/345398) switching between editing experiences in GitLab 14.7 [with a flag](../../../administration/feature_flags.md) named `wiki_switch_between_content_editor_raw_markdown`. Enabled by default.
-> - Switching between editing experiences generally available in GitLab 14.10. [Feature flag `wiki_switch_between_content_editor_raw_markdown`](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/83760) removed.
 > - [Renamed](https://gitlab.com/gitlab-org/gitlab/-/issues/398152) from content editor to rich text editor in GitLab 16.2.
 
 GitLab provides a WYSIWYG editing experience for GitLab Flavored Markdown in wikis.
@@ -431,7 +419,7 @@ For the status of the ongoing development for CommonMark and GitLab Flavored Mar
 
 ### Page slug rendering with Apache reverse proxy
 
-In GitLab 14.9 and later, page slugs are now encoded using the
+Page slugs are encoded using the
 [`ERB::Util.url_encode`](https://www.rubydoc.info/stdlib/erb/ERB%2FUtil.url_encode) method.
 If you use an Apache reverse proxy, you can add a `nocanon` argument to the `ProxyPass`
 line of your Apache configuration to ensure your page slugs render correctly.

@@ -138,6 +138,7 @@ export default {
     :suggestions="labels"
     :get-active-token-value="getActiveLabel"
     :default-suggestions="defaultLabels"
+    :value-identifier="getLabelName"
     v-bind="$attrs"
     @fetch-suggestions="fetchLabels"
     v-on="$listeners"
@@ -151,7 +152,6 @@ export default {
           :background-color="getLabelBackgroundColor(label)"
           :scoped="showScopedLabel(label)"
           :title="label"
-          size="sm"
         />
       </gl-intersperse>
       <template v-else>
@@ -162,7 +162,6 @@ export default {
           "
           :scoped="showScopedLabel(activeTokenValue ? getLabelName(activeTokenValue) : inputValue)"
           :title="activeTokenValue ? getLabelName(activeTokenValue) : inputValue"
-          size="sm"
       /></template>
     </template>
     <template #suggestions-list="{ suggestions, selections = [] }">

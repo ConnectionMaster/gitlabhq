@@ -2,21 +2,21 @@
 
 module API
   module Entities
-    class Project < BasicProjectDetails
+    class Project < ProjectDetails
       include ::API::Helpers::RelatedResourcesHelpers
 
-      expose :container_registry_url, as: :container_registry_image_prefix, documentation: { type: 'string', example: 'registry.gitlab.example.com/gitlab/gitlab-client' }, if: -> (_, _) { Gitlab.config.registry.enabled }
+      expose :container_registry_url, as: :container_registry_image_prefix, documentation: { type: 'string', example: 'registry.gitlab.example.com/gitlab/gitlab-client' }, if: ->(_, _) { Gitlab.config.registry.enabled }
 
       expose :_links do
         expose :self, documentation: { type: 'string', example: 'https://gitlab.example.com/api/v4/projects/4' } do |project|
           expose_url(api_v4_projects_path(id: project.id))
         end
 
-        expose :issues, documentation: { type: 'string', example: 'https://gitlab.example.com/api/v4/projects/4/issues' }, if: -> (project, options) { issues_available?(project, options) } do |project|
+        expose :issues, documentation: { type: 'string', example: 'https://gitlab.example.com/api/v4/projects/4/issues' }, if: ->(project, options) { issues_available?(project, options) } do |project|
           expose_url(api_v4_projects_issues_path(id: project.id))
         end
 
-        expose :merge_requests, documentation: { type: 'string', example: 'https://gitlab.example.com/api/v4/projects/4/merge_requests' }, if: -> (project, options) { mrs_available?(project, options) } do |project|
+        expose :merge_requests, documentation: { type: 'string', example: 'https://gitlab.example.com/api/v4/projects/4/merge_requests' }, if: ->(project, options) { mrs_available?(project, options) } do |project|
           expose_url(api_v4_projects_merge_requests_path(id: project.id))
         end
 
@@ -48,8 +48,8 @@ module API
       expose :owner, using: Entities::UserBasic, unless: ->(project, options) { project.group }
       expose :resolve_outdated_diff_discussions, documentation: { type: 'boolean' }
       expose :container_expiration_policy,
-             using: Entities::ContainerExpirationPolicy,
-             if: -> (project, _) { project.container_expiration_policy }
+        using: Entities::ContainerExpirationPolicy,
+        if: ->(project, _) { project.container_expiration_policy }
       expose :repository_object_format, documentation: { type: 'string', example: 'sha1' }
 
       # Expose old field names with the new permissions methods to keep API compatible
@@ -61,7 +61,7 @@ module API
       expose(:snippets_enabled, documentation: { type: 'boolean' }) { |project, options| project.feature_available?(:snippets, options[:current_user]) }
       expose(:container_registry_enabled, documentation: { type: 'boolean' }) { |project, options| project.feature_available?(:container_registry, options[:current_user]) }
       expose :service_desk_enabled, documentation: { type: 'boolean' }
-      expose :service_desk_address, documentation: { type: 'string', example: 'address@example.com' }, if: -> (project, options) do
+      expose :service_desk_address, documentation: { type: 'string', example: 'address@example.com' }, if: ->(project, options) do
         Ability.allowed?(options[:current_user], :admin_issue, project)
       end
 
@@ -94,15 +94,12 @@ module API
       expose :shared_runners_enabled, documentation: { type: 'boolean' }
       expose :lfs_enabled?, as: :lfs_enabled, documentation: { type: 'boolean' }
       expose :creator_id, documentation: { type: 'integer', example: 1 }
-      expose :forked_from_project, using: Entities::BasicProjectDetails, if: ->(project, options) do
-        project.forked? && Ability.allowed?(options[:current_user], :read_project, project.forked_from_project)
-      end
-      expose :mr_default_target_self, if: -> (project) { project.forked? }, documentation: { type: 'boolean' }
+      expose :mr_default_target_self, if: ->(project) { project.forked? }, documentation: { type: 'boolean' }
 
-      expose :import_url, documentation: { type: 'string', example: 'https://gitlab.com/gitlab/gitlab.git' }, if: -> (project, options) { Ability.allowed?(options[:current_user], :admin_project, project) } do |project|
+      expose :import_url, documentation: { type: 'string', example: 'https://gitlab.com/gitlab/gitlab.git' }, if: ->(project, options) { Ability.allowed?(options[:current_user], :admin_project, project) } do |project|
         project[:import_url]
       end
-      expose :import_type, documentation: { type: 'string', example: 'git' }, if: -> (project, options) { Ability.allowed?(options[:current_user], :admin_project, project) }
+      expose :import_type, documentation: { type: 'string', example: 'git' }, if: ->(project, options) { Ability.allowed?(options[:current_user], :admin_project, project) }
       expose :import_status, documentation: { type: 'string', example: 'none' }
       expose :import_error, documentation: { type: 'string', example: 'Import error' }, if: lambda { |_project, options| options[:user_can_admin_project] } do |project|
         project.import_state&.last_error
@@ -124,6 +121,7 @@ module API
         end
         expose :keep_latest_artifacts_available?, as: :keep_latest_artifact, documentation: { type: 'boolean' }
         expose :restrict_user_defined_variables, documentation: { type: 'boolean' }
+        expose :ci_pipeline_variables_minimum_override_role, documentation: { type: 'string' }
         expose :runners_token, documentation: { type: 'string', example: 'b8547b1dc37721d05889db52fa2f02' }
         expose :runner_token_expiration_interval, documentation: { type: 'integer', example: 3600 }
         expose :group_runners_enabled, documentation: { type: 'boolean' }
@@ -133,9 +131,10 @@ module API
         expose :auto_devops_deploy_strategy, documentation: { type: 'string', example: 'continuous' } do |project, options|
           project.auto_devops.nil? ? 'continuous' : project.auto_devops.deploy_strategy
         end
+        expose :ci_push_repository_for_job_token_allowed, documentation: { type: 'boolean' }
       end
 
-      expose :ci_config_path, documentation: { type: 'string', example: '' }, if: -> (project, options) { Ability.allowed?(options[:current_user], :read_code, project) }
+      expose :ci_config_path, documentation: { type: 'string', example: '' }, if: ->(project, options) { Ability.allowed?(options[:current_user], :read_code, project) }
       expose :public_builds, as: :public_jobs, documentation: { type: 'boolean' }
 
       expose :shared_with_groups, documentation: { is_array: true } do |project, options|
@@ -157,7 +156,7 @@ module API
       expose :merge_commit_template, documentation: { type: 'string', example: '%(title)' }
       expose :squash_commit_template, documentation: { type: 'string', example: '%(source_branch)' }
       expose :issue_branch_template, documentation: { type: 'string', example: '%(title)' }
-      expose :statistics, using: 'API::Entities::ProjectStatistics', if: -> (project, options) {
+      expose :statistics, using: 'API::Entities::ProjectStatistics', if: ->(project, options) {
         options[:statistics] && Ability.allowed?(options[:current_user], :read_statistics, project)
       }
       expose :warn_about_potentially_unwanted_characters, documentation: { type: 'boolean' }
@@ -182,9 +181,8 @@ module API
                                 .preload(:project_repository)
                                 .preload(:service_desk_setting)
                                 .preload(project_group_links: { group: :route },
-                                         fork_network: :root_project,
-                                         fork_network_member: :forked_from_project,
-                                         forked_from_project: [:route, :topics, :group, :project_feature, namespace: [:route, :owner]])
+                                  fork_network: :root_project,
+                                  fork_network_member: :forked_from_project)
       end
       # rubocop: enable CodeReuse/ActiveRecord
 
@@ -192,13 +190,8 @@ module API
         # Call the count methods on every project, so the BatchLoader would load them all at
         # once when the entities are rendered
         projects_relation.each(&:open_issues_count)
-        projects_relation.map(&:forked_from_project).compact.each(&:forks_count)
 
         super
-      end
-
-      def self.repositories_for_preload(projects_relation)
-        super + projects_relation.map(&:forked_from_project).compact.map(&:repository)
       end
     end
   end

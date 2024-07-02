@@ -54,10 +54,10 @@ RSpec.describe 'admin/dashboard/index.html.haml' do
   it 'shows database versions for all database models' do
     render
 
-    expect(rendered).to have_content /PostgreSQL \(main\).+?#{::Gitlab::Database::Reflection.new(ApplicationRecord).version}/
+    expect(rendered).to have_content(/PostgreSQL \(main\).+?#{::Gitlab::Database::Reflection.new(ApplicationRecord).version}/)
 
     if Gitlab::Database.has_config?(:ci)
-      expect(rendered).to have_content /PostgreSQL \(ci\).+?#{::Gitlab::Database::Reflection.new(Ci::ApplicationRecord).version}/
+      expect(rendered).to have_content(/PostgreSQL \(ci\).+?#{::Gitlab::Database::Reflection.new(Ci::ApplicationRecord).version}/)
     end
   end
 
@@ -72,20 +72,19 @@ RSpec.describe 'admin/dashboard/index.html.haml' do
     end
   end
 
-  describe 'GitLab KAS' do
+  describe 'GitLab KAS', feature_category: :deployment_management do
     before do
       allow(Gitlab::Kas).to receive(:enabled?).and_return(enabled)
-      allow(Gitlab::Kas).to receive(:version).and_return('kas-1.2.3')
     end
 
     context 'KAS enabled' do
       let(:enabled) { true }
+      let(:expected_kas_version) { Gitlab::Kas.display_version_info }
 
       it 'includes KAS version' do
         render
 
-        expect(rendered).to have_content('GitLab KAS')
-        expect(rendered).to have_content('kas-1.2.3')
+        expect(rendered).to have_content("GitLab KAS #{expected_kas_version}")
       end
     end
 
@@ -96,7 +95,6 @@ RSpec.describe 'admin/dashboard/index.html.haml' do
         render
 
         expect(rendered).not_to have_content('GitLab KAS')
-        expect(rendered).not_to have_content('kas-1.2.3')
       end
     end
   end

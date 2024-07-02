@@ -3,31 +3,25 @@ import { shallowMountExtended } from 'helpers/vue_test_utils_helper';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import AbuseCategorySelector from '~/abuse_reports/components/abuse_category_selector.vue';
 import CiResourceHeader from '~/ci/catalog/components/details/ci_resource_header.vue';
-import CiResourceAbout from '~/ci/catalog/components/details/ci_resource_about.vue';
-import CiIcon from '~/vue_shared/components/ci_icon/ci_icon.vue';
-import { catalogSharedDataMock, catalogAdditionalDetailsMock } from '../../mock';
+import CiVerificationBadge from '~/ci/catalog/components/shared/ci_verification_badge.vue';
+import { catalogSharedDataMock } from '../../mock';
 
 describe('CiResourceHeader', () => {
   let wrapper;
 
   const resource = { ...catalogSharedDataMock.data.ciCatalogResource };
-  const resourceAdditionalData = { ...catalogAdditionalDetailsMock.data.ciCatalogResource };
 
   const defaultProps = {
-    openIssuesCount: resourceAdditionalData.openIssuesCount,
-    openMergeRequestsCount: resourceAdditionalData.openMergeRequestsCount,
-    isLoadingDetails: false,
-    isLoadingSharedData: false,
+    isLoadingData: false,
     resource,
   };
 
-  const findAboutComponent = () => wrapper.findComponent(CiResourceAbout);
   const findReportAbuseButton = () => wrapper.findByTestId('report-abuse-button');
   const findAbuseCategorySelector = () => wrapper.findComponent(AbuseCategorySelector);
   const findAvatar = () => wrapper.findComponent(GlAvatar);
   const findAvatarLink = () => wrapper.findComponent(GlAvatarLink);
+  const findVerificationBadge = () => wrapper.findComponent(CiVerificationBadge);
   const findVersionBadge = () => wrapper.findComponent(GlBadge);
-  const findPipelineStatusBadge = () => wrapper.findComponent(CiIcon);
 
   const createComponent = ({ props = {} } = {}) => {
     wrapper = shallowMountExtended(CiResourceHeader, {
@@ -66,18 +60,6 @@ describe('CiResourceHeader', () => {
         entityName: name,
       });
     });
-
-    it('renders the catalog about section and passes props', () => {
-      expect(findAboutComponent().exists()).toBe(true);
-      expect(findAboutComponent().props()).toEqual({
-        isLoadingDetails: false,
-        isLoadingSharedData: false,
-        openIssuesCount: defaultProps.openIssuesCount,
-        openMergeRequestsCount: defaultProps.openMergeRequestsCount,
-        latestVersion: resource.versions.nodes[0],
-        webPath: resource.webPath,
-      });
-    });
   });
 
   describe('Version badge', () => {
@@ -102,42 +84,32 @@ describe('CiResourceHeader', () => {
     });
   });
 
-  describe('when the project has a release', () => {
-    const pipelineStatus = {
-      detailsPath: 'path/to/pipeline',
-      icon: 'status_success',
-      text: 'passed',
-      group: 'success',
-    };
+  describe('verification badge', () => {
+    describe('when the resource is not verified', () => {
+      beforeEach(() => {
+        createComponent();
+      });
+
+      it('does not render the verification badge', () => {
+        expect(findVerificationBadge().exists()).toBe(false);
+      });
+    });
 
     describe.each`
-      hasPipelineBadge | describeText | testText             | status
-      ${true}          | ${'is'}      | ${'renders'}         | ${pipelineStatus}
-      ${false}         | ${'is not'}  | ${'does not render'} | ${{}}
-    `('and there $describeText a pipeline', ({ hasPipelineBadge, testText, status }) => {
+      verificationLevel | describeText
+      ${'GITLAB'}       | ${'GitLab'}
+      ${'PARTNER'}      | ${'partner'}
+    `('when the resource is $describeText maintained', ({ verificationLevel }) => {
       beforeEach(() => {
-        createComponent({
-          props: {
-            pipelineStatus: status,
-            latestVersion: { name: '1.0.0', path: 'path/to/release' },
-          },
-        });
+        createComponent({ props: { resource: { ...resource, verificationLevel } } });
       });
 
-      it('renders the version badge', () => {
-        expect(findVersionBadge().exists()).toBe(true);
+      it('renders the verification badge', () => {
+        expect(findVerificationBadge().exists()).toBe(true);
       });
 
-      it(`${testText} the pipeline status badge`, () => {
-        expect(findPipelineStatusBadge().exists()).toBe(hasPipelineBadge);
-        if (hasPipelineBadge) {
-          expect(findPipelineStatusBadge().props()).toEqual({
-            showStatusText: true,
-            status: pipelineStatus,
-            showTooltip: true,
-            useLink: true,
-          });
-        }
+      it('displays the correct badge', () => {
+        expect(findVerificationBadge().props('verificationLevel')).toBe(verificationLevel);
       });
     });
   });

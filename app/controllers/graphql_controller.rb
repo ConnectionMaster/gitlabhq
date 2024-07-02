@@ -30,7 +30,13 @@ class GraphqlController < ApplicationController
   protect_from_forgery with: :null_session, only: :execute
 
   # must come first: current_user is set up here
-  before_action(only: [:execute]) { authenticate_sessionless_user!(:api) }
+  before_action(only: [:execute]) do
+    if Feature.enabled? :graphql_minimal_auth_methods # rubocop:disable Gitlab/FeatureFlagWithoutActor -- reverting MR
+      authenticate_graphql
+    else
+      authenticate_sessionless_user!(:api)
+    end
+  end
 
   before_action :authorize_access_api!
   before_action :set_user_last_activity
@@ -61,10 +67,10 @@ class GraphqlController < ApplicationController
   urgency :low, [:execute]
 
   def execute
-    result = if introspection_query?
-               execute_introspection_query
+    result = if multiplex?
+               execute_multiplex
              else
-               multiplex? ? execute_multiplex : execute_query
+               introspection_query? ? execute_introspection_query : execute_query
              end
 
     render json: result
@@ -103,10 +109,6 @@ class GraphqlController < ApplicationController
     render_error(exception.message, status: :unprocessable_entity)
   end
 
-  rescue_from ::GraphQL::CoercionError do |exception|
-    render_error(exception.message, status: :unprocessable_entity)
-  end
-
   rescue_from ActiveRecord::QueryAborted do |exception|
     log_exception(exception)
 
@@ -121,8 +123,35 @@ class GraphqlController < ApplicationController
 
   private
 
+  # unwound from SessionlessAuthentication concern
+  # use a minimal subset of Gitlab::Auth::RequestAuthenticator.find_sessionless_user
+  # so only token types allowed for GraphQL can authenticate users
+  # CI_JOB_TOKENs are not allowed for now, since their access is too broad
+  def authenticate_graphql
+    user = request_authenticator.find_user_from_web_access_token(:api, scopes: authorization_scopes)
+    user ||= request_authenticator.find_user_from_personal_access_token_for_api_or_git
+    sessionless_sign_in(user) if user
+  rescue Gitlab::Auth::AuthenticationError
+    nil
+  end
+
+  # Overridden in EE
+  def authorization_scopes
+    [:api, :read_api]
+  end
+
+  def permitted_params
+    @permitted_params ||= multiplex? ? permitted_multiplex_params : permitted_standalone_query_params
+  end
+
+  def permitted_standalone_query_params
+    params.permit(:query, :operationName, :remove_deprecated, variables: {}).tap do |permitted_params|
+      permitted_params[:variables] = params[:variables]
+    end
+  end
+
   def permitted_multiplex_params
-    params.permit(_json: [:query, :operationName, { variables: {} }])
+    params.permit(:remove_deprecated, _json: [:query, :operationName, { variables: {} }])
   end
 
   def disallow_mutations_for_get
@@ -150,7 +179,7 @@ class GraphqlController < ApplicationController
     end
   end
 
-  def mutation?(query_string, operation_name = params[:operationName])
+  def mutation?(query_string, operation_name = permitted_params[:operationName])
     ::GraphQL::Query.new(GitlabSchema, query_string, operation_name: operation_name).mutation?
   end
 
@@ -206,14 +235,13 @@ class GraphqlController < ApplicationController
   end
 
   def execute_query
-    variables = build_variables(params[:variables])
-    operation_name = params[:operationName]
-
+    variables = build_variables(permitted_params[:variables])
+    operation_name = permitted_params[:operationName]
     GitlabSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
   end
 
   def query
-    params.fetch(:query, '')
+    GraphQL::Language.escape_single_quoted_newlines(permitted_params.fetch(:query, ''))
   end
 
   def multiplex_param
@@ -240,7 +268,7 @@ class GraphqlController < ApplicationController
       is_sessionless_user: api_user,
       request: request,
       scope_validator: ::Gitlab::Auth::ScopeValidator.new(api_user, request_authenticator),
-      remove_deprecated: Gitlab::Utils.to_boolean(params[:remove_deprecated], default: false)
+      remove_deprecated: Gitlab::Utils.to_boolean(permitted_params[:remove_deprecated], default: false)
     }
   end
 
@@ -257,7 +285,7 @@ class GraphqlController < ApplicationController
   def authorize_access_api!
     if current_user.nil? &&
         request_authenticator.authentication_token_present?
-      render_error('Invalid token', status: :unauthorized)
+      return render_error('Invalid token', status: :unauthorized)
     end
 
     return if can?(current_user, :access_api)
@@ -319,8 +347,8 @@ class GraphqlController < ApplicationController
   end
 
   def introspection_query?
-    if params.key?(:operationName)
-      params[:operationName] == INTROSPECTION_QUERY_OPERATION_NAME
+    if permitted_params.key?(:operationName)
+      permitted_params[:operationName] == INTROSPECTION_QUERY_OPERATION_NAME
     else
       # If we don't provide operationName param, we infer it from the query
       graphql_query_object.selected_operation_name == INTROSPECTION_QUERY_OPERATION_NAME
@@ -329,6 +357,8 @@ class GraphqlController < ApplicationController
 
   def graphql_query_object
     @graphql_query_object ||= GraphQL::Query.new(GitlabSchema, query: query,
-      variables: build_variables(params[:variables]))
+      variables: build_variables(permitted_params[:variables]))
   end
 end
+
+GraphqlController.prepend_mod_with('GraphqlController')

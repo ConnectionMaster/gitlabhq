@@ -16,18 +16,29 @@ RSpec.describe 'Container Registry', :js, feature_category: :container_registry 
     create(:container_repository, name: '')
   end
 
+  let(:help_page_href) { help_page_path('administration/packages/container_registry_metadata_database') }
+
   before do
     sign_in(user)
     project.add_developer(user)
     stub_container_registry_config(enabled: true)
     stub_container_registry_info
     stub_container_registry_tags(repository: :any, tags: [])
+    allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(true)
   end
 
   it 'has a page title set' do
     visit_container_registry
 
     expect(page).to have_title _('Container Registry')
+  end
+
+  it 'has link to next generation container registry docs' do
+    allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(false)
+
+    visit_container_registry
+
+    expect(page).to have_link('next-generation container registry', href: help_page_href)
   end
 
   it 'does not have link to settings' do
@@ -92,10 +103,11 @@ RSpec.describe 'Container Registry', :js, feature_category: :container_registry 
       before do
         stub_container_registry_tags(repository: %r{my/image}, tags: ('1'..'20').to_a, with_manifest: true)
         visit_container_registry_details 'my/image'
+        click_sort_option('Name', true)
       end
 
       it 'shows the details breadcrumb' do
-        expect(find('.breadcrumbs')).to have_link 'my/image'
+        expect(find_by_testid('breadcrumb-links')).to have_link 'my/image'
       end
 
       it 'shows the image title' do

@@ -130,6 +130,8 @@ RSpec.describe ::Gitlab::Housekeeper::Git do
   end
 
   describe '#push' do
+    let(:push_options) { ::Gitlab::Housekeeper::PushOptions.new }
+
     before do
       # Needed to check if remote exists
       allow(::Gitlab::Housekeeper::Shell).to receive(:execute)
@@ -150,17 +152,28 @@ RSpec.describe ::Gitlab::Housekeeper::Git do
 
       it 'pushes to the housekeeper remote' do
         expect(::Gitlab::Housekeeper::Shell).to receive(:execute)
-          .with('git', 'push', '-f', 'housekeeper', 'the-branch-name:the-branch-name')
+          .with('git', 'push', '-u', '-f', 'housekeeper', 'the-branch-name:the-branch-name')
 
-        git.push('the-branch-name')
+        git.push('the-branch-name', push_options)
       end
     end
 
     it 'pushes to origin' do
       expect(::Gitlab::Housekeeper::Shell).to receive(:execute)
-        .with('git', 'push', '-f', 'origin', 'the-branch-name:the-branch-name')
+        .with('git', 'push', '-u', '-f', 'origin', 'the-branch-name:the-branch-name')
 
-      git.push('the-branch-name')
+      git.push('the-branch-name', push_options)
+    end
+
+    context 'with push options defined' do
+      it 'pushes with push options set' do
+        expect(::Gitlab::Housekeeper::Shell).to receive(:execute)
+          .with('git', 'push', '-u', '-f', 'origin', 'the-branch-name:the-branch-name', '-o ci.skip')
+
+        push_options.ci_skip = true
+
+        git.push('the-branch-name', push_options)
+      end
     end
   end
 end

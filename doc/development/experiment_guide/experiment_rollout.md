@@ -23,7 +23,7 @@ In either case, an outcome of the experiment should be posted to the issue with 
 
 When there is a case on GitLab.com (SaaS) that necessitates turning off all experiments, we have this control.
 
-You can toggle experiments on SaaS on and off using the `gitlab_experiment` [feature flag](../feature_flags).
+You can toggle experiments on SaaS on and off using the `gitlab_experiment` [feature flag](../feature_flags/index.md).
 
 This can be done via ChatOps:
 
@@ -72,6 +72,3 @@ _inactive_ experiment until we set the feature flag to `conditional`. After whic
 our experiment is then considered _running_. If you choose to "enable" your feature flag,
 you should consider the experiment to be _resolved_, because everyone is assigned
 the candidate unless they've opted out of experimentation.
-
-As of GitLab 13.10, work is being done to improve this process and how we communicate
-about it.

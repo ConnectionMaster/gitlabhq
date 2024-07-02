@@ -1,7 +1,8 @@
 ---
 stage: Create
 group: Code Review
-info: Detailing the process to add a new mergeability check
+info: Any user with at least the Maintainer role can merge updates to this content. For details, see https://docs.gitlab.com/ee/development/development_processes.html#development-guidelines-review.
+description: "Developer information explaining the process to add a new mergeability check"
 ---
 
 # Mergeability framework
@@ -91,7 +92,7 @@ The mergeability checks live under `app/services/merge_requests/mergeability/`.
 
 ## Merge when checks pass
 
-When we want to add the check to the Merge When Checks Pass feature, we must: 
+When we want to add the check to the Merge When Checks Pass feature, we must:
 
 1. Allow the check to be skipped in the class.
 1. Add the parameter to the list in the method `skipped_mergeable_checks`.

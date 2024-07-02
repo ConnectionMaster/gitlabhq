@@ -1,19 +1,18 @@
 <script>
 import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import { makeLoadVersionsErrorMessage } from '~/ml/model_registry/translations';
-import { convertToGraphQLId } from '~/graphql_shared/utils';
 import { s__ } from '~/locale';
 import getModelVersionsQuery from '../graphql/queries/get_model_versions.query.graphql';
 import {
   GRAPHQL_PAGE_SIZE,
   LIST_KEY_CREATED_AT,
   LIST_KEY_VERSION,
-  MODEL_ENTITIES,
+  MODEL_VERSION_CREATION_MODAL_ID,
   SORT_KEY_CREATED_AT,
   SORT_KEY_ORDER,
 } from '../constants';
 import SearchableList from './searchable_list.vue';
-import EmptyState from './empty_state.vue';
+import EmptyState from './model_list_empty_state.vue';
 import ModelVersionRow from './model_version_row.vue';
 
 export default {
@@ -24,14 +23,14 @@ export default {
   },
   props: {
     modelId: {
-      type: Number,
+      type: String,
       required: true,
     },
   },
   data() {
     return {
       modelVersions: {},
-      errorMessage: undefined,
+      errorMessage: '',
       skipQueries: true,
       queryVariables: {},
     };
@@ -54,9 +53,6 @@ export default {
     },
   },
   computed: {
-    gid() {
-      return convertToGraphQLId('Ml::Model', this.modelId);
-    },
     isLoading() {
       return this.$apollo.queries.modelVersions.loading;
     },
@@ -70,7 +66,7 @@ export default {
   methods: {
     fetchPage(variables) {
       this.queryVariables = {
-        id: this.gid,
+        id: this.modelId,
         first: GRAPHQL_PAGE_SIZE,
         ...variables,
         version: variables.name,
@@ -78,7 +74,7 @@ export default {
         sort: variables.sort?.toUpperCase() || SORT_KEY_ORDER,
       };
 
-      this.errorMessage = null;
+      this.errorMessage = '';
       this.skipQueries = false;
 
       this.$apollo.queries.modelVersions.fetchMore({});
@@ -88,7 +84,6 @@ export default {
       Sentry.captureException(error);
     },
   },
-  modelVersionEntity: MODEL_ENTITIES.modelVersion,
   sortableFields: [
     {
       orderBy: LIST_KEY_VERSION,
@@ -99,6 +94,14 @@ export default {
       label: s__('MlExperimentTracking|Created at'),
     },
   ],
+  emptyState: {
+    title: s__(
+      'MlModelRegistry|Manage versions of your machine learning modelManage versions of your machine learning model',
+    ),
+    description: s__('MlModelRegistry|Use versions to track performance, parameters, and metadata'),
+    primaryText: s__('MlModelRegistry|Create model version'),
+    modalId: MODEL_VERSION_CREATION_MODAL_ID,
+  },
 };
 </script>
 <template>
@@ -112,7 +115,12 @@ export default {
     @fetch-page="fetchPage"
   >
     <template #empty-state>
-      <empty-state :entity-type="$options.modelVersionEntity" />
+      <empty-state
+        :title="$options.emptyState.title"
+        :description="$options.emptyState.description"
+        :primary-text="$options.emptyState.primaryText"
+        :modal-id="$options.emptyState.modalId"
+      />
     </template>
 
     <template #item="{ item }">

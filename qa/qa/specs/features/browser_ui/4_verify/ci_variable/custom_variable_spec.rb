@@ -7,13 +7,7 @@ module QA
       let(:pipeline_job_name) { 'customizable-variable' }
       let(:variable_custom_value) { 'Custom Foo' }
       let(:project) { create(:project, name: 'project-with-customizable-variable-pipeline') }
-      let!(:runner) do
-        Resource::ProjectRunner.fabricate! do |runner|
-          runner.project = project
-          runner.name = executor
-          runner.tags = [executor]
-        end
-      end
+      let!(:runner) { create(:project_runner, project: project, name: executor, tags: [executor]) }
 
       let!(:commit) do
         create(:commit, project: project, commit_message: 'Add .gitlab-ci.yml', actions: [
@@ -46,7 +40,7 @@ module QA
         runner&.remove_via_api!
       end
 
-      it 'manually creates a pipeline and uses the defined custom variable value', :reliable,
+      it 'manually creates a pipeline and uses the defined custom variable value', :blocking,
         testcase: 'https://gitlab.com/gitlab-org/gitlab/-/quality/test_cases/378975' do
         Page::Project::Pipeline::New.perform do |new|
           new.configure_variable(value: variable_custom_value)

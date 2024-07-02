@@ -18,14 +18,16 @@ import (
 func TestSavedFileTracking(t *testing.T) {
 	testhelper.ConfigureSecret()
 
-	r, err := http.NewRequest("PUT", "/url/path", nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	r, err := http.NewRequestWithContext(ctx, "PUT", "/url/path", nil)
 	require.NoError(t, err)
 
 	tracker := SavedFileTracker{Request: r}
 	require.Equal(t, "accelerate", tracker.Name())
 
 	file := &destination.FileHandler{}
-	ctx := context.Background()
 	tracker.ProcessFile(ctx, "test", file, nil, config.NewDefaultConfig())
 	require.Equal(t, 1, tracker.Count())
 
@@ -34,7 +36,7 @@ func TestSavedFileTracking(t *testing.T) {
 	require.NoError(t, err)
 
 	rewrittenFields := token.Claims.(*MultipartClaims).RewrittenFields
-	require.Equal(t, 1, len(rewrittenFields))
+	require.Len(t, rewrittenFields, 1)
 
 	require.Contains(t, rewrittenFields, "test")
 }

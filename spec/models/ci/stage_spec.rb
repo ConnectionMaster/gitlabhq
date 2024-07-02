@@ -118,13 +118,13 @@ RSpec.describe Ci::Stage, :models, feature_category: :continuous_integration do
     end
   end
 
-  describe '#canceling' do
+  describe '#start_cancel' do
     it 'transitions to canceling' do
       stage = create(:ci_stage, pipeline: pipeline, project: pipeline.project, status: 'running')
       create(:ci_build, :success, stage_id: stage.id)
       create(:ci_build, :running, stage_id: stage.id)
 
-      expect { stage.canceling }.to change { stage.status }.from('running').to('canceling')
+      expect { stage.start_cancel }.to change { stage.status }.from('running').to('canceling')
     end
   end
 
@@ -438,6 +438,26 @@ RSpec.describe Ci::Stage, :models, feature_category: :continuous_integration do
       it 'does not change the partition_id value' do
         expect { stage.valid? }.not_to change(stage, :partition_id)
       end
+    end
+  end
+
+  describe 'confirm_manual_job?' do
+    context 'when a stage has a `manual`-status playable job with manual_confirmation_message' do
+      before do
+        create(:ci_build, :success, pipeline: pipeline, stage_id: stage.id)
+        create(:ci_build, :manual, :with_manual_confirmation, pipeline: pipeline, stage_id: stage.id)
+      end
+
+      it { expect(stage.confirm_manual_job?).to be_truthy }
+    end
+
+    context 'when a stage does not have a `manual`-status playable job' do
+      before do
+        create(:ci_build, :success, pipeline: pipeline, stage_id: stage.id)
+        create(:ci_build, status: :skipped, pipeline: pipeline, stage_id: stage.id)
+      end
+
+      it { expect(stage.confirm_manual_job?).to be_falsy }
     end
   end
 end

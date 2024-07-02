@@ -69,13 +69,14 @@ query getProjectContainerRepositories(
         path
         status
         location
-        canDelete
         createdAt
         expirationPolicyStartedAt
         expirationPolicyCleanupStatus
         project {
           id
+          name
           path
+          webUrl
         }
         userPermissions {
           destroyContainerRepository

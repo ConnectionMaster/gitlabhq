@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 <!-- some details borrowed from GitLab.com move from Azure to GCP detailed at https://gitlab.com/gitlab-com/migration/-/blob/master/.gitlab/issue_templates/failover.md -->
 
 You can use GitLab backup and restore to migrate your instance to a new server. This section outlines a typical procedure for a GitLab deployment running on a single server.
-If you're running GitLab Geo, an alternative option is [Geo disaster recovery for planned failover](../geo/disaster_recovery/planned_failover.md).
+If you're running GitLab Geo, an alternative option is [Geo disaster recovery for planned failover](../geo/disaster_recovery/planned_failover.md). You must make sure all sites meet the [Geo requirements](../geo/index.md#requirements-for-running-geo) before selecting Geo for the migration.
 
 WARNING:
 Avoid uncoordinated data processing by both the new and old servers, where multiple
@@ -160,6 +160,23 @@ To prepare the new server:
    sudo scp /var/opt/gitlab/redis/dump.rdb <your-linux-username>@new-server:/var/opt/gitlab/redis
    sudo scp /var/opt/gitlab/backups/your-backup.tar <your-linux-username>@new-server:/var/opt/gitlab/backups
    ```
+
+### For instances with a large volume of Git and object data
+
+If your GitLab instance has a large amount of data on local volumes, for example greater than 1 TB,
+backups may take a long time. In that case, you may find it easier to transfer the data to the appropriate volumes on the new instance.
+
+The main volumes that you might need to migrate manually are:
+
+- The `/var/opt/gitlab/git-data` directory which contains all the Git data.
+  Be sure to read [the moving repositories documentation section](../../administration/operations/moving_repositories.md#migrating-to-another-gitlab-instance) to eliminate the chance of Git data corruption.
+- The `/var/opt/gitlab/gitlab-rails/shared` directory which contains object data, like artifacts.
+- If you are using the bundled PostgreSQL included with the Linux package,
+  you also need to migrate the [PostgreSQL data directory](https://docs.gitlab.com/omnibus/settings/database.html#store-postgresql-data-in-a-different-directory)
+  under `/var/opt/gitlab/postgresql/data`.
+
+After all GitLab services have been stopped, you can use tools like `rsync` or mounting volume snapshots to move the data
+to the new environment.
 
 ## Restore data on the new server
 

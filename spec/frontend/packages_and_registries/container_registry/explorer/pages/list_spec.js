@@ -22,9 +22,10 @@ import {
 import deleteContainerRepositoryMutation from '~/packages_and_registries/container_registry/explorer/graphql/mutations/delete_container_repository.mutation.graphql';
 import getContainerRepositoriesDetails from '~/packages_and_registries/container_registry/explorer/graphql/queries/get_container_repositories_details.query.graphql';
 import component from '~/packages_and_registries/container_registry/explorer/pages/list.vue';
-import Tracking from '~/tracking';
+import { mockTracking, unmockTracking } from 'helpers/tracking_helper';
 import PersistedPagination from '~/packages_and_registries/shared/components/persisted_pagination.vue';
 import PersistedSearch from '~/packages_and_registries/shared/components/persisted_search.vue';
+import MetadataDatabaseAlert from '~/packages_and_registries/shared/components/container_registry_metadata_database_alert.vue';
 import { FILTERED_SEARCH_TERM } from '~/vue_shared/components/filtered_search_bar/constants';
 import TitleArea from '~/vue_shared/components/registry/title_area.vue';
 
@@ -57,6 +58,7 @@ describe('List Page', () => {
   const findRegistryHeader = () => wrapper.findComponent(RegistryHeader);
 
   const findDeleteAlert = () => wrapper.findComponent(GlAlert);
+  const findMetadataDatabaseAlert = () => wrapper.findComponent(MetadataDatabaseAlert);
   const findImageList = () => wrapper.findComponent(ImageList);
   const findPersistedSearch = () => wrapper.findComponent(PersistedSearch);
   const findEmptySearchMessage = () => wrapper.find('[data-testid="emptySearch"]');
@@ -101,6 +103,7 @@ describe('List Page', () => {
         RegistryHeader,
         TitleArea,
         DeleteImage,
+        MetadataContainerScanning: true,
       },
       mocks: {
         $toast,
@@ -136,6 +139,24 @@ describe('List Page', () => {
       showCleanupPolicyLink: false,
       expirationPolicy: {},
       cleanupPoliciesSettingsPath: '',
+    });
+  });
+
+  describe('metadata database alert', () => {
+    it('is rendered when metadata database is not enabled', () => {
+      mountComponent();
+
+      expect(findMetadataDatabaseAlert().exists()).toBe(true);
+    });
+
+    it('is not rendered when metadata database is enabled', () => {
+      mountComponent({
+        config: {
+          isMetadataDatabaseEnabled: true,
+        },
+      });
+
+      expect(findMetadataDatabaseAlert().exists()).toBe(false);
     });
   });
 
@@ -651,22 +672,26 @@ describe('List Page', () => {
   });
 
   describe('tracking', () => {
+    let trackingSpy;
+
     beforeEach(() => {
+      trackingSpy = mockTracking(undefined, undefined, jest.spyOn);
       mountComponent();
       fireFirstSortUpdate();
     });
 
+    afterEach(() => {
+      unmockTracking();
+    });
+
     const testTrackingCall = (action) => {
-      expect(Tracking.event).toHaveBeenCalledWith(undefined, action, {
+      expect(trackingSpy).toHaveBeenCalledWith(undefined, action, {
         label: 'registry_repository_delete',
       });
     };
 
-    beforeEach(() => {
-      jest.spyOn(Tracking, 'event');
-    });
-
-    it('send an event when delete button is clicked', () => {
+    it('send an event when delete button is clicked', async () => {
+      await waitForPromises();
       findImageList().vm.$emit('delete', {});
 
       testTrackingCall('click_button');

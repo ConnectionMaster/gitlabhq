@@ -8,6 +8,8 @@ import {
 import Vue from 'vue';
 import VueApollo from 'vue-apollo';
 
+import projectWorkItemTypesQueryResponse from 'test_fixtures/graphql/work_items/project_work_item_types.query.graphql.json';
+
 import createMockApollo from 'helpers/mock_apollo_helper';
 import { stubComponent } from 'helpers/stub_component';
 
@@ -36,7 +38,6 @@ import convertWorkItemMutation from '~/work_items/graphql/work_item_convert.muta
 
 import {
   convertWorkItemMutationResponse,
-  projectWorkItemTypesQueryResponse,
   convertWorkItemMutationErrorResponse,
   updateWorkItemMutationResponse,
   updateWorkItemNotificationsMutationResponse,
@@ -119,6 +120,7 @@ describe('WorkItemActions component', () => {
     workItemReference = mockWorkItemReference,
     workItemCreateNoteEmail = mockWorkItemCreateNoteEmail,
     hideSubscribe = undefined,
+    hasChildren = false,
   } = {}) => {
     wrapper = shallowMountExtended(WorkItemActions, {
       isLoggedIn: isLoggedIn(),
@@ -135,6 +137,7 @@ describe('WorkItemActions component', () => {
         workItemState: STATE_OPEN,
         fullPath: 'gitlab-org/gitlab-test',
         workItemId: 'gid://gitlab/WorkItem/1',
+        workItemIid: '1',
         canUpdate,
         canDelete,
         isConfidential,
@@ -145,10 +148,11 @@ describe('WorkItemActions component', () => {
         workItemReference,
         workItemCreateNoteEmail,
         hideSubscribe,
+        hasChildren,
       },
       provide: {
         isGroup: false,
-        glFeatures: { workItemsBeta: true, workItemsMvc2: true },
+        glFeatures: { workItemsBeta: true, workItemsAlpha: true },
       },
       mocks: {
         $toast,
@@ -191,16 +195,16 @@ describe('WorkItemActions component', () => {
         divider: true,
       },
       {
+        testId: TEST_ID_TOGGLE_ACTION,
+        text: '',
+      },
+      {
         testId: TEST_ID_LOCK_ACTION,
         text: 'Lock discussion',
       },
       {
         testId: TEST_ID_CONFIDENTIALITY_TOGGLE_ACTION,
         text: 'Turn on confidentiality',
-      },
-      {
-        testId: TEST_ID_TOGGLE_ACTION,
-        text: '',
       },
       {
         testId: TEST_ID_COPY_REFERENCE_ACTION,
@@ -309,12 +313,25 @@ describe('WorkItemActions component', () => {
   });
 
   describe('delete action', () => {
-    it('shows confirm modal when clicked', () => {
+    it('shows confirm modal with delete confirmation message when clicked', () => {
       createComponent();
 
       findDeleteButton().vm.$emit('action');
 
       expect(modalShowSpy).toHaveBeenCalled();
+      expect(findModal().text()).toBe(
+        'Are you sure you want to delete the task? This action cannot be reversed.',
+      );
+    });
+
+    it('shows confirm modal with delete hierarchy confirmation message when clicked', () => {
+      createComponent({ hasChildren: true });
+
+      findDeleteButton().vm.$emit('action');
+
+      expect(findModal().text()).toBe(
+        'Delete this task and release all child items? This action cannot be reversed.',
+      );
     });
 
     it('emits event when clicking OK button', () => {

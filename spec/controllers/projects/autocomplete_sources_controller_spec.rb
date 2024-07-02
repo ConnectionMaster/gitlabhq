@@ -11,7 +11,7 @@ RSpec.describe Projects::AutocompleteSourcesController do
   let_it_be(:private_issue) { create(:labeled_issue, project: project, labels: [development]) }
   let_it_be(:private_work_item) { create(:work_item, project: project) }
   let_it_be(:issue) { create(:labeled_issue, project: public_project, labels: [development]) }
-  let_it_be(:work_item) { create(:work_item, project: public_project, id: 1, iid: 100) }
+  let_it_be(:work_item) { create(:work_item, project: public_project) }
   let_it_be(:user) { create(:user) }
 
   def members_by_username(username)
@@ -61,6 +61,15 @@ RSpec.describe Projects::AutocompleteSourcesController do
         let(:issuable_iid) { work_item.iid }
 
         it_behaves_like 'issuable commands'
+
+        it 'returns an array of commands when work_item_type_id is specified' do
+          sign_in(user)
+
+          get :commands, format: :json, params: { namespace_id: group.path, project_id: public_project.path, type: issuable_type, work_item_type_id: work_item.work_item_type_id }
+
+          expect(response).to have_gitlab_http_status(:ok)
+          expect(json_response).to be_present
+        end
       end
 
       context 'with merge request' do

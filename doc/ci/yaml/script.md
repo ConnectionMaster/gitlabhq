@@ -4,7 +4,7 @@ group: Pipeline Authoring
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Format scripts and job logs
+# Scripts and job logs
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -70,7 +70,7 @@ with [`default`](index.md#default):
 - Use `before_script` with `default` to define a default array of commands that
   should run before the `script` commands in all jobs.
 - Use `after_script` with default to define a default array of commands
-  that should run after the job completes.
+  that should run after any job completes or is canceled.
 
 You can overwrite a default by defining a different one in a job. To ignore the default
 use `before_script: []` or `after_script: []`:
@@ -94,6 +94,38 @@ job2:
     - echo "This script executes after the job's `before_script`,"
     - echo "but the job does not use the default `after_script`."
   after_script: []
+```
+
+## Skip `after_script` commands if a job is cancelled
+
+> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10158) in GitLab 17.0 [with a flag](../../administration/feature_flags.md) named `ci_canceling_status`. Enabled by default. Requires GitLab Runner version 16.11.1.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+
+[`after_script`](index.md) commands run if a job is canceled while the `before_script`
+or `script` section of that job are running.
+
+The job's status in the UI is `canceling` while the `after_script` are executing,
+and changes to `canceled` after the `after_script` commands complete. The `$CI_JOB_STATUS`
+predefined variable has a value of `canceled` while the `after_script` commands are running.
+
+To prevent `after_script` commands running after canceling a job, configure the `after_script`
+section to:
+
+1. Check the `$CI_JOB_STATUS` predefined variable at the start of the `after_script` section.
+1. End execution early if the value is `canceled`.
+
+For example:
+
+```yaml
+job1:
+  script:
+    - my-script.sh
+  after_script:
+    - if [ "$CI_JOB_STATUS" == "canceled" ]; then exit 0; fi
+    - my-after-script.sh
 ```
 
 ## Split long commands
@@ -357,3 +389,11 @@ environment variable is set to `dumb`. To fix the formatting for these tools, yo
 
 - Add an additional script line to set `TERM=ansi` in the shell's environment before running the command.
 - Add a `TERM` [CI/CD variable](../variables/index.md) with a value of `ansi`.
+
+### `after_script` section execution stops early and incorrect `$CI_JOB_STATUS` values
+
+In GitLab Runner 16.9.0 to 16.11.0:
+
+- The `after_script` section execution sometimes stops too early.
+- The status of the `$CI_JOB_STATUS` predefined variable is
+  [incorrectly set as `failed` while the job is canceling](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37485).

@@ -21,6 +21,7 @@ module Ci
     self.sequence_name = :ci_job_artifacts_id_seq
 
     partitionable scope: :job, partitioned: true
+    query_constraints :id, :partition_id
 
     enum accessibility: { public: 0, private: 1, none: 2 }, _suffix: true
 
@@ -63,7 +64,7 @@ module Ci
 
     scope :with_job, -> { joins(:job).includes(:job) }
 
-    scope :with_file_types, -> (file_types) do
+    scope :with_file_types, ->(file_types) do
       types = self.file_types.select { |file_type| file_types.include?(file_type) }.values
 
       where(file_type: types)
@@ -153,10 +154,6 @@ module Ci
     # FastDestroyAll concerns
     def self.finalize_fast_destroy(service)
       service.update_statistics
-    end
-
-    def self.use_partition_id_filter?
-      Ci::Pipeline.use_partition_id_filter?
     end
 
     def local_store?

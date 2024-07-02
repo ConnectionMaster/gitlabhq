@@ -412,7 +412,6 @@ export default {
               boardId: this.boardId,
               itemToMove,
             }),
-            withColor: this.isEpicBoard && this.glFeatures.epicColorHighlight,
           },
           update: (cache, { data: { issuableMoveList } }) =>
             this.updateCacheAfterMovingItem({
@@ -505,7 +504,6 @@ export default {
               itemToMove: item,
             }),
             positionInList,
-            withColor: this.isEpicBoard && this.glFeatures.epicColorHighlight,
           },
           optimisticResponse: {
             issuableMoveList: {
@@ -558,7 +556,6 @@ export default {
           mutation: listIssuablesQueries[this.issuableType].createMutation,
           variables: {
             input: this.isEpicBoard ? input : { ...input, moveAfterId: this.boardListItems[0]?.id },
-            withColor: this.isEpicBoard && this.glFeatures.epicColorHighlight,
           },
           update: (cache, { data: { createIssuable } }) => {
             issuable = createIssuable.issuable;
@@ -651,12 +648,13 @@ export default {
       :data-board="list.id"
       :data-board-type="list.listType"
       :class="{
-        'gl-bg-red-50 gl-rounded-bottom-left-base gl-rounded-bottom-right-base': boardItemsSizeExceedsMax,
+        'gl-bg-red-50 gl-rounded-bottom-left-base gl-rounded-bottom-right-base':
+          boardItemsSizeExceedsMax,
         'gl-overflow-hidden': disableScrollingWhenMutationInProgress,
         'gl-overflow-y-auto': !disableScrollingWhenMutationInProgress,
       }"
       draggable=".board-card"
-      class="board-list gl-w-full gl-h-full gl-list-style-none gl-mb-0 gl-p-3 gl-pt-0 gl-overflow-x-hidden"
+      class="board-list gl-w-full gl-h-full gl-list-none gl-mb-0 gl-p-3 gl-pt-0 gl-overflow-x-hidden"
       data-testid="tree-root-wrapper"
       @start="handleDragOnStart"
       @end="handleDragOnEnd"

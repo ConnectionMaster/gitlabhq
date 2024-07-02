@@ -9,7 +9,7 @@ RSpec.describe Banzai::Filter::References::DesignReferenceFilter, feature_catego
   let_it_be(:issue)         { create(:issue, iid: 10) }
   let_it_be(:issue_proj_2)  { create(:issue, iid: 20) }
   let_it_be(:issue_b)       { create(:issue, project: issue.project) }
-  let_it_be(:developer)     { create(:user, developer_projects: [issue.project, issue_proj_2.project]) }
+  let_it_be(:developer)     { create(:user, developer_of: [issue.project, issue_proj_2.project]) }
   let_it_be(:design_a)      { create(:design, :with_versions, issue: issue) }
   let_it_be(:design_b)      { create(:design, :with_versions, issue: issue_b) }
   let_it_be(:design_proj_2) { create(:design, :with_versions, issue: issue_proj_2) }
@@ -77,12 +77,16 @@ RSpec.describe Banzai::Filter::References::DesignReferenceFilter, feature_catego
     end
   end
 
-  %w[pre code a style].each do |elem|
-    context "wrapped in a <#{elem}/>" do
+  %w[pre style].each do |elem|
+    context "wrapped in a block <#{elem}/>" do
       let(:input_text) { "<#{elem}>Design #{url_for_design(design)}</#{elem}>" }
 
       it_behaves_like 'a no-op filter'
     end
+  end
+
+  it_behaves_like 'a no-op filter' do
+    let(:input_text) { "`Design #{url_for_design(design)}`" }
   end
 
   describe '.identifier' do

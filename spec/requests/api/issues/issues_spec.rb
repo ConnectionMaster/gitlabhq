@@ -6,14 +6,14 @@ RSpec.describe API::Issues, feature_category: :team_planning do
   using RSpec::Parameterized::TableSyntax
 
   let_it_be(:user) { create(:user) }
-  let_it_be(:project, reload: true) { create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace) }
+  let_it_be(:project, reload: true) { create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, reporters: user) }
   let_it_be(:private_mrs_project) do
-    create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, merge_requests_access_level: ProjectFeature::PRIVATE)
+    create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, merge_requests_access_level: ProjectFeature::PRIVATE, reporters: user)
   end
 
   let_it_be(:user2) { create(:user) }
   let_it_be(:non_member) { create(:user) }
-  let_it_be(:guest)       { create(:user) }
+  let_it_be(:guest)       { create(:user, guest_of: [project, private_mrs_project]) }
   let_it_be(:author)      { create(:author) }
   let_it_be(:assignee)    { create(:assignee) }
   let_it_be(:admin) { create(:user, :admin) }
@@ -71,13 +71,6 @@ RSpec.describe API::Issues, feature_category: :team_planning do
 
   let(:no_milestone_title) { 'None' }
   let(:any_milestone_title) { 'Any' }
-
-  before_all do
-    project.add_reporter(user)
-    project.add_guest(guest)
-    private_mrs_project.add_reporter(user)
-    private_mrs_project.add_guest(guest)
-  end
 
   before do
     stub_licensed_features(multiple_issue_assignees: false, issue_weights: false)
@@ -589,6 +582,7 @@ RSpec.describe API::Issues, feature_category: :team_planning do
             create(:label_link, label: label_b, target: issue)
             create(:label_link, label: label_c, target: issue)
           end
+
           it 'tests N+1' do
             control = ActiveRecord::QueryRecorder.new do
               get api('/issues', user), params: { labels: [label.title, label_b.title, label_c.title] }

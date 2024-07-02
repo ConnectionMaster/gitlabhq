@@ -116,7 +116,7 @@ balanced across many projects.
 
 ### Disable compute quota enforcement
 
-To disable the enforcement of [compute quotas](../ci/pipelines/cicd_minutes.md) on instance runners, you can temporarily
+To disable the enforcement of [compute quotas](../ci/pipelines/compute_minutes.md) on instance runners, you can temporarily
 enable the `ci_queueing_disaster_recovery_disable_quota` [feature flag](../administration/feature_flags.md).
 This flag reduces system resource usage on the `jobs/request` endpoint.
 
@@ -167,11 +167,27 @@ end
 
 ### Obtain runners registration token
 
+WARNING:
+The ability to pass a runner registration token, and support for certain configuration arguments, was
+[deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6 and is planned for removal
+in GitLab 18.0. Runner authentication tokens should be used instead. For more information, see
+[Migrating to the new runner registration workflow](../ci/runners/new_creation_workflow.md).
+
+Prerequisites:
+
+- Runner registration tokens must be [enabled](../administration/settings/continuous_integration.md#enable-runner-registrations-tokens) in the Admin Area.
+
 ```ruby
 Gitlab::CurrentSettings.current_application_settings.runners_registration_token
 ```
 
 ### Seed runners registration token
+
+WARNING:
+The ability to pass a runner registration token, and support for certain configuration arguments, was
+[deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6 and is planned for removal
+in GitLab 18.0. Runner authentication tokens should be used instead. For more information, see
+[Migrating to the new runner registration workflow](../ci/runners/new_creation_workflow.md).
 
 ```ruby
 appSetting = Gitlab::CurrentSettings.current_application_settings

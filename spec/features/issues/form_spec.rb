@@ -7,9 +7,9 @@ RSpec.describe 'New/edit issue', :js, feature_category: :team_planning do
   include ListboxHelpers
 
   let_it_be(:project)   { create(:project, :repository) }
-  let_it_be(:user)      { create(:user) }
-  let_it_be(:user2)     { create(:user) }
-  let_it_be(:guest)     { create(:user) }
+  let_it_be(:user)      { create(:user, maintainer_of: project) }
+  let_it_be(:user2)     { create(:user, maintainer_of: project) }
+  let_it_be(:guest)     { create(:user, guest_of: project) }
   let_it_be(:milestone) { create(:milestone, project: project) }
   let_it_be(:label)     { create(:label, project: project) }
   let_it_be(:label2)    { create(:label, project: project) }
@@ -17,12 +17,6 @@ RSpec.describe 'New/edit issue', :js, feature_category: :team_planning do
   let_it_be(:confidential_issue) { create(:issue, project: project, assignees: [user], milestone: milestone, confidential: true) }
 
   let(:current_user) { user }
-
-  before_all do
-    project.add_maintainer(user)
-    project.add_maintainer(user2)
-    project.add_guest(guest)
-  end
 
   before do
     stub_licensed_features(multiple_issue_assignees: false, issue_weights: false)
@@ -175,7 +169,7 @@ RSpec.describe 'New/edit issue', :js, feature_category: :team_planning do
         end
       end
 
-      page.within '.breadcrumbs' do
+      within_testid 'breadcrumb-links' do
         issue = Issue.find_by(title: 'title')
 
         expect(page).to have_text("Issues #{issue.to_reference}")
@@ -581,17 +575,9 @@ RSpec.describe 'New/edit issue', :js, feature_category: :team_planning do
 
         within_testid 'sidebar-labels' do
           click_button _('Create project label')
-
-          wait_for_requests
-        end
-
-        page.within '.js-labels-create' do
-          find_by_testid('label-title-input').fill_in with: 'test label'
+          fill_in _('Label name'), with: 'test label'
           first('.suggest-colors-dropdown a').click
-
           click_button 'Create'
-
-          wait_for_all_requests
         end
 
         page.within '.js-labels-list' do

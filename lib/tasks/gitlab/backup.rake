@@ -22,6 +22,13 @@ module Tasks
         end
       end
 
+      # Verify backup file to ensure it is compatible with current GitLab's version
+      def self.verify_backup
+        lock_backup do
+          ::Backup::Manager.new(backup_progress).verify!
+        end
+      end
+
       def self.create_task(task_id)
         lock_backup do
           backup_manager = ::Backup::Manager.new(backup_progress)
@@ -68,7 +75,7 @@ module Tasks
           yield
         ensure
           backup_progress.puts(
-            "#{Time.current} " + '-- Deleting backup and restore PID file ... '.color(:blue) + 'done'.color(:green)
+            "#{Time.current} #{Rainbow('-- Deleting backup and restore PID file ...').blue} #{Rainbow('done').green}"
           )
           File.delete(PID_FILE)
         end
@@ -77,7 +84,7 @@ module Tasks
       def self.read_pid(file_content)
         Process.getpgid(file_content.to_i)
 
-        backup_progress.puts(<<~MESSAGE.color(:red))
+        backup_progress.puts(Rainbow(<<~MESSAGE).red)
           Backup and restore in progress:
             There is a backup and restore task in progress (PID #{file_content}).
             Try to run the current task once the previous one ends.
@@ -85,7 +92,7 @@ module Tasks
 
         exit 1
       rescue Errno::ESRCH
-        backup_progress.puts(<<~MESSAGE.color(:blue))
+        backup_progress.puts(Rainbow(<<~MESSAGE).blue)
           The PID file #{PID_FILE} exists and contains #{file_content}, but the process is not running.
           The PID file will be rewritten with the current process ID #{PID}.
         MESSAGE
@@ -111,6 +118,11 @@ namespace :gitlab do
     desc 'GitLab | Backup | Restore a previously created backup'
     task restore: :gitlab_environment do
       Tasks::Gitlab::Backup.restore_backup
+    end
+
+    desc 'GitLab | Backup | Verify a previously created backup'
+    task verify: :gitlab_environment do
+      Tasks::Gitlab::Backup.verify_backup
     end
 
     namespace :repo do
@@ -220,6 +232,16 @@ namespace :gitlab do
 
       task restore: :gitlab_environment do
         Tasks::Gitlab::Backup.restore_task('ci_secure_files')
+      end
+    end
+
+    namespace :external_diffs do
+      task create: :gitlab_environment do
+        Tasks::Gitlab::Backup.create_task('external_diffs')
+      end
+
+      task restore: :gitlab_environment do
+        Tasks::Gitlab::Backup.restore_task('external_diffs')
       end
     end
   end

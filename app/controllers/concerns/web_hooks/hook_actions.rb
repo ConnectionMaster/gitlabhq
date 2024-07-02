@@ -10,14 +10,6 @@ module WebHooks
 
       before_action :hook_logs, only: :edit
       feature_category :webhooks
-
-      before_action only: %i[edit update] do
-        push_frontend_feature_flag(:custom_webhook_headers, hook.parent, type: :beta)
-      end
-
-      before_action only: :index do
-        push_frontend_feature_flag(:custom_webhook_headers, @project || @group, type: :beta)
-      end
     end
 
     def index
@@ -26,14 +18,13 @@ module WebHooks
     end
 
     def create
-      self.hook = relation.new(hook_params)
-      hook.save
+      result = WebHooks::CreateService.new(current_user).execute(hook_params, relation)
 
-      if hook.valid?
+      if result.success?
         flash[:notice] = _('Webhook was created')
       else
         self.hooks = relation.select(&:persisted?)
-        flash[:alert] = hook.errors.full_messages.to_sentence.html_safe
+        flash[:alert] = result.message
       end
 
       redirect_to action: :index
@@ -95,7 +86,7 @@ module WebHooks
     end
 
     def hook_logs
-      @hook_logs ||= hook.web_hook_logs.recent.page(params[:page]).without_count
+      @hook_logs ||= hook.web_hook_logs.recent.page(pagination_params[:page]).without_count
     end
 
     def hook_value_from_param_or_db(key, value)

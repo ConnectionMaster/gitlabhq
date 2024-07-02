@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile do
+RSpec.describe API::Users, :aggregate_failures, feature_category: :user_management do
   include WorkhorseHelpers
   include KeysetPaginationHelpers
   include CryptoHelpers
@@ -1000,6 +1000,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
   end
 
   describe 'GET /users/:id_or_username/status' do
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
+
     context 'when finding the user by id' do
       it_behaves_like 'rendering user status' do
         let(:path) { "/users/#{user.id}/status" }
@@ -1015,6 +1019,23 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
     context 'when finding the user by username (case insensitive)' do
       it_behaves_like 'rendering user status' do
         let(:path) { "/users/#{user.username.upcase}/status" }
+      end
+    end
+
+    context 'when the rate limit has been reached' do
+      let(:path) { "/users/#{user.username.upcase}/status" }
+
+      before do
+        stub_feature_flags(rate_limiting_user_endpoints: true)
+      end
+
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_status, scope: ip).and_return(true)
+
+        get api(path, user), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
       end
     end
   end
@@ -1146,6 +1167,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
     let(:followee) { create(:user) }
     let(:path) { "/users/#{user.id}/followers" }
 
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
+
     context 'for an anonymous user' do
       it 'returns 403' do
         get api("/users/#{user.id}")
@@ -1182,6 +1207,21 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
         expect(response).to have_gitlab_http_status(:ok)
         expect(response).to include_pagination_headers
         expect(json_response).to be_empty
+      end
+    end
+
+    context 'when the rate limit has been reached' do
+      before do
+        stub_feature_flags(rate_limiting_user_endpoints: true)
+      end
+
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_followers, scope: ip).and_return(true)
+
+        get api(path, user), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
       end
     end
   end
@@ -1613,11 +1653,21 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
       end
 
       context 'admin updates their own password' do
+        # `Users::ActivityService` should not be allowed to execute
+        # as the same fails on update user_details
+        # This prevents a failure we saw in
+        # https://gitlab.com/gitlab-org/quality/engineering-productivity/master-broken-incidents/-/issues/6616
+        before do
+          allow_next_instance_of(Users::ActivityService) do |service|
+            allow(service).to receive(:execute).and_return(true)
+          end
+        end
+
         it 'does not force reset on next login' do
           update_password(admin, admin)
 
           expect(response).to have_gitlab_http_status(:ok)
-          expect(user.reload.password_expired?).to eq(false)
+          expect(admin.reload.password_expired?).to eq(false)
         end
 
         it 'does not enqueue the `admin changed your password` email' do
@@ -2030,6 +2080,9 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
     let(:expiration_date) { Date.new(expiration_year, expiration_month, -1) }
     let(:credit_card_validated_at) { Time.utc(2020, 1, 1) }
     let(:zuora_payment_method_xid) { 'abc123' }
+    let(:stripe_setup_intent_xid) { 'seti_abc123' }
+    let(:stripe_payment_method_xid) { 'pm_abc123' }
+    let(:stripe_card_fingerprint) { 'card123' }
 
     let(:path) { "/user/#{user.id}/credit_card_validation" }
     let(:params) do
@@ -2040,7 +2093,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
         credit_card_holder_name: holder_name,
         credit_card_type: network,
         credit_card_mask_number: last_digits,
-        zuora_payment_method_xid: zuora_payment_method_xid
+        zuora_payment_method_xid: zuora_payment_method_xid,
+        stripe_setup_intent_xid: stripe_setup_intent_xid,
+        stripe_payment_method_xid: stripe_payment_method_xid,
+        stripe_card_fingerprint: stripe_card_fingerprint
       }
     end
 
@@ -2075,7 +2131,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
           holder_name_hash: sha256(holder_name.downcase),
           last_digits_hash: sha256(last_digits),
           expiration_date_hash: sha256(expiration_date.to_s),
-          zuora_payment_method_xid: zuora_payment_method_xid
+          zuora_payment_method_xid: zuora_payment_method_xid,
+          stripe_setup_intent_xid: stripe_setup_intent_xid,
+          stripe_payment_method_xid: stripe_payment_method_xid,
+          stripe_card_fingerprint: stripe_card_fingerprint
         )
       end
 
@@ -2188,7 +2247,7 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
     end
   end
 
-  describe 'GET /users/:id/project_deploy_keys' do
+  describe 'GET /users/:id/project_deploy_keys', feature_category: :continuous_delivery do
     let(:project) { create(:project) }
     let(:path) { "/users/#{user.id}/project_deploy_keys" }
 
@@ -2301,6 +2360,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
 
     let(:path) { "/users/#{user.id}/keys" }
 
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
+
     it 'returns 404 for non-existing user' do
       get api("/users/#{non_existing_record_id}/keys")
 
@@ -2348,10 +2411,25 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
         end.not_to exceed_all_query_limit(control)
       end
     end
+
+    context 'when the rate limit has been reached' do
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_keys, scope: ip).and_return(true)
+
+        get api(path), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
+      end
+    end
   end
 
   describe 'GET /user/:user_id/keys' do
     let(:path) { "/users/#{user.username}/keys" }
+
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
 
     it 'returns 404 for non-existing user' do
       get api("/users/#{non_existing_record_id}/keys")
@@ -2370,10 +2448,25 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
       expect(json_response).to be_an Array
       expect(json_response.first['title']).to eq(key.title)
     end
+
+    context 'when the rate limit has been reached' do
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_keys, scope: ip).and_return(true)
+
+        get api(path), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
+      end
+    end
   end
 
   describe 'GET /user/:id/keys/:key_id' do
     let(:path) { "/users/#{user.id}/keys/#{key.id}" }
+
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
 
     it 'gets existing key' do
       user.keys << key
@@ -2398,6 +2491,17 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
 
       expect(response).to have_gitlab_http_status(:not_found)
       expect(json_response['message']).to eq('404 Key Not Found')
+    end
+
+    context 'when the rate limit has been reached' do
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_specific_key, scope: ip).and_return(true)
+
+        get api(path), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
+      end
     end
   end
 
@@ -2478,6 +2582,10 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
   describe 'GET /user/:id/gpg_keys' do
     let(:path) { "/users/#{user.id}/gpg_keys" }
 
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
+
     it 'returns 404 for non-existing user' do
       get api("/users/#{non_existing_record_id}/gpg_keys")
 
@@ -2495,10 +2603,25 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
       expect(json_response).to be_an Array
       expect(json_response.first['key']).to eq(gpg_key.key)
     end
+
+    context 'when the rate limit has been reached' do
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_gpg_keys, scope: ip).and_return(true)
+
+        get api(path), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
+      end
+    end
   end
 
   describe 'GET /user/:id/gpg_keys/:key_id' do
     let(:path) { "/users/#{user.id}/gpg_keys/#{gpg_key.id}" }
+
+    before do
+      allow(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).and_return(false)
+    end
 
     it 'returns 404 for non-existing user' do
       get api("/users/#{non_existing_record_id}/gpg_keys/1")
@@ -2521,6 +2644,17 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
 
       expect(response).to have_gitlab_http_status(:ok)
       expect(json_response['key']).to eq(gpg_key.key)
+    end
+
+    context 'when the rate limit has been reached' do
+      it 'returns status 429 Too Many Requests', :aggregate_failures do
+        ip = '1.2.3.4'
+        expect(::Gitlab::ApplicationRateLimiter).to receive(:throttled?).with(:user_specific_gpg_key, scope: ip).and_return(true)
+
+        get api(path), env: { REMOTE_ADDR: ip }
+
+        expect(response).to have_gitlab_http_status(:too_many_requests)
+      end
     end
   end
 
@@ -2805,7 +2939,7 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
     end
 
     context "sole owner of a group" do
-      let!(:group) { create(:group).tap { |group| group.add_owner(user) } }
+      let!(:group) { create(:group, owners: user) }
 
       context "hard delete disabled" do
         it "does not delete user" do
@@ -4604,6 +4738,36 @@ RSpec.describe API::Users, :aggregate_failures, feature_category: :user_profile 
           expect(user_with_status.status.clear_status_at).not_to be_nil
         end
       end
+    end
+  end
+
+  describe 'PUT /user/avatar' do
+    let(:path) { "/user/avatar" }
+
+    it "returns 200 OK on success" do
+      workhorse_form_with_file(
+        api(path, user),
+        method: :put,
+        file_key: :avatar,
+        params: { avatar: fixture_file_upload('spec/fixtures/banana_sample.gif', 'image/gif') }
+      )
+
+      user.reload
+      expect(user.avatar).to be_present
+      expect(response).to have_gitlab_http_status(:ok)
+      expect(json_response['avatar_url']).to include(user.avatar_path)
+    end
+
+    it "returns 400 when avatar file size over 200 KiB" do
+      workhorse_form_with_file(
+        api(path, user),
+        method: :put,
+        file_key: :avatar,
+        params: { avatar: fixture_file_upload('spec/fixtures/big-image.png', 'image/png') }
+      )
+
+      expect(response).to have_gitlab_http_status(:bad_request)
+      expect(json_response['message']).to include("Avatar is too big (should be at most 200 KiB)")
     end
   end
 

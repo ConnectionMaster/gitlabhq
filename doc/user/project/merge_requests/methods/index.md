@@ -18,7 +18,10 @@ The examples on this page assume a `main` branch with commits A, C, and E, and a
 `feature` branch with commits B and D:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 gitGraph
+   accTitle: Diagram of a merge
+   accDescr: A Git graph of five commits on two branches, which will be expanded on in other graphs in this page.
    commit id: "A"
    branch feature
    commit id: "B"
@@ -57,8 +60,10 @@ and selecting `Merge commit` as the **Merge method** in the GitLab UI:
 The merge strategy:
 
 ```mermaid
-%%{init: { 'gitGraph': {'logLevel': 'debug', 'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main'}} }%%
+%%{init: { 'gitGraph': {'logLevel': 'debug', 'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main', 'fontFamily': 'GitLab Sans'}} }%%
 gitGraph
+   accTitle: Diagram of a merge commit
+   accDescr: A Git graph showing how merge commits are created in GitLab when a feature branch is merged.
    commit id: "A"
    branch feature
    commit id: "B"
@@ -73,8 +78,10 @@ After a feature branch is merged with the **Merge commit** method, your `main` b
 looks like this:
 
 ```mermaid
-%%{init: { 'gitGraph': {'logLevel': 'debug', 'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main'}} }%%
+%%{init: { 'gitGraph': {'logLevel': 'debug', 'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main', 'fontFamily': 'GitLab Sans'}} }%%
 gitGraph
+   accTitle: Diagram of the Merge Commit method
+   accDescr: A Git graph showing the structure of a Git repository after a feature branch is merged.
    commit id: "A"
    commit id: "C"
    commit id: "E"
@@ -87,8 +94,10 @@ from the `feature` branch. The original commits (B and D) remain unchanged
 on the `feature` branch, and the squash commit is placed on the `main` branch:
 
 ```mermaid
-%%{init: { 'gitGraph': {'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main'}} }%%
+%%{init: { 'gitGraph': {'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'main', 'fontFamily': 'GitLab Sans'}} }%%
 gitGraph
+   accTitle: Diagram of of a squash merge
+   accDescr: A Git graph showing repository and branch structure after a squash commit is added to the main branch.
    commit id:"A"
    branch feature
    checkout main
@@ -126,7 +135,10 @@ succeeded, the target branch build also succeeds after the merge. An example
 commit graph generated using this merge method:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 gitGraph
+  accTitle: Diagram of a merge commit
+  accDescr: Shows the flow of commits when a branch merges with a merge commit.
   commit id: "Init"
   branch mr-branch-1
   commit
@@ -165,7 +177,10 @@ to accept merge requests without creating merge commits. An example commit graph
 generated using this merge method:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 gitGraph
+  accTitle: Diagram of a fast-forward merge
+  accDescr: Shows how a fast-forwarded merge request maintains a linear Git history, but does not add a merge commit.
   commit id: "Init"
   commit id: "Merge mr-branch-1"
   commit id: "Merge mr-branch-2"
@@ -222,7 +237,6 @@ considered equivalent to rebasing.
 
 ### Rebase without CI/CD pipeline
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/118825) in GitLab 14.7 [with a flag](../../../../administration/feature_flags.md) named `rebase_without_ci_ui`. Disabled by default.
 > - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/350262) in GitLab 15.3. Feature flag `rebase_without_ci_ui` removed.
 
 To rebase a merge request's branch without triggering a CI/CD pipeline, select

@@ -17,9 +17,12 @@ import { fetchPolicies } from '~/lib/graphql';
 import axios from '~/lib/utils/axios_utils';
 import { joinPaths } from '~/lib/utils/url_utility';
 import { __, s__, sprintf } from '~/locale';
+import SnippetCodeDropdown from '~/vue_shared/components/code_dropdown/snippet_code_dropdown.vue';
 import TimeAgoTooltip from '~/vue_shared/components/time_ago_tooltip.vue';
 import { createAlert, VARIANT_DANGER, VARIANT_SUCCESS } from '~/alert';
-
+import { VISIBILITY_LEVEL_PUBLIC_STRING } from '~/visibility_level/constants';
+import { TYPE_SNIPPET } from '~/import/constants';
+import ImportedBadge from '~/vue_shared/components/imported_badge.vue';
 import DeleteSnippetMutation from '../mutations/delete_snippet.mutation.graphql';
 
 export const i18n = {
@@ -35,15 +38,17 @@ export const i18n = {
 
 export default {
   components: {
+    SnippetCodeDropdown,
     GlIcon,
     GlSprintf,
     GlModal,
     GlAlert,
+    GlButton,
     GlDisclosureDropdown,
     GlDisclosureDropdownGroup,
     GlDisclosureDropdownItem,
     TimeAgoTooltip,
-    GlButton,
+    ImportedBadge,
   },
   directives: {
     GlTooltip: GlTooltipDirective,
@@ -101,7 +106,7 @@ export default {
           ? __('Snippets with non-text files can only be edited via Git.')
           : undefined,
         extraAttrs: {
-          class: 'gl-sm-display-none!',
+          class: 'sm:!gl-hidden',
         },
       };
     },
@@ -136,7 +141,9 @@ export default {
         this.snippet.userPermissions.updateSnippet ||
         this.canCreateSnippet ||
         this.snippet.userPermissions.adminSnippet ||
-        this.canReportSpaCheck
+        this.canReportSpaCheck ||
+        this.embedDropdown ||
+        this.canBeCloned
       );
     },
     editLink() {
@@ -169,6 +176,20 @@ export default {
     },
     showDropdownTooltip() {
       return !this.isDropdownShown ? this.$options.i18n.snippetAction : '';
+    },
+    isInPrivateProject() {
+      const projectVisibility = this.snippet?.project?.visibility;
+      const isLimitedVisibilityProject = projectVisibility !== VISIBILITY_LEVEL_PUBLIC_STRING;
+      return projectVisibility ? isLimitedVisibilityProject : false;
+    },
+    embeddable() {
+      return this.visibility === VISIBILITY_LEVEL_PUBLIC_STRING && !this.isInPrivateProject;
+    },
+    canBeCloned() {
+      return Boolean(this.snippet.sshUrlToRepo || this.snippet.httpUrlToRepo);
+    },
+    canBeClonedOrEmbedded() {
+      return this.canBeCloned || this.embeddable;
     },
   },
   methods: {
@@ -228,16 +249,17 @@ export default {
     },
   },
   i18n,
+  TYPE_SNIPPET,
 };
 </script>
 <template>
   <div>
     <div
-      class="gl-display-flex gl-align-items-flex-start gl-flex-direction-column gl-sm-flex-direction-row gl-gap-3 gl-pt-3"
+      class="gl-flex gl-align-items-flex-start gl-flex-direction-column gl-sm-flex-direction-row gl-gap-3 gl-pt-3"
     >
       <span
         v-if="snippet.hidden"
-        class="gl-bg-orange-50 gl-text-orange-600 gl-h-6 gl-w-6 gl-rounded-base gl-line-height-24 gl-text-center gl-mt-2"
+        class="gl-bg-orange-50 gl-text-orange-600 gl-h-6 gl-w-6 gl-rounded-base gl-leading-24 gl-text-center gl-mt-2"
       >
         <gl-icon
           v-gl-tooltip.bottom
@@ -256,30 +278,41 @@ export default {
 
       <div
         v-if="hasPersonalSnippetActions"
-        class="detail-page-header-actions gl-display-flex gl-align-self-center gl-gap-3 gl-relative gl-w-full gl-sm-w-auto"
+        class="gl-flex gl-align-self-center gl-gap-3 gl-w-full gl-sm-w-auto gl-flex-direction-column gl-sm-flex-direction-row"
       >
         <gl-button
           v-if="snippet.userPermissions.updateSnippet"
           :href="editItem.href"
           :title="editItem.title"
           :disabled="editItem.disabled"
-          class="gl-display-none gl-sm-display-inline-block"
+          class="gl-hidden sm:gl-inline-block"
           data-testid="snippet-action-button"
           :data-qa-action="editItem.text"
         >
           {{ editItem.text }}
         </gl-button>
 
+        <snippet-code-dropdown
+          v-if="canBeClonedOrEmbedded"
+          :ssh-link="snippet.sshUrlToRepo"
+          :http-link="snippet.httpUrlToRepo"
+          :url="snippet.webUrl"
+          :embeddable="embeddable"
+          data-testid="code-button"
+        />
+
         <gl-disclosure-dropdown
           data-testid="snippets-more-actions-dropdown"
+          placement="bottom-end"
+          block
           @shown="onShowDropdown"
           @hidden="onHideDropdown"
         >
           <template #toggle>
             <div class="gl-w-full gl-min-h-7">
               <gl-button
-                class="gl-sm-display-none! gl-new-dropdown-toggle gl-absolute gl-top-0 gl-left-0 gl-w-full"
-                button-text-classes="gl-display-flex gl-justify-content-space-between gl-w-full"
+                class="sm:!gl-hidden gl-new-dropdown-toggle gl-w-full"
+                button-text-classes="gl-flex gl-justify-content-space-between gl-w-full"
                 category="secondary"
                 tabindex="0"
               >
@@ -288,7 +321,7 @@ export default {
               </gl-button>
               <gl-button
                 v-gl-tooltip="showDropdownTooltip"
-                class="gl-display-none gl-sm-display-flex! gl-new-dropdown-toggle gl-new-dropdown-icon-only gl-new-dropdown-toggle-no-caret"
+                class="gl-hidden sm:!gl-flex gl-new-dropdown-toggle gl-new-dropdown-icon-only gl-new-dropdown-toggle-no-caret"
                 category="tertiary"
                 icon="ellipsis_v"
                 :aria-label="$options.i18n.snippetAction"
@@ -314,11 +347,11 @@ export default {
     </div>
 
     <div
-      class="detail-page-header gl-flex-direction-column gl-md-flex-direction-row gl-p-0 gl-mt-2 gl-mb-6"
+      class="detail-page-header gl-flex-direction-column gl-md-flex-direction-row gl-p-0 gl-mb-5"
     >
-      <div class="detail-page-header-body gl-align-items-baseline">
+      <div class="gl-flex gl-items-baseline">
         <div
-          class="snippet-box has-tooltip gl-display-flex gl-align-self-baseline gl-mt-3 gl-mr-2"
+          class="has-tooltip gl-flex gl-align-self-baseline gl-mt-3 gl-mr-2"
           data-testid="snippet-container"
           :title="snippetVisibilityLevelDescription"
           data-container="body"
@@ -326,7 +359,14 @@ export default {
           <span class="gl-sr-only">{{ snippetVisibilityLevelDescription }}</span>
           <gl-icon :name="visibilityLevelIcon" :size="14" class="gl-relative gl-top-1" />
         </div>
-        <div data-testid="authored-message" class="gl-line-height-20">
+
+        <imported-badge
+          v-if="snippet.imported"
+          :importable-type="$options.TYPE_SNIPPET"
+          class="gl-mr-2"
+        />
+
+        <div data-testid="authored-message" class="gl-leading-20">
           <gl-sprintf :message="authoredMessage">
             <template #timeago>
               <time-ago-tooltip
@@ -336,7 +376,7 @@ export default {
               />
             </template>
             <template #author>
-              <a :href="snippet.author.webUrl" class="gl-font-weight-bold">
+              <a :href="snippet.author.webUrl" class="gl-font-bold">
                 {{ snippet.author.name }}
               </a>
             </template>

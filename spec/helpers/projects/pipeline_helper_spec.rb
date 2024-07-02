@@ -6,13 +6,9 @@ RSpec.describe Projects::PipelineHelper do
   include Ci::BuildsHelper
 
   let_it_be(:user) { create(:user) }
-  let_it_be(:project) { create(:project, :repository) }
+  let_it_be(:project) { create(:project, :repository, developers: user) }
   let_it_be(:raw_pipeline) { create(:ci_pipeline, project: project, ref: 'master', sha: project.commit.id) }
   let_it_be(:pipeline) { Ci::PipelinePresenter.new(raw_pipeline, current_user: user) }
-
-  before do
-    project.add_developer(user)
-  end
 
   describe '#js_pipeline_tabs_data' do
     subject(:pipeline_tabs_data) { helper.js_pipeline_tabs_data(project, pipeline, user) }
@@ -39,11 +35,11 @@ RSpec.describe Projects::PipelineHelper do
     end
   end
 
-  describe '#js_pipeline_details_header_data' do
-    subject(:pipeline_details_header_data) { helper.js_pipeline_details_header_data(project, pipeline) }
+  describe '#js_pipeline_header_data' do
+    subject(:pipeline_header_data) { helper.js_pipeline_header_data(project, pipeline) }
 
-    it 'returns pipeline details header data' do
-      expect(pipeline_details_header_data).to include({
+    it 'returns pipeline header data' do
+      expect(pipeline_header_data).to include({
         full_path: project.full_path,
         graphql_resource_etag: graphql_etag_pipeline_path(pipeline),
         pipeline_iid: pipeline.iid,

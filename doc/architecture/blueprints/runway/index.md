@@ -187,7 +187,7 @@ The following high level diagram shows the proposed setup of secrets within Vaul
 
 ![Runway Vault Architecture](img/runway_vault_4_.drawio.png)
 
-[Diagram Source](img/runway_vault_4_.drawio)
+Diagram Source: `https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/architecture/blueprints/runway/img/runway_vault_4_.drawio`
 
 ### Identity Management, Authentication, Authorization across Runway Components
 
@@ -195,7 +195,7 @@ The goal of Runway is to not rely on long lived secrets or tokens inside the run
 
 #### Service projects to runway deployment projects
 
-This is handled by GitLab downstream pipeline triggers. Because of this, all permissions are handled within GitLab itself (and API calls to GitLab use short lived `CI_JOB_TOKEN`). We leverage [CI_JOB_TOKEN allowlists](../../../ci/jobs/ci_job_token.md#add-a-project-to-the-job-token-allowlist) to allow deployment projects and service projects to interact in API calls (e.g. updating environments in the service project).
+This is handled by GitLab downstream pipeline triggers. Because of this, all permissions are handled within GitLab itself (and API calls to GitLab use short lived `CI_JOB_TOKEN`). We leverage [CI_JOB_TOKEN allowlists](../../../ci/jobs/ci_job_token.md#add-a-group-or-project-to-the-job-token-allowlist) to allow deployment projects and service projects to interact in API calls (e.g. updating environments in the service project).
 
 #### Deployment project to GCP Cloud
 

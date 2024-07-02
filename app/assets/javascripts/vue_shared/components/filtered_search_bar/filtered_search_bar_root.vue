@@ -100,6 +100,11 @@ export default {
       required: false,
       default: __('Search for this text'),
     },
+    showSearchButton: {
+      type: Boolean,
+      required: false,
+      default: true,
+    },
   },
   data() {
     return {
@@ -337,12 +342,15 @@ export default {
         sortDirectionAscending: false,
       };
     },
+    onInput(tokens) {
+      this.$emit('onInput', this.removeQuotesEnclosure(uniqueTokens(tokens)));
+    },
   },
 };
 </script>
 
 <template>
-  <div class="vue-filtered-search-bar-container gl-md-display-flex gl-min-w-0">
+  <div class="vue-filtered-search-bar-container max-sm:gl-flex-col gl-flex gl-min-w-0 sm:gl-gap-3">
     <gl-form-checkbox
       v-if="showCheckbox"
       class="gl-align-self-center"
@@ -367,12 +375,14 @@ export default {
       :no-recent-searches-text="__(`You don't have any recent searches`)"
       :search-text-option-label="searchTextOptionLabel"
       :show-friendly-text="showFriendlyText"
+      :show-search-button="showSearchButton"
       :terms-as-tokens="termsAsTokens"
       class="flex-grow-1"
       @history-item-selected="handleHistoryItemSelected"
       @clear="onClear"
       @clear-history="handleClearHistory"
       @submit="handleFilterSubmit"
+      @input="onInput"
     >
       <template #history-item="{ historyItem }">
         <template v-for="(token, index) in historyItem">
@@ -391,7 +401,10 @@ export default {
       :sort-options="transformedSortOptions"
       :sort-by="sortById"
       :is-ascending="sortDirectionAscending"
-      class="sort-dropdown-container"
+      class="sort-dropdown-container sm:!gl-m-0 max-sm:gl-w-full"
+      dropdown-class="gl-grow"
+      dropdown-toggle-class="gl-grow"
+      sort-direction-toggle-class="!gl-shrink !gl-grow-0"
       @sortByChange="handleSortByChange"
       @sortDirectionChange="handleSortDirectionChange"
     />

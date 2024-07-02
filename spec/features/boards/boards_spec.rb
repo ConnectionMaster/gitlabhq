@@ -17,7 +17,7 @@ require 'spec_helper'
 # - https://gitlab.com/gitlab-org/gitlab/-/merge_requests/105849
 # - https://gitlab.com/gitlab-org/gitlab/-/issues/383970
 #
-RSpec.describe 'Project issue boards', :js, feature_category: :team_planning do
+RSpec.describe 'Project issue boards', :js, feature_category: :portfolio_management do
   include DragTo
   include MobileHelpers
   include BoardHelpers
@@ -134,6 +134,9 @@ RSpec.describe 'Project issue boards', :js, feature_category: :team_planning do
       end
 
       it 'infinite scrolls list' do
+        # Use small height to avoid automatic loading via GlIntersectionObserver
+        page.driver.browser.manage.window.resize_to(400, 400)
+
         create_list(:labeled_issue, 30, project: project, labels: [planning])
 
         visit_project_board_path_without_query_limit(project, board)
@@ -524,7 +527,7 @@ RSpec.describe 'Project issue boards', :js, feature_category: :team_planning do
     end
 
     it 'does not show create new list' do
-      expect(page).not_to have_button('Create list')
+      expect(page).not_to have_button('New list')
     end
 
     it 'does not allow dragging' do
@@ -543,7 +546,7 @@ RSpec.describe 'Project issue boards', :js, feature_category: :team_planning do
     end
 
     it 'does not show create new list' do
-      expect(page).not_to have_button('Create list')
+      expect(page).not_to have_button('New list')
     end
   end
 

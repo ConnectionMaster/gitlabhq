@@ -256,6 +256,8 @@ export default {
       this.idState.moreActionsShown = val;
     },
     toggleReview(newReviewedStatus) {
+      // this is the easiest way to hide an already open tooltip that triggers on focus
+      document.activeElement.blur();
       const autoCollapsed =
         this.isCollapsed && collapsedType(this.diffFile) === DIFF_FILE_AUTOMATIC_COLLAPSE;
       const open = this.expanded;
@@ -319,7 +321,7 @@ export default {
       />
       <a
         :v-once="!viewDiffsFileByFile"
-        class="gl-mr-2 gl-text-decoration-none! gl-word-break-all"
+        class="gl-mr-2 gl-text-decoration-none! gl-break-all"
         :href="titleLink"
         data-testid="file-title"
         @click="handleFileNameClick"
@@ -381,7 +383,7 @@ export default {
 
     <div
       v-if="!diffFile.submodule && addMergeRequestButtons"
-      class="file-actions d-flex gl-align-items-center gl-ml-auto gl-align-self-start"
+      class="file-actions gl-flex gl-items-center gl-ml-auto gl-align-self-start"
     >
       <diff-stats
         :diff-file="diffFile"
@@ -390,9 +392,9 @@ export default {
       />
       <gl-form-checkbox
         v-if="isReviewable && showLocalFileReviews"
-        v-gl-tooltip.hover.focus
+        v-gl-tooltip.hover.focus.left
         data-testid="fileReviewCheckbox"
-        class="gl-mr-5 gl-mb-n3 gl-display-flex gl-align-items-center"
+        class="gl-mr-5 -gl-mb-3 gl-flex gl-items-center"
         :title="$options.i18n.fileReviewTooltip"
         :checked="reviewed"
         @change="toggleReview"
@@ -508,7 +510,7 @@ export default {
 
     <div
       v-if="diffFile.submodule_compare"
-      class="file-actions d-none d-sm-flex gl-align-items-center gl-flex-wrap"
+      class="file-actions gl-hidden sm:gl-flex gl-align-items-center gl-flex-wrap"
     >
       <gl-button
         v-gl-tooltip.hover

@@ -2,6 +2,7 @@
 stage: Create
 group: Code Review
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Understand how to read the display of commits in a merge request."
 ---
 
 # Merge request commits
@@ -37,9 +38,6 @@ need to [include more commits for context](#show-commits-from-previous-merge-req
 
 ### Show commits from previous merge requests
 
-> - [Enabled on GitLab.com](https://gitlab.com/gitlab-org/gitlab/-/issues/320757) in GitLab 14.8.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/320757) in GitLab 14.9. [Feature flag `context_commits`](https://gitlab.com/gitlab-org/gitlab/-/issues/320757) removed.
-
 When you review a merge request, you might need information from previous commits
 to help understand the commits you're reviewing. You might need more context
 if another merge request:
@@ -57,6 +55,9 @@ To add previously merged commits to a merge request for more context:
 1. Scroll to the end of the list of commits, and select **Add previously merged commits**.
 1. Select the commits that you want to add.
 1. Select **Save changes**.
+
+Previously merged commits are referred to as **Context Commits** in
+the [API](../../../api/merge_request_context_commits.md).
 
 ## Add a comment to a commit
 

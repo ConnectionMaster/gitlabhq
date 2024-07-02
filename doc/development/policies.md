@@ -12,6 +12,8 @@ The policy used is based on the subject's class name - so `Ability.allowed?(user
 
 The Ruby gem source is available in the [declarative-policy](https://gitlab.com/gitlab-org/ruby/gems/declarative-policy) GitLab project.
 
+For information about naming and conventions, please refer to [Permission conventions page](permissions/conventions.md).
+
 ## Managing Permission Rules
 
 Permissions are broken into two parts: `conditions` and `rules`. Conditions are boolean expressions that can access the database and the environment, while rules are statically configured combinations of expressions and other rules that enable or prevent certain abilities. For an ability to be allowed, it must be enabled by at least one rule, and not prevented by any.
@@ -70,7 +72,7 @@ Within the rule DSL, you can use:
 - `can?(:other_ability)` delegates to the rules that apply to `:other_ability`. This is distinct from the instance method `can?`, which can check dynamically - this only configures a delegation to another ability.
 
 `~`, `&` and `|` operators are overridden methods in
-[`DeclarativePolicy::Rule::Base`](https://gitlab.com/gitlab-org/declarative-policy/-/blob/main/lib/declarative_policy/rule.rb).
+[`DeclarativePolicy::Rule::Base`](https://gitlab.com/gitlab-org/ruby/gems/declarative-policy/-/blob/main/lib/declarative_policy/rule.rb).
 
 Do not use boolean operators such as `&&` and `||` within the rule DSL,
 as conditions within rule blocks are objects, not booleans. The same

@@ -6,10 +6,11 @@ export const COMPONENTS = {
   draft_status: () => import('./draft.vue'),
   need_rebase: () => import('./rebase.vue'),
   default: () => import('./message.vue'),
+  requested_changes: () =>
+    import('ee_component/vue_merge_request_widget/components/checks/requested_changes.vue'),
 };
 
 export const FAILURE_REASONS = {
-  broken_status: __('Cannot merge the source into the target branch, due to a conflict.'),
   commits_status: __('Source branch exists and contains commits.'),
   ci_must_pass: __('Pipeline must succeed.'),
   conflict: __('Merge conflicts must be resolved.'),
@@ -21,4 +22,6 @@ export const FAILURE_REASONS = {
   merge_request_blocked: __('Merge request dependencies must be merged.'),
   status_checks_must_pass: __('Status checks must pass.'),
   jira_association_missing: __('Either the title or description must reference a Jira issue.'),
+  requested_changes: __('The change requests must be completed or resolved.'),
+  approvals_syncing: __('The merge request approvals are currently syncing.'),
 };

@@ -7,12 +7,14 @@ module Gitlab
     InvalidPropertyTypeError = Class.new(StandardError)
 
     SNOWPLOW_EMITTER_BUFFER_SIZE = 100
+    DEFAULT_BUFFER_SIZE = 1
     ALLOWED_ADDITIONAL_PROPERTIES = {
       label: [String],
       property: [String],
       value: [Integer, Float]
     }.freeze
     DEFAULT_ADDITIONAL_PROPERTIES = {}.freeze
+    KEY_EXPIRY_LENGTH = Gitlab::UsageDataCounters::HLLRedisCounter::KEY_EXPIRY_LENGTH
 
     class << self
       include Gitlab::Tracking::Helpers
@@ -22,21 +24,22 @@ module Gitlab
       def track_event(
         event_name, category: nil, send_snowplow_event: true,
         additional_properties: DEFAULT_ADDITIONAL_PROPERTIES, **kwargs)
-        raise UnknownEventError, "Unknown event: #{event_name}" unless EventDefinitions.known_event?(event_name)
+
+        unless Gitlab::Tracking::EventDefinition.internal_event_exists?(event_name)
+          raise UnknownEventError, "Unknown event: #{event_name}"
+        end
 
         validate_properties!(additional_properties, kwargs)
 
         project = kwargs[:project]
         kwargs[:namespace] ||= project.namespace if project
 
-        increase_total_counter(event_name)
-        increase_weekly_total_counter(event_name)
-        update_unique_counters(event_name, kwargs)
-
+        update_redis_values(event_name, additional_properties, kwargs)
         trigger_snowplow_event(event_name, category, additional_properties, kwargs) if send_snowplow_event
+        send_application_instrumentation_event(event_name, additional_properties, kwargs) if send_snowplow_event
 
-        if Feature.enabled?(:internal_events_for_product_analytics) && send_snowplow_event
-          send_application_instrumentation_event(event_name, additional_properties, kwargs)
+        if Feature.enabled?(:early_access_program, kwargs[:user], type: :wip)
+          create_early_access_program_event(event_name, category, additional_properties[:label], kwargs)
         end
       rescue StandardError => e
         extra = {}
@@ -85,45 +88,64 @@ module Gitlab
         end
       end
 
-      def increase_total_counter(event_name)
-        redis_counter_key = Gitlab::Usage::Metrics::Instrumentations::TotalCountMetric.redis_key(event_name)
+      def update_redis_values(event_name, additional_properties, kwargs)
+        event_definition = Gitlab::Tracking::EventDefinition.find(event_name)
 
-        increment(redis_counter_key)
-      end
+        return unless event_definition
 
-      def increase_weekly_total_counter(event_name)
-        redis_counter_key = Gitlab::Usage::Metrics::Instrumentations::TotalCountMetric.redis_key(event_name, Date.today)
-
-        increment(redis_counter_key)
-      end
-
-      def update_unique_counters(event_name, kwargs)
-        unique_properties = EventDefinitions.unique_properties(event_name)
-        return if unique_properties.empty?
-
-        unique_properties.each do |property_name|
-          unless kwargs[property_name]
-            message = "#{event_name} should be triggered with a named parameter '#{property_name}'."
-            Gitlab::AppJsonLogger.warn(message: message)
-            next
+        event_definition.event_selection_rules.each do |event_selection_rule|
+          matches_filter = event_selection_rule.filter.all? do |property_name, value|
+            additional_properties[property_name] == value
           end
 
-          unique_value = kwargs[property_name].id
+          next unless matches_filter
 
-          UsageDataCounters::HLLRedisCounter.track_event(event_name, values: unique_value, property_name: property_name)
+          if event_selection_rule.total_counter?
+            update_total_counter(event_selection_rule)
+          else
+            update_unique_counter(event_selection_rule, kwargs)
+          end
         end
+      end
+
+      def update_total_counter(event_selection_rule)
+        expiry = event_selection_rule.time_framed? ? KEY_EXPIRY_LENGTH : nil
+
+        # Overrides for legacy keys of total counters are handled in `increment`
+        increment(event_selection_rule.redis_key_for_date, expiry: expiry)
+      end
+
+      def update_unique_counter(event_selection_rule, kwargs)
+        identifier_name = event_selection_rule.unique_identifier_name
+
+        unless kwargs[identifier_name]
+          message = "#{event_selection_rule.name} should be triggered with a named parameter '#{identifier_name}'."
+          Gitlab::AppJsonLogger.warn(message: message)
+          return
+        end
+
+        unique_value = kwargs[identifier_name].id
+
+        # Overrides for legacy keys of unique counters are handled in `event_selection_rule.redis_key_for_date`
+        Gitlab::Redis::HLL.add(
+          key: event_selection_rule.redis_key_for_date,
+          value: unique_value,
+          expiry: KEY_EXPIRY_LENGTH
+        )
       end
 
       def trigger_snowplow_event(event_name, category, additional_properties, kwargs)
         user = kwargs[:user]
         project = kwargs[:project]
         namespace = kwargs[:namespace]
+        feature_enabled_by_namespace_ids = kwargs[:feature_enabled_by_namespace_ids]
 
         standard_context = Tracking::StandardContext.new(
           project_id: project&.id,
           user_id: user&.id,
           namespace_id: namespace&.id,
-          plan_name: namespace&.actual_plan_name
+          plan_name: namespace&.actual_plan_name,
+          feature_enabled_by_namespace_ids: feature_enabled_by_namespace_ids
         ).to_context
 
         service_ping_context = Tracking::ServicePingContext.new(
@@ -156,13 +178,23 @@ module Gitlab
         gitlab_sdk_client.track(event_name, tracked_attributes)
       end
 
+      def create_early_access_program_event(event_name, category, event_label, kwargs)
+        user, namespace = kwargs.values_at(:user, :namespace)
+        return if user.nil? || !namespace&.namespace_settings&.early_access_program_participant?
+
+        ::EarlyAccessProgram::TrackingEvent.create(
+          user: user, event_name: event_name.to_s, event_label: event_label, category: category
+        )
+      end
+
       def gitlab_sdk_client
         app_id = ENV['GITLAB_ANALYTICS_ID']
         host = ENV['GITLAB_ANALYTICS_URL']
 
         return unless app_id.present? && host.present?
 
-        GitlabSDK::Client.new(app_id: app_id, host: host, buffer_size: SNOWPLOW_EMITTER_BUFFER_SIZE)
+        buffer_size = Feature.enabled?(:internal_events_batching) ? SNOWPLOW_EMITTER_BUFFER_SIZE : DEFAULT_BUFFER_SIZE
+        GitlabSDK::Client.new(app_id: app_id, host: host, buffer_size: buffer_size)
       end
       strong_memoize_attr :gitlab_sdk_client
     end

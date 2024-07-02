@@ -88,6 +88,23 @@ RSpec.describe Gitlab::Cleanup::OrphanJobArtifactFinalObjects::ProcessList, :orp
         expect_object_to_exist(non_orphan_final_object)
       end
 
+      context 'when objects have generation attribute (GCP)' do
+        before do
+          allow_any_instance_of(Fog::AWS::Storage::File).to receive(:generation).and_return('some-generation-value') # rubocop: disable RSpec/AnyInstanceOf -- We need this here because we can't do expect_next_instance for all objects
+        end
+
+        it 'includes the last known generation value of deleted objects in the list' do
+          run
+
+          expect_deleted_list_to_contain_exactly(deleted_list_filename, [
+            orphan_final_object_1,
+            orphan_final_object_2,
+            orphan_final_object_3,
+            orphan_final_object_4
+          ], includes_generation: true)
+        end
+      end
+
       context 'when given custom filename is under a directory' do
         let(:orphan_list_filename) { 'spec/fixtures/custom.csv' }
         let(:deleted_list_filename) { "spec/fixtures/#{described_class::DELETED_LIST_FILENAME_PREFIX}custom.csv" }
@@ -108,54 +125,23 @@ RSpec.describe Gitlab::Cleanup::OrphanJobArtifactFinalObjects::ProcessList, :orp
         before do
           orphan_final_object_1.destroy # rubocop:disable Rails/SaveBang -- not the AR method
 
-          allow_next_instance_of(Fog::AWS::Storage::File) do |instance|
-            allow(instance).to receive(:destroy).and_wrap_original do |m, *args|
-              result = m.call(*args)
-
-              if instance.key == orphan_final_object_1.key
-                destroy_return_value
-              else
-                result
-              end
-            end
-          end
-
           run
         end
 
-        context 'and the destroy method returns false which is the case for GCP' do
-          let(:destroy_return_value) { false }
+        # NOTE: This behavior doesn't apply to GCP but we can't add a test here because
+        # fog doesn't have a mock implementation for it. We can only test AWS behavior.
+        it 'does not fail and still logs the non-existent path to the deleted list' do
+          expect_deleted_object_log_message(orphan_final_object_1)
+          expect_deleted_object_log_message(orphan_final_object_2)
+          expect_deleted_object_log_message(orphan_final_object_3)
+          expect_deleted_object_log_message(orphan_final_object_4)
 
-          it 'does not fail but does not log the non-existent path to the deleted list' do
-            expect_no_deleted_object_log_message(orphan_final_object_1)
-            expect_deleted_object_log_message(orphan_final_object_2)
-            expect_deleted_object_log_message(orphan_final_object_3)
-            expect_deleted_object_log_message(orphan_final_object_4)
-
-            expect_deleted_list_to_contain_exactly(deleted_list_filename, [
-              orphan_final_object_2,
-              orphan_final_object_3,
-              orphan_final_object_4
-            ])
-          end
-        end
-
-        context 'and the destroy method returns true regardless which is the case for S3 and Azure' do
-          let(:destroy_return_value) { true }
-
-          it 'does not fail and still logs the non-existent path to the deleted list' do
-            expect_deleted_object_log_message(orphan_final_object_1)
-            expect_deleted_object_log_message(orphan_final_object_2)
-            expect_deleted_object_log_message(orphan_final_object_3)
-            expect_deleted_object_log_message(orphan_final_object_4)
-
-            expect_deleted_list_to_contain_exactly(deleted_list_filename, [
-              orphan_final_object_1,
-              orphan_final_object_2,
-              orphan_final_object_3,
-              orphan_final_object_4
-            ])
-          end
+          expect_deleted_list_to_contain_exactly(deleted_list_filename, [
+            orphan_final_object_1,
+            orphan_final_object_2,
+            orphan_final_object_3,
+            orphan_final_object_4
+          ])
         end
       end
 
@@ -238,6 +224,8 @@ RSpec.describe Gitlab::Cleanup::OrphanJobArtifactFinalObjects::ProcessList, :orp
             expect_deleted_object_log_message(orphan_final_object_3)
             expect_deleted_object_log_message(orphan_final_object_4)
 
+            # The previous objects that were deleted in the 1st run will still appear here
+            # because this is AWS behavior. But for GCP provider, they shouldn't anymore.
             expect_deleted_list_to_contain_exactly(deleted_list_filename, [
               orphan_final_object_1,
               orphan_final_object_2,

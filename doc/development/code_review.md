@@ -103,9 +103,6 @@ To find a domain expert:
 NOTE:
 Reviewer roulette is an internal tool for use on GitLab.com, and not available for use on customer installations.
 
-NOTE:
-Until %16.11, GitLab is running [an experiment](https://gitlab.com/gitlab-org/quality/engineering-productivity/team/-/issues/377) to remove hungriness and busy indicators.
-
 The [Danger bot](dangerbot.md) randomly picks a reviewer and a maintainer for
 each area of the codebase that your merge request seems to touch. It makes
 **recommendations** for developer reviewers and you should override it if you think someone else is a better
@@ -125,14 +122,10 @@ page, with these behaviors:
   - Emoji is from one of these categories:
     - **On leave** - 🌴 `:palm_tree:`, 🏖️ `:beach:`, ⛱ `:beach_umbrella:`, 🏖 `:beach_with_umbrella:`, 🌞 `:sun_with_face:`, 🎡 `:ferris_wheel:`, 🏙 `:cityscape:`
     - **Out sick** - 🌡️ `:thermometer:`, 🤒 `:face_with_thermometer:`
-    - **At capacity** - 🔴 `:red_circle:`
-    - **Focus mode** - 💡 `:bulb:` (focusing on their team's work)
 - It doesn't pick people who are already assigned a number of reviews that is equal to
   or greater than their chosen "review limit". The review limit is the maximum number of
   reviews people are ready to handle at a time. Set a review limit by using one of the following
   as a Slack or [GitLab status](../user/profile/index.md#set-your-current-status):
-  - 0️⃣ - `:zero:` (similar to `:red_circle:`)
-  - 1️⃣ - `:one:`
   - 2️⃣ - `:two:`
   - 3️⃣ - `:three:`
   - 4️⃣ - `:four:`
@@ -143,12 +136,6 @@ page, with these behaviors:
   not counted. These MRs are usually backports, and maintainers or reviewers usually
   do not need much time reviewing them.
 
-- 'Hungriness' for reviews: Team members whose Slack or [GitLab status](../user/profile/index.md#set-your-current-status) emoji
-  is 🔵 `:large_blue_circle:` are more likely to be picked. This applies to both reviewers and trainee maintainers.
-  - Reviewers with 🔵 `:large_blue_circle:` are two times as likely to be picked as other reviewers.
-  - [Trainee maintainers](https://handbook.gitlab.com/handbook/engineering/workflow/code-review/#trainee-maintainer) with 🔵 `:large_blue_circle:` are three times as likely to be picked as other reviewers.
-- People whose [GitLab status](../user/profile/index.md#set-your-current-status) emoji
-  is 🔶 `:large_orange_diamond:` or 🔸 `:small_orange_diamond:` are half as likely to be picked.
 - It always picks the same reviewers and maintainers for the same
   branch name (unless their out-of-office (`OOO`) status changes, as in point 1). It
   removes leading `ce-` and `ee-`, and trailing `-ce` and `-ee`, so
@@ -182,7 +169,7 @@ by a reviewer before passing it to a maintainer as described in the
 | `~workhorse` changes | [Workhorse maintainer](https://handbook.gitlab.com/handbook/engineering/projects/#gitlab_maintainers_workhorse). |
 | `~frontend` changes <sup>1</sup>       | [Frontend maintainer](https://handbook.gitlab.com/handbook/engineering/projects/#gitlab_maintainers_frontend). |
 | `~UX` user-facing changes <sup>3</sup> | [Product Designer](https://handbook.gitlab.com/handbook/engineering/projects/#gitlab_reviewers_UX). Refer to the [design and user interface guidelines](contributing/design.md) for details. |
-| Adding a new JavaScript library <sup>1</sup> | - [Frontend foundations member](https://about.gitlab.com/direction/manage/foundations/) if the library significantly increases the [bundle size](https://gitlab.com/gitlab-org/frontend/playground/webpack-memory-metrics/-/blob/master/doc/report.md).<br/>- A [legal department member](https://handbook.gitlab.com/handbook/legal/) if the license used by the new library hasn't been approved for use in GitLab.<br/><br/>More information about license compatibility can be found in our [GitLab Licensing and Compatibility documentation](licensing.md). |
+| Adding a new JavaScript library <sup>1</sup> | - [Frontend foundations member](https://about.gitlab.com/direction/manage/personal_productivity/) if the library significantly increases the [bundle size](https://gitlab.com/gitlab-org/frontend/playground/webpack-memory-metrics/-/blob/master/doc/report.md).<br/>- A [legal department member](https://handbook.gitlab.com/handbook/legal/) if the license used by the new library hasn't been approved for use in GitLab.<br/><br/>More information about license compatibility can be found in our [GitLab Licensing and Compatibility documentation](licensing.md). |
 | A new dependency or a file system change | - [Distribution team member](https://about.gitlab.com/company/team/). See how to work with the [Distribution team](https://handbook.gitlab.com/handbook/engineering/infrastructure/core-platform/systems/distribution/#how-to-work-with-distribution) for more details.<br/>- For RubyGems, request an [AppSec review](gemfile.md#request-an-appsec-review). |
 | `~documentation` or `~UI text` changes | [Technical writer](https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments) based on assignments in the appropriate [DevOps stage group](https://handbook.gitlab.com/handbook/product/categories/#devops-stages). |
 | Changes to development guidelines | Follow the [review process](development_processes.md#development-guidelines-review) and get the approvals accordingly. |
@@ -582,7 +569,12 @@ experience, refactors the existing code). Then:
   - Consider using the [Conventional Comment format](https://conventionalcomments.org#format) to
     convey your intent.
   - For non-mandatory suggestions, decorate with (non-blocking) so the author knows they can
-    optionally resolve within the merge request or follow-up at a later stage.
+    optionally resolve within the merge request or follow-up at a later stage. When the only suggestions are
+    non-blocking, move the MR onto the next stage to reduce async cycles. When you are a first round
+    reviewer, pass to a maintainer to review. When you are the final approving maintainer,
+    generate follow-ups from the non-blocking suggestions and merge or set auto-merge.
+    The author then has the option to either cancel the auto-merge by implementing the non-blocking suggestions,
+    they provide a follow-up MR after the MR got merged, or decide to not implement the suggestions.
   - There's a [Chrome/Firefox add-on](https://gitlab.com/conventionalcomments/conventional-comments-button) which you can use to apply [Conventional Comment](https://conventionalcomments.org/) prefixes.
 - Ensure there are no open dependencies. Check [linked issues](../user/project/issues/related_issues.md) for blockers. Clarify with the authors
   if necessary. If blocked by one or more open MRs, set an [MR dependency](../user/project/merge_requests/dependencies.md).
@@ -656,7 +648,7 @@ WARNING:
     [very specific cases](https://handbook.gitlab.com/handbook/engineering/workflow/#criteria-for-merging-during-broken-master).
     For other cases, follow these [handbook instructions](https://handbook.gitlab.com/handbook/engineering/workflow/#merging-during-broken-master).
   - If the latest pipeline was created before the merge request was approved, start a new pipeline to ensure that full RSpec suite has been run. You may skip this step only if the merge request does not contain any backend change.
-  - If the **latest [merged results pipeline](../ci/pipelines/merged_results_pipelines.md)** was **created less than 4 hours ago**, you
+  - If the **latest [merged results pipeline](../ci/pipelines/merged_results_pipelines.md)** was **created less than 8 hours ago**, you
     may merge without starting a new pipeline as the merge request is close enough to the target branch.
 - When you set the MR to auto-merge, you should take over
   subsequent revisions for anything that would be spotted after that.
@@ -689,22 +681,10 @@ When reviewing merge requests added by wider community contributors:
   the current milestone. This is to avoid confusion around when it'll be
   merged and avoid moving milestone too often when it's not yet ready.
 
-If the MR source branch is more than 1,000 commits behind the target branch:
-
-- Ask the author to rebase it, or consider taking a bias-for-action and rebasing it yourself
-  if the MR has "Allows commits from members who can merge to the target branch" enabled.
-- Reviewing MRs in the context of recent changes can help prevent hidden runtime conflicts and
-  promote consistency. Depending on the nature of the change, you might also want to rebase if the
-  MR is less than 1,000 commits behind.
-- A forced push could throw off the contributor, so it's a good idea to communicate that you've performed a rebase,
-  or check with the contributor first when they're actively working on the MR.
-- The rebase can usually be done inside GitLab with the `/rebase` [quick action](../user/project/quick_actions.md).
-
 #### Taking over a community merge request
 
 When an MR needs further changes but the author is not responding for a long period of time,
-or is unable to finish the MR, GitLab can take it over in accordance with our
-[Closing policy for issues and merge requests](contributing/index.md#closing-policy-for-issues-and-merge-requests).
+or is unable to finish the MR, GitLab can take it over.
 A GitLab engineer (generally the merge request coach) will:
 
 1. Add a comment to their MR saying you'll take it over to be able to get it merged.

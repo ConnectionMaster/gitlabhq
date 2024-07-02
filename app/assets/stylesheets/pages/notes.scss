@@ -22,7 +22,7 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
 @mixin outline-comment() {
   margin: $gl-padding $gl-padding 0;
   border: 1px solid $border-color;
-  border-radius: $border-radius-default;
+  border-radius: $gl-border-radius-base;
 }
 
 .issuable-discussion:not(.incident-timeline-events),
@@ -494,7 +494,7 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
     margin-left: 2.5rem;
 
     &:hover {
-      background-color: $gray-light;
+      background-color: $gray-10;
     }
   }
 
@@ -635,8 +635,8 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
   .diff-grid-comments:last-child {
     .notes-content {
       border-bottom-width: 0;
-      border-bottom-left-radius: #{$border-radius-default - 1px};
-      border-bottom-right-radius: #{$border-radius-default - 1px};
+      border-bottom-left-radius: $gl-border-radius-base-inner;
+      border-bottom-right-radius: $gl-border-radius-base-inner;
     }
   }
 }
@@ -661,7 +661,7 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
 
     .discussion-form {
       width: 100%;
-      background-color: $gray-light;
+      background-color: $gray-10;
       padding: 0;
     }
 
@@ -839,7 +839,7 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
 
 .discussion-actions {
   float: right;
-  color: $gray-darkest;
+  color: $gray-200;
 
   @include media-breakpoint-down(xs) {
     width: 100%;
@@ -896,17 +896,6 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
 .more-actions-dropdown {
   width: 180px;
   min-width: 180px;
-}
-
-.note-actions-item {
-  margin-left: 12px;
-  display: flex;
-  align-items: center;
-
-  &.more-actions {
-    // compensate for narrow icon
-    margin-left: 10px;
-  }
 }
 
 .discussion-toggle-button {
@@ -987,7 +976,7 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
 }
 
 .disabled-comment {
-  background-color: $gray-light;
+  background-color: $gray-10;
   border-radius: $border-radius-base;
   border: 1px solid $border-color;
   color: $note-disabled-comment-color;
@@ -1133,7 +1122,9 @@ $system-note-icon-m-left: $avatar-m-left + $icon-size-diff / $avatar-m-ratio;
   position: relative;
 
   .system-note-image {
-    @include gl--flex-center;
+    @apply gl-flex;
+    @apply gl-justify-center;
+    @apply gl-items-center;
     top: 14px;
     width: 22px;
     height: 22px;

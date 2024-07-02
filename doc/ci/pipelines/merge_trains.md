@@ -12,6 +12,7 @@ DETAILS:
 
 > - [In GitLab 16.0 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/359057), the **Start merge train** and **Start merge train when pipeline succeeds** buttons became **Set to auto-merge**. **Remove from merge train** became **Cancel auto-merge**.
 > - Support for [fast-forward](../../user/project/merge_requests/methods/index.md#fast-forward-merge) and [semi-linear](../../user/project/merge_requests/methods/index.md#merge-commit-with-semi-linear-history) merge methods [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/282442) in GitLab 16.5 [with a flag](../../administration/feature_flags.md) named `fast_forward_merge_trains_support`. Enabled by default.
+> - [Feature flag `fast_forward_merge_trains_support` removed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148964#note_1855981445) in GitLab 16.11.
 
 In projects with frequent merges to the default branch, changes in different merge requests
 might conflict with each other. Use merge trains to put merge requests in a queue.
@@ -25,17 +26,19 @@ For more information about:
 ## Merge train workflow
 
 A merge train starts when there are no merge requests waiting to merge and you
-select [**Merge**](#start-a-merge-train). GitLab starts a merge train pipeline
-that verifies that the changes can merge into the default branch. This first pipeline
-is the same as a [merged results pipeline](merged_results_pipelines.md), which runs on
-the changes of the source and target branches combined together. The author of the
-internal merged result commit is the user that initiated the merge.
+select [**Merge** or **Set to auto-merge**](#start-a-merge-train). GitLab starts a merge
+train pipeline that verifies that the changes can merge into the default branch.
+This first pipeline is the same as a [merged results pipeline](merged_results_pipelines.md),
+which runs on the changes of the source and target branches combined together.
+The author of the internal merged result commit is the user that initiated the
+merge.
 
-To queue a second merge request to merge immediately after the first pipeline completes, select
-[**Set to auto-merge**](#add-a-merge-request-to-a-merge-train) to add it to the train.
-This second merge train pipeline runs on the changes of _both_ merge requests combined with the
-target branch. Similarly, if you add a third merge request, that pipeline runs on the changes
-of all three merge requests merged with the target branch. The pipelines all run in parallel.
+To queue a second merge request to merge immediately after the first pipeline
+completes, select [**Merge** or **Set to auto-merge**](#add-a-merge-request-to-a-merge-train)
+to add it to the train. This second merge train pipeline runs on the changes of
+_both_ merge requests combined with the target branch. Similarly, if you add a
+third merge request, that pipeline runs on the changes of all three merge
+requests merged with the target branch. The pipelines all run in parallel.
 
 Each merge request merges into the target branch only after:
 
@@ -118,7 +121,7 @@ To start a merge train:
 1. Visit a merge request.
 1. Select:
    - When no pipeline is running, **Merge**.
-   - When a pipeline is running, **Set to auto-merge**.
+   - When a pipeline is running, [**Set to auto-merge**](../../user/project/merge_requests/auto_merge.md).
 
 The merge request's merge train status displays under the pipeline widget with a
 message similar to `A new merge train has started and this merge request is the first of the queue.`
@@ -136,7 +139,7 @@ To add a merge request to a merge train:
 1. Visit a merge request.
 1. Select:
    - When no pipeline is running, **Merge**.
-   - When a pipeline is running, **Set to auto-merge**.
+   - When a pipeline is running, [**Set to auto-merge**](../../user/project/merge_requests/auto_merge.md).
 
 The merge request's merge train status displays under the pipeline widget with a
 message similar to `Added to the merge train. There are 2 merge requests waiting to be merged.`
@@ -194,6 +197,8 @@ You can allow merge requests to be merged without completely restarting a runnin
 Use this feature to quickly merge changes that can safely skip the pipeline, for example
 minor documentation updates.
 
+You cannot skip merge trains for fast-forward or semi-linear merge methods. For more information, see [issue 429009](https://gitlab.com/gitlab-org/gitlab/-/issues/429009).
+
 Skipping merge trains is an experimental feature. It may change or be removed completely in future releases.
 
 WARNING:
@@ -241,13 +246,13 @@ notes. Check the **Activity** section in the **Overview** tab for a message simi
 
 ### Cannot use auto-merge
 
-You cannot use [auto-merge](../../user/project/merge_requests/merge_when_pipeline_succeeds.md)
+You cannot use [auto-merge](../../user/project/merge_requests/auto_merge.md)
 (formerly **Merge when pipeline succeeds**) to skip the merge train, when merge trains are enabled.
 See [issue 12267](https://gitlab.com/gitlab-org/gitlab/-/issues/12267) for more information.
 
 ### Cannot retry merge train pipeline
 
-When a merge train pipeline fails, the merge request is dropped from the train and the pipeline can't be retried.
+When a merge train pipeline fails, the merge request is dropped from the train so the pipeline can't be retried after it fails.
 Merge train pipelines run on the merged result of the changes in the merge request and
 changes from other merge requests already on the train. If the merge request is dropped from the train,
 the merged result is out of date and the pipeline can't be retried.
@@ -261,7 +266,7 @@ You can:
 
 ### Unable to add to the merge train
 
-When [**Pipelines must succeed**](../../user/project/merge_requests/merge_when_pipeline_succeeds.md#require-a-successful-pipeline-for-merge)
+When [**Pipelines must succeed**](../../user/project/merge_requests/auto_merge.md#require-a-successful-pipeline-for-merge)
 is enabled, but the latest pipeline failed:
 
 - The **Set to auto-merge** or **Merge** options are not available.

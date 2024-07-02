@@ -6,6 +6,7 @@ import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import axios from '~/lib/utils/axios_utils';
 import { DEFAULT_DEBOUNCE_AND_THROTTLE_MS } from '~/lib/utils/constants';
 import Tracking from '~/tracking';
+import { logError } from '~/lib/logger';
 import { getFormattedItem } from '../utils';
 
 import {
@@ -16,6 +17,7 @@ import {
   ISSUE_HANDLE,
   PATH_HANDLE,
   PAGES_GROUP_TITLE,
+  SETTINGS_GROUP_TITLE,
   PATH_GROUP_TITLE,
   GROUP_TITLES,
   MAX_ROWS,
@@ -37,6 +39,7 @@ export default {
     'commandPaletteCommands',
     'commandPaletteLinks',
     'autocompletePath',
+    'settingsPath',
     'searchContext',
     'projectFilesPath',
     'projectBlobPath',
@@ -82,6 +85,7 @@ export default {
           break;
       }
     }, DEFAULT_DEBOUNCE_AND_THROTTLE_MS),
+    settings: [],
   }),
   computed: {
     isCommandMode() {
@@ -145,6 +149,9 @@ export default {
         // Track immediately on component creation
         const label = TRACKING_HANDLE_LABEL_MAP[value] ?? 'unknown';
         this.track(TRACKING_ACTIVATE_COMMAND_PALETTE, { label });
+
+        // Fetch settings results only for ">"
+        if (value === COMMAND_HANDLE) this.fetchSettings();
       },
       immediate: true,
     },
@@ -153,6 +160,20 @@ export default {
     this.$emit('updated');
   },
   methods: {
+    async fetchSettings() {
+      const projectId = this.searchContext.project.id;
+      if (projectId) {
+        await axios
+          .get(`${this.settingsPath}?project_id=${projectId}`)
+          .then((response) => {
+            this.settings = response.data;
+          })
+          .catch((e) => {
+            logError(e);
+            this.settings = [];
+          });
+      }
+    },
     filterBySearchQuery(items, key = 'keywords') {
       return fuzzaldrinPlus.filter(items, this.searchQuery, { key });
     },
@@ -193,6 +214,15 @@ export default {
           items: matchedLinks,
         });
       }
+
+      const matchedSettings = this.filterBySearchQuery(this.settings, 'text');
+
+      if (matchedSettings.length) {
+        this.groups.push({
+          name: SETTINGS_GROUP_TITLE,
+          items: matchedSettings,
+        });
+      }
     },
     async getScopedItems() {
       if (this.searchQuery?.length < 3) return;
@@ -229,7 +259,7 @@ export default {
   <div>
     <gl-loading-icon v-if="loading" size="lg" class="gl-my-5" />
 
-    <ul v-else-if="hasResults" class="gl-p-0 gl-m-0 gl-list-style-none">
+    <ul v-else-if="hasResults" class="gl-p-0 gl-m-0 gl-list-none">
       <gl-disclosure-dropdown-group
         v-for="(group, index) in groups"
         :key="index"

@@ -54,6 +54,10 @@ RSpec.describe 'Runners', feature_category: :fleet_visibility do
     context 'when a project_type runner is activated on the project' do
       let_it_be(:project_runner) { create(:ci_runner, :project, projects: [project]) }
 
+      let_it_be(:project_runner_manager) do
+        create(:ci_runner_machine, runner: project_runner, platform: 'darwin')
+      end
+
       it 'user sees the project runner' do
         visit project_runners_path(project)
 
@@ -63,7 +67,7 @@ RSpec.describe 'Runners', feature_category: :fleet_visibility do
 
         click_on project_runner.short_sha
 
-        expect(page).to have_content(project_runner.platform)
+        expect(page).to have_content(project_runner_manager.platform)
       end
 
       it 'user can pause and resume the project runner' do

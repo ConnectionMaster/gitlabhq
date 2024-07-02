@@ -11,9 +11,6 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 **Status:** Experiment
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/8248) in GitLab 12.6.
-> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/221259) from GitLab Premium to GitLab Free in 13.3.
-
 WARNING:
 The Conan package registry for GitLab is under development and isn't ready for production use due to
 limited functionality. This [epic](https://gitlab.com/groups/gitlab-org/-/epics/6816) details the remaining
@@ -43,8 +40,6 @@ your project or instance. Then you can publish packages to
 and install packages from the package registry.
 
 ### Add a remote for your project
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/11679) in GitLab 13.4.
 
 Set a remote so you can work with packages in a project without
 having to specify the remote name in every command.
@@ -174,7 +169,7 @@ If you don't set a default user or remote, you can still include the user and
 remote in your commands:
 
 ```shell
-`CONAN_LOGIN_USERNAME=<gitlab_username or deploy_token_username> CONAN_PASSWORD=<personal_access_token or deploy_token> <conan command> --remote=gitlab
+CONAN_LOGIN_USERNAME=<gitlab_username or deploy_token_username> CONAN_PASSWORD=<personal_access_token or deploy_token> <conan command> --remote=gitlab
 ```
 
 ## Publish a Conan package
@@ -190,7 +185,7 @@ Prerequisites:
 - A local [Conan package](https://docs.conan.io/en/latest/creating_packages/getting_started.html)
   must exist.
   - For an instance remote, the package must meet the [naming convention](#package-recipe-naming-convention-for-instance-remotes).
-- You must have the project ID, which is displayed on the [project overview page](../../project/working_with_projects.md#access-the-project-overview-page-by-using-the-project-id).
+- You must have the project ID, which is displayed on the [project overview page](../../project/working_with_projects.md#access-a-project-by-using-the-project-id).
 
 To publish the package, use the `conan upload` command:
 
@@ -199,9 +194,6 @@ conan upload Hello/0.1@mycompany/beta --all
 ```
 
 ## Publish a Conan package by using CI/CD
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/11678) in GitLab 12.7.
-> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/221259) from GitLab Premium to GitLab Free in 13.3.
 
 To work with Conan commands in [GitLab CI/CD](../../../ci/index.md), you can
 use `CI_JOB_TOKEN` in place of the personal access token in your commands.

@@ -1,5 +1,5 @@
 ---
-stage: Service Management
+stage: Monitor
 group: Respond
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
@@ -24,8 +24,6 @@ The email address is available at the top of the issue list.
 
 ## As an end user (issue creator)
 
-> - Support for additional email headers [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/346600) in GitLab 14.6. In earlier versions, the Service Desk email address had to be in the "To" field.
-
 To create a Service Desk issue, an end user does not need to know anything about
 the GitLab instance. They just send an email to the address they are given, and
 receive an email back confirming receipt:
@@ -41,8 +39,8 @@ are sent as emails:
 
 Any responses they send via email are displayed in the issue itself.
 
-For information about headers used for treating email, see
-[the incoming email documentation](../../../administration/incoming_email.md#accepted-headers).
+For additional information see [External participants](external_participants.md) and the
+[headers used for treating email](../../../administration/incoming_email.md#accepted-headers).
 
 ### Create a Service Desk ticket in GitLab UI
 
@@ -172,7 +170,7 @@ into a Service Desk ticket. This assigns the provided email address as the exter
 and adds them to the list of external participants. They receive Service Desk emails for any public
 comment on the ticket and can reply to these emails. Replies add a new comment on the ticket.
 
-GitLab doesn't send [the default `thank_you` email](configure.md#customize-emails-sent-to-the-requester).
+GitLab doesn't send [the default `thank_you` email](configure.md#customize-emails-sent-to-external-participants).
 You can add a public comment on the ticket to let the end user know that the ticket has been created.
 
 ## Privacy considerations

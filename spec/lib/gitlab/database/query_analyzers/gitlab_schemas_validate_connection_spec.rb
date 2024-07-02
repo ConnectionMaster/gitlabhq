@@ -28,19 +28,19 @@ RSpec.describe Gitlab::Database::QueryAnalyzers::GitlabSchemasValidateConnection
           model: ApplicationRecord,
           sql: "SELECT 1 FROM projects LEFT JOIN p_ci_builds ON p_ci_builds.project_id=projects.id",
           expect_error: /The query tried to access \["projects", "p_ci_builds"\]/,
-          setup: -> (_) { skip_if_shared_database(:ci) }
+          setup: ->(_) { skip_if_shared_database(:ci) }
         },
         "for query accessing gitlab_ci and gitlab_main the gitlab_schemas is always ordered" => {
           model: ApplicationRecord,
           sql: "SELECT 1 FROM p_ci_builds LEFT JOIN projects ON p_ci_builds.project_id=projects.id",
           expect_error: /The query tried to access \["p_ci_builds", "projects"\]/,
-          setup: -> (_) { skip_if_shared_database(:ci) }
+          setup: ->(_) { skip_if_shared_database(:ci) }
         },
         "for query accessing main table from CI database" => {
           model: Ci::ApplicationRecord,
           sql: "SELECT 1 FROM projects",
           expect_error: /The query tried to access \["projects"\]/,
-          setup: -> (_) { skip_if_shared_database(:ci) }
+          setup: ->(_) { skip_if_shared_database(:ci) }
         },
         "for query accessing CI database" => {
           model: Ci::ApplicationRecord,
@@ -51,14 +51,20 @@ RSpec.describe Gitlab::Database::QueryAnalyzers::GitlabSchemasValidateConnection
           model: ::ApplicationRecord,
           sql: "SELECT 1 FROM p_ci_builds",
           expect_error: /The query tried to access \["p_ci_builds"\]/,
-          setup: -> (_) { skip_if_shared_database(:ci) }
+          setup: ->(_) { skip_if_shared_database(:ci) }
         },
         "for query accessing unknown gitlab_schema" => {
           model: ::ApplicationRecord,
           sql: "SELECT 1 FROM new_table",
           expect_error:
             /Could not find gitlab schema for table new_table/,
-          setup: -> (_) { skip_if_shared_database(:ci) }
+          setup: ->(_) { skip_if_shared_database(:ci) }
+        },
+        "for DDL operation that adds a view that changes MAIN and CI and contains DML statements" => {
+          model: ApplicationRecord,
+          sql: "CREATE OR REPLACE VIEW my_view AS SELECT * FROM p_ci_builds WHERE id = 1",
+          expect_error: nil,
+          setup: nil
         }
       }
     end

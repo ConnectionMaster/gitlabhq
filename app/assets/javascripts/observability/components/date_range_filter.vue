@@ -1,17 +1,33 @@
 <script>
-import { GlDaterangePicker } from '@gitlab/ui';
 import { periodToDate } from '~/observability/utils';
 import DateRangesDropdown from '~/analytics/shared/components/date_ranges_dropdown.vue';
 import { TIME_RANGE_OPTIONS, CUSTOM_DATE_RANGE_OPTION } from '~/observability/constants';
+import { dayAfter, getCurrentUtcDate } from '~/lib/utils/datetime_utility';
+import DateTimeRangePicker from './datetime_range_picker.vue';
 
 export default {
   components: {
     DateRangesDropdown,
-    GlDaterangePicker,
+    DateTimeRangePicker,
   },
   props: {
     selected: {
       type: Object,
+      required: false,
+      default: null,
+    },
+    maxDateRange: {
+      type: Number,
+      required: false,
+      default: null,
+    },
+    dateOptions: {
+      type: Array,
+      required: false,
+      default: () => TIME_RANGE_OPTIONS,
+    },
+    defaultMinDate: {
+      type: Date,
       required: false,
       default: null,
     },
@@ -27,7 +43,7 @@ export default {
   },
   computed: {
     dateRangeOptions() {
-      return TIME_RANGE_OPTIONS.map((option) => {
+      return this.dateOptions.map((option) => {
         const dateRange = periodToDate(option.value);
         return {
           value: option.value,
@@ -44,6 +60,9 @@ export default {
       return (
         this.shouldShowDateRangePicker && (!this.dateRange.startDate || !this.dateRange.endDate)
       );
+    },
+    defaultMaxDate() {
+      return dayAfter(getCurrentUtcDate(), { utc: true });
     },
   },
   methods: {
@@ -75,21 +94,25 @@ export default {
 </script>
 
 <template>
-  <div class="gl-display-flex gl-flex-direction-column gl-lg-flex-direction-row gl-gap-3">
+  <div
+    class="gl-display-flex gl-flex-direction-column gl-lg-flex-direction-row gl-gap-3"
+    data-testid="date-range-filter"
+  >
     <date-ranges-dropdown
       :selected="dateRange.value"
       :date-range-options="dateRangeOptions"
       disable-selected-day-count
-      tooltip=""
-      include-end-date-in-days-selected
       @selected="onSelectPredefinedDateRange"
       @customDateRangeSelected="onSelectCustomDateRange"
     />
-    <gl-daterange-picker
+    <date-time-range-picker
       v-if="shouldShowDateRangePicker"
       :start-opened="shouldStartOpened"
       :default-start-date="dateRange.startDate"
       :default-end-date="dateRange.endDate"
+      :max-date-range="maxDateRange"
+      :default-max-date="defaultMaxDate"
+      :default-min-date="defaultMinDate"
       @input="onCustomRangeSelected"
     />
   </div>

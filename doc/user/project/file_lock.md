@@ -42,7 +42,7 @@ Developer role in the repository.
 Only the user who locked the file or directory can edit locked files. Other
 users are prevented from modifying locked files by pushing, merging,
 or any other means, and are shown an error like:
-`The path '.gitignore' is locked by Administrator`.
+`'.gitignore' is locked by @Administrator`.
 
 ## Exclusive file locks
 
@@ -77,7 +77,7 @@ you can skip this step. If you're unsure, re-installing it does no harm:
 git lfs install
 ```
 
-For more information, see [Using Git LFS](../../topics/git/lfs/index.md#using-git-lfs).
+For more information, see [Git Large File Storage (LFS)](../../topics/git/lfs/index.md).
 
 ### Configure Exclusive File Locks
 

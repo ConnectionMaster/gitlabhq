@@ -13,6 +13,11 @@ RSpec.describe Gitlab::BackgroundMigration::JobCoordinator do
     Sidekiq::RedisConnection.create(params) # rubocop:disable Rails/SaveBang -- RedisConnection only has .create
   end
 
+  before do
+    allow(Gitlab::Redis::Queues).to receive(:instances)
+      .and_return({ 'main' => Gitlab::Redis::Queues, 'shard' => Gitlab::Redis::Queues })
+  end
+
   describe '.for_tracking_database' do
     it 'returns an executor with the correct worker class and database' do
       coordinator = described_class.for_tracking_database(tracking_database)
@@ -239,12 +244,16 @@ RSpec.describe Gitlab::BackgroundMigration::JobCoordinator do
         Sidekiq::Testing.disable! do
           worker_class.perform_in(10.minutes, 'Object')
 
-          expect(Sidekiq::ScheduledSet.new).to be_one
+          Gitlab::SidekiqSharding::Validator.allow_unrouted_sidekiq_calls do
+            expect(Sidekiq::ScheduledSet.new).to be_one
+          end
           expect(coordinator).to receive(:perform).with('Object', any_args)
 
           coordinator.steal('Object')
 
-          expect(Sidekiq::ScheduledSet.new).to be_none
+          Gitlab::SidekiqSharding::Validator.allow_unrouted_sidekiq_calls do
+            expect(Sidekiq::ScheduledSet.new).to be_none
+          end
         end
       end
     end
@@ -342,6 +351,12 @@ RSpec.describe Gitlab::BackgroundMigration::JobCoordinator do
   end
 
   describe '.remaining', :redis do
+    it 'is shard aware' do
+      expect(Sidekiq::Client).to receive(:via).with(coordinator.sidekiq_redis_pool).once
+
+      coordinator.remaining
+    end
+
     context 'when there are jobs remaining' do
       before do
         Sidekiq::Testing.disable! do
@@ -370,6 +385,12 @@ RSpec.describe Gitlab::BackgroundMigration::JobCoordinator do
   end
 
   describe '.exists?', :redis do
+    it 'is shard aware' do
+      expect(Sidekiq::Client).to receive(:via).with(coordinator.sidekiq_redis_pool).once
+
+      coordinator.exists?('Foo')
+    end
+
     context 'when there are enqueued jobs present' do
       before do
         Sidekiq::Testing.disable! do
@@ -434,6 +455,12 @@ RSpec.describe Gitlab::BackgroundMigration::JobCoordinator do
         double(args: ['Foo', [10, 20]], klass: worker_class.name),
         double(args: ['Bar'], klass: 'MergeWorker')
       ]
+    end
+
+    it 'is shard aware' do
+      expect(Sidekiq::Client).to receive(:via).with(coordinator.sidekiq_redis_pool).once
+
+      coordinator.retrying_jobs?('Foo')
     end
 
     context 'when there are dead jobs present' do

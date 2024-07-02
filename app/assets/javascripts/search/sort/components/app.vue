@@ -98,8 +98,8 @@ export default {
   <gl-button-group>
     <gl-collapsible-listbox
       v-model="selectedSortOptionTitle"
-      placement="right"
-      class="gl-z-index-1"
+      placement="bottom-end"
+      class="gl-z-1"
       toggle-class="gl-rounded-top-right-none! gl-rounded-bottom-right-none!"
       :toggle-text="selectedSortOptionTitle"
       :items="listboxOptions"

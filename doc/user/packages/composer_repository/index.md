@@ -11,11 +11,6 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/15886) in GitLab 13.2.
-> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/221259) from GitLab Premium to GitLab Free in 13.3.
-> - Support for Composer 2.0 [added](https://gitlab.com/gitlab-org/gitlab/-/issues/259840) in GitLab 13.10.
-> - Deploy token support [added](https://gitlab.com/gitlab-org/gitlab/-/issues/240897) in GitLab 14.6.
-
 WARNING:
 The Composer package registry for GitLab is under development and isn't ready for production use due to
 limited functionality. This [epic](https://gitlab.com/groups/gitlab-org/-/epics/6817) details the remaining
@@ -45,7 +40,7 @@ Prerequisites:
   error (`Validation failed: Version is invalid`) occurs when you publish.
 - A valid `composer.json` file at the project root directory.
 - The Packages feature is enabled in a GitLab repository.
-- The project ID, which is displayed on the [project overview page](../../project/working_with_projects.md#access-the-project-overview-page-by-using-the-project-id).
+- The project ID, which is displayed on the [project overview page](../../project/working_with_projects.md#access-a-project-by-using-the-project-id).
 - One of the following token types:
   - A [personal access token](../../../user/profile/personal_access_tokens.md) with the scope set to `api`.
   - A [deploy token](../../project/deploy_tokens/index.md)
@@ -58,7 +53,7 @@ To publish the package with a personal access token:
   For example, you can use `curl`:
 
   ```shell
-  curl --data tag=<tag> "https://__token__:<personal-access-token>@gitlab.example.com/api/v4/projects/<project_id>/packages/composer"
+  curl --fail-with-body --data tag=<tag> "https://__token__:<personal-access-token>@gitlab.example.com/api/v4/projects/<project_id>/packages/composer"
   ```
 
   - `<personal-access-token>` is your personal access token.
@@ -73,7 +68,7 @@ To publish the package with a deploy token:
   For example, you can use `curl`:
 
   ```shell
-  curl --data tag=<tag> --header "Deploy-Token: <deploy-token>" "https://gitlab.example.com/api/v4/projects/<project_id>/packages/composer"
+  curl --fail-with-body --data tag=<tag> --header "Deploy-Token: <deploy-token>" "https://gitlab.example.com/api/v4/projects/<project_id>/packages/composer"
   ```
 
   - `<deploy-token>` is your deploy token
@@ -98,7 +93,7 @@ You can publish a Composer package to the package registry as part of your CI/CD
      stage: deploy
      script:
        - apk add curl
-       - 'curl --header "Job-Token: $CI_JOB_TOKEN" --data tag=<tag> "${CI_API_V4_URL}/projects/$CI_PROJECT_ID/packages/composer"'
+       - 'curl --fail-with-body --header "Job-Token: $CI_JOB_TOKEN" --data tag=<tag> "${CI_API_V4_URL}/projects/$CI_PROJECT_ID/packages/composer"'
      environment: production
    ```
 
@@ -126,8 +121,6 @@ When you publish:
 
 ## Install a Composer package
 
-> - Authorization to [download a package archive](../../../api/packages/composer.md#download-a-package-archive) was [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/331601) in GitLab 14.10.
-
 Install a package from the package registry so you can use it as a dependency.
 
 Prerequisites:
@@ -148,15 +141,15 @@ To install a package:
 
    - Connect to the package registry for your group:
 
-   ```shell
-   composer config repositories.<group_id> composer https://gitlab.example.com/api/v4/group/<group_id>/-/packages/composer/packages.json
-   ```
+     ```shell
+     composer config repositories.<group_id> composer https://gitlab.example.com/api/v4/group/<group_id>/-/packages/composer/packages.json
+     ```
 
    - Set the required package version:
 
-   ```shell
-   composer require <package_name>:<version>
-   ```
+     ```shell
+     composer require <package_name>:<version>
+     ```
 
    Result in the `composer.json` file:
 
@@ -351,8 +344,8 @@ When you install from source, the `composer` configures an
 access to the project's Git repository.
 Depending on the project visibility, the access type is different:
 
-- On public projects, the `https` Git URL is used. Make sure you can [clone the repository with HTTPS](../../../gitlab-basics/start-using-git.md#clone-with-https).
-- On internal or private projects, the `ssh` Git URL is used. Make sure you can [clone the repository with SSH](../../../gitlab-basics/start-using-git.md#clone-with-ssh).
+- On public projects, the `https` Git URL is used. Make sure you can [clone the repository with HTTPS](../../../topics/git/clone.md#clone-with-https).
+- On internal or private projects, the `ssh` Git URL is used. Make sure you can [clone the repository with SSH](../../../topics/git/clone.md#clone-with-ssh).
 
 You can access the `ssh` Git URL from a CI/CD job using [SSH keys with GitLab CI/CD](../../../ci/ssh_keys/index.md).
 
@@ -379,10 +372,7 @@ composer clearcache
 
 ### Authorization requirement when using `composer install`
 
-In GitLab 14.9 and earlier, you did not require authorization to use `composer install` if you already had a generated `composer.lock`.
-If you committed your `composer.lock`, you could do a `composer install` in CI without setting up credentials.
-
-In GitLab 14.10 and later, authorization is required for the [downloading a package archive](../../../api/packages/composer.md#download-a-package-archive) endpoint.
+Authorization is required for the [downloading a package archive](../../../api/packages/composer.md#download-a-package-archive) endpoint.
 If you encounter a credentials prompt when you are using `composer install`, follow the instructions in the [install a composer package](#install-a-composer-package) section to create an `auth.json` file.
 
 ### Publish fails with `The file composer.json was not found`

@@ -58,21 +58,6 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
     end
   end
 
-  shared_examples 'it requires a group' do
-    context 'when given an deleted group' do
-      before do
-        # destroy group and group member
-        group_member.destroy!
-        group.destroy!
-      end
-
-      it 'returns NullMail type message' do
-        expect(Gitlab::AppLogger).to receive(:info)
-        expect(subject.message).to be_a(ActionMailer::Base::NullMail)
-      end
-    end
-  end
-
   context 'for a project' do
     shared_examples 'an assignee email' do
       let(:recipient) { assignee }
@@ -137,6 +122,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
           aggregate_failures do
             is_expected.to have_referable_subject(issue)
             is_expected.to have_body_text(project_issue_path(project, issue))
+            is_expected.not_to have_body_text 'This project does not include diff previews in email notifications'
           end
         end
 
@@ -375,8 +361,8 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
           it 'has the correct subject and body' do
             aggregate_failures do
               is_expected.to have_referable_subject(issue, reply: true)
-              is_expected.to have_body_text("Issue was closed by #{current_user_sanitized} via #{closing_commit.id}")
-              is_expected.to have_plain_text_content("Issue was closed by #{current_user_sanitized} via #{closing_commit.id}")
+              is_expected.to have_body_text("Issue was closed by #{current_user_sanitized} with #{closing_commit.id}")
+              is_expected.to have_plain_text_content("Issue was closed by #{current_user_sanitized} with #{closing_commit.id}")
             end
           end
         end
@@ -399,9 +385,9 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
             aggregate_failures do
               url = project_merge_request_url(project, closing_merge_request)
               is_expected.to have_referable_subject(issue, reply: true)
-              is_expected.to have_body_text("Issue was closed by #{current_user_sanitized} via merge request " +
+              is_expected.to have_body_text("Issue was closed by #{current_user_sanitized} with merge request " +
                                             %(<a href="#{url}">#{closing_merge_request.to_reference}</a>))
-              is_expected.to have_plain_text_content("Issue was closed by #{current_user_sanitized} via merge request " \
+              is_expected.to have_plain_text_content("Issue was closed by #{current_user_sanitized} with merge request " \
                                                      "#{closing_merge_request.to_reference} (#{url})")
             end
           end
@@ -754,7 +740,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
 
       describe 'that have new commits on top of more than two existing ones' do
         let(:existing_commits) do
-          [merge_request.commits.first] + [double(:commit)] * 3 + [merge_request.commits.second]
+          [merge_request.commits.first] + ([double(:commit)] * 3) + [merge_request.commits.second]
         end
 
         subject do
@@ -1084,6 +1070,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
         is_expected.to have_body_text project.full_name
         is_expected.to have_body_text project.web_url
         is_expected.to have_body_text project_member.human_access
+        is_expected.to have_body_text 'default role'
         is_expected.to have_body_text 'leave the project'
         is_expected.to have_body_text project_url(project, leave: 1)
       end
@@ -1101,85 +1088,9 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       )
     end
 
-    describe 'project invitation' do
-      let(:maintainer) { create(:user).tap { |u| project.add_maintainer(u) } }
-      let(:project_member) { invite_to_project(project, inviter: inviter) }
-      let(:inviter) { maintainer }
-
-      subject(:invite_email) do
-        described_class.member_invited_email('project', project_member.id, project_member.invite_token)
-      end
-
-      it_behaves_like 'an email sent from GitLab'
-      it_behaves_like 'it should show Gmail Actions Join now link'
-      it_behaves_like "a user cannot unsubscribe through footer link"
-      it_behaves_like 'appearance header and footer enabled'
-      it_behaves_like 'appearance header and footer not enabled'
-      it_behaves_like 'does not render a manage notifications link'
-
-      context 'when there is an inviter', :aggregate_failures do
-        it 'contains all the useful information' do
-          is_expected.to have_subject "#{inviter.name} invited you to join GitLab"
-          is_expected.to have_body_text project.full_name
-          is_expected.to have_body_text project_member.human_access.downcase
-          is_expected.to have_body_text project_member.invite_token
-          is_expected.to have_link(
-            'Join now',
-            href: invite_url(project_member.invite_token, invite_type: Emails::Members::INITIAL_INVITE)
-          )
-          is_expected.to have_content("#{inviter.name} invited you to join the")
-          is_expected.to have_content('Project details')
-          is_expected.to have_content("What's it about?")
-        end
-      end
-
-      context 'when there is no inviter', :aggregate_failures do
-        let(:inviter) { nil }
-
-        it 'contains all the useful information' do
-          is_expected.to have_subject "Invitation to join the #{project.full_name} project"
-          is_expected.to have_body_text project.full_name
-          is_expected.to have_body_text project_member.human_access.downcase
-          is_expected.to have_body_text project_member.invite_token
-          is_expected.to have_link(
-            'Join now',
-            href: invite_url(project_member.invite_token, invite_type: Emails::Members::INITIAL_INVITE)
-          )
-          is_expected.to have_content('Project details')
-          is_expected.to have_content("What's it about?")
-        end
-      end
-
-      context 'when invite email sent is tracked', :snowplow do
-        it 'tracks the sent invite' do
-          invite_email.deliver_now
-
-          expect_snowplow_event(
-            category: 'Notify',
-            action: 'invite_email_sent',
-            label: 'invite_email',
-            property: project_member.id.to_s
-          )
-        end
-      end
-
-      context 'when mailgun events are enabled' do
-        before do
-          stub_application_setting(mailgun_events_enabled: true)
-        end
-
-        it 'has custom headers' do
-          aggregate_failures do
-            expect(subject).to have_header('X-Mailgun-Tag', ::Members::Mailgun::INVITE_EMAIL_TAG)
-            expect(subject).to have_header('X-Mailgun-Variables', { ::Members::Mailgun::INVITE_EMAIL_TOKEN_KEY => project_member.invite_token }.to_json)
-          end
-        end
-      end
-    end
-
     describe 'project invitation accepted' do
       let(:invited_user) { create(:user, name: 'invited user') }
-      let(:recipient) { create(:user).tap { |u| project.add_maintainer(u) } }
+      let(:recipient) { create(:user, maintainer_of: project) }
       let(:project_member) do
         invitee = invite_to_project(project, inviter: recipient)
         invitee.accept_invite!(invited_user)
@@ -1205,7 +1116,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
     end
 
     describe 'project invitation declined' do
-      let(:recipient) { create(:user).tap { |u| project.add_maintainer(u) } }
+      let(:recipient) { create(:user, maintainer_of: project) }
       let(:project_member) do
         invitee = invite_to_project(project, inviter: recipient)
         invitee.decline_invite!
@@ -1329,7 +1240,12 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       shared_examples 'a discussion note email' do |model|
         it_behaves_like 'it should have Gmail Actions links'
 
-        it 'is sent to the given recipient as the author' do
+        # Two tests with flakiness:1 are coming from this test:
+        #
+        # 1. https://gitlab.com/gitlab-org/gitlab/-/issues/464578
+        # 2. https://gitlab.com/gitlab-org/gitlab/-/issues/464577
+        it 'is sent to the given recipient as the author',
+          quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/464578' do
           aggregate_failures do
             expect_sender(note_author)
             expect(subject).to deliver_to(recipient.notification_email_or_default)
@@ -1464,14 +1380,23 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       end
 
       shared_examples 'an email for a note on a diff discussion' do |model|
-        let(:note) { create(model, author: note_author) }
-
         context 'when note is not on text' do
           before do
             allow(note.discussion).to receive(:on_text?).and_return(false)
           end
 
           it 'does not include diffs with character-level highlighting' do
+            is_expected.not_to have_body_text '<span class="p">}</span></span>'
+          end
+        end
+
+        context 'when the project does not show diffs in emails' do
+          before do
+            allow(project).to receive(:show_diff_preview_in_email?).and_return(false)
+          end
+
+          it "does not show diff and displays a separate message" do
+            is_expected.to have_body_text 'This project does not include diff previews in email notifications'
             is_expected.not_to have_body_text '<span class="p">}</span></span>'
           end
         end
@@ -1486,7 +1411,12 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
 
         it_behaves_like 'it should have Gmail Actions links'
 
-        it 'is sent to the given recipient as the author' do
+        # Two tests with flakiness:1 are coming from this test:
+        #
+        # 1. https://gitlab.com/gitlab-org/gitlab/-/issues/464579
+        # 2. https://gitlab.com/gitlab-org/gitlab/-/issues/464580
+        it 'is sent to the given recipient as the author',
+          quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/464579' do
           aggregate_failures do
             expect_sender(note_author)
             expect(subject).to deliver_to(recipient.notification_email_or_default)
@@ -1513,7 +1443,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
 
       describe 'on a commit' do
         let(:commit) { project.commit }
-        let(:note) { create(:diff_note_on_commit) }
+        let(:note) { create(:diff_note_on_commit, author: note_author, project: project) }
 
         subject { described_class.note_commit_email(recipient.id, note.id) }
 
@@ -1525,7 +1455,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       end
 
       describe 'on a merge request' do
-        let(:note) { create(:diff_note_on_merge_request) }
+        let(:note) { create(:diff_note_on_merge_request, author: note_author, noteable: merge_request, project: project) }
 
         subject { described_class.note_merge_request_email(recipient.id, note.id) }
 
@@ -1743,7 +1673,6 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       it_behaves_like "a user cannot unsubscribe through footer link"
       it_behaves_like 'appearance header and footer enabled'
       it_behaves_like 'appearance header and footer not enabled'
-      it_behaves_like 'it requires a group'
 
       it 'contains all the useful information' do
         is_expected.to have_subject "Access to the #{group.name} group was granted"
@@ -1767,44 +1696,8 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       )
     end
 
-    describe 'invitations' do
-      let(:owner) { create(:user).tap { |u| group.add_member(u, Gitlab::Access::OWNER) } }
-      let(:group_member) { invite_to_group(group, inviter: inviter) }
-      let(:inviter) { owner }
-
-      subject { described_class.member_invited_email('Group', group_member.id, group_member.invite_token) }
-
-      it_behaves_like 'an email sent from GitLab'
-      it_behaves_like 'it should show Gmail Actions Join now link'
-      it_behaves_like "a user cannot unsubscribe through footer link"
-      it_behaves_like 'appearance header and footer enabled'
-      it_behaves_like 'appearance header and footer not enabled'
-      it_behaves_like 'it requires a group'
-      it_behaves_like 'does not render a manage notifications link'
-
-      context 'when there is an inviter' do
-        it 'contains all the useful information' do
-          is_expected.to have_subject "#{group_member.created_by.name} invited you to join GitLab"
-          is_expected.to have_body_text group.name
-          is_expected.to have_body_text group_member.human_access.downcase
-          is_expected.to have_body_text group_member.invite_token
-        end
-      end
-
-      context 'when there is no inviter' do
-        let(:inviter) { nil }
-
-        it 'contains all the useful information' do
-          is_expected.to have_subject "Invitation to join the #{group.name} group"
-          is_expected.to have_body_text group.name
-          is_expected.to have_body_text group_member.human_access.downcase
-          is_expected.to have_body_text group_member.invite_token
-        end
-      end
-    end
-
     describe 'group invitation reminders' do
-      let_it_be(:inviter) { create(:user).tap { |u| group.add_member(u, Gitlab::Access::OWNER) } }
+      let_it_be(:inviter) { create(:user, owner_of: group) }
 
       let(:group_member) { invite_to_group(group, inviter: inviter) }
 
@@ -1887,7 +1780,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
 
     describe 'group invitation accepted' do
       let(:invited_user) { create(:user, name: 'invited user') }
-      let(:owner) { create(:user).tap { |u| group.add_member(u, Gitlab::Access::OWNER) } }
+      let(:owner) { create(:user, owner_of: group) }
       let(:group_member) do
         invitee = invite_to_group(group, inviter: owner)
         invitee.accept_invite!(invited_user)
@@ -1901,7 +1794,6 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
       it_behaves_like "a user cannot unsubscribe through footer link"
       it_behaves_like 'appearance header and footer enabled'
       it_behaves_like 'appearance header and footer not enabled'
-      it_behaves_like 'it requires a group'
 
       it 'contains all the useful information' do
         is_expected.to have_subject 'Invitation accepted'
@@ -1913,7 +1805,7 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
     end
 
     describe 'group invitation declined' do
-      let(:owner) { create(:user).tap { |u| group.add_member(u, Gitlab::Access::OWNER) } }
+      let(:owner) { create(:user, owner_of: group) }
       let(:group_member) do
         invitee = invite_to_group(group, inviter: owner)
         invitee.decline_invite!
@@ -2498,6 +2390,36 @@ RSpec.describe Notify, feature_category: :code_review_workflow do
 
         is_expected.to have_body_text project_merge_request_path(project, merge_request)
       end
+    end
+  end
+
+  describe 'rate limiting', :freeze_time, :clean_gitlab_redis_rate_limiting do
+    let(:recipient) { issue.assignees.first }
+
+    before do
+      allow(Gitlab::ApplicationRateLimiter).to receive(:rate_limits)
+        .and_return(notification_emails: { threshold: 1, interval: 1.minute })
+    end
+
+    it 'logs a message, stops sending notifications, and notifies the user of the rate limit only once', :aggregate_failures do
+      expect(Gitlab::AppLogger).to receive(:info).with(
+        event: 'notification_emails_rate_limited',
+        user_id: recipient.id,
+        project_id: issue.project_id,
+        group_id: nil
+      )
+
+      perform_enqueued_jobs do
+        3.times { described_class.new_issue_email(recipient.id, issue.id).deliver }
+      end
+
+      expect(ActionMailer::Base.deliveries.count).to eq(2)
+
+      allowed_notification, rate_limit_notification = ActionMailer::Base.deliveries
+
+      expect(allowed_notification).to have_referable_subject(issue)
+      expect(rate_limit_notification.to).to contain_exactly(recipient.notification_email)
+      expect(rate_limit_notification).to have_subject(/Notifications temporarily disabled/)
     end
   end
 end

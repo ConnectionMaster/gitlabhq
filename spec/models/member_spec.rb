@@ -182,7 +182,7 @@ RSpec.describe Member, feature_category: :groups_and_projects do
     let_it_be(:awaiting_project_member) { create(:project_member, :awaiting, project: project) }
 
     before_all do
-      @owner_user = create(:user).tap { |u| group.add_owner(u) }
+      @owner_user = create(:user, owner_of: group)
       @owner = group.members.find_by(user_id: @owner_user.id)
       @blocked_owner_user = create(:user).tap do |u|
         group.add_owner(u)
@@ -191,8 +191,11 @@ RSpec.describe Member, feature_category: :groups_and_projects do
       end
       @blocked_owner = group.members.find_by(user_id: @blocked_owner_user.id)
 
-      @maintainer_user = create(:user).tap { |u| project.add_maintainer(u) }
+      @maintainer_user = create(:user, maintainer_of: project)
       @maintainer = project.members.find_by(user_id: @maintainer_user.id)
+
+      @developer_user = create(:user).tap { |u| group.add_developer(u) }
+      @developer = project.members.find_by(user_id: @developer_user.id)
 
       @blocked_maintainer_user = create(:user).tap do |u|
         project.add_maintainer(u)
@@ -267,6 +270,40 @@ RSpec.describe Member, feature_category: :groups_and_projects do
         subject { described_class.in_hierarchy(project).where.not(source: project) }
 
         it { is_expected.to contain_exactly(root_ancestor_member, subgroup_member, subgroup_project_member) }
+      end
+    end
+
+    describe '.with_case_insensitive_invite_emails' do
+      let_it_be(:email) { 'bob@example.com' }
+
+      context 'when the invite_email is the same case' do
+        let_it_be(:invited_member) do
+          create(:project_member, :invited, invite_email: email)
+        end
+
+        it 'finds the members' do
+          expect(described_class.with_case_insensitive_invite_emails([email])).to match_array([invited_member])
+        end
+      end
+
+      context 'when the invite_email is lowercased and we have an uppercase email for searching' do
+        let_it_be(:invited_member) do
+          create(:project_member, :invited, invite_email: email)
+        end
+
+        it 'finds the members' do
+          expect(described_class.with_case_insensitive_invite_emails([email.upcase])).to match_array([invited_member])
+        end
+      end
+
+      context 'when the invite_email is non lower cased' do
+        let_it_be(:invited_member) do
+          create(:project_member, :invited, invite_email: email.upcase)
+        end
+
+        it 'finds the members' do
+          expect(described_class.with_case_insensitive_invite_emails([email])).to match_array([invited_member])
+        end
       end
     end
 
@@ -647,20 +684,78 @@ RSpec.describe Member, feature_category: :groups_and_projects do
 
     describe '.distinct_on_user_with_max_access_level' do
       let_it_be(:other_group) { create(:group) }
+      let_it_be(:group_project) { create(:project, group: group) }
       let_it_be(:member_with_lower_access_level) { create(:group_member, :developer, group: other_group, user: @owner_user) }
+      let_it_be(:member_with_same_access_level) { create(:group_member, :maintainer, group: other_group, user: @maintainer_user) }
+      let_it_be(:project_member_with_same_access_level) { create(:project_member, :maintainer, project: group_project, user: @maintainer_user) }
+      let_it_be(:member_with_higher_access_level) { create(:group_member, :maintainer, group: other_group, user: @developer_user) }
 
-      subject { described_class.default_scoped.distinct_on_user_with_max_access_level.to_a }
+      let(:for_object) { group }
 
-      it { is_expected.not_to include member_with_lower_access_level }
-      it { is_expected.to include @owner }
-      it { is_expected.to include @maintainer }
-      it { is_expected.to include @invited_member }
-      it { is_expected.to include @accepted_invite_member }
-      it { is_expected.to include @requested_member }
-      it { is_expected.to include @accepted_request_member }
-      it { is_expected.to include @blocked_maintainer }
-      it { is_expected.to include @blocked_developer }
-      it { is_expected.to include @member_with_minimal_access }
+      subject { described_class.default_scoped.distinct_on_user_with_max_access_level(for_object).to_a }
+
+      context 'for group' do
+        it { is_expected.not_to include member_with_lower_access_level }
+        it { is_expected.not_to include member_with_same_access_level }
+        it { is_expected.not_to include @developer }
+        it { is_expected.to include @owner }
+        it { is_expected.to include @maintainer }
+        it { is_expected.to include @invited_member }
+        it { is_expected.to include @accepted_invite_member }
+        it { is_expected.to include @requested_member }
+        it { is_expected.to include @accepted_request_member }
+        it { is_expected.to include @blocked_maintainer }
+        it { is_expected.to include @blocked_developer }
+        it { is_expected.to include @member_with_minimal_access }
+        it { is_expected.to include member_with_higher_access_level }
+      end
+
+      context 'for other_group' do
+        let(:for_object) { other_group }
+
+        it { is_expected.not_to include member_with_lower_access_level }
+        it { is_expected.not_to include @developer }
+        it { is_expected.not_to include @maintainer }
+
+        it { is_expected.to include @owner }
+        it { is_expected.to include @invited_member }
+        it { is_expected.to include @accepted_invite_member }
+        it { is_expected.to include @requested_member }
+        it { is_expected.to include @accepted_request_member }
+        it { is_expected.to include @blocked_maintainer }
+        it { is_expected.to include @blocked_developer }
+        it { is_expected.to include @member_with_minimal_access }
+        it { is_expected.to include member_with_same_access_level }
+        it { is_expected.to include member_with_higher_access_level }
+      end
+
+      context 'for project' do
+        let(:for_object) { group_project }
+
+        it { is_expected.not_to include member_with_lower_access_level }
+        it { is_expected.not_to include @developer }
+        it { is_expected.not_to include @maintainer }
+        it { is_expected.not_to include member_with_same_access_level }
+
+        it { is_expected.to include @owner }
+        it { is_expected.to include @invited_member }
+        it { is_expected.to include @accepted_invite_member }
+        it { is_expected.to include @requested_member }
+        it { is_expected.to include @accepted_request_member }
+        it { is_expected.to include @blocked_maintainer }
+        it { is_expected.to include @blocked_developer }
+        it { is_expected.to include @member_with_minimal_access }
+        it { is_expected.to include project_member_with_same_access_level }
+        it { is_expected.to include member_with_higher_access_level }
+      end
+
+      context 'for other object' do
+        let(:for_object) { build(:organization) }
+
+        it 'raises an error' do
+          expect { subject }.to raise_error ArgumentError, "Invalid object: Organizations::Organization"
+        end
+      end
 
       context 'with where conditions' do
         let_it_be(:example_member) { create(:group_member, invite_email: 'user@example.com') }
@@ -669,7 +764,7 @@ RSpec.describe Member, feature_category: :groups_and_projects do
           described_class
             .default_scoped
             .where(invite_email: 'user@example.com')
-            .distinct_on_user_with_max_access_level
+            .distinct_on_user_with_max_access_level(group)
             .to_a
         end
 
@@ -738,22 +833,19 @@ RSpec.describe Member, feature_category: :groups_and_projects do
   describe 'callbacks' do
     describe '#send_invite' do
       context 'with an invited group member' do
-        it 'sends an invite email' do
-          expect_next_instance_of(NotificationService) do |instance|
-            expect(instance).to receive(:invite_member)
-          end
+        it 'enqueues initial invite email' do
+          allow(Members::InviteMailer).to receive(:initial_email).and_call_original
 
-          create(:group_member, :invited)
+          expect do
+            member = create(:group_member, :invited)
+            expect(Members::InviteMailer).to have_received(:initial_email).with(member, member.raw_invite_token)
+          end.to have_enqueued_mail(Members::InviteMailer, :initial_email)
         end
       end
 
       context 'with an uninvited member' do
-        it 'does not send an invite email' do
-          expect_next_instance_of(NotificationService) do |instance|
-            expect(instance).not_to receive(:invite_member)
-          end
-
-          create(:group_member)
+        it 'does not enqueue the initial invite email' do
+          expect { create(:group_member) }.not_to have_enqueued_mail(Members::InviteMailer, :initial_email)
         end
       end
     end
@@ -787,6 +879,46 @@ RSpec.describe Member, feature_category: :groups_and_projects do
     end
   end
 
+  describe '.distinct_on_source_and_case_insensitive_invite_email' do
+    it 'finds distinct members on email' do
+      email = 'bob@example.com'
+      project = create(:project)
+      project_owner_member = project.members.first
+      member = create(:project_member, :invited, source: project, invite_email: email)
+      # The one below is the duplicate and will not be returned.
+      create(:project_member, :invited, source: project, invite_email: email.upcase)
+
+      another_project = create(:project)
+      another_project_owner_member = another_project.members.first
+      another_project_member = create(:project_member, :invited, source: another_project, invite_email: email)
+      # The one below is the duplicate and will not be returned.
+      create(:project_member, :invited, source: another_project, invite_email: email.upcase)
+
+      expect(described_class.distinct_on_source_and_case_insensitive_invite_email)
+        .to match_array([project_owner_member, member, another_project_owner_member, another_project_member])
+    end
+  end
+
+  describe '.order_updated_desc' do
+    it 'contains only the latest updated case insensitive email invite' do
+      project = create(:project)
+      member = project.members.first
+      another_member = create(:project_member, source: member.project)
+
+      travel_to 10.minutes.ago do
+        another_member.touch # in past, so shouldn't get accepted over the one created
+      end
+
+      member.touch # ensure updated_at is being verified. This one should be first now.
+
+      travel_to 10.minutes.from_now do
+        another_member.touch # now we'll make the original first so we are verifying updated_at
+
+        expect(described_class.order_updated_desc).to eq([another_member, member])
+      end
+    end
+  end
+
   describe '.with_group_group_sharing_access' do
     let_it_be(:shared_group) { create(:group) }
     let_it_be(:invited_group) { create(:group) }
@@ -806,20 +938,35 @@ RSpec.describe Member, feature_category: :groups_and_projects do
 
       let(:member) { create(:group_member, source: invited_group, access_level: member_access_in_invited_group) }
 
-      it 'returns the minimum of member access level and group sharing access level' do
-        access_level = invited_group
+      shared_examples 'returns the minimum of member access level and group sharing access level' do
+        specify do
+          members = invited_group
                          .members
-                         .with_group_group_sharing_access
-                         .find(member.id)
-                         .access_level
+                         .with_group_group_sharing_access(shared_group)
+                         .id_in(member.id)
+                         .to_a
 
-        expect(access_level).to eq(Gitlab::Access::REPORTER)
+          expect(members.size).to eq(1)
+          expect(members.first.access_level).to eq(Gitlab::Access::REPORTER)
+        end
+      end
+
+      it_behaves_like 'returns the minimum of member access level and group sharing access level'
+
+      context 'with multiple group group links' do
+        before_all do
+          create(:group_group_link, :owner, shared_with_group: invited_group)
+          create(:group_group_link, :owner, shared_group: shared_group)
+        end
+
+        it_behaves_like 'returns the minimum of member access level and group sharing access level'
       end
     end
   end
 
-  describe '#accept_request' do
+  describe '#accept_request', :freeze_time do
     let(:member) { create(:project_member, requested_at: Time.current.utc) }
+    let(:current_time) { Time.current.utc }
 
     it { expect(member.accept_request(@owner_user)).to be_truthy }
     it { expect(member.accept_request(nil)).to be_truthy }
@@ -834,6 +981,12 @@ RSpec.describe Member, feature_category: :groups_and_projects do
       member.accept_request(@owner_user)
 
       expect(member.created_by).to eq(@owner_user)
+    end
+
+    it 'sets the request accepted timestamp' do
+      member.accept_request(@owner_user)
+
+      expect(member.request_accepted_at).to eq(current_time)
     end
 
     it 'calls #after_accept_request' do

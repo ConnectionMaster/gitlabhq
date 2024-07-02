@@ -11,16 +11,12 @@ module QA
             element 'close-button'
           end
 
-          def has_file_explorer?
-            has_element?('div[aria-label="Files Explorer"]')
-          end
-
-          def right_click_file_explorer
-            page.find('.explorer-folders-view', visible: true).right_click
-          end
-
-          def has_file?(file_name)
-            has_element?("div[aria-label='#{file_name}']")
+          def has_pending_changes?
+            within_vscode_editor do
+              all_elements('.action-item', minimum: 1).any? do |item|
+                item[:'aria-label'] =~ /Source Control .* \d+ pending changes/
+              end
+            end
           end
 
           def open_file_from_explorer(file_name)
@@ -36,15 +32,19 @@ module QA
           end
 
           def has_right_click_menu_item?
-            has_element?('div.menu-item-check')
+            has_element?('.action-menu-item')
           end
 
           def click_menu_item(item)
-            click_element("li[title='#{item}']")
+            click_element("a[aria-label='#{item}']")
           end
 
           def click_upload_menu_item
-            click_element('span[aria-label="Upload..."]')
+            selector = 'span[aria-label="Upload..."]'
+            Support::Waiter.wait_until do
+              click_element(selector)
+              has_no_element?(selector, wait: 1)
+            end
           end
 
           def enter_text_for_input(name)
@@ -56,8 +56,8 @@ module QA
             find_element('input[type="file"]', visible: false).send_keys(file)
           end
 
-          def has_commit_pending_tab?
-            has_element?('.scm-viewlet-label')
+          def has_commit_pending_tab?(wait: Capybara.default_max_wait_time)
+            has_element?('.scm-viewlet-label', wait: wait)
           end
 
           def click_commit_pending_tab
@@ -92,11 +92,11 @@ module QA
           end
 
           def click_new_branch
-            click_element('.monaco-button[title="Create new branch"]')
+            click_monaco_button('Create new branch')
           end
 
           def click_continue_with_existing_branch
-            click_element('.monaco-button[title="Continue"]')
+            click_monaco_button('Continue')
           end
 
           def has_branch_input_field?
@@ -104,23 +104,21 @@ module QA
           end
 
           def has_committed_successfully?
-            has_element?('.span[title="Success! Your changes have been committed."]')
+            within_vscode_editor do
+              has_text?('Success! Your changes have been committed.')
+            end
           end
 
           def has_message?(content)
-            within_vscode_editor do
-              has_text?(content)
-            end
+            within_vscode_editor { has_text?(content) }
           end
 
           def close_ide_tab
             page.execute_script "window.close();" if page.current_url.include?('ide')
           end
 
-          def ide_tab_closed?
-            within_vscode_editor do
-              has_file_explorer?
-            end
+          def ide_tab_closed?(wait: Capybara.default_max_wait_time)
+            has_no_element?('#ide iframe', wait: wait)
           end
 
           def within_vscode_editor(&block)
@@ -164,11 +162,15 @@ module QA
             end
 
             Support::WaitForRequests.wait_for_requests(finish_loading_wait: 30)
-            Support::Waiter.wait_until(max_duration: 60, reload_page: page, retry_on_exception: true) do
-              within_vscode_editor do
-                # Check for webide file_explorer element
-                has_file_explorer?
-              end
+            Support::Waiter.wait_until(reload_page: page, retry_on_exception: true,
+              message: 'Waiting for VSCode file explorer') do
+              has_file_explorer?
+            end
+          end
+
+          def wait_for_file_to_load(filename)
+            Support::Waiter.wait_until(message: "Waiting for #{filename} to load in VSCode file explorer") do
+              has_file?(filename)
             end
           end
 
@@ -183,16 +185,18 @@ module QA
           def commit_and_push_to_new_branch(file_name)
             commit_toggle(file_name)
             push_to_new_branch
+            Support::Waiter.wait_until { !has_text?("Loading GitLab Web IDE...", wait: 1) }
           end
 
           def commit_and_push_to_existing_branch(file_name)
             commit_toggle(file_name)
             push_to_existing_branch
+            Support::Waiter.wait_until { !has_text?("Loading GitLab Web IDE...", wait: 1) }
           end
 
           def commit_toggle(message)
             within_vscode_editor do
-              if has_commit_pending_tab?
+              if has_commit_pending_tab?(wait: 0)
                 click_commit_pending_tab
               else
                 click_commit_tab
@@ -209,25 +213,25 @@ module QA
           def push_to_existing_branch
             within_vscode_editor do
               click_continue_with_existing_branch
-              has_committed_successfully?
             end
+            raise "failed to push_to_existing_branch" unless has_committed_successfully?
           end
 
           def push_to_new_branch
             within_vscode_editor do
-              page.find('.monaco-button[title="Create new branch"]').click
+              click_new_branch
               has_branch_input_field?
               # Typing enter to 'New branch name' popup to take the default branch name
               send_keys(:enter)
-              has_committed_successfully?
             end
+            raise "failed to push_to_new_branch" unless has_committed_successfully?
           end
 
           def create_merge_request
             within_vscode_editor do
               within_element('.notification-toast-container') do
                 has_element?('div[title="GitLab Web IDE Extension (Extension)"]')
-                click_element('.monaco-text-button[title="Create MR"]')
+                click_monaco_button('Create MR')
               end
             end
           end
@@ -238,17 +242,13 @@ module QA
               # We need to execute a script on the iframe to stub out the iframes body.removeChild to add it back in.
               page.execute_script("document.body.removeChild = function(){};")
 
-              # Use for stability, WebIDE inside an iframe is finnicky, webdriver sometimes moves too fast
-              Support::Retrier.retry_until(
-                max_attempts: 5, retry_on_exception: true, sleep_interval: 2
-              ) do
+              # under some conditions the page may not be fully loaded and the right click
+              # context menu can get closed prior to hitting 'upload' leading to failures
+              Support::Retrier.retry_until(retry_on_exception: true, message: "Uploading a file in vscode") do
                 right_click_file_explorer
-                has_right_click_menu_item?
                 click_upload_menu_item
                 enter_file_input(file_path)
               end
-              # Wait for the file to be uploaded
-              has_text?(file_path)
             end
           end
 
@@ -311,6 +311,26 @@ module QA
 
           private
 
+          def click_monaco_button(label)
+            click_element('.monaco-button', text: label)
+          end
+
+          def has_file_explorer?
+            within_vscode_editor do
+              has_element?('div[aria-label="Files Explorer"]')
+            end
+          end
+
+          def right_click_file_explorer
+            page.find('.explorer-folders-view', visible: true).right_click
+          end
+
+          def has_file?(file_name)
+            within_vscode_editor do
+              has_element?("div[aria-label='#{file_name}']")
+            end
+          end
+
           def create_item(click_item, item_name)
             within_vscode_editor do
               # Use for stability, WebIDE inside an iframe is finnicky, webdriver sometimes moves too fast
@@ -318,7 +338,7 @@ module QA
                 click_menu_item(click_item)
                 # Verify the button is triggered and textbox is waiting for input
                 enter_text_for_input(item_name)
-                has_text?(item_name)
+                has_text?(item_name, wait: 1)
               end
             end
           end

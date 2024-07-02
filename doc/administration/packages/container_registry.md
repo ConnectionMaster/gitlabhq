@@ -394,19 +394,6 @@ Although most S3 compatible services (like [MinIO](https://min.io/)) should work
 we only guarantee support for AWS S3. Because we cannot assert the correctness of third-party S3 implementations,
 we can debug issues, but we cannot patch the registry unless an issue is reproducible against an AWS S3 bucket.
 
-<!--- start_remove The following content will be removed on remove_date: '2024-05-16' -->
-
-WARNING:
-Support for the following drivers was [deprecated](https://gitlab.com/gitlab-org/container-registry/-/issues/1141)
-in GitLab 16.6, and is planned for removal in 17.0. This change is a breaking change.
-
-| Driver  | Description |
-|---------|-------------|
-| `swift` | OpenStack Swift Object Storage |
-| `oss`   | Aliyun OSS  |
-
-<!--- end_remove -->
-
 ### Use file system
 
 If you want to store your images on the file system, you can change the storage
@@ -957,6 +944,10 @@ response to events happening in the registry.
 Read more about the container registry notifications configuration options in the
 [Docker Registry notifications documentation](https://distribution.github.io/distribution/about/notifications/).
 
+WARNING:
+Support for the `threshold` parameter was [deprecated](https://gitlab.com/gitlab-org/container-registry/-/issues/1243)
+in GitLab 17.0, and is planned for removal in 18.0. Use `maxretries` instead.
+
 You can configure multiple endpoints for the container registry.
 
 ::Tabs
@@ -973,7 +964,8 @@ To configure a notification endpoint for a Linux package installation:
        'name' => 'test_endpoint',
        'url' => 'https://gitlab.example.com/notify',
        'timeout' => '500ms',
-       'threshold' => 5,
+       'threshold' => 5, # DEPRECATED: use `maxretries` instead.
+       'maxretries' => 5,
        'backoff' => '1s',
        'headers' => {
          "Authorization" => ["AUTHORIZATION_EXAMPLE_TOKEN"]
@@ -999,7 +991,8 @@ notifications:
       url: https://my.listener.com/event
       headers: <http.Header>
       timeout: 500
-      threshold: 5
+      threshold: 5 # DEPRECATED: use `maxretries` instead.
+      maxretries: 5
       backoff: 1000
 ```
 
@@ -1294,7 +1287,7 @@ itself on the system so that the `gitlab-ctl` command can bring the registry ser
 Also, there's no way to save progress or results during the mark phase of the process. Only once
 blobs start being deleted is anything permanent done.
 
-### Continuous Zero Downtime Garbage Collection
+### Continuous Zero-Downtime Garbage Collection
 
 DETAILS:
 **Status:** Beta
@@ -1303,7 +1296,7 @@ You can run garbage collection in the background without the need to schedule it
 if you migrate to the [metadata database](container_registry_metadata_database.md).
 
 NOTE:
-If you would like to try this [Beta feature](../../policy/experiment-beta-support.md#beta),
+If you would like to try this [beta feature](../../policy/experiment-beta-support.md#beta),
 you should review the [known limitations](container_registry_metadata_database.md#known-limitations). If you have any feedback,
 you can let us know in the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/423459).
 
@@ -1676,91 +1669,6 @@ curl "localhost:5001/debug/health"
 curl "localhost:5001/debug/vars"
 ```
 
-### Access old schema v1 Docker images
-
-Support for the Docker registry API V1,
-including [schema V1 image manifests](https://distribution.github.io/distribution/spec/deprecated-schema-v1/),
-was:
-
-- [Deprecated in GitLab 13.7](https://about.gitlab.com/releases/2020/12/22/gitlab-13-7-released/#deprecate-pulls-that-use-v1-of-the-docker-registry-api)
-- [Removed in GitLab 13.9](https://about.gitlab.com/releases/2021/02/22/gitlab-13-9-released/#deprecate-pulls-that-use-v1-of-the-docker-registry-api)
-
-It's no longer possible to push or pull v1 images from the GitLab container registry.
-
-If you had v1 images in the GitLab container registry, but you did not upgrade them (following the
-[steps Docker recommends](https://distribution.github.io/distribution/spec/deprecated-schema-v1/))
-ahead of the GitLab 13.9 upgrade, these images are no longer accessible. If you try to pull them,
-this error appears:
-
-- `Error response from daemon: manifest invalid: Schema 1 manifest not supported`
-
-For self-managed GitLab instances, you can regain access to these images by temporarily downgrading
-the GitLab container registry to a version lower than `v3.0.0-gitlab`. Follow these steps to regain
-access to these images:
-
-1. Downgrade the container registry to [`v2.13.1-gitlab`](https://gitlab.com/gitlab-org/container-registry/-/releases/v2.13.1-gitlab).
-1. Upgrade any v1 images.
-1. Revert the container registry downgrade.
-
-There's no need to put the registry in read-only mode during the image upgrade process. Ensure that
-you are not relying on any new feature introduced since `v3.0.0-gitlab`. Such features are
-unavailable during the upgrade process. See the [complete registry changelog](https://gitlab.com/gitlab-org/container-registry/-/blob/master/CHANGELOG.md)
-for more information.
-
-The following sections provide additional details about each installation method.
-
-::Tabs
-
-:::TabTitle Helm chart (Kubernetes)
-
-For Helm chart installations:
-
-1. Override the [`image.tag`](https://docs.gitlab.com/charts/charts/registry/#configuration)
-   configuration parameter with `v2.13.1-gitlab`.
-1. Restart.
-1. Performing the [images upgrade](#images-upgrade)) steps.
-1. Revert the `image.tag` parameter to the previous value.
-
-No other registry configuration changes are required.
-
-:::TabTitle Linux package (Omnibus)
-
-For Linux package installations:
-
-1. Temporarily replace the registry binary that ships with GitLab 13.9+ for one prior to
-   `v3.0.0-gitlab`. To do so, pull a previous version of the Docker image for the GitLab Container
-   Registry, such as `v2.13.1-gitlab`. You can then grab the `registry` binary from within this
-   image, located at `/bin/registry`:
-
-   ```shell
-   id=$(docker create registry.gitlab.com/gitlab-org/build/cng/gitlab-container-registry:v2.13.1-gitlab)
-   docker cp $id:/bin/registry registry-2.13.1-gitlab
-   docker rm $id
-   ```
-
-1. Replace the binary embedded in the Linux package installation located at
-   `/opt/gitlab/embedded/bin/registry`, with `registry-2.13.1-gitlab`. Make sure to start by backing
-   up the original binary embedded in the Linux package, and restore it after performing the
-   [image upgrade](#images-upgrade) steps. You should [stop](https://docs.gitlab.com/omnibus/maintenance/#starting-and-stopping)
-   the registry service before replacing its binary and start it right after. No registry
-   configuration changes are required.
-
-:::TabTitle Self-compiled (source)
-
-Locate your `registry` binary and temporarily replace it with the one
-obtained from `v3.0.0-gitlab`, as explained for Linux package installations.
-Make sure to start by backing up the original registry binary, and restore it after performing the
-[images upgrade](#images-upgrade) steps.
-
-::EndTabs
-
-#### Images upgrade
-
-Follow the [steps that Docker recommends to upgrade v1 images](https://distribution.github.io/distribution/spec/deprecated-schema-v1/).
-The most straightforward option is to pull those images and push them once again to the registry,
-using a Docker client version above v1.12. Docker converts images automatically before pushing them
-to the registry. Once done, all your v1 images should now be available as v2 images.
-
 ### Tags with an empty name
 
 If using [AWS DataSync](https://aws.amazon.com/datasync/)
@@ -1979,3 +1887,22 @@ if prj.has_container_registry_tags?
   prj.container_repositories.each { |p| p.destroy }
 end
 ```
+
+### Registry service listens on IPv6 address instead of IPv4
+
+You might see the following error if the `localhost` hostname resolves to a IPv6
+loopback address (`::1`) on your GitLab server and GitLab expects the registry service
+to be available on the IPv4 loopback address (`127.0.0.1`):
+
+```plaintext
+request: "GET /v2/ HTTP/1.1", upstream: "http://[::1]:5000/v2/", host: "registry.example.com:5005"
+[error] 1201#0: *13442797 connect() failed (111: Connection refused) while connecting to upstream, client: x.x.x.x, server: registry.example.com, request: "GET /v2/<path> HTTP/1.1", upstream: "http://[::1]:5000/v2/<path>", host: "registry.example.com:5005"
+```
+
+To fix the error, change `registry['registry_http_addr']` to an IPv4 address in `/etc/gitlab/gitlab.rb`. For example:
+
+```ruby
+registry['registry_http_addr'] = "127.0.0.1:5000"
+```
+
+See [issue 5449](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/5449) for more details.

@@ -4,7 +4,7 @@ module Gitlab
   class CrossProjectAccess
     class << self
       delegate :add_check, :find_check, :checks,
-               to: :instance
+        to: :instance
     end
 
     def self.instance
@@ -19,16 +19,16 @@ module Gitlab
 
     def add_check(
       klass,
-          actions: {},
-          positive_condition: nil,
-          negative_condition: nil,
-          skip: false)
+      actions: {},
+      positive_condition: nil,
+      negative_condition: nil,
+      skip: false)
 
       new_check = CheckInfo.new(actions,
-                                positive_condition,
-                                negative_condition,
-                                skip
-                               )
+        positive_condition,
+        negative_condition,
+        skip
+      )
 
       @checks[klass] ||= Gitlab::CrossProjectAccess::CheckCollection.new
       @checks[klass].add_check(new_check)

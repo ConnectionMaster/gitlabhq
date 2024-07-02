@@ -4,6 +4,10 @@ module Bitbucket
   module Representation
     class PullRequest < Representation::Base
       def author
+        raw.dig('author', 'uuid')
+      end
+
+      def author_nickname
         raw.dig('author', 'nickname')
       end
 
@@ -55,7 +59,7 @@ module Bitbucket
       end
 
       def reviewers
-        raw['reviewers']&.pluck('username')
+        raw['reviewers']&.pluck('uuid')
       end
 
       def merge_commit_sha
@@ -66,6 +70,7 @@ module Bitbucket
         {
           iid: iid,
           author: author,
+          author_nickname: author_nickname,
           description: description,
           created_at: created_at,
           updated_at: updated_at,
@@ -77,7 +82,8 @@ module Bitbucket
           target_branch_name: target_branch_name,
           target_branch_sha: target_branch_sha,
           source_and_target_project_different: source_and_target_project_different,
-          reviewers: reviewers
+          reviewers: reviewers,
+          closed_by: closed_by
         }
       end
 
@@ -101,6 +107,10 @@ module Bitbucket
 
       def source_and_target_project_different
         source_repo_uuid != target_repo_uuid
+      end
+
+      def closed_by
+        raw['closed_by']&.dig('uuid')
       end
     end
   end

@@ -121,7 +121,7 @@ module Gitlab
             params: {
               title: mail.subject,
               description: message_including_template,
-              confidential: true,
+              confidential: ticket_confidential?,
               external_author: from_address,
               extra_params: {
                 cc: mail.cc
@@ -219,7 +219,7 @@ module Gitlab
         end
 
         def can_handle_legacy_format?
-          project_path && project_path.include?('/') && !mail_key.include?('+')
+          project_path && project_path.include?('/') && mail_key.exclude?('+')
         end
 
         def author
@@ -256,6 +256,12 @@ module Gitlab
           ].compact
         end
         strong_memoize_attr :service_desk_addresses
+
+        def ticket_confidential?
+          return true if service_desk_setting.nil?
+
+          service_desk_setting.tickets_confidential_by_default?
+        end
       end
     end
   end

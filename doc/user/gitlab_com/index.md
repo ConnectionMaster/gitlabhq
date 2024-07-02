@@ -107,9 +107,7 @@ To back up an entire project on GitLab.com, you can export it either:
 With exports, be aware of [what is and is not](../project/settings/import_export.md#project-items-that-are-exported)
 included in a project export.
 
-GitLab is built on Git, so you can back up just the repository of a project by
-[cloning](../../gitlab-basics/start-using-git.md#clone-a-repository) it to
-another computer.
+GitLab is built on Git, so you can back up just the repository of a project by cloning it to another computer.
 Similarly, you can clone a project's wiki to back it up. All files
 [uploaded after August 22, 2020](../project/wiki/index.md#create-a-new-wiki-page)
 are included when cloning.
@@ -126,6 +124,8 @@ Groups are permanently deleted after a seven-day delay.
 
 If you are on the Free tier, your groups are immediately deleted, and you will not be able to restore them.
 
+You can [view and restore groups marked for deletion](../../user/group/index.md#restore-a-group).
+
 ## Delayed project deletion
 
 DETAILS:
@@ -137,6 +137,8 @@ After May 08, 2023, all groups have delayed project deletion enabled by default.
 Projects are permanently deleted after a seven-day delay.
 
 If you are on the Free tier, your projects are immediately deleted, and you will not be able to restore them.
+
+You can [view and restore projects marked for deletion](../../user/project/working_with_projects.md#restore-a-project).
 
 ## Inactive project deletion
 
@@ -212,7 +214,7 @@ the related documentation.
 | Scheduled Pipeline Cron                                                          | `*/5 * * * *`                                                                                                             | See [Pipeline schedules advanced configuration](../../administration/cicd.md#change-maximum-scheduled-pipeline-frequency). |
 | Maximum jobs in active pipelines                                                 | `500` for Free tier, `1000` for all trial tiers, `20000` for Premium, and `100000` for Ultimate.                                                 | See [Number of jobs in active pipelines](../../administration/instance_limits.md#number-of-jobs-in-active-pipelines). |
 | Maximum CI/CD subscriptions to a project                                         | `2`                                                                                                                       | See [Number of CI/CD subscriptions to a project](../../administration/instance_limits.md#number-of-cicd-subscriptions-to-a-project). |
-| Maximum number of pipeline triggers in a project                                 | `25000` for Free and trial tiers, Unlimited for all paid tiers                                                            | See [Limit the number of pipeline triggers](../../administration/instance_limits.md#limit-the-number-of-pipeline-triggers). |
+| Maximum number of pipeline triggers in a project                                 | `25000` for all tiers                                                                                                     | See [Limit the number of pipeline triggers](../../administration/instance_limits.md#limit-the-number-of-pipeline-triggers). |
 | Maximum pipeline schedules in projects                                           | `10` for Free tier, `50` for all paid tiers                                                                               | See [Number of pipeline schedules](../../administration/instance_limits.md#number-of-pipeline-schedules). |
 | Maximum pipelines per schedule                                                   | `24` for Free tier, `288` for all paid tiers                                                                              | See [Limit the number of pipelines created by a pipeline schedule per day](../../administration/instance_limits.md#limit-the-number-of-pipelines-created-by-a-pipeline-schedule-per-day). |
 | Maximum number of schedule rules defined for each security policy project        | Unlimited for all paid tiers                                                                                              | See [Number of schedule rules defined for each security policy project](../../administration/instance_limits.md#limit-the-number-of-schedule-rules-defined-for-security-policy-project). |
@@ -320,17 +322,19 @@ The limit varies depending on your plan and the number of seats in your subscrip
 
 ### Other limits
 
-| Setting              | Default for GitLab.com  |
-|----------------------|-------------------------|
-| Number of webhooks   | `100` per project, `50` per group (subgroup webhooks are not counted towards parent group limits ) |
-| Maximum payload size | 25 MB                   |
-| Timeout              | 10 seconds              |
+| Setting                                                        | Default for GitLab.com |
+|:---------------------------------------------------------------|:-----------------------|
+| Number of webhooks                                             | 100 per project, 50 per group (subgroup webhooks are not counted towards parent group limits ) |
+| Maximum payload size                                           | 25 MB                  |
+| Timeout                                                        | 10 seconds             |
+| [Multiple Pages deployments](../project/pages/index.md#limits) | 100 extra deployments (Premium tier), 500 extra deployments (Ultimate tier) |
 
 For self-managed instance limits, see:
 
 - [Webhook rate limit](../../administration/instance_limits.md#webhook-rate-limit).
 - [Number of webhooks](../../administration/instance_limits.md#number-of-webhooks).
 - [Webhook timeout](../../administration/instance_limits.md#webhook-timeout).
+- [Multiple Pages deployments](../../administration/instance_limits.md#number-of-extra-pages-deployments-when-using-multiple-deployments).
 
 ## Runner SaaS
 

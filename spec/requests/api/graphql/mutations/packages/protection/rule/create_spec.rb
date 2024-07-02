@@ -6,7 +6,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
   include GraphqlHelpers
 
   let_it_be(:project) { create(:project) }
-  let_it_be(:user) { create(:user, maintainer_projects: [project]) }
+  let_it_be(:user) { create(:user, maintainer_of: project) }
 
   let(:package_protection_rule_attributes) { build_stubbed(:package_protection_rule, project: project) }
 
@@ -15,7 +15,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
       project_path: project.full_path,
       package_name_pattern: package_protection_rule_attributes.package_name_pattern,
       package_type: 'NPM',
-      push_protected_up_to_access_level: 'MAINTAINER'
+      minimum_access_level_for_push: 'MAINTAINER'
     }
   end
 
@@ -26,7 +26,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
         id
         packageNamePattern
         packageType
-        pushProtectedUpToAccessLevel
+        minimumAccessLevelForPush
       }
       errors
       QUERY
@@ -56,7 +56,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
         'id' => be_present,
         'packageNamePattern' => kwargs[:package_name_pattern],
         'packageType' => kwargs[:package_type],
-        'pushProtectedUpToAccessLevel' => kwargs[:push_protected_up_to_access_level]
+        'minimumAccessLevelForPush' => kwargs[:minimum_access_level_for_push]
       )
     end
 
@@ -67,7 +67,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
         project: project,
         package_name_pattern: kwargs[:package_name_pattern],
         package_type: kwargs[:package_type].downcase,
-        push_protected_up_to_access_level: kwargs[:push_protected_up_to_access_level].downcase
+        minimum_access_level_for_push: kwargs[:minimum_access_level_for_push].downcase
       )
     end
   end
@@ -85,7 +85,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
       super().merge!(
         package_name_pattern: '',
         package_type: 'UNKNOWN_PACKAGE_TYPE',
-        push_protected_up_to_access_level: 'UNKNOWN_ACCESS_LEVEL'
+        minimum_access_level_for_push: 'UNKNOWN_ACCESS_LEVEL'
       )
     end
 
@@ -95,7 +95,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
       subject
 
       expect_graphql_errors_to_include(/was provided invalid value for packageType/)
-      expect_graphql_errors_to_include(/pushProtectedUpToAccessLevel/)
+      expect_graphql_errors_to_include(/minimumAccessLevelForPush/)
     end
   end
 
@@ -111,7 +111,7 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
 
   context 'with existing packages protection rule' do
     let_it_be(:existing_package_protection_rule) do
-      create(:package_protection_rule, project: project, push_protected_up_to_access_level: :maintainer)
+      create(:package_protection_rule, project: project, minimum_access_level_for_push: :maintainer)
     end
 
     let(:kwargs) { super().merge!(package_name_pattern: existing_package_protection_rule.package_name_pattern) }
@@ -131,8 +131,8 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
       it_behaves_like 'a successful response'
     end
 
-    context 'when field `push_protected_up_to_access_level` is different than existing one' do
-      let(:kwargs) { super().merge!(push_protected_up_to_access_level: 'DEVELOPER') }
+    context 'when field `minimum_access_level_for_push` is different than existing one' do
+      let(:kwargs) { super().merge!(minimum_access_level_for_push: 'MAINTAINER') }
 
       it_behaves_like 'an erroneous response'
 
@@ -144,9 +144,9 @@ RSpec.describe 'Creating the packages protection rule', :aggregate_failures, fea
 
   context 'when user does not have permission' do
     let_it_be(:anonymous) { create(:user) }
-    let_it_be(:developer) { create(:user).tap { |u| project.add_developer(u) } }
-    let_it_be(:guest) { create(:user).tap { |u| project.add_guest(u) } }
-    let_it_be(:reporter) { create(:user).tap { |u| project.add_reporter(u) } }
+    let_it_be(:developer) { create(:user, developer_of: project) }
+    let_it_be(:guest) { create(:user, guest_of: project) }
+    let_it_be(:reporter) { create(:user, reporter_of: project) }
 
     where(:user) do
       [ref(:developer), ref(:reporter), ref(:guest), ref(:anonymous)]

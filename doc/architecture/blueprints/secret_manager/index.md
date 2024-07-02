@@ -1,10 +1,10 @@
 ---
 status: proposed
 creation-date: "2023-08-07"
-authors: [ "@alberts-gitlab" ]
-coach: [ "@grzesiek" ]
+authors: [ "@alberts-gitlab", "@iamricecake" ]
+coach: [ "@grzesiek", "@fabiopitino" ]
 approvers: [ "@jocelynjane", "@shampton" ]
-owning-stage: "~devops::verify"
+owning-stage: "~sec::govern"
 participating-stages: []
 ---
 
@@ -35,7 +35,7 @@ In addition, customer's engineering teams using these external secret managers
 may need to maintain these systems themselves, adding to the operational burden.
 
 Having a GitLab native secret manager would provide customers a secure method to store and access secrets
-without the overhead of third party tools as well as to leverage the tight integration with other GitLab features.
+without the overhead of third party tools and to leverage the tight integration with other GitLab features.
 
 ### Goals
 
@@ -45,7 +45,19 @@ Provide GitLab users with a way to:
 - Use the stored secrets in GitLab components (for example, CI Runner)
 - Use the stored secrets in external environments (for example, production infrastructure).
 - Manage access to secrets across a root namespace, subgroups and projects.
-- Seal/unseal secrets vault on demand.
+
+#### Use Cases
+
+To help design the architecture, we need to understand how users, in their roles, would
+operate and use the system. Here are significant use case scenarios that can help drive our
+design decisions:
+
+- As a user running a pipeline, I want a CI job to automatically fetch secrets specified in the `.gitlab-ci.yml` file.
+- As a DevOps engineer, I want the deployment process to fetch secrets necessary for deployment directly from GitLab Secrets Manager.
+- As a DevOps engineer, I want to manually retrieve the staging database password from the GitLab Secrets Manager.
+- As a project maintainer, I want to destroy all secrets in the scope of the project, when the project is being deleted.
+- As a GitLab instance admin, I want to quickly rotate all runner registration tokens.
+- As a FIPS compliant customer, I want GitLab Secrets Manager to encrypt/decrypt secrets using an HSM solution.
 
 #### Non-functional requirements
 
@@ -61,72 +73,87 @@ This blueprint does not cover the following:
 
 ## Decisions
 
+- [ADR-004: Use OpenBao as the secrets management service](decisions/004_openbao.md)
+- [ADR-005: Non-hierarchical key structure for secrets in OpenBao](decisions/005_secrets_key_structure.md)
+
+### Superseded
+
+These documents are part of the initial iteration of this blueprint.
+
 - [ADR-001: Use envelope encryption](decisions/001_envelop_encryption.md)
 - [ADR-002: Use GCP Key Management Service](decisions/002_gcp_kms.md)
 - [ADR-003: Build Secrets Manager in Go](decisions/003_go_service.md)
 
 ## Proposal
 
-The secrets manager feature will consist of three core components:
+The secrets manager feature will be available on both SaaS and Self-Managed installations
+and will consist of two core components:
 
 1. GitLab Rails
-1. GitLab Secrets Manager Service
-1. GCP Key Management
+1. OpenBao Server
 
-At a high level, secrets will be stored using unique encryption keys in order to achieve isolation
-across GitLab. Each service should also be isolated such that in the event
-one of the components is compromised, the likelihood of a secrets leaking is minimized.
+```mermaid
+flowchart LR
+c([Consumer]) --interacts with-->glab[GitLab Rails]--with backend-->o[OpenBao]
+```
 
-![Secrets Manager Overview](secrets-manager-overview.png)
+A consumer can be:
 
-**1. GitLab Rails**
+1. A user who interacts manually with a client library, API, or UI.
+1. An integration, for example, Vault integration on Runner.
 
-GitLab Rails would be the main interface that users would interact with when creating secrets using the Secrets Manager feature.
+### GitLab Rails
 
-This component performs the following role:
+GitLab Rails would be the main interface that users would interact with when managing secrets using the Secrets Manager feature.
 
-1. Storing unique encryption public keys per organization.
-1. Encrypting and storing secret using envelope encryption.
+This component is a facade to OpenBao server.
 
-The plain-text secret would be encrypted using a single use data key.
-The data key is then encrypted using the public key belonging to the group or project.
-Both, the encrypted secret and the encrypted data key, are being stored in the database.
+#### Retrieve user secrets
 
-**2. GitLab Secrets Manager Service**
+To retrieve secrets for a given user and display them in GitLab UI we will create a new table to persist secrets metadata. Otherwise we can't pull all the secrets belonging to a user as there is no `OpenBao` endpoint to achieve this.
 
-GitLab Secrets Manager Service will be a new component in the GitLab overall architecture. This component serves the following purpose:
+Here a `SQL` example of how this could look like:
 
-1. Correlating GitLab identities into GCP identities for access control.
-1. A proxy over GCP Key Management for decrypting operations.
+```sql
+CREATE TABLE secrets (
+   id bigint NOT NULL,
+   environment_id bigint,
+   project_id bigint,
+   group_id bigint,
+   created_at timestamp with time zone NOT NULL,
+   updated_at timestamp with time zone NOT NULL,
+   revoked_at timestamp with time zone,
+   expiration_date date,
+   name text,
+   description text,
+   branch_name text
+)
+```
 
-[The service will use Go-based tech stack](decisions/003_go_service.md) and [labkit](https://gitlab.com/gitlab-org/labkit).
+Based on this metadata, we will be able to determine the secret path in `OpenBao` by using the name provided by the user: `kv-v2/data/projects/<project_id>/<secret#name>`.
 
-**3. GCP Key Management**
+### OpenBao Server
 
-We choose to leverage GCP Key Management to build on the security and trust that GCP provides on cryptographic operations.
-In particular, we would be using GCP Key Management to store the private keys that will be used to decrypt
-the data keys mentioned above.
+OpenBao Server will be a new component in the GitLab overall architecture. This component provides all the secrets management capabilities
+including storing the secrets themselves.
 
-### Implementation detail
+### Use Case Studies
 
-- [Secrets Manager](secrets_manager.md)
+- [Using secrets in a CI job](studies/ci_job_secrets.md)
 
 ### Further investigations required
 
-1. Management of identities stored in GCP Key Management.
-   We need to investigate how we can correlate and de-multiplex GitLab identities into
-   GCP identities that are used to allow access to cryptographic operations on GCP Key Management.
-1. Authentication of clients. Clients to the Secrets Manager could be GitLab Runner or external clients.
-   For each of these, we need a secure and reliable method to authenticate requests to decrypt a secret.
-1. Assignment of GCP backed private keys to each identity.
-
-### Availability on SaaS and Self-Managed
-
-To begin with, the proposal above is intended for GitLab SaaS environment. GitLab SaaS is deployed on Google Cloud Platform.
-Hence, GCP Key Management is the natural choice for a cloud-based key management service.
-
-To extend this service to self-managed GitLab instances, we would consider using GitLab Cloud Connector as a proxy between
-self-managed GitLab instances and the GitLab Secrets Manager.
+1. Authentication of clients other than GitLab Runner.
+   GitLab Runner authenticates using JWT, for other types of clients, we need a secure and reliable method to authenticate requests to decrypt a secret.
+1. How to namespace data, roles and policies to specific tenant.
+1. How to allow organizations to seal/unseal secrets vault on demand.
+1. Infrastructure setup, including how OpenBao will be installed for self-managed instances.
+1. How to best implement sharing of secrets between multiple groups in GitLab.
+1. Establish our protocol and processes for incidents that may require sealing the secrets vault.
+1. How to support protected and environment specific rules for secrets.
+1. How to audit secret changes. Do we want to use [audit socket](https://openbao.org/docs/audit/socket/)?
+1. Do we want to structure project secret paths to be under namespaces to increase isolation between tenants?
+1. Should the secrets be revoked if a project or subgroup is moved under a different top-level group/organization?
 
 ## Alternative Solutions
 
@@ -141,3 +168,21 @@ The following links provide additional information that may be relevant to secre
 
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 - [OWASP Key Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html)
+
+## Who
+
+DRIs:
+
+<!-- vale gitlab.Spelling = NO -->
+
+| Role                | Who                                            |
+|---------------------|------------------------------------------------|
+| Author              | Erick Bajao, Senior Engineer                   |
+| Recommender         | Fabio Pitino, Principal Engineer               |
+| Product Leadership  | Jocelyn Eillis , Product Manager               |
+| Engineering Leadership | Scott Hampton, Engineering Manager          |
+| Lead Engineer       | Erick Bajao, Senior Backend Engineer           |
+| Senior Engineer     | Maxime Orefice, Senior Backend Engineer        |
+| Engineer            | Shabini Rajadas, Backend Engineer              |
+
+<!-- vale gitlab.Spelling = YES -->

@@ -164,9 +164,9 @@ module Gitlab
         nil
       end
 
-      def replicate(source_repository)
+      def replicate(source_repository, partition_hint: "")
         wrapped_gitaly_errors do
-          gitaly_repository_client.replicate(source_repository)
+          gitaly_repository_client.replicate(source_repository, partition_hint: partition_hint)
         end
       end
 
@@ -428,7 +428,7 @@ module Gitlab
 
         wrapped_gitaly_errors do
           gitaly_blob_client.list_blobs(revisions, limit: REV_LIST_COMMIT_LIMIT,
-                                                   with_paths: with_paths, dynamic_timeout: dynamic_timeout)
+            with_paths: with_paths, dynamic_timeout: dynamic_timeout)
         end
       end
 
@@ -668,20 +668,20 @@ module Gitlab
       def merge(user, source_sha:, target_branch:, message:, target_sha: nil, &block)
         wrapped_gitaly_errors do
           gitaly_operation_client.user_merge_branch(user,
-                                                    source_sha: source_sha,
-                                                    target_branch: target_branch,
-                                                    message: message,
-                                                    target_sha: target_sha,
-                                                    &block)
+            source_sha: source_sha,
+            target_branch: target_branch,
+            message: message,
+            target_sha: target_sha,
+            &block)
         end
       end
 
       def ff_merge(user, source_sha:, target_branch:, target_sha: nil)
         wrapped_gitaly_errors do
           gitaly_operation_client.user_ff_branch(user,
-                                                 source_sha: source_sha,
-                                                 target_branch: target_branch,
-                                                 target_sha: target_sha)
+            source_sha: source_sha,
+            target_branch: target_branch,
+            target_sha: target_sha)
         end
       end
 
@@ -701,19 +701,9 @@ module Gitlab
         end
       end
 
-      def cherry_pick(user:, commit:, branch_name:, message:, start_branch_name:, start_repository:, dry_run: false)
-        args = {
-          user: user,
-          commit: commit,
-          branch_name: branch_name,
-          message: message,
-          start_branch_name: start_branch_name,
-          start_repository: start_repository,
-          dry_run: dry_run
-        }
-
+      def cherry_pick(...)
         wrapped_gitaly_errors do
-          gitaly_operation_client.user_cherry_pick(**args)
+          gitaly_operation_client.user_cherry_pick(...)
         end
       end
 
@@ -798,12 +788,6 @@ module Gitlab
         gitaly_commit_client.ls_files(ref)
       end
 
-      def copy_gitattributes(ref)
-        wrapped_gitaly_errors do
-          gitaly_repository_client.apply_gitattributes(ref)
-        end
-      end
-
       def info_attributes
         return @info_attributes if @info_attributes
 
@@ -847,10 +831,10 @@ module Gitlab
           break nil if response.license_short_name.empty?
 
           ::Gitlab::Git::DeclaredLicense.new(key: response.license_short_name,
-                                             name: response.license_name,
-                                             nickname: response.license_nickname.presence,
-                                             url: response.license_url.presence,
-                                             path: response.license_path)
+            name: response.license_name,
+            nickname: response.license_nickname.presence,
+            url: response.license_url.presence,
+            path: response.license_path)
         end
       rescue Licensee::InvalidLicense => e
         Gitlab::ErrorTracking.track_exception(e)
@@ -1028,30 +1012,15 @@ module Gitlab
         user, branch_name:, message:, actions:,
         author_email: nil, author_name: nil,
         start_branch_name: nil, start_sha: nil, start_repository: nil,
-        force: false)
+        force: false, sign: true)
 
         wrapped_gitaly_errors do
           gitaly_operation_client.user_commit_files(user, branch_name,
-              message, actions, author_email, author_name,
-              start_branch_name, start_repository, force, start_sha)
+            message, actions, author_email, author_name,
+            start_branch_name, start_repository, force, start_sha, sign)
         end
       end
       # rubocop:enable Metrics/ParameterLists
-
-      def set_full_path(full_path:)
-        return unless full_path.present?
-
-        # This guard avoids Gitaly log/error spam
-        raise NoRepository, 'repository does not exist' unless exists?
-
-        gitaly_repository_client.set_full_path(full_path)
-      end
-
-      def full_path
-        wrapped_gitaly_errors do
-          gitaly_repository_client.full_path
-        end
-      end
 
       def disconnect_alternates
         wrapped_gitaly_errors do
@@ -1351,10 +1320,6 @@ module Gitlab
       # Ref names must start with `refs/`.
       def gitaly_ref_exists?(ref_name)
         gitaly_ref_client.ref_exists?(ref_name)
-      end
-
-      def gitaly_copy_gitattributes(revision)
-        gitaly_repository_client.apply_gitattributes(revision)
       end
 
       def gitaly_delete_refs(*ref_names)

@@ -55,15 +55,20 @@ module API
           event_lists = params[:events]&.slice(
             :k8s_api_proxy_requests_unique_users_via_ci_access,
             :k8s_api_proxy_requests_unique_users_via_user_access,
-            :k8s_api_proxy_requests_unique_users_via_pat_access
+            :k8s_api_proxy_requests_unique_users_via_pat_access,
+            :register_agent_at_kas
           )
           return if event_lists.blank?
 
-          event_lists[:agent_users_using_ci_tunnel] = event_lists.values.flatten
+          event_lists[:agent_users_using_ci_tunnel] = event_lists.slice(
+            :k8s_api_proxy_requests_unique_users_via_ci_access,
+            :k8s_api_proxy_requests_unique_users_via_user_access,
+            :k8s_api_proxy_requests_unique_users_via_pat_access
+          ).values.compact.flatten
 
           users, projects = load_users_and_projects(event_lists)
           event_lists.each do |event_name, events|
-            track_events_for(event_name, events, users, projects)
+            track_events_for(event_name, events, users, projects) if events
           end
         end
 
@@ -90,7 +95,7 @@ module API
 
         def increment_count_events
           events = params[:counters]&.slice(
-            :gitops_sync, :k8s_api_proxy_request, :flux_git_push_notifications_total,
+            :k8s_api_proxy_request, :flux_git_push_notifications_total,
             :k8s_api_proxy_requests_via_ci_access, :k8s_api_proxy_requests_via_user_access,
             :k8s_api_proxy_requests_via_pat_access
           )
@@ -130,7 +135,7 @@ module API
         def retrieve_user_from_personal_access_token
           return unless access_token.present?
 
-          validate_access_token!(scopes: [Gitlab::Auth::K8S_PROXY_SCOPE])
+          validate_and_save_access_token!(scopes: [Gitlab::Auth::K8S_PROXY_SCOPE])
 
           ::PersonalAccessTokens::LastUsedService.new(access_token).execute
 
@@ -147,7 +152,7 @@ module API
         private
 
         def load_users_and_projects(event_lists)
-          all_events = event_lists.values.flatten
+          all_events = event_lists.values.flatten.compact
           unique_user_ids = all_events.pluck('user_id').compact.uniq # rubocop:disable CodeReuse/ActiveRecord -- this pluck isn't from ActiveRecord, it's from ActiveSupport
           unique_project_ids = all_events.pluck('project_id').compact.uniq # rubocop:disable CodeReuse/ActiveRecord -- this pluck isn't from ActiveRecord, it's from ActiveSupport
           users = User.id_in(unique_user_ids).index_by(&:id)
@@ -161,9 +166,15 @@ module API
 
             user = users[event[:user_id]]
             project = projects[event[:project_id]]
-            next if user.nil? || project.nil?
+            next if project.nil?
 
-            Gitlab::InternalEvents.track_event(event_name, user: user, project: project)
+            additional_properties = {}
+            if event_name.to_sym == :register_agent_at_kas
+              additional_properties = { label: event[:agent_version], property: event[:architecture] }
+            end
+
+            Gitlab::InternalEvents.track_event(event_name, additional_properties: additional_properties, user: user,
+              project: project)
           end
         end
       end

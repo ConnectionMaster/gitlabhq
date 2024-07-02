@@ -31,7 +31,7 @@ exports[`Alert integration settings form default state should match the default 
       optionaltext="(optional)"
     >
       <label
-        class="gl-display-inline-flex"
+        class="gl-inline-flex"
         for="reference-1"
       >
         Incident template (optional).
@@ -40,7 +40,7 @@ exports[`Alert integration settings form default state should match the default 
           target="_blank"
         >
           <span
-            class="gl-font-weight-normal gl-pl-2"
+            class="gl-font-normal gl-pl-2"
           >
             Learn more.
           </span>
@@ -55,7 +55,7 @@ exports[`Alert integration settings form default state should match the default 
         id="reference-1"
         items="[object Object]"
         noresultstext="No results found"
-        placement="left"
+        placement="bottom-start"
         positioningstrategy="absolute"
         resetbuttonlabel=""
         searchplaceholder="Search"

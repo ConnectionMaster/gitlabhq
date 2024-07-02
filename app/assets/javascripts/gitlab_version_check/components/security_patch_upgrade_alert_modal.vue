@@ -16,7 +16,7 @@ import {
 export default {
   name: 'SecurityPatchUpgradeAlertModal',
   i18n: {
-    modalTitle: s__('VersionCheck|Important notice - Critical security release'),
+    modalTitle: s__('VersionCheck|Important notice - Critical patch release'),
     modalBodyNoStableVersions: s__(
       'VersionCheck|You are currently on version %{currentVersion}! We strongly recommend upgrading your GitLab installation immediately.',
     ),
@@ -27,7 +27,7 @@ export default {
       'VersionCheck|Additionally, there is an available stable patch for your current GitLab minor version: %{latestStableVersionOfMinor}',
     ),
     modalDetails: s__('VersionCheck|%{details}'),
-    learnMore: s__('VersionCheck|Learn more about this critical security release.'),
+    learnMore: s__('VersionCheck|Learn more about this critical patch release.'),
     primaryButtonText: s__('VersionCheck|Upgrade now'),
     secondaryButtonText: s__('VersionCheck|Remind me again in 3 days'),
   },
@@ -144,16 +144,16 @@ export default {
       <div data-testid="alert-modal-body" class="gl-mb-6">
         <gl-sprintf :message="modalBody">
           <template #currentVersion>
-            <span class="gl-font-weight-bold">{{ currentVersion }}</span>
+            <span class="gl-font-bold">{{ currentVersion }}</span>
           </template>
           <template #latestStableVersions>
-            <span class="gl-font-weight-bold">{{ latestStableVersionsStrings }}</span>
+            <span class="gl-font-bold">{{ latestStableVersionsStrings }}</span>
           </template>
         </gl-sprintf>
         <div v-if="showLatestStableVersionOfMinor" class="gl-mt-6">
           <gl-sprintf :message="$options.i18n.additionalAvailablePatch">
             <template #latestStableVersionOfMinor>
-              <span class="gl-font-weight-bold">{{ latestStableVersionOfMinor }}</span>
+              <span class="gl-font-bold">{{ latestStableVersionOfMinor }}</span>
             </template>
           </gl-sprintf>
         </div>

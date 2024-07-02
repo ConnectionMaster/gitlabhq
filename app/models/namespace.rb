@@ -38,12 +38,21 @@ class Namespace < ApplicationRecord
   NUMBER_OF_ANCESTORS_ALLOWED = 20
 
   SR_DISABLED_AND_UNOVERRIDABLE = 'disabled_and_unoverridable'
-  # DISABLED_WITH_OVERRIDE is deprecated in favour of DISABLED_AND_OVERRIDABLE.
-  SR_DISABLED_WITH_OVERRIDE = 'disabled_with_override'
   SR_DISABLED_AND_OVERRIDABLE = 'disabled_and_overridable'
   SR_ENABLED = 'enabled'
-  SHARED_RUNNERS_SETTINGS = [SR_DISABLED_AND_UNOVERRIDABLE, SR_DISABLED_WITH_OVERRIDE, SR_DISABLED_AND_OVERRIDABLE, SR_ENABLED].freeze
+  SHARED_RUNNERS_SETTINGS = [SR_DISABLED_AND_UNOVERRIDABLE, SR_DISABLED_AND_OVERRIDABLE, SR_ENABLED].freeze
   URL_MAX_LENGTH = 255
+  STATISTICS_COLUMNS = %i[
+    storage_size
+    repository_size
+    wiki_size
+    snippets_size
+    lfs_objects_size
+    build_artifacts_size
+    pipeline_artifacts_size
+    packages_size
+    uploads_size
+  ].freeze
 
   cache_markdown_field :description, pipeline: :description
 
@@ -100,6 +109,8 @@ class Namespace < ApplicationRecord
   has_many :value_streams, class_name: 'Analytics::CycleAnalytics::ValueStream', foreign_key: :group_id, inverse_of: :namespace
 
   has_many :jira_connect_subscriptions, class_name: 'JiraConnectSubscription', foreign_key: :namespace_id, inverse_of: :namespace
+
+  has_many :import_source_users, class_name: 'Import::SourceUser', foreign_key: :namespace_id, inverse_of: :namespace
 
   validates :owner, presence: true, if: ->(n) { n.owner_required? }
   validates :name,
@@ -167,6 +178,7 @@ class Namespace < ApplicationRecord
   delegate :math_rendering_limits_enabled?,
     :lock_math_rendering_limits_enabled?,
     to: :namespace_settings
+  delegate :add_creator, to: :namespace_details
 
   before_create :sync_share_with_group_lock_with_parent
   before_update :sync_share_with_group_lock_with_parent, if: :parent_changed?
@@ -180,36 +192,34 @@ class Namespace < ApplicationRecord
   after_sync_traversal_ids :schedule_sync_event_worker # custom callback defined in Namespaces::Traversal::Linear
 
   after_commit :expire_child_caches, on: :update, if: -> {
-    Feature.enabled?(:cached_route_lookups, self, type: :ops) &&
-      saved_change_to_name? || saved_change_to_path? || saved_change_to_parent_id?
+    (Feature.enabled?(:cached_route_lookups, self, type: :ops) &&
+      saved_change_to_name?) || saved_change_to_path? || saved_change_to_parent_id?
   }
 
   scope :user_namespaces, -> { where(type: Namespaces::UserNamespace.sti_name) }
+  scope :group_namespaces, -> { where(type: Group.sti_name) }
   scope :without_project_namespaces, -> { where(Namespace.arel_table[:type].not_eq(Namespaces::ProjectNamespace.sti_name)) }
   scope :sort_by_type, -> { order(arel_table[:type].asc.nulls_first) }
   scope :include_route, -> { includes(:route) }
-  scope :by_parent, -> (parent) { where(parent_id: parent) }
-  scope :by_root_id, -> (root_id) { where('traversal_ids[1] IN (?)', root_id) }
-  scope :filter_by_path, -> (query) { where('lower(path) = :query', query: query.downcase) }
-  scope :in_organization, -> (organization) { where(organization: organization) }
+  scope :by_parent, ->(parent) { where(parent_id: parent) }
+  scope :by_root_id, ->(root_id) { where('traversal_ids[1] IN (?)', root_id) }
+  scope :filter_by_path, ->(query) { where('lower(path) = :query', query: query.downcase) }
+  scope :in_organization, ->(organization) { where(organization: organization) }
   scope :by_name, ->(name) { where('name LIKE ?', "#{sanitize_sql_like(name)}%") }
   scope :ordered_by_name, -> { order(:name) }
 
   scope :with_statistics, -> do
-    joins('LEFT JOIN project_statistics ps ON ps.namespace_id = namespaces.id')
-      .group('namespaces.id')
-      .select(
-        'namespaces.*',
-        'COALESCE(SUM(ps.storage_size), 0) AS storage_size',
-        'COALESCE(SUM(ps.repository_size), 0) AS repository_size',
-        'COALESCE(SUM(ps.wiki_size), 0) AS wiki_size',
-        'COALESCE(SUM(ps.snippets_size), 0) AS snippets_size',
-        'COALESCE(SUM(ps.lfs_objects_size), 0) AS lfs_objects_size',
-        'COALESCE(SUM(ps.build_artifacts_size), 0) AS build_artifacts_size',
-        'COALESCE(SUM(ps.pipeline_artifacts_size), 0) AS pipeline_artifacts_size',
-        'COALESCE(SUM(ps.packages_size), 0) AS packages_size',
-        'COALESCE(SUM(ps.uploads_size), 0) AS uploads_size'
-      )
+    namespace_statistic_columns = STATISTICS_COLUMNS.map { |column| sum_project_statistics_column(column) }
+    subquery = Arel::Table.new(:statistics)
+    project_statistics = ProjectStatistics.arel_table
+
+    statistics = project_statistics
+      .project(namespace_statistic_columns)
+      .where(project_statistics[:namespace_id].eq(arel_table[:id]))
+      .lateral(subquery.name)
+
+    select(arel_table[Arel.star], subquery[Arel.star])
+      .from([arel.as('namespaces'), statistics])
   end
 
   scope :with_jira_installation, ->(installation_id) do
@@ -217,7 +227,7 @@ class Namespace < ApplicationRecord
     .where(jira_connect_subscriptions: { jira_connect_installation_id: installation_id })
   end
 
-  scope :sorted_by_similarity_and_parent_id_desc, -> (search) do
+  scope :sorted_by_similarity_and_parent_id_desc, ->(search) do
     order_expression = Gitlab::Database::SimilarityScore.build_expression(
       search: search,
       rules: [
@@ -329,6 +339,13 @@ class Namespace < ApplicationRecord
     def reference_pattern
       User.reference_pattern
     end
+
+    def sum_project_statistics_column(column)
+      sum = ProjectStatistics.arel_table[column].sum
+
+      coalesce = Arel::Nodes::NamedFunction.new('COALESCE', [sum, 0])
+      coalesce.as(column.to_s)
+    end
   end
 
   def to_reference_base(from = nil, full: false, absolute_path: false)
@@ -352,6 +369,8 @@ class Namespace < ApplicationRecord
   end
 
   def default_branch_protection_settings
+    return Gitlab::CurrentSettings.default_branch_protection_defaults if user_namespace?
+
     settings = default_branch_protection_defaults
 
     return settings unless settings.blank?
@@ -445,6 +464,10 @@ class Namespace < ApplicationRecord
     !emails_enabled?
   end
 
+  def default_branch_protected?
+    Gitlab::Access::DefaultBranchProtection.new(default_branch_protection_settings).any?
+  end
+
   def emails_enabled?
     # If no namespace_settings, we can assume it has not changed from enabled
     return true unless namespace_settings
@@ -474,8 +497,10 @@ class Namespace < ApplicationRecord
     Project.where(namespace: namespace)
   end
 
-  # Includes projects from this namespace and projects from all subgroups
-  # that belongs to this namespace, except the ones that are soft deleted
+  def all_catalog_resources
+    Ci::Catalog::Resource.where(project: all_projects)
+  end
+
   def all_projects_except_soft_deleted
     all_projects.not_aimed_for_deletion
   end
@@ -548,11 +573,9 @@ class Namespace < ApplicationRecord
 
   def container_repositories_size
     strong_memoize(:container_repositories_size) do
-      next unless Gitlab.com_except_jh?
       next unless root?
       next unless ContainerRegistry::GitlabApiClient.supports_gitlab_api?
       next 0 if all_container_repositories.empty?
-      next unless all_container_repositories.all_migrated?
 
       Rails.cache.fetch(container_repositories_size_cache_key, expires_in: 7.days) do
         ContainerRegistry::GitlabApiClient.deduplicated_size(full_path)
@@ -631,10 +654,10 @@ class Namespace < ApplicationRecord
     case other_setting
     when SR_ENABLED
       false
-    when SR_DISABLED_WITH_OVERRIDE, SR_DISABLED_AND_OVERRIDABLE
+    when SR_DISABLED_AND_OVERRIDABLE
       shared_runners_setting == SR_ENABLED
     when SR_DISABLED_AND_UNOVERRIDABLE
-      shared_runners_setting == SR_ENABLED || shared_runners_setting == SR_DISABLED_AND_OVERRIDABLE || shared_runners_setting == SR_DISABLED_WITH_OVERRIDE
+      shared_runners_setting == SR_ENABLED || shared_runners_setting == SR_DISABLED_AND_OVERRIDABLE
     else
       raise ArgumentError
     end
@@ -828,13 +851,6 @@ class Namespace < ApplicationRecord
 
     keys = descendants_to_expire.map { |group| first_auto_devops_config_cache_key_for(group.id) }
     Rails.cache.delete_multi(keys)
-  end
-
-  def write_projects_repository_config
-    all_projects.find_each do |project|
-      project.set_full_path
-      project.track_project_repository
-    end
   end
 
   def enforce_minimum_path_length?

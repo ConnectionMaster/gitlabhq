@@ -20,17 +20,9 @@
 
 require 'terminal-table'
 require 'net/http'
+require_relative '../../spec/support/helpers/service_ping_helpers'
 
-module ExtendedTimeFrame
-  def weekly_time_range
-    super.tap { |h| h[:end_date] = 1.week.from_now }
-  end
-
-  def monthly_time_range
-    super.tap { |h| h[:end_date] = 1.week.from_now }
-  end
-end
-Gitlab::Usage::TimeFrame.prepend(ExtendedTimeFrame)
+Gitlab::Usage::TimeFrame.prepend(ServicePingHelpers::CurrentTimeFrame)
 
 def metric_definitions_from_args
   args = ARGV
@@ -59,7 +51,6 @@ def extract_standard_context(event)
     next unless context['schema'].start_with?('iglu:com.gitlab/gitlab_standard/jsonschema')
 
     return {
-
       user_id: context["data"]["user_id"],
       namespace_id: context["data"]["namespace_id"],
       project_id: context["data"]["project_id"],
@@ -74,7 +65,19 @@ def generate_snowplow_table
   @initial_max_timestamp ||= events.map { |e| e['rawEvent']['parameters']['dtm'].to_i }.max || 0
 
   rows = []
-  rows << ['Event Name', 'Collector Timestamp', 'Category', 'user_id', 'namespace_id', 'project_id', 'plan']
+  rows << [
+    'Event Name',
+    'Collector Timestamp',
+    'Category',
+    'user_id',
+    'namespace_id',
+    'project_id',
+    'plan',
+    'Label',
+    'Property',
+    'Value'
+  ]
+
   rows << :separator
 
   events.each do |event|
@@ -87,7 +90,10 @@ def generate_snowplow_table
       standard_context[:user_id],
       standard_context[:namespace_id],
       standard_context[:project_id],
-      standard_context[:plan]
+      standard_context[:plan],
+      event['event']['se_label'],
+      event['event']['se_property'],
+      event['event']['se_value']
     ]
 
     row.map! { |value| red(value) } if event['rawEvent']['parameters']['dtm'].to_i > @initial_max_timestamp
@@ -98,6 +104,17 @@ def generate_snowplow_table
   Terminal::Table.new(
     title: 'SNOWPLOW EVENTS',
     rows: rows
+  )
+end
+
+def generate_snowplow_placeholder
+  Terminal::Table.new(
+    title: 'SNOWPLOW EVENTS',
+    rows: [
+      ["Could not connect to Snowplow Micro."],
+      ["Please follow these instruction to set up Snowplow Micro:"],
+      ["https://gitlab.com/gitlab-org/gitlab-development-kit/-/blob/main/doc/howto/snowplow_micro.md"]
+    ]
   )
 end
 
@@ -137,9 +154,9 @@ def generate_metrics_table
   )
 end
 
-def render_screen(paused)
+def render_screen(paused, snowplow_available)
   metrics_table = generate_metrics_table
-  events_table = generate_snowplow_table
+  events_table = snowplow_available ? generate_snowplow_table : generate_snowplow_placeholder
 
   print TTY::Cursor.clear_screen
   print TTY::Cursor.move_to(0, 0)
@@ -149,7 +166,6 @@ def render_screen(paused)
   puts
 
   puts metrics_table
-
   puts events_table
 
   puts
@@ -157,13 +173,12 @@ def render_screen(paused)
   puts "Press \"q\" to quit"
 end
 
+snowplow_available = true
+
 begin
   snowplow_data
 rescue Errno::ECONNREFUSED
-  puts "Could not connect to Snowplow Micro."
-  puts "Please follow these instruction to set up Snowplow Micro:"
-  puts "https://gitlab.com/gitlab-org/gitlab-development-kit/-/blob/main/doc/howto/snowplow_micro.md"
-  exit 1
+  snowplow_available = false
 end
 
 reader = TTY::Reader.new
@@ -174,12 +189,12 @@ begin
     case reader.read_keypress(nonblock: true)
     when 'p'
       paused = !paused
-      render_screen(paused)
+      render_screen(paused, snowplow_available)
     when 'q'
       break
     end
 
-    render_screen(paused) unless paused
+    render_screen(paused, snowplow_available) unless paused
 
     sleep 1
   end

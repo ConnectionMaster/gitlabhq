@@ -55,9 +55,8 @@ We should evaluate if the small to medium business and mid-market segment is int
 ### Self-managed
 
 For reasons of consistency, it is expected that self-managed instances will
-adopt the cells architecture as well. To expand, self-managed instances can
-continue with just a single Cell while supporting the option of adding additional
-Cells. Organizations, and possible User decomposition will also be adopted for
+adopt the single cell architecture as well. Self-managed instances can
+continue with just a single Cell without needing the additional Cell services like routing or topology. Organizations, and possible User decomposition will also be adopted for
 self-managed instances.
 
 ## Requirements
@@ -129,7 +128,7 @@ Currently on-premise has numerous advantages compared to our SaaS offering.
 On-premise allows to control all aspects of a GitLab installation, including but not limited to: managing users, access controls, or instance-wide settings.
 
 The difference between SaaS and on-premise is problematic for our customers,
-and us as it results in a different user experience.
+as it results in a different user experience.
 
 ### Minimize breaking changes
 
@@ -289,6 +288,11 @@ The Cells architecture is meant to provide trusted intra-cluster communication
 with some set of data being shared. Federation is meant to solve the problem
 of data flow between two completely distinct and external instances.
 
+### Merging Dedicated instance(s) to GitLab.com
+
+It is not intended for any existing Dedicated instances to join the GitLab.com
+cluster.
+
 ### Usage of cloud managed services
 
 Cells should not interfere with other efforts to move towards using more managed services in the cloud.
@@ -326,7 +330,7 @@ A Cell is a set of infrastructure components that contains multiple top-level Gr
 - Noisy neighbor effects are limited to within a Cell
 - Cells are not visible to Organizations - they are an implementation detail
 - Cells may be located in different geographical regions (for example: EU, US, JP, UK)
-- A GitLab Dedicated instance can join the cluster, and become a Cell
+- On initial provisioning, a GitLab instance provisioned by GitLab Dedicated tooling can be configured to join the cluster, and become a Cell
 
 Discouraged synonyms: GitLab instance, cluster, shard, Pod
 

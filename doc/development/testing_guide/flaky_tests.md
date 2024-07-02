@@ -153,6 +153,18 @@ usually a good idea.
 - [Example 1](https://gitlab.com/gitlab-org/gitlab/-/issues/363214): The runner is under heavy load at this time.
 - [Example 2](https://gitlab.com/gitlab-org/gitlab/-/issues/360559): The runner is having networking issues, making a job failing early
 
+## How to reproduce a flaky test locally?
+
+1. Reproduce the failure locally
+   - Find RSpec `seed` from the CI job log
+   - OR Run `while :; do bin/rspec <spec> || break; done` in a loop to find a `seed`
+1. Reduce the examples by bisecting the spec failure with `bin/rspec --seed <previously found> --bisect <spec>`
+1. Look at the remaining examples and watch for state leakage
+    - e.g. Updating records created with `let_it_be` is a common source of problems
+1. Once fixed, rerun the specs with `seed`
+1. Run `scripts/rspec_check_order_dependence` to ensure the spec can be run in [random order](best_practices.md#test-order)
+1. Run `while :; do bin/rspec <spec> || break; done` in a loop again (and grab lunch) to verify it's no longer flaky
+
 ## Quarantined tests
 
 When we have a flaky test in `master`:
@@ -166,8 +178,12 @@ When we have a flaky test in `master`:
 
 #### Fast quarantine
 
+Unless you really need to have a test disabled very fast (`< 10min`), consider [using the `~pipeline::expedited` label instead](../pipelines/index.md#the-pipelineexpedited-label).
+
 To quickly quarantine a test without having to open a merge request and wait for pipelines,
 you can follow [the fast quarantining process](https://gitlab.com/gitlab-org/quality/engineering-productivity/fast-quarantine/-/tree/main/#fast-quarantine-a-test).
+
+**Please always proceed** to [open a long-term quarantine merge request](#long-term-quarantine) after fast-quarantining a test! This is to ensure the fast-quarantined test was correctly fixed by running tests from the CI/CD pipelines (which are not run in the context of the fast-quarantine project).
 
 #### Long-term quarantine
 

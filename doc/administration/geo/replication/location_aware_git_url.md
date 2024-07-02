@@ -11,7 +11,6 @@ DETAILS:
 **Offering:** Self-managed
 
 NOTE:
-Since GitLab 14.6,
 [GitLab Geo supports a location-aware URL including web UI and API traffic.](../secondary_proxy/location_aware_external_url.md)
 This configuration is recommended over the location-aware Git remote URL
 described in this document.
@@ -126,4 +125,4 @@ For requests:
   - SSH:
     - `git clone git@git.example.com:foo/bar.git` is directed to the **secondary**.
     - `git push` is initially directed to the **secondary**, which automatically
-       proxies the request to `primary.example.com`.
+      proxies the request to `primary.example.com`.

@@ -9,9 +9,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-**Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/391331) in GitLab 15.11 as a Beta feature.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/391331) in GitLab 15.11 as a beta feature.
+> - [Made generally available](https://gitlab.com/gitlab-com/www-gitlab-com/-/merge_requests/134062) in GitLab 17.0.
 
 Use inputs to increase the flexibility of CI/CD configuration files that are designed
 to be reused.
@@ -20,16 +20,9 @@ Inputs can use CI/CD variables, but have the same [variable limitations as the `
 
 ## Define input parameters with `spec:inputs`
 
-Use `spec:inputs` to define input parameters for CI/CD configuration intended to be added
-to a pipeline with `include`. Use [`include:inputs`](#set-input-values-when-using-include)
-to pass input values when building the configuration for a pipeline.
-
-The specs must be declared at the top of the configuration file, in a header section.
-Separate the header from the rest of the configuration with `---`.
-
-Use the interpolation format `$[[ inputs.input-id ]]` outside the header section to replace the values.
-The inputs are evaluated and interpolated when the configuration is fetched during pipeline creation, but before the
-configuration is merged with the contents of the `.gitlab-ci.yml` file.
+Use `spec:inputs` to define parameters that can be populated in reusable CI/CD configuration
+files when added to a pipeline. Then use [`include:inputs`](#set-input-values-when-using-include)
+to add the configuration to a project's pipeline and set the values for the parameters.
 
 For example, in a file named `custom_website_scan.yml`:
 
@@ -45,12 +38,28 @@ scan-website:
   script: ./scan-website $[[ inputs.environment ]]
 ```
 
-When using `spec:inputs`:
+In this example, the inputs are `job-stage` and `environment`. Then, in a `.gitlab-ci.yml` file,
+you can add this configuration and set the input values:
+
+```yaml
+include:
+  - local: 'custom_website_scan.yml'
+    inputs:
+      job-stage: 'my-test-stage'
+      environment: 'my-environment'
+```
+
+Specs must be declared at the top of a configuration file, in a header section separated
+from the rest of the configuration with `---`. Use the `$[[ inputs.input-id ]]` interpolation format
+outside the header section to declare where to use the inputs.
+
+With `spec:inputs`:
 
 - Inputs are mandatory by default.
-- Validation errors are returned if:
-  - A string containing an interpolation block exceeds 1 MB.
-  - The string inside an interpolation block exceeds 1 KB.
+- Inputs are evaluated and populated when the configuration is fetched during pipeline creation,
+  before the configuration is merged with the contents of the `.gitlab-ci.yml` file.
+- A string containing an input must be less than 1 MB.
+- A string inside an input must be less than 1 KB.
 
 Additionally, use:
 
@@ -87,7 +96,7 @@ spec:
       default: 1
     version:        # Mandatory string input that must match the regular expression
       type: string
-      regex: /^v\d\.\d+(\.\d+)$/
+      regex: ^v\d\.\d+(\.\d+)$
     export_results: # Optional boolean input with a default value when not provided
       type: boolean
       default: true
@@ -158,6 +167,8 @@ test_job:
 ```
 
 #### Array type
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/407176) in GitLab 16.11.
 
 The content of the items in an array type can be any valid YAML map, sequence, or scalar. More complex YAML features
 like [`!reference`](yaml_optimization.md#reference-tags) cannot be used.
@@ -233,12 +244,31 @@ For example:
 
 ```yaml
 include:
-  - component: gitlab.com/the-namespace/the-project/the-component@1.0
+  - component: $CI_SERVER_FQDN/the-namespace/the-project/the-component@1.0
     inputs:
       stage: my-stage
   - local: path/to/file.yml
     inputs:
       stage: my-stage
+```
+
+### Use `inputs` with child pipelines
+
+You can pass inputs to [child pipelines](../pipelines/downstream_pipelines.md),
+if the child pipeline's configuration file uses [`spec:inputs`](#define-input-parameters-with-specinputs).
+For example:
+
+```yaml
+trigger-job:
+  trigger:
+    strategy: depend
+    include:
+      - project: my-group/my-project
+        file: ".gitlab-ci.yml"
+        inputs:
+          job-name: "defined"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 ```
 
 ### Include the same file multiple times
@@ -272,6 +302,165 @@ spec:
 ---
 "run-$[[ inputs.linter ]]-lint":
   script: ./lint --$[[ inputs.linter ]] --path=$[[ inputs.lint-path ]]
+```
+
+### Reuse configuration in `inputs`
+
+To reuse configuration with `inputs`, you can use [YAML anchors](yaml_optimization.md#anchors).
+
+For example, to reuse the same `rules` configuration with multiple components that support
+`rules` arrays in the inputs:
+
+```yaml
+.my-job-rules: &my-job-rules
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+include:
+  - component: $CI_SERVER_FQDN/project/path/component1@main
+    inputs:
+      job-rules: *my-job-rules
+  - component: $CI_SERVER_FQDN/project/path/component2@main
+    inputs:
+      job-rules: *my-job-rules
+```
+
+You cannot use [`!reference` tags](yaml_optimization.md#reference-tags) in inputs,
+but [issue 424481](https://gitlab.com/gitlab-org/gitlab/-/issues/424481) proposes adding
+this functionality.
+
+## `inputs` examples
+
+### Use `inputs` with `needs`
+
+You can use array type inputs with [`needs`](index.md#needs) for complex job dependencies.
+
+For example, in a file named `component.yml`:
+
+```yaml
+spec:
+  inputs:
+    first_needs:
+      type: array
+    second_needs:
+      type: array
+---
+
+test_job:
+  script: echo "this job has needs"
+  needs:
+    - $[[ inputs.first_needs ]]
+    - $[[ inputs.second_needs ]]
+```
+
+In this example, the inputs are `first_needs` and `second_needs`, both [array type inputs](#array-type).
+Then, in a `.gitlab-ci.yml` file, you can add this configuration and set the input values:
+
+```yaml
+include:
+  - local: 'component.yml'
+    inputs:
+      first_needs:
+        - build1
+      second_needs:
+        - build2
+```
+
+When the pipeline starts, the items in the `needs` array for `test_job` get concatenated into:
+
+```yaml
+test_job:
+  script: echo "this job has needs"
+  needs:
+  - build1
+  - build2
+```
+
+### Allow `needs` to be expanded when included
+
+You can have [`needs`](index.md#needs) in an included job, but also add additional jobs
+to the `needs` array with `spec:inputs`.
+
+For example:
+
+```yaml
+spec:
+  inputs:
+    test_job_needs:
+      type: array
+      default: []
+---
+
+build-job:
+  script:
+    - echo "My build job"
+
+test-job:
+  script:
+    - echo "My test job"
+  needs:
+    - build-job
+    - $[[ inputs.test_job_needs ]]
+```
+
+In this example:
+
+- `test-job` job always needs `build-job`.
+- By default the test job doesn't need any other jobs, as the `test_job_needs:` array input
+  is empty by default.
+
+To set `test-job` to need another job in your configuration, add it to the `test_needs` input
+when you include the file. For example:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/project/path/component@1.0.0
+    inputs:
+      test_job_needs: [ my-other-job ]
+
+my-other-job:
+  script:
+    - echo "I want build-job` in the component to need this job too"
+```
+
+### Add `needs` to an included job that doesn't have `needs`
+
+You can add [`needs`](index.md#needs) to an included job that does not have `needs`
+already defined. For example, in a CI/CD component's configuration:
+
+```yaml
+spec:
+  inputs:
+    test_job:
+      default: test-job
+---
+
+build-job:
+  script:
+    - echo "My build job"
+
+"$[[ inputs.test_job ]]":
+  script:
+    - echo "My test job"
+```
+
+In this example, the `spec:inputs` section allows the job name to be customized.
+
+Then, after you include the component, you can extend the job with the additional
+`needs` configuration. For example:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/project/path/component@1.0.0
+    inputs:
+      test_job: my-test-job
+
+my-test-job:
+  needs: [my-other-job]
+
+my-other-job:
+  script:
+    - echo "I want `my-test-job` to need this job"
 ```
 
 ## Specify functions to manipulate input values
@@ -361,7 +550,7 @@ Assuming the value of `inputs.test` is `0123456789`, then the output would be `3
 
 ### YAML syntax errors when using `inputs`
 
-[CI/CD variable expressions](../jobs/job_control.md#cicd-variable-expressions)
+[CI/CD variable expressions](../jobs/job_rules.md#cicd-variable-expressions)
 in `rules:if` expect a comparison of a CI/CD variable with a string, otherwise
 [a variety of syntax errors could be returned](../jobs/job_troubleshooting.md#this-gitlab-ci-configuration-is-invalid-for-variable-expressions).
 
@@ -401,7 +590,7 @@ spec:
 $[[ inputs.environment | expand_vars ]] job:
   script: echo
   rules:
-    - if: '"$[[ inputs.environment1 | expand_vars ]]" == "production"'
+    - if: '"$[[ inputs.environment | expand_vars ]]" == "production"'
 ```
 
 In this example, quoting the input block and also the entire variable expression

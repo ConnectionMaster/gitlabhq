@@ -85,7 +85,7 @@ describe('CompareVersions', () => {
 
       expect(treeListBtn.exists()).toBe(true);
       expect(treeListBtn.attributes('aria-label')).toBe('Hide file browser');
-      expect(treeListBtn.props('icon')).toBe('file-tree');
+      expect(treeListBtn.props('icon')).toBe('sidebar');
     });
 
     it('should render comparison dropdowns with correct values', () => {
@@ -96,18 +96,6 @@ describe('CompareVersions', () => {
       expect(targetDropdown.exists()).toBe(true);
       expect(sourceDropdown.find('a p').html()).toContain('latest version');
       expect(targetDropdown.find('button').html()).toContain(targetBranchName);
-    });
-
-    it('should render view types buttons with correct values', () => {
-      const inlineBtn = wrapper.find('#inline-diff-btn');
-      const parallelBtn = wrapper.find('#parallel-diff-btn');
-
-      expect(inlineBtn.exists()).toBe(true);
-      expect(parallelBtn.exists()).toBe(true);
-      expect(inlineBtn.attributes('data-view-type')).toEqual('inline');
-      expect(parallelBtn.attributes('data-view-type')).toEqual('parallel');
-      expect(inlineBtn.html()).toContain('Inline');
-      expect(parallelBtn.html()).toContain('Side-by-side');
     });
   });
 
@@ -121,33 +109,6 @@ describe('CompareVersions', () => {
       const treeListBtn = wrapper.find('.js-toggle-tree-list');
 
       expect(treeListBtn.exists()).toBe(false);
-    });
-  });
-
-  describe('setInlineDiffViewType', () => {
-    it('should persist the view type in the url', () => {
-      createWrapper();
-
-      const viewTypeBtn = wrapper.find('#inline-diff-btn');
-      viewTypeBtn.trigger('click');
-
-      expect(store.dispatch).toHaveBeenCalledWith(
-        'diffs/setInlineDiffViewType',
-        expect.any(MouseEvent),
-      );
-    });
-  });
-
-  describe('setParallelDiffViewType', () => {
-    it('should persist the view type in the url', () => {
-      createWrapper();
-      const viewTypeBtn = wrapper.find('#parallel-diff-btn');
-      viewTypeBtn.trigger('click');
-
-      expect(store.dispatch).toHaveBeenCalledWith(
-        'diffs/setParallelDiffViewType',
-        expect.any(MouseEvent),
-      );
     });
   });
 

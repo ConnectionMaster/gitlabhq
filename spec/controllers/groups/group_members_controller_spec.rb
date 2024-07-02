@@ -236,7 +236,7 @@ RSpec.describe Groups::GroupMembersController, feature_category: :groups_and_pro
 
       context 'when `expires_at` is set' do
         it 'returns correct json response' do
-          expect(json_response).to eq({
+          expect(json_response).to include({
             "expires_soon" => false,
             "expires_at_formatted" => expiry_date.to_time.in_time_zone.to_fs(:medium)
           })
@@ -246,8 +246,9 @@ RSpec.describe Groups::GroupMembersController, feature_category: :groups_and_pro
       context 'when `expires_at` is not set' do
         let(:expiry_date) { nil }
 
-        it 'returns empty json response' do
-          expect(json_response).to be_empty
+        it 'returns json response without expiration data' do
+          expect(json_response).not_to have_key(:expires_soon)
+          expect(json_response).not_to have_key(:expires_at_formatted)
         end
       end
     end
@@ -295,7 +296,7 @@ RSpec.describe Groups::GroupMembersController, feature_category: :groups_and_pro
           expect(controller).to set_flash.to 'User was successfully removed from group.'
           expect(response).to redirect_to(group_group_members_path(group))
           expect(group.members).not_to include member
-          expect(sub_group.members).to include sub_member
+          expect(sub_group.reload.members).to include sub_member
         end
 
         it '[HTML] removes user from members including subgroups and projects', :aggregate_failures do
@@ -304,7 +305,7 @@ RSpec.describe Groups::GroupMembersController, feature_category: :groups_and_pro
           expect(controller).to set_flash.to 'User was successfully removed from group and any subgroups and projects.'
           expect(response).to redirect_to(group_group_members_path(group))
           expect(group.members).not_to include member
-          expect(sub_group.members).not_to include sub_member
+          expect(sub_group.reload.members).not_to include sub_member
         end
 
         it '[JS] removes user from members', :aggregate_failures do

@@ -6,6 +6,7 @@ class BlobPresenter < Gitlab::View::Presenter::Delegated
   include DiffHelper
   include TreeHelper
   include ChecksCollaboration
+  include Gitlab::EncodingHelper
 
   presents ::Blob, as: :blob
 
@@ -92,6 +93,12 @@ class BlobPresenter < Gitlab::View::Presenter::Delegated
 
   def blame_path
     url_helpers.project_blame_path(*path_params)
+  end
+
+  def base64_encoded_blob
+    return unless Feature.enabled?(:unicode_escaped_blob)
+
+    Base64.encode64(blob.raw)
   end
 
   def history_path

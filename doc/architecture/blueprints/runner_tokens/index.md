@@ -231,27 +231,27 @@ token to register new runners.
 
 The new workflow looks as follows:
 
-  1. The user opens the Runners settings page (instance, group, or project level);
-  1. The user fills in the details regarding the new desired runner, namely description,
-     tags, protected, locked, etc.;
-  1. The user clicks `Create`. That results in the following:
+1. The user opens the Runners settings page (instance, group, or project level);
+1. The user fills in the details regarding the new desired runner, namely description,
+   tags, protected, locked, etc.;
+1. The user clicks `Create`. That results in the following:
 
-     1. Creates a new runner in the `ci_runners` table (and corresponding `glrt-` prefixed authentication token);
-     1. Presents the user with instructions on how to configure this new runner on a machine,
-        with possibilities for different supported deployment scenarios (for example, shell, `docker-compose`, Helm chart, etc.)
-        This information contains a token which is available to the user only once, and the UI
-        makes it clear to the user that the value shall not be shown again, as registering the same runner multiple times
-        is discouraged (though not impossible).
+   1. Creates a new runner in the `ci_runners` table (and corresponding `glrt-` prefixed authentication token);
+   1. Presents the user with instructions on how to configure this new runner on a machine,
+      with possibilities for different supported deployment scenarios (for example, shell, `docker-compose`, Helm chart, etc.)
+      This information contains a token which is available to the user only once, and the UI
+      makes it clear to the user that the value shall not be shown again, as registering the same runner multiple times
+      is discouraged (though not impossible).
 
-  1. The user copies and pastes the instructions for the intended deployment scenario (a `register` command), leading to the following actions:
+1. The user copies and pastes the instructions for the intended deployment scenario (a `register` command), leading to the following actions:
 
-     1. Upon executing the new `gitlab-runner register` command in the instructions, `gitlab-runner` performs
-        a call to the `POST /api/v4/runners/verify` with the given runner token;
-     1. If the `POST /api/v4/runners/verify` GitLab endpoint validates the token, the `config.toml`
-        file is populated with the configuration;
-     1. Whenever a runner pings for a job, the respective `ci_runner_machines` record is
-        ["upserted"](https://en.wiktionary.org/wiki/upsert) with the latest information about the
-        runner (with Redis cache in front of it like we do for Runner heartbeats).
+   1. Upon executing the new `gitlab-runner register` command in the instructions, `gitlab-runner` performs
+      a call to the `POST /api/v4/runners/verify` with the given runner token;
+   1. If the `POST /api/v4/runners/verify` GitLab endpoint validates the token, the `config.toml`
+      file is populated with the configuration;
+   1. Whenever a runner pings for a job, the respective `ci_runner_machines` record is
+      ["upserted"](https://en.wiktionary.org/wiki/upsert) with the latest information about the
+      runner (with Redis cache in front of it like we do for Runner heartbeats).
 
 As part of the transition period, we provide admins and top-level group owners with an
 instance/group-level setting (`allow_runner_registration_token`) to disable the legacy registration
@@ -419,7 +419,7 @@ scope.
 | Component        | Milestone | Changes                                                                                                                                                                                                                                                                                                                            |
 |------------------|----------:|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | GitLab Rails app | `%16.0`   | Adapt `register_{group|project}_runner` permissions to take [application setting](https://gitlab.com/gitlab-org/gitlab/-/issues/386712) in consideration. |
-| GitLab Rails app | `%16.1`   | Make [`POST /api/v4/runners` endpoint](../../../api/runners.md#create-an-instance-runner) permanently return `HTTP 410 Gone` if either `allow_runner_registration_token` setting disables registration tokens.<br/>A future v5 version of the API should return `HTTP 404 Not Found`. |
+| GitLab Rails app | `%16.1`   | Make the [`POST /api/v4/runners`](../../../api/runners.md#create-a-runner) endpoint return `HTTP 410 Gone` permanently if either `allow_runner_registration_token` setting disables registration tokens. The Runners API v5 should return `HTTP 404 Not Found`. |
 | GitLab Rails app | `%16.1`   | Add runner group metadata to the runner list. |
 | GitLab Rails app | `%16.11`  | Add UI to allow disabling use of registration tokens in top-level group settings.                                                                                                                                                                                                                                                               |
 | GitLab Rails app | `%16.11`  | Add UI to allow disabling use of registration tokens in admin panel. |

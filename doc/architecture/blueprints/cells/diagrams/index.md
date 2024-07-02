@@ -6,16 +6,16 @@ description: 'Cells: Diagrams'
 
 # Diagrams
 
-Diagrams used in Cells are created with [draw.io](https://draw.io).
+Diagrams used in Cells are created with [draw.io](https://app.diagrams.net/).
 
 ## Edit existing diagrams
 
 Load the `.drawio.png` or `.drawio.svg` file directly into **draw.io**, which you can use in several ways:
 
-- Best: Use the [draw.io integration in VSCode](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio).
+- Best: Use the [draw.io integration in VS Code](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio).
 - Good: Install on MacOS with `brew install drawio` or download the [draw.io desktop](https://github.com/jgraph/drawio-desktop/releases).
 - Good: Install on Linux by downloading the [draw.io desktop](https://github.com/jgraph/drawio-desktop/releases).
-- Discouraged: Use the [draw.io website](https://draw.io) to load and save files.
+- Discouraged: Use the [draw.io website](https://app.diagrams.net/) to load and save files.
 
 ## Create a diagram
 

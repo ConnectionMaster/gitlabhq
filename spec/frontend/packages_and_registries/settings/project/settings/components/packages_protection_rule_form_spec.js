@@ -23,11 +23,11 @@ describe('Packages Protection Rule Form', () => {
   };
 
   const findPackageNamePatternInput = () =>
-    wrapper.findByRole('textbox', { name: /package name pattern/i });
-  const findPackageTypeSelect = () => wrapper.findByRole('combobox', { name: /package type/i });
-  const findPushProtectedUpToAccessLevelSelect = () =>
-    wrapper.findByRole('combobox', { name: /push protected up to access level/i });
-  const findSubmitButton = () => wrapper.findByRole('button', { name: /protect/i });
+    wrapper.findByRole('textbox', { name: /name pattern/i });
+  const findPackageTypeSelect = () => wrapper.findByRole('combobox', { name: /type/i });
+  const findMinimumAccessLevelForPushSelect = () =>
+    wrapper.findByRole('combobox', { name: /minimum access level for push/i });
+  const findSubmitButton = () => wrapper.findByRole('button', { name: /add rule/i });
   const findForm = () => wrapper.findComponent(GlForm);
 
   const mountComponent = ({ data, config, provide = defaultProvidedValues } = {}) => {
@@ -66,19 +66,15 @@ describe('Packages Protection Rule Form', () => {
       });
     });
 
-    describe('form field "pushProtectedUpToAccessLevelSelect"', () => {
+    describe('form field "minimumAccessLevelForPushSelect"', () => {
       it('contains only the options for maintainer and owner', () => {
         mountComponent();
 
-        expect(findPushProtectedUpToAccessLevelSelect().exists()).toBe(true);
-        const pushProtectedUpToAccessLevelSelectOptions = findPushProtectedUpToAccessLevelSelect()
+        expect(findMinimumAccessLevelForPushSelect().exists()).toBe(true);
+        const minimumAccessLevelForPushSelectOptions = findMinimumAccessLevelForPushSelect()
           .findAll('option')
           .wrappers.map((option) => option.element.value);
-        expect(pushProtectedUpToAccessLevelSelectOptions).toEqual([
-          'DEVELOPER',
-          'MAINTAINER',
-          'OWNER',
-        ]);
+        expect(minimumAccessLevelForPushSelectOptions).toEqual(['MAINTAINER', 'OWNER', 'ADMIN']);
       });
     });
 
@@ -93,7 +89,7 @@ describe('Packages Protection Rule Form', () => {
         expect(findSubmitButton().props('disabled')).toBe(true);
         expect(findPackageNamePatternInput().attributes('disabled')).toBe('disabled');
         expect(findPackageTypeSelect().attributes('disabled')).toBe('disabled');
-        expect(findPushProtectedUpToAccessLevelSelect().attributes('disabled')).toBe('disabled');
+        expect(findMinimumAccessLevelForPushSelect().attributes('disabled')).toBe('disabled');
       });
 
       it('displays a loading spinner', () => {
@@ -188,8 +184,9 @@ describe('Packages Protection Rule Form', () => {
         await submitForm();
 
         expect(wrapper.emitted('submit')).toBeDefined();
-        const expectedEventSubmitPayload = createPackagesProtectionRuleMutationPayload().data
-          .createPackagesProtectionRule.packageProtectionRule;
+        const expectedEventSubmitPayload =
+          createPackagesProtectionRuleMutationPayload().data.createPackagesProtectionRule
+            .packageProtectionRule;
         expect(wrapper.emitted('submit')[0]).toEqual([expectedEventSubmitPayload]);
 
         expect(wrapper.emitted()).not.toHaveProperty('cancel');
@@ -219,7 +216,7 @@ describe('Packages Protection Rule Form', () => {
 
         expect(findAlert().isVisible()).toBe(true);
         expect(findAlert().text()).toMatch(
-          /something went wrong while saving the package protection rule/i,
+          'Something went wrong while saving the package protection rule',
         );
       });
     });

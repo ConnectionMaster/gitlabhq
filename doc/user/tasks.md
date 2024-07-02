@@ -14,22 +14,20 @@ DETAILS:
 > - [Creating, editing, and deleting tasks](https://gitlab.com/groups/gitlab-org/-/epics/7169) introduced in GitLab 15.0.
 > - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/334812) in GitLab 15.3.
 
-Known limitation:
-
-- [Tasks cannot be accessed via REST API.](https://gitlab.com/gitlab-org/gitlab/-/issues/368055)
-
-For the latest updates, check the [Tasks Roadmap](https://gitlab.com/groups/gitlab-org/-/epics/7103).
-
 FLAG:
 On self-managed GitLab, by default this feature is available. To hide the feature,
 an administrator can [disable the feature flags](../administration/feature_flags.md) named `work_items`.
 On GitLab.com, this feature is available. On GitLab Dedicated, this feature is not available.
 
-Use tasks to track steps needed for the [issue](project/issues/index.md) to be closed.
+A task in GitLab is a planning item that can be created in an issue.
+Use tasks to break down user stories captured in [issues](project/issues/index.md) into
+smaller, trackable items.
 
 When planning an issue, you need a way to capture and break down technical
 requirements or steps necessary to complete it. An issue with related tasks is better defined,
 and so you can provide a more accurate issue weight and completion criteria.
+
+For the latest updates, check the [Tasks roadmap](https://gitlab.com/groups/gitlab-org/-/epics/7103).
 
 Tasks are a type of work item, a step towards [default issue types](https://gitlab.com/gitlab-org/gitlab/-/issues/323404)
 in GitLab.
@@ -51,6 +49,8 @@ the task opens in a full-page view.
 
 ## Create a task
 
+> - Ability to select which project to create the task in [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/436255) in GitLab 17.1.
+
 Prerequisites:
 
 - You must have at least the Reporter role for the project, or the project must be public.
@@ -62,6 +62,7 @@ To create a task:
 1. In the issue description, in the **Tasks** section, select **Add**.
 1. Select **New task**.
 1. Enter the task title.
+1. Select the [project](project/organize_work_with_projects.md) to create the new task in.
 1. Select **Create task**.
 
 ### From a task list item
@@ -124,7 +125,7 @@ FLAG:
 On self-managed GitLab, by default the rich text feature is not available. To make it available per group, ask an
 administrator
 to [enable the feature flag](../administration/feature_flags.md) named `work_items_mvc`. On GitLab.com, this feature
-is not available. The feature is not ready for production use.
+is not available. This feature is not ready for production use.
 
 Use a rich text editor to edit a task's description.
 
@@ -350,6 +351,14 @@ To add a task to an iteration:
 1. Next to **Iteration**, select **Add to iteration**.
 1. From the dropdown list, select the iteration to be associated with the task.
 
+## Estimate and track spent time
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/438577) in GitLab 17.0.
+
+You can estimate and track the time you spend on a task.
+
+For more information, see [Time tracking](project/time_tracking.md).
+
 ## View task system notes
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/378949) in GitLab 15.7 [with a flag](../administration/feature_flags.md) named `work_items_mvc_2`. Disabled by default.
@@ -520,7 +529,7 @@ If a task is closed with a locked discussion, then you cannot reopen it until th
 DETAILS:
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/415077) in GitLab 16.2 [with a flag](../administration/feature_flags.md) named `work_items_mvc_2`. Disabled by default. This feature is in [Beta](../policy/experiment-beta-support.md).
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/415077) in GitLab 16.2 [with a flag](../administration/feature_flags.md) named `work_items_mvc_2`. Disabled by default. This feature is in [beta](../policy/experiment-beta-support.md).
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/446064) to feature flag named `work_items_beta` in GitLab 16.10. Disabled by default.
 
 FLAG:
@@ -532,7 +541,7 @@ When enabled, tasks use a two-column layout, similar to issues.
 The description and threads are on the left, and attributes, such as labels
 or assignees, on the right.
 
-This feature is in [Beta](../policy/experiment-beta-support.md).
+This feature is in [beta](../policy/experiment-beta-support.md).
 If you find a bug, [comment on the feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/442090).
 
 ![Task two column view](img/task_two_column_view_v16_10.png)
@@ -542,10 +551,8 @@ If you find a bug, [comment on the feedback issue](https://gitlab.com/gitlab-org
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/416558) in GitLab 16.5 [with a flag](../administration/feature_flags.md) named `linked_work_items`. Disabled by default.
 > - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/139394) in GitLab 16.7.
 > - Adding related items by entering their URLs and IDs [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/427594) in GitLab 16.8.
-
-FLAG:
-On self-managed GitLab, by default this feature is available. To hide the feature, an administrator can [disable the feature flag](../administration/feature_flags.md) named `linked_work_items`.
-On GitLab.com, this feature is available. On GitLab Dedicated, this feature is not available.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/150148) in GitLab 17.0. Feature flag `linked_work_items` removed.
+> - [Changed](https://gitlab.com/groups/gitlab-org/-/epics/10267) minimum required role from Reporter (if true) to Guest in GitLab 17.0.
 
 Linked items are a bi-directional relationship and appear in a block below
 the emoji reactions section. You can link an objective, key result, or a task in the same project with each other.

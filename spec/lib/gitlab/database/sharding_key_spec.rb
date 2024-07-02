@@ -11,6 +11,7 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
     [
       'compliance_framework_security_policies', # has a desired sharding key instead
       'merge_request_diff_commits_b5377a7a34', # has a desired sharding key instead
+      'merge_request_diff_files_99208b8fac', # has a desired sharding key instead
       'ml_model_metadata', # has a desired sharding key instead.
       'p_ci_pipeline_variables', # https://gitlab.com/gitlab-org/gitlab/-/issues/436360
       'p_ci_stages', # https://gitlab.com/gitlab-org/gitlab/-/issues/448630
@@ -23,16 +24,22 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
   let(:allowed_to_be_missing_not_null) do
     [
       *tables_with_alternative_not_null_constraint,
-      'internal_ids.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/451900
-      'internal_ids.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/451900
-      'labels.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/434356
-      'labels.group_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/434356
+      'analytics_devops_adoption_segments.namespace_id',
+      *['badges.project_id', 'badges.group_id'],
+      *['boards.project_id', 'boards.group_id'],
+      *['bulk_import_exports.project_id', 'bulk_import_exports.group_id'],
+      'ci_pipeline_schedules.project_id',
+      'ci_sources_pipelines.project_id',
+      'ci_triggers.project_id',
+      'gpg_signatures.project_id',
+      *['internal_ids.project_id', 'internal_ids.namespace_id'], # https://gitlab.com/gitlab-org/gitlab/-/issues/451900
+      *['labels.project_id', 'labels.group_id'], # https://gitlab.com/gitlab-org/gitlab/-/issues/434356
       'member_roles.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/444161
+      *['milestones.project_id', 'milestones.group_id'],
       'pages_domains.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/442178,
-      'path_locks.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/444643
       'remote_mirrors.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/444643
-      'subscription_add_on_purchases.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/444338
-      'temp_notes_backup.project_id' # https://gitlab.com/gitlab-org/gitlab/-/issues/443667'
+      'sprints.group_id',
+      *['todos.project_id', 'todos.group_id']
     ]
   end
 
@@ -43,8 +50,10 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
   #   `CONSTRAINT example_constraint CHECK (((project_id IS NULL) <> (namespace_id IS NULL)))`
   let(:tables_with_alternative_not_null_constraint) do
     [
+      *['protected_environments.project_id', 'protected_environments.group_id'],
       'security_orchestration_policy_configurations.project_id',
-      'security_orchestration_policy_configurations.namespace_id'
+      'security_orchestration_policy_configurations.namespace_id',
+      *['protected_branches.project_id', 'protected_branches.namespace_id']
     ]
   end
 
@@ -57,17 +66,25 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       'ci_job_artifacts.project_id',
       'ci_namespace_monthly_usages.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/321400
       'ci_builds_metadata.project_id',
-      'geo_repository_deleted_events.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/439935
+      'ldap_group_links.group_id',
       'namespace_descendants.namespace_id',
       'p_batched_git_ref_updates_deletions.project_id',
       'p_catalog_resource_sync_events.project_id',
       'project_data_transfers.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/439201
       'search_namespace_index_assignments.namespace_id_non_nullable',
-      'temp_notes_backup.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/443667'
       'value_stream_dashboard_counts.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/439555
       'zoekt_indices.namespace_id',
       'zoekt_repositories.project_identifier',
-      'zoekt_tasks.project_identifier'
+      'zoekt_tasks.project_identifier',
+      'project_audit_events.project_id',
+      'group_audit_events.group_id',
+      # aggregated table, a worker ensures eventual consistency
+      'analytics_cycle_analytics_issue_stage_events.group_id',
+      # aggregated table, a worker ensures eventual consistency
+      'analytics_cycle_analytics_merge_request_stage_events.group_id',
+      # This is event log table for gitlab_subscriptions and should not be deleted.
+      # See more: https://gitlab.com/gitlab-org/gitlab/-/issues/462598#note_1949768698
+      'gitlab_subscription_histories.namespace_id'
     ]
   end
 
@@ -197,6 +214,21 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       "Please change the `gitlab_schema` of these tables accordingly."
   end
 
+  it 'does not allow invalid follow-up issue URLs', :aggregate_failures do
+    issue_url_regex = %r{\Ahttps://gitlab\.com/gitlab-org/gitlab/-/issues/\d+\z}
+
+    entries_with_issue_link.each do |entry|
+      if entry.sharding_key.present?
+        expect(entry.sharding_key_issue_url).not_to be_present,
+          "You must remove `sharding_key_issue_url` from #{entry.table_name} now that it has a valid sharding key." \
+      else
+        expect(entry.sharding_key_issue_url).to match(issue_url_regex),
+          "Invalid `sharding_key_issue_url` url for #{entry.table_name}. Please use the following format: " \
+          "https://gitlab.com/gitlab-org/gitlab/-/issues/XXX"
+      end
+    end
+  end
+
   private
 
   def error_message(table_name)
@@ -212,8 +244,15 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
   def tables_missing_sharding_key(starting_from_milestone:)
     ::Gitlab::Database::Dictionary.entries.filter_map do |entry|
       entry.table_name if entry.sharding_key.blank? &&
+        !entry.exempt_from_sharding? &&
         entry.milestone_greater_than_or_equal_to?(starting_from_milestone) &&
         ::Gitlab::Database::GitlabSchema.cell_local?(entry.gitlab_schema)
+    end
+  end
+
+  def entries_with_issue_link
+    ::Gitlab::Database::Dictionary.entries.select do |entry|
+      entry.sharding_key_issue_url.present?
     end
   end
 

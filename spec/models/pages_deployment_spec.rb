@@ -140,6 +140,31 @@ RSpec.describe PagesDeployment, feature_category: :pages do
     end
   end
 
+  describe '.count_versioned_deployments_for' do
+    it 'counts the number of active pages deployments for the root level namespace of a given project' do
+      group = create(:group)
+      create(:project, group: group).tap do |project|
+        # not versioned
+        create(:pages_deployment, project: project)
+        # versioned, active
+        create(:pages_deployment, project: project, path_prefix: 'v1')
+        # versioned, not active
+        create(:pages_deployment, project: project, path_prefix: 'v2', deleted_at: 1.day.from_now)
+      end
+      project = create(:project, group: group).tap do |project|
+        # not versioned
+        create(:pages_deployment, project: project)
+        # versioned, active
+        create(:pages_deployment, project: project, path_prefix: 'v1')
+        # versioned, not active
+        create(:pages_deployment, project: project, path_prefix: 'v2', deleted_at: 1.day.from_now)
+      end
+
+      expect(described_class.count_versioned_deployments_for(project, 10)).to eq(2)
+      expect(described_class.count_versioned_deployments_for(project, 1)).to eq(1)
+    end
+  end
+
   describe 'default for file_store' do
     let(:deployment) do
       filepath = Rails.root.join("spec/fixtures/pages.zip")
@@ -178,6 +203,23 @@ RSpec.describe PagesDeployment, feature_category: :pages do
       create(:pages_deployment)
 
       expect(described_class.older_than(deployment.id)).to eq(old_deployments)
+    end
+  end
+
+  # Verify that calling deactivate on an instance sets the deleted_at value to now
+  describe '.deactivate (instance method)' do
+    it 'sets deleted_at to the current time', :freeze_time do
+      deployment = create(:pages_deployment)
+      expect { deployment.deactivate }
+        .to change { deployment.deleted_at }.from(nil).to(Time.zone.now)
+    end
+  end
+
+  describe '.restore' do
+    it 'sets deleted_at to nil', :freeze_time do
+      deployment = create(:pages_deployment, deleted_at: Time.zone.now)
+      expect { deployment.restore }
+        .to change { deployment.deleted_at }.from(Time.zone.now).to(nil)
     end
   end
 end

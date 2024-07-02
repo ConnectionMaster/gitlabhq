@@ -15,7 +15,8 @@ class Projects::PipelinesController < Projects::ApplicationController
   before_action :pipeline, except: [:index, :new, :create, :charts]
   before_action :set_pipeline_path, only: [:show]
   before_action :authorize_read_pipeline!
-  before_action :authorize_read_build!, only: [:index, :show]
+  before_action :authorize_read_build!, only: [:index]
+  before_action :authorize_read_build_on_pipeline!, only: [:show]
   before_action :authorize_read_ci_cd_analytics!, only: [:charts]
   before_action :authorize_create_pipeline!, only: [:new, :create]
   before_action :authorize_update_pipeline!, only: [:retry]
@@ -47,8 +48,9 @@ class Projects::PipelinesController < Projects::ApplicationController
   feature_category :continuous_integration, [
     :charts, :show, :stage, :cancel, :retry,
     :builds, :dag, :failures, :status,
-    :index, :create, :new, :destroy
+    :index, :new, :destroy
   ]
+  feature_category :pipeline_composition, [:create]
   feature_category :code_testing, [:test_report]
   feature_category :build_artifacts, [:downloadable_artifacts]
 
@@ -314,11 +316,15 @@ class Projects::PipelinesController < Projects::ApplicationController
   end
 
   def authorize_update_pipeline!
-    return access_denied! unless can?(current_user, :update_pipeline, @pipeline)
+    access_denied! unless can?(current_user, :update_pipeline, @pipeline)
   end
 
   def authorize_cancel_pipeline!
-    return access_denied! unless can?(current_user, :cancel_pipeline, @pipeline)
+    access_denied! unless can?(current_user, :cancel_pipeline, @pipeline)
+  end
+
+  def authorize_read_build_on_pipeline!
+    access_denied! unless can?(current_user, :read_build, @pipeline)
   end
 
   def limited_pipelines_count(project, scope = nil)

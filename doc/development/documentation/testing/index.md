@@ -13,11 +13,12 @@ those used for code.
 
 Merge requests containing changes to Markdown (`.md`) files run these CI/CD jobs:
 
-- `docs-lint markdown`: Tests the documentation content with [Vale](vale.md),
-  the Markdown structure with [markdownlint](markdownlint.md), and other tests
-  [in `lint-docs.sh`](#tests-in-lint-docsh).
+- `docs-lint markdown`: Runs several types of tests, including:
+  - Documentation content: [Vale](vale.md)
+  - Markdown structure: [markdownlint](markdownlint.md)
+  - Miscellaneous tests: [`lint-docs.sh`](#tests-in-lint-docsh), including
+    [`mermaidlint`](#mermaid-chart-linting) for invalid Mermaid charts
 - `docs-lint links`: Checks the validity of internal links in the documentation suite.
-- `mermaidlint`: Checks for invalid Mermaid charts in the documentation.
 - `ui-docs-links lint`: Checks the validity of links from UI elements, such as files in `app/views` files.
 
 ## Tests in `lint-doc.sh`
@@ -36,49 +37,36 @@ The `docs-lint markdown` job fails if any of these `lint-doc.sh` tests fail:
 - Use `index.md` instead of `README.md`.
 - Directories and filenames must use underscores instead of dashes.
 - Directories and filenames must be in lower case.
+- Mermaid charts must render without errors.
 
-## Tests in `docs-lint links`
-
-Merge requests containing changes to Markdown (`.md`) files run a `docs-lint links`
-job, which runs two types of link checks. In both cases, links with destinations
-that begin with `http` or `https` are considered external links, and skipped:
-
-- `bundle exec nanoc check internal_links`: Tests links to internal pages.
-- `bundle exec nanoc check internal_anchors`: Tests links to topic title anchors on internal pages.
-
-Failures from these tests are displayed at the end of the test results in the **Issues found!** area.
-For example, failures in the `internal_anchors` test follow this format:
-
-```plaintext
-[ ERROR ] internal_anchors - Broken anchor detected!
-  - source file `/tmp/gitlab-docs/public/ee/user/application_security/api_fuzzing/index.html`
-  - destination `/tmp/gitlab-docs/public/ee/development/code_review.html`
-  - link `../../../development/code_review.html#review-response-slo`
-  - anchor `#review-response-slo`
-```
-
-- **Source file**: The full path to the file containing the error. To find the
-  file in the `gitlab` repository, replace `/tmp/gitlab-docs/public/ee` with `doc`, and `.html` with `.md`.
-- **Destination**: The full path to the file not found by the test. To find the
-  file in the `gitlab` repository, replace `/tmp/gitlab-docs/public/ee` with `doc`, and `.html` with `.md`.
-- **Link**: The actual link the script attempted to find.
-- **Anchor**: If present, the topic title anchor the script attempted to find.
-
-Check for multiple instances of the same broken link on each page reporting an error.
-Even if a specific broken link appears multiple times on a page, the test reports it only once.
-
-## Tests in `mermaidlint`
+### Mermaid chart linting
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/144328) in GitLab 16.10.
 
 [Mermaid](https://mermaid.js.org/) builds charts and diagrams from code.
 
-The `mermaidlint` job runs on merge requests that contain changes to Markdown files.
-The script (`scripts/lint/check_mermaid.mjs`) returns an error if any Markdown
-files return a Mermaid syntax error.
+The script (`scripts/lint/check_mermaid.mjs`) runs during `lint-doc.sh` checks on
+all merge requests that contain changes to Markdown files. The script returns an
+error if any Markdown files return a Mermaid syntax error.
 
 To help debug your Mermaid charts, use the
 [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit).
+
+## Tests in `docs-lint links` and other jobs
+
+To check for broken links, merge requests containing changes to Markdown (`.md`) files run these jobs in their
+pipelines:
+
+- `docs-lint links` job in the `gitlab` project. For example: <https://gitlab.com/gitlab-org/gitlab/-/jobs/7065686331>.
+- `docs-lint links` job in the `omnibus-gitlab` project. For example: <https://gitlab.com/gitlab-org/omnibus-gitlab/-/jobs/7065337075>.
+- `docs-lint links` job in the `gitlab-operator` project.
+- `docs:lint markdown` job in the `gitlab-runner` project, which includes link checking. For example:
+  <https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/7056674997>.
+- `check_docs_links` job in the `charts/gitlab` project. For example:
+  <https://gitlab.com/gitlab-org/charts/gitlab/-/jobs/7066011619>.
+
+These jobs check links, including anchor links, and report any problems. Any link that requires a network
+connection is skipped.
 
 ## Tests in `ui-docs-links lint`
 
@@ -154,19 +142,30 @@ The output should be similar to:
 
 ### Run documentation link tests locally
 
-To test links in the documentation locally:
+To run documentation link tests locally, you can either:
 
+- Run a link check for a single project that contains documentation.
+- Run a link check across entire local copy of the [GitLab documentation site](https://docs.gitlab.com).
+
+#### Check a single project
+
+To check the links on a single project:
+
+1. Install [Lychee](https://lychee.cli.rs/installation/).
+1. Change into the root directory of the project.
+1. Run `lychee --offline --include-fragments <doc_directory>` where `<doc_directory>` it the directory that contains
+   documentation to check. For example: `lychee --offline --include-fragments doc`.
+
+#### Check all GitLab Docs site projects
+
+To check links on the entire [GitLab documentation site](https://docs.gitlab.com):
+
+1. Make sure you have all the documentation projects cloned in the same directory as your `gitlab-docs` clone. You can
+   run `make clone-all-docs-projects` to clone any projects you don't have in that location. If you want to update
+   the documentation projects, run `make update-all-projects`.
 1. Go to the [`gitlab-docs`](https://gitlab.com/gitlab-org/gitlab-docs) directory.
-1. Run the following commands:
-
-   ```shell
-   # Check for broken internal links
-   bundle exec nanoc check internal_links
-
-   # Check for broken external links (might take a lot of time to complete).
-   # This test is allowed to fail, and is run only in the gitlab-docs project CI
-   bundle exec nanoc check internal_anchors
-   ```
+1. Run `make internal-links-and-anchors-check`, which builds the GitLab Docs site with `nanoc` and checks links on the
+   built site by using `nanoc`.
 
 ### Run UI link tests locally
 
@@ -231,16 +230,19 @@ To update the linting images:
 
 1. In `gitlab-docs`, open a merge request to update `.gitlab-ci.yml` to use the new tooling
    version. ([Example MR](https://gitlab.com/gitlab-org/gitlab-docs/-/merge_requests/2571))
-1. When merged, start a `Build docs.gitlab.com every hour` [scheduled pipeline](https://gitlab.com/gitlab-org/gitlab-docs/-/pipeline_schedules).
-1. Go the pipeline you started, and manually run the relevant build-images job,
-   for example, `image:docs-lint-markdown`.
-1. In the job output, get the name of the new image.
+1. When merged, start a `Build docker images manually` [scheduled pipeline](https://gitlab.com/gitlab-org/gitlab-docs/-/pipeline_schedules).
+1. Go the pipeline you started, and wait for the relevant `test:image` job to complete,
+   for example `test:image:docs-lint-markdown`. If the job:
+   - Passes, start the relevant `image:` job, for example, `image:docs-lint-markdown`.
+   - Fails, review the test job log and start troubleshooting the issue. The image configuration
+     likely needs some manual tweaks to work with the updated dependency.
+1. After the `image:` job passes, check the job's log for the name of the new image.
    ([Example job output](https://gitlab.com/gitlab-org/gitlab-docs/-/jobs/2335033884#L334))
 1. Verify that the new image was added to the container registry.
 1. Open merge requests to update each of these configuration files to point to the new image.
    In each merge request, include a small doc update to trigger the job that uses the image.
    - <https://gitlab.com/gitlab-org/gitlab/-/blob/master/.gitlab/ci/docs.gitlab-ci.yml> ([Example MR](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/85177))
-   - <https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/.gitlab/ci/test.gitlab-ci.yml> ([Example MR](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3408))
+   - <https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/.gitlab/ci/docs.gitlab-ci.yml> ([Example MR](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3408))
    - <https://gitlab.com/gitlab-org/omnibus-gitlab/-/blob/master/gitlab-ci-config/gitlab-com.yml> ([Example MR](https://gitlab.com/gitlab-org/omnibus-gitlab/-/merge_requests/6037))
    - <https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/.gitlab-ci.yml> ([Example MR](https://gitlab.com/gitlab-org/charts/gitlab/-/merge_requests/2511))
    - <https://gitlab.com/gitlab-org/cloud-native/gitlab-operator/-/blob/master/.gitlab-ci.yml> ([Example MR](https://gitlab.com/gitlab-org/cloud-native/gitlab-operator/-/merge_requests/462))

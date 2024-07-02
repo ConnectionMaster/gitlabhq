@@ -51,13 +51,20 @@ For example, use `self.table_name=` when the model name diverges from the table 
 We can allow exceptions only when renaming is challenging. For example, when the naming is used
 for STI, exposed to the user, or if it would be a breaking change.
 
-## Use namespaces to define bounded contexts
+## Bounded contexts
 
-A healthy application is divided into macro and sub components that represent the contexts at play,
-whether they are related to business domain or infrastructure code.
+See the [Bounded Contexts working group](https://handbook.gitlab.com/handbook/company/working-groups/bounded-contexts/) and
+[GitLab Modular Monolith blueprint](../architecture/blueprints/modular_monolith/index.md) for more context on the
+goals, motivations, and direction related to Bounded Contexts.
 
-As GitLab code has so many features and components it's hard to see what contexts are involved.
+### Use namespaces to define bounded contexts
+
+A healthy application is divided into macro and sub components that represent the bounded contexts at play.
+As GitLab code has so many features and components, it's hard to see what contexts are involved.
+These components can be related to business domain or infrastructure code.
+
 We should expect any class to be defined inside a module/namespace that represents the contexts where it operates.
+We maintain a [list of allowed namespaces](#how-to-define-bounded-contexts) to define these contexts.
 
 When we namespace classes inside their domain:
 
@@ -66,32 +73,49 @@ When we namespace classes inside their domain:
 - Top-level namespaces could be associated to one or more groups identified as domain experts.
 - We can better identify the interactions and coupling between components.
   For example, several classes inside `MergeRequests::` domain interact more with `Ci::`
-  domain and less with `ImportExport::`.
+  domain and less with `Import::`.
+
+```ruby
+# bad
+class JobArtifact ... end
+
+# good
+module Ci
+  class JobArtifact ... end
+end
+```
+
+### How to define bounded contexts
+
+Allowed bounded contexts are defined in `config/bounded_contexts.yml` which contains namespaces for the
+domain layer and infrastructure layer.
+
+For **domain layer** we refer to:
+
+1. Code in `app`, excluding the **application adapters** (controllers, API endpoints and views).
+1. Code in `lib` that specifically relates to domain logic.
+
+This includes `ActiveRecord` models, service objects, workers, and domain-specific Plain Old Ruby Objects.
+
+For now we exclude application adapters from the modularization in order to keep the effort smaller and because
+a given endpoint don't always match to a single domain (e.g. settings, merge request view, project view, etc.).
+
+For **infrastructure layer** we refer to code in `lib` that is for generic purposes, not containing GitLab business concepts,
+and that could be extracted into Ruby gems.
 
 A good guideline for naming a top-level namespace (bounded context) is to use the related
 [feature category](https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/master/data/categories.yml).
 For example, `Continuous Integration` feature category maps to `Ci::` namespace.
 
-```ruby
-# bad
-class JobArtifact
-end
-
-# good
-module Ci
-  class JobArtifact
-  end
-end
-```
-
 Projects and Groups are generally container concepts because they identify tenants.
-They allow features to exist at the project or group level, like repositories or runners,
-but do not nest such features under `Projects::` or `Groups::`.
+While features exist at the project or group level, like repositories or runners, we must not nest such features
+under `Projects::` or `Groups::` but under their relative bounded context.
 
 `Projects::` and `Groups::` namespaces should be used only for concepts that are strictly related to them:
 for example `Project::CreateService` or `Groups::TransferService`.
 
-For controllers we allow `app/controllers/projects` and `app/controllers/groups` to be exceptions.
+For controllers we allow `app/controllers/projects` and `app/controllers/groups` to be exceptions, also because
+bounded contexts are not applied to application layer.
 We use this convention to indicate the scope of a given web endpoint.
 
 Do not use the [stage or group name](https://handbook.gitlab.com/handbook/product/categories/#devops-stages)
@@ -100,14 +124,12 @@ because a feature category could be reassigned to a different group in the futur
 ```ruby
 # bad
 module Create
-  class Commit
-  end
+  class Commit ... end
 end
 
 # good
 module Repositories
-  class Commit
-  end
+  class Commit ... end
 end
 ```
 
@@ -125,20 +147,56 @@ For example, instead of having separate and granular bounded contexts like: `Con
 `ContainerHostSecurity::`, `ContainerNetworkSecurity::`, we could have:
 
 ```ruby
-module ContainerSecurity
-  module HostSecurity
-  end
+module Security::Container
+  module Scanning ... end
 
-  module NetworkSecurity
-  end
+  module NetworkSecurity ... end
 
-  module Scanning
-  end
+  module HostSecurity ... end
 end
 ```
 
 If classes that are defined into a namespace have a lot in common with classes in other namespaces,
 chances are that these two namespaces are part of the same bounded context.
+
+### How to resolve GitLab/BoundedContexts RuboCop offenses
+
+The `Gitlab/BoundedContexts` RuboCop cop ensures that every Ruby class or module is nested inside a
+top-level Ruby namespace existing in [`config/bounded_contexts.yml`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/config/bounded_contexts.yml).
+
+Offenses should be resolved by nesting the constant inside an existing bounded context namespace.
+
+- Search in `config/bounded_contexts.yml` for namespaces that more closely relate to the feature,
+  for example by matching the feature category.
+- If needed, use sub-namespaces to further nest the constant inside the namespace.
+  For example: `Repositories::Mirrors::SyncService`.
+- Create follow-up issues to move the existing related code into the same namespace.
+
+In exceptional cases, we may need to add a new bounded context to the list. This can be done if:
+
+- We are introducing a new product category that does not align with any existing bounded contexts.
+- We are extracting a bounded context out of an existing one because it's too large and we want to decouple the two.
+
+### GitLab/BoundedContexts and `config/bounded_contexts.yml` FAQ
+
+1. **Is there ever a situation where the cop should be disabled?**
+
+    - The cop **should not** be disabled but it **could** be disabled temporarily if the offending class or module is part
+      of a cluster of classes that should otherwise be moved all together.
+      In this case you could disable the cop and create a follow-up issue to move all the classes at once.
+1. **Is there a suggested timeline to get all of the existing code refactored into compliance?**
+
+    - We do not have a timeline defined but the quicker we consolidate code the more consistent it becomes.
+1. **Do the bounded contexts apply for existing Sidekiq workers?**
+
+    - Existing workers would be already in the RuboCop TODO file so they do not raise offenses. However, they should
+      also be moved into the bounded context whenever possible.
+      Follow the Sidekiq [renaming worker](../development/sidekiq/compatibility_across_updates.md#renaming-worker-classes) guide.
+1. **We are renaming a feature category and the `config/bounded_contexts.yml` references that. Is it safe to update?**
+
+    - Yes the file only expects that the feature categories mapped to bounded contexts are defined in `config/feature_categories.yml`
+      and nothing specifically depends on these values. This mapping is primarily for contributors to understand where features
+      may be living in the codebase.
 
 ## Distinguish domain code from generic code
 
@@ -195,7 +253,7 @@ class User
 
   def spammer?
     # Warning sign: we use a constant that belongs to a specific bounded context!
-    spam_score > Abuse::TrustScore::SPAMCHECK_HAM_THRESHOLD
+    spam_score > AntiAbuse::TrustScore::SPAMCHECK_HAM_THRESHOLD
   end
 
   def telesign_score
@@ -221,7 +279,7 @@ user.arkose_global_score
 ```ruby
 ##
 # GOOD: Define a thin class that represents a user trust score
-class Abuse::UserTrustScore
+class AntiAbuse::UserTrustScore
   def initialize(user)
     @user = user
   end
@@ -231,7 +289,7 @@ class Abuse::UserTrustScore
   end
 
   def spammer?
-    spam > Abuse::TrustScore::SPAMCHECK_HAM_THRESHOLD
+    spam > AntiAbuse::TrustScore::SPAMCHECK_HAM_THRESHOLD
   end
 
   def telesign
@@ -249,13 +307,13 @@ class Abuse::UserTrustScore
   private
 
   def scores
-    Abuse::TrustScore.for_user(@user)
+    AntiAbuse::TrustScore.for_user(@user)
   end
 end
 
 # Usage:
 user = User.find(1)
-user_score = Abuse::UserTrustScore.new(user)
+user_score = AntiAbuse::UserTrustScore.new(user)
 user_score.spam
 user_score.spammer?
 user_score.telesign
@@ -344,7 +402,7 @@ We have `Groups::UpdateService` which is entity-centric and reused for radically
 use cases:
 
 - Update group description, which requires group admin access.
-- Set namespace-level limit for [compute quota](../ci/pipelines/cicd_minutes.md), like `shared_runners_minutes_limit`
+- Set namespace-level limit for [compute quota](../ci/pipelines/compute_minutes.md), like `shared_runners_minutes_limit`
   which requires instance admin access.
 
 These 2 different use cases support different sets of parameters. It's not likely or expected that

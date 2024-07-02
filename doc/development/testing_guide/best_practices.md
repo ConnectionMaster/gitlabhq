@@ -54,7 +54,7 @@ When using spring and guard together, use `SPRING=1 bundle exec guard` instead t
 - Use a single, top-level `RSpec.describe ClassName` block.
 - Use `.method` to describe class methods and `#method` to describe instance
   methods.
-- Use `context` to test branching logic (`RSpec/AvoidConditionalStatements` Rubocop Cop - [MR](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/117152)).
+- Use `context` to test branching logic (`RSpec/AvoidConditionalStatements` RuboCop Cop - [MR](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/117152)).
 - Try to match the ordering of tests to the ordering in the class.
 - Try to follow the [Four-Phase Test](https://thoughtbot.com/blog/four-phase-test) pattern, using newlines
   to separate phases.
@@ -93,8 +93,6 @@ If your test depends on all the application code that is being loaded, add the `
 This ensures that the application code is eagerly loaded before the test execution.
 
 ### Ruby warnings
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/47767) in GitLab 13.7.
 
 We've enabled [deprecation warnings](https://ruby-doc.org/core-2.7.4/Warning.html)
 by default when running specs. Making these warnings more visible to developers
@@ -1293,8 +1291,6 @@ variables example can be used, but avoid this if at all possible.
 
 #### Elasticsearch specs
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/61171) in GitLab 14.0.
-
 Specs that require Elasticsearch must be marked with the `:elastic` trait. This
 creates and deletes indices before and after all examples.
 
@@ -1777,7 +1773,7 @@ GitLab uses [`factory_bot`](https://github.com/thoughtbot/factory_bot) as a test
 
 - Factories don't have to be limited to `ActiveRecord` objects.
   [See example](https://gitlab.com/gitlab-org/gitlab-foss/commit/0b8cefd3b2385a21cfed779bd659978c0402766d).
-- Factories and their traits should produce valid objects that are [verified by specs](https://gitlab.com/gitlab-org/gitlab/-/blob/master/spec/models/factories_spec.rb).
+- Factories and their traits should produce valid objects that are [verified by shared specs](https://gitlab.com/gitlab-org/gitlab/-/blob/master/spec/support/shared_examples/models/factories_shared_examples.rb) run in every model spec.
 - Avoid the use of [`skip_callback`](https://api.rubyonrails.org/classes/ActiveSupport/Callbacks/ClassMethods.html#method-i-skip_callback) in factories.
   See [issue #247865](https://gitlab.com/gitlab-org/gitlab/-/issues/247865) for details.
 

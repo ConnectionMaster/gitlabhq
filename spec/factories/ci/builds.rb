@@ -49,6 +49,12 @@ FactoryBot.define do
       end
     end
 
+    trait :with_build_name do
+      after(:create) do |build, _|
+        create(:ci_build_name, build: build)
+      end
+    end
+
     trait :degenerated do
       options { nil }
       yaml_variables { nil }
@@ -170,6 +176,14 @@ FactoryBot.define do
 
     trait :playable do
       manual
+    end
+
+    trait :with_manual_confirmation do
+      options do
+        {
+          manual_confirmation: 'Please confirm. Do you want to proceed?'
+        }
+      end
     end
 
     trait :retryable do
@@ -310,7 +324,21 @@ FactoryBot.define do
       runner factory: :ci_runner
 
       after(:create) do |build|
-        ::Ci::RunningBuild.upsert_shared_runner_build!(build)
+        ::Ci::RunningBuild.upsert_build!(build)
+      end
+    end
+
+    trait :pages do
+      ref { "HEAD" }
+      name { 'pages' }
+
+      after(:create) do |build, _evaluator|
+        file = fixture_file_upload("spec/fixtures/pages.zip")
+        metadata = fixture_file_upload("spec/fixtures/pages.zip.meta")
+
+        create(:ci_job_artifact, :correct_checksum, file: file, job: build)
+        create(:ci_job_artifact, file_type: :metadata, file_format: :gzip, file: metadata, job: build)
+        build.reload
       end
     end
 

@@ -110,8 +110,8 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
         expect(Gitlab::Cleanup::OrphanJobArtifactFiles)
           .to receive(:new)
           .with(dry_run: false,
-                niceness: anything,
-                logger: anything)
+            niceness: anything,
+            logger: anything)
           .and_call_original
 
         rake_task
@@ -144,8 +144,8 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
         expect(Gitlab::Cleanup::OrphanLfsFileReferences)
           .to receive(:new)
           .with(project,
-                dry_run: false,
-                logger: anything)
+            dry_run: false,
+            logger: anything)
           .and_call_original
 
         rake_task
@@ -193,19 +193,19 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
       project.repository.raw.create_branch(delete_branch_name, "master")
 
       create(:merge_request, :merged, :remove_source_branch, source_project: project, target_project: project,
-     source_branch: delete_branch_name, target_branch: 'master')
+        source_branch: delete_branch_name, target_branch: 'master')
     end
 
     let!(:mr2) do
       project.repository.raw.create_branch(keep_branch_name, "master")
 
       create(:merge_request, :merged, source_project: project, target_project: project, source_branch: keep_branch_name,
-     target_branch: 'master')
+        target_branch: 'master')
     end
 
     let!(:mr3) do
       create(:merge_request, :remove_source_branch, source_project: project, target_project: project,
-     source_branch: keep_branch_name, target_branch: 'master')
+        source_branch: keep_branch_name, target_branch: 'master')
     end
 
     let!(:mr4) do
@@ -214,7 +214,7 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
 
     let!(:mr5) do
       create(:merge_request, :merged, :remove_source_branch, source_branch: 'test', source_project: project,
-             target_project: project, target_branch: 'master')
+        target_project: project, target_branch: 'master')
     end
 
     let!(:protected) do
@@ -260,7 +260,7 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
         project.repository.raw.create_branch(delete_me_not, "master")
 
         create(:merge_request, :merged, :remove_source_branch, source_project: project, target_project: project,
-               source_branch: delete_me_not, target_branch: 'master')
+          source_branch: delete_me_not, target_branch: 'master')
       end
 
       before do
@@ -286,7 +286,7 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
           stub_env('LIMIT_TO_DELETE', 1)
         end
 
-        it 'deletes only one branch' do
+        it 'deletes only one branch', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/448376' do
           expect(project.repository.raw.find_branch(delete_branch_name)).not_to be_nil
           expect(project.repository.raw.find_branch(keep_branch_name)).not_to be_nil
           expect(project.repository.raw.find_branch(delete_me_not)).not_to be_nil
@@ -306,7 +306,7 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
           project.repository.raw.create_branch(delete_me_not, "master")
 
           create(:merge_request, :opened, :remove_source_branch, source_project: project, target_project: project,
-                 source_branch: delete_me_not, target_branch: 'master')
+            source_branch: delete_me_not, target_branch: 'master')
         end
 
         it 'does not delete the branch of the merged/open mr' do
@@ -364,7 +364,7 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
       before do
         Gitlab::Redis::Sessions.with do |redis|
           redis.set(ActiveSession.key_name(user.id, existing_session_id),
-                    ActiveSession.new(session_id: 'x').dump)
+            ActiveSession.new(session_id: 'x').dump)
           redis.sadd(ActiveSession.lookup_key_name(user.id), (1..10).to_a)
         end
       end
@@ -544,6 +544,82 @@ RSpec.describe 'gitlab:cleanup rake tasks', :silence_stdout do
           .with(
             force_restart: false,
             filename: orphan_list_filename,
+            logger: anything
+          )
+          .and_call_original
+
+        expect { rake_task }.not_to raise_error
+      end
+    end
+  end
+
+  describe 'cleanup:rollback_deleted_orphan_job_artifact_final_objects' do
+    let(:deleted_list_filename) do
+      [
+        Gitlab::Cleanup::OrphanJobArtifactFinalObjects::ProcessList::DELETED_LIST_FILENAME_PREFIX,
+        Gitlab::Cleanup::OrphanJobArtifactFinalObjects::GenerateList::DEFAULT_FILENAME
+      ].join
+    end
+
+    subject(:rake_task) { run_rake_task('gitlab:cleanup:rollback_deleted_orphan_job_artifact_final_objects') }
+
+    before do
+      stub_artifacts_object_storage
+
+      allow(Gitlab.config.artifacts.object_store.connection).to receive(:provider).and_return('Google')
+
+      FileUtils.touch(deleted_list_filename)
+    end
+
+    after do
+      File.delete(deleted_list_filename) if File.file?(deleted_list_filename)
+    end
+
+    it 'runs the task without errors' do
+      expect(Gitlab::Cleanup::OrphanJobArtifactFinalObjects::RollbackDeletedObjects)
+        .to receive(:new)
+        .with(
+          force_restart: false,
+          filename: nil,
+          logger: anything
+        )
+        .and_call_original
+
+      expect { rake_task }.not_to raise_error
+    end
+
+    context 'with FORCE_RESTART defined' do
+      before do
+        stub_env('FORCE_RESTART', '1')
+      end
+
+      it 'passes force_restart correctly' do
+        expect(Gitlab::Cleanup::OrphanJobArtifactFinalObjects::RollbackDeletedObjects)
+          .to receive(:new)
+          .with(
+            force_restart: true,
+            filename: nil,
+            logger: anything
+          )
+          .and_call_original
+
+        expect { rake_task }.not_to raise_error
+      end
+    end
+
+    context 'with FILENAME defined' do
+      let(:deleted_list_filename) { 'custom_filename.csv' }
+
+      before do
+        stub_env('FILENAME', deleted_list_filename)
+      end
+
+      it 'passes filename correctly' do
+        expect(Gitlab::Cleanup::OrphanJobArtifactFinalObjects::RollbackDeletedObjects)
+          .to receive(:new)
+          .with(
+            force_restart: false,
+            filename: deleted_list_filename,
             logger: anything
           )
           .and_call_original

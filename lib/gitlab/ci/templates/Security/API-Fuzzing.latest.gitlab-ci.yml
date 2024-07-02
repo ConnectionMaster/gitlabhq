@@ -26,7 +26,7 @@ variables:
     # (SAST, Dependency Scanning, ...)
     SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/security-products"
     #
-    FUZZAPI_VERSION: "3"
+    FUZZAPI_VERSION: "5"
     FUZZAPI_IMAGE_SUFFIX: ""
     FUZZAPI_IMAGE: api-security
 
@@ -64,6 +64,7 @@ apifuzzer_fuzz:
     script:
         - /peach/analyzer-fuzz-api
     artifacts:
+        access: 'developer'
         when: always
         paths:
             - gl-assets

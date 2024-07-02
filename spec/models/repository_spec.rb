@@ -57,6 +57,18 @@ RSpec.describe Repository, feature_category: :source_code_management do
       it { is_expected.to match_array(["'test'"]) }
     end
 
+    context 'when exclude_refs is provided' do
+      let(:opts) { { exclude_refs: ['master'] } }
+
+      it { is_expected.not_to include('master') }
+    end
+
+    context 'with limit + exclude_refs options' do
+      let(:opts) { { limit: 1, exclude_refs: ["'test'"] } }
+
+      it { is_expected.to match_array(["2-mb-file"]) }
+    end
+
     describe 'when storage is broken', :broken_storage do
       it 'raises a storage error' do
         expect_to_raise_storage_error do
@@ -78,6 +90,18 @@ RSpec.describe Repository, feature_category: :source_code_management do
       let(:opts) { { limit: 1 } }
 
       it { is_expected.to match_array(['v1.1.0']) }
+    end
+
+    context 'when exclude_refs is provided' do
+      let(:opts) { { exclude_refs: ['v1.1.0'] } }
+
+      it { is_expected.not_to include('v1.1.0') }
+    end
+
+    context 'with limit + exclude_refs options' do
+      let(:opts) { { limit: 1, exclude_refs: ["v1.1.0"] } }
+
+      it { is_expected.to match_array(["v1.1.1"]) }
     end
   end
 
@@ -1577,27 +1601,6 @@ RSpec.describe Repository, feature_category: :source_code_management do
     end
   end
 
-  describe "#gitlab_ci_yml", :use_clean_rails_memory_store_caching do
-    let(:project) { create(:project, :repository) }
-
-    it 'returns valid file' do
-      files = [TestBlob.new('file'), TestBlob.new('.gitlab-ci.yml'), TestBlob.new('copying')]
-      expect(repository.tree).to receive(:blobs).and_return(files)
-
-      expect(repository.gitlab_ci_yml.path).to eq('.gitlab-ci.yml')
-    end
-
-    it 'returns nil if not exists' do
-      expect(repository.tree).to receive(:blobs).and_return([])
-      expect(repository.gitlab_ci_yml).to be_nil
-    end
-
-    it 'returns nil for empty repository' do
-      allow(repository).to receive(:root_ref).and_raise(Gitlab::Git::Repository::NoRepository)
-      expect(repository.gitlab_ci_yml).to be_nil
-    end
-  end
-
   describe "#jenkinsfile?" do
     let_it_be(:project) { create(:project, :repository) }
 
@@ -2495,7 +2498,6 @@ RSpec.describe Repository, feature_category: :source_code_management do
           :license_blob,
           :license_gitaly,
           :gitignore,
-          :gitlab_ci_yml,
           :branch_names,
           :tag_names,
           :branch_count,
@@ -2611,6 +2613,34 @@ RSpec.describe Repository, feature_category: :source_code_management do
       expect(repository).to receive(:repository_event).with(:create_repository)
 
       repository.after_create
+    end
+
+    context 'when repository is attached to a personal snippet' do
+      let(:repository) { create(:personal_snippet).repository }
+
+      it 'does not raise an error for onboarding considerations' do
+        expect { repository.after_create }.not_to raise_error
+      end
+    end
+
+    context 'when namespace is onboarded', :sidekiq_inline do
+      before do
+        ::Onboarding::Progress.onboard(project.namespace)
+      end
+
+      it 'records the onboarding progress' do
+        repository.after_create
+
+        expect(::Onboarding::Progress.completed?(project.namespace, :git_write)).to eq(true)
+      end
+    end
+
+    context 'when namespace is not onboarded', :sidekiq_inline do
+      it 'does not record the onboarding progress' do
+        repository.after_create
+
+        expect(::Onboarding::Progress.completed?(project.namespace, :git_write)).to eq(false)
+      end
     end
   end
 
@@ -3752,11 +3782,6 @@ RSpec.describe Repository, feature_category: :source_code_management do
         repository.change_head(branch)
       end
 
-      it 'copies the gitattributes' do
-        expect(repository).to receive(:copy_gitattributes).with(branch)
-        repository.change_head(branch)
-      end
-
       it 'reloads the default branch' do
         expect(repository.container).to receive(:reload_default_branch)
         repository.change_head(branch)
@@ -3936,7 +3961,7 @@ RSpec.describe Repository, feature_category: :source_code_management do
 
   describe '#object_pool' do
     let_it_be(:primary_project) { create(:project, :empty_repo) }
-    let_it_be(:forked_project) { create(:project, :empty_repo) }
+    let_it_be(:forked_project) { create(:project, :fork_repository, forked_from_project: primary_project) }
 
     let(:repository) { primary_project.repository }
 
@@ -4174,6 +4199,30 @@ RSpec.describe Repository, feature_category: :source_code_management do
       let(:attrs) { [] }
 
       it { expect { file_attributes }.to raise_error(ArgumentError) }
+    end
+  end
+
+  describe '#commit_files' do
+    let(:project) { create(:project, :empty_repo) }
+
+    it 'calls UserCommitFiles RPC' do
+      expect_next_instance_of(Gitlab::GitalyClient::OperationService) do |client|
+        expect(client).to receive(:user_commit_files).with(
+          user, 'extra-branch', 'commit message', [],
+          'author email', 'author name', nil, nil, true, nil, false
+        )
+      end
+
+      repository.commit_files(
+        user,
+        branch_name: 'extra-branch',
+        message: 'commit message',
+        author_name: 'author name',
+        author_email: 'author email',
+        actions: [],
+        force: true,
+        sign: false
+      )
     end
   end
 end

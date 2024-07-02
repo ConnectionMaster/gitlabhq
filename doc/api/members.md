@@ -10,24 +10,18 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> `created_by` field [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/28789) in GitLab 14.10.
-
 ## Roles
 
 The [role](../user/permissions.md) assigned to a user or group is defined
 in the `Gitlab::Access` module as `access_level`.
 
 - No access (`0`)
-- Minimal access (`5`) ([Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/220203) in GitLab 13.5.)
+- Minimal access (`5`)
 - Guest (`10`)
 - Reporter (`20`)
 - Developer (`30`)
 - Maintainer (`40`)
-- Owner (`50`). Valid for projects in [GitLab 14.9 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/21432).
-
-NOTE:
-In [GitLab 14.9](https://gitlab.com/gitlab-org/gitlab/-/issues/351211) and later, projects in personal namespaces have an `access_level` of `50`(Owner).
-In GitLab 14.8 and earlier, projects in personal namespaces have an `access_level` of `40` (Maintainer) due to [an issue](https://gitlab.com/gitlab-org/gitlab/-/issues/219299)
+- Owner (`50`)
 
 ## Limitations
 
@@ -80,7 +74,7 @@ Example response:
       "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
       "web_url": "http://192.168.1.8:3000/root"
     },
-    "expires_at": "2012-10-22T14:13:35Z",
+    "expires_at": "2012-10-22",
     "access_level": 30,
     "group_saml_identity": null
   },
@@ -100,7 +94,7 @@ Example response:
       "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
       "web_url": "http://192.168.1.8:3000/root"
     },
-    "expires_at": "2012-10-22T14:13:35Z",
+    "expires_at": "2012-10-22",
     "access_level": 30,
     "email": "john@example.com",
     "group_saml_identity": {
@@ -115,16 +109,16 @@ Example response:
 ## List all members of a group or project including inherited and invited members
 
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to return members of the invited private group if the current user is a member of the shared group or project in GitLab 16.10 [with a flag](../administration/feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - Feature flag `webui_members_inherited_users` was [enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 Gets a list of group or project members viewable by the authenticated user, including inherited members, invited users, and permissions through ancestor groups.
 
 If a user is a member of this group or project and also of one or more ancestor groups,
 only its membership with the highest `access_level` is returned.
-([Improved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/56677) in GitLab 13.11.)
 This represents the effective permission of the user.
 
 Members from an invited group are returned if either:
@@ -178,7 +172,7 @@ Example response:
       "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
       "web_url": "http://192.168.1.8:3000/root"
     },
-    "expires_at": "2012-10-22T14:13:35Z",
+    "expires_at": "2012-10-22",
     "access_level": 30,
     "group_saml_identity": null
   },
@@ -198,7 +192,7 @@ Example response:
       "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
       "web_url": "http://192.168.1.8:3000/root"
     },
-    "expires_at": "2012-10-22T14:13:35Z",
+    "expires_at": "2012-10-22",
     "access_level": 30,
     "email": "john@example.com",
     "group_saml_identity": {
@@ -223,7 +217,7 @@ Example response:
       "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
       "web_url": "http://192.168.1.8:3000/root"
     },
-    "expires_at": "2012-11-22T14:13:35Z",
+    "expires_at": "2012-11-22",
     "access_level": 30,
     "group_saml_identity": null
   }
@@ -279,10 +273,11 @@ Example response:
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/17744) in GitLab 12.4.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) to return members of the invited private group if the current user is a member of the shared group or project in GitLab 16.10 [with a flag](../administration/feature_flags.md) named `webui_members_inherited_users`. Disabled by default.
+> - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/219230) in GitLab 17.0.
 
 FLAG:
-On self-managed GitLab, by default this feature is not available. To make it available per user, an administrator can [enable the feature flag](../administration/feature_flags.md) named `webui_members_inherited_users`.
-On GitLab.com and GitLab Dedicated, this feature is not available.
+On self-managed GitLab, by default this feature is available. To hide the feature per user, an administrator can [disable the feature flag](../administration/feature_flags.md) named `webui_members_inherited_users`.
+On GitLab.com and GitLab Dedicated, this feature is available.
 
 Gets a member of a group or project, including members inherited or invited through ancestor groups. See the corresponding [endpoint to list all inherited members](#list-all-members-of-a-group-or-project-including-inherited-and-invited-members) for details.
 
@@ -334,7 +329,9 @@ Example response:
 
 ## List all billable members of a group
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/217384) in GitLab 13.5.
+Prerequisites:
+
+- You must have the Owner role to access the API endpoint for billing permissions, as shown in [billing permissions](../user/free_user_limit.md).
 
 Gets a list of group members that count as billable. The list includes members in subgroups and projects.
 
@@ -342,8 +339,7 @@ This API endpoint works on top-level groups only. It does not work on subgroups.
 
 This function takes [pagination](rest/index.md#pagination) parameters `page` and `per_page` to restrict the list of users.
 
-[In GitLab 13.7 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/262875), use the `search` parameter
-to search for billable group members by name and `sort` to sort the results.
+Use the `search` parameter to search for billable group members by name and `sort` to sort the results.
 
 ```plaintext
 GET /groups/:id/billable_members
@@ -422,8 +418,6 @@ Example response:
 ```
 
 ## List memberships for a billable member of a group
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/321560) in GitLab 13.11.
 
 Gets a list of memberships for a billable member of a group.
 
@@ -559,8 +553,9 @@ curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" "https://git
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/86705) in GitLab 15.0.
 
-Changes the membership state of a user in a group. The state is applied to
-all subgroups and projects.
+Changes the membership state of a user in a group.
+When a user is over [the free user limit](../user/free_user_limit.md), changing their membership state for a group or project to `awaiting` or `active` can allow them to
+access that group or project. The change is applied to applied to all subgroups and projects.
 
 ```plaintext
 PUT /groups/:id/members/:user_id/state
@@ -595,10 +590,11 @@ POST /projects/:id/members
 
 | Attribute | Type | Required | Description |
 | --------- | ---- | -------- | ----------- |
-| `id`      | integer/string | yes | The ID or [URL-encoded path of the project or group](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
-| `user_id` | integer/string | yes | The user ID of the new member or multiple IDs separated by commas |
-| `access_level` | integer | yes | [A valid access level](access_requests.md#valid-access-levels) |
-| `expires_at` | string | no | A date string in the format `YEAR-MONTH-DAY` |
+| `id`      | integer/string | yes | The ID or [URL-encoded path of the project or group](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `user_id` | integer/string | yes, if `username` is not provided | The user ID of the new member or multiple IDs separated by commas. |
+| `username` | string | yes, if `user_id` is not provided | The username of the new member or multiple usernames separated by commas. |
+| `access_level` | integer | yes | [A valid access level](access_requests.md#valid-access-levels). |
+| `expires_at` | string | no | A date string in the format `YEAR-MONTH-DAY`. |
 | `invite_source` | string | no | The source of the invitation that starts the member creation process. GitLab team members can view more information in this confidential issue: `https://gitlab.com/gitlab-org/gitlab/-/issues/327120>`. |
 | `member_role_id` | integer | no | The ID of a member role. Ultimate only. |
 
@@ -628,7 +624,7 @@ Example response:
     "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
     "web_url": "http://192.168.1.8:3000/root"
   },
-  "expires_at": "2012-10-22T14:13:35Z",
+  "expires_at": "2012-10-22",
   "access_level": 30,
   "email": "john@example.com",
   "group_saml_identity": null
@@ -676,7 +672,7 @@ Example response:
     "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
     "web_url": "http://192.168.1.8:3000/root"
   },
-  "expires_at": "2012-10-22T14:13:35Z",
+  "expires_at": "2012-10-22",
   "access_level": 40,
   "email": "john@example.com",
   "group_saml_identity": null
@@ -684,8 +680,6 @@ Example response:
 ```
 
 ### Set override flag for a member of a group
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/4875) in GitLab 13.0.
 
 By default, the access level of LDAP group members is set to the value specified
 by LDAP through Group Sync. You can allow access level overrides by calling this endpoint.
@@ -722,7 +716,7 @@ Example response:
     "avatar_url": "https://www.gravatar.com/avatar/c2525a7f58ae3776070e44c106c48e15?s=80&d=identicon",
     "web_url": "http://192.168.1.8:3000/root"
   },
-  "expires_at": "2012-10-22T14:13:35Z",
+  "expires_at": "2012-10-22",
   "access_level": 40,
   "email": "john@example.com",
   "override": true
@@ -730,8 +724,6 @@ Example response:
 ```
 
 ### Remove override for a member of a group
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/4875) in GitLab 13.0.
 
 Sets the override flag to false and allows LDAP Group Sync to reset the access
 level to the LDAP-prescribed value.
@@ -841,8 +833,6 @@ curl --request POST --header "PRIVATE-TOKEN: <your_access_token>" "https://gitla
 ```
 
 ## List pending members of a group and its subgroups and projects
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/332596) in GitLab 14.6.
 
 For a group and its subgroups and projects, get a list of all members in an `awaiting` state and those who are invited but do not have a GitLab account.
 

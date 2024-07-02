@@ -2,6 +2,7 @@
 stage: Create
 group: Code Review
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Troubleshooting help for merge requests."
 ---
 
 # Merge request troubleshooting
@@ -174,6 +175,14 @@ a merge request is closed or merged. The merge request is then no longer availab
 for local checkout from the merge request `head` ref anymore. The merge request
 can still be re-opened. If the merge request's branch
 exists, you can still check out the branch, as it isn't affected.
+
+### Check out locally using `glab`
+
+```plaintext
+glab mr checkout <merge_request_iid>
+```
+
+More information on the [GitLab terminal client](../../../editor_extensions/gitlab_cli/index.md).
 
 ### Check out locally by adding a Git alias
 

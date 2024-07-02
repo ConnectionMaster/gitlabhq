@@ -3,7 +3,7 @@ import VueRouter from 'vue-router';
 import VueApollo from 'vue-apollo';
 import { convertObjectPropsToCamelCase } from '~/lib/utils/common_utils';
 import createDefaultClient from '~/lib/graphql';
-import { ORGANIZATION_ROOT_ROUTE_NAME } from '../constants';
+import { ORGANIZATION_ROOT_ROUTE_NAME } from '~/organizations/shared/constants';
 import App from './components/app.vue';
 
 export const createRouter = () => {
@@ -34,6 +34,7 @@ export const initOrganizationsShow = () => {
     projectsEmptyStateSvgPath,
     groupsEmptyStateSvgPath,
     newGroupPath,
+    groupsPath,
     newProjectPath,
     associationCounts,
     canCreateProject,
@@ -57,6 +58,7 @@ export const initOrganizationsShow = () => {
       projectsEmptyStateSvgPath,
       groupsEmptyStateSvgPath,
       newGroupPath,
+      groupsPath,
       newProjectPath,
       canCreateProject,
       canCreateGroup,

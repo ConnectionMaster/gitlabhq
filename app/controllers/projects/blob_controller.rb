@@ -156,18 +156,12 @@ class Projects::BlobController < Projects::ApplicationController
 
   def check_for_ambiguous_ref
     @ref_type = ref_type
-    return if Feature.enabled?(:ambiguous_ref_modal, @project)
-
-    if @ref_type == ExtractsRef::RefExtractor::BRANCH_REF_TYPE && ambiguous_ref?(@project, @ref)
-      branch = @project.repository.find_branch(@ref)
-      redirect_to project_blob_path(@project, File.join(branch.target, @path))
-    end
   end
 
   def commit
     @commit ||= @repository.commit(@ref)
 
-    return render_404 unless @commit
+    render_404 unless @commit
   end
 
   def redirect_renamed_default_branch?
@@ -175,8 +169,10 @@ class Projects::BlobController < Projects::ApplicationController
   end
 
   def assign_blob_vars
+    ref_extractor = ExtractsRef::RefExtractor.new(@project, {})
     @id = params[:id]
-    @ref, @path = extract_ref(@id)
+
+    @ref, @path = ref_extractor.extract_ref(@id)
   rescue InvalidPathError
     render_404
   end
@@ -211,16 +207,7 @@ class Projects::BlobController < Projects::ApplicationController
   def editor_variables
     @branch_name = params[:branch_name]
 
-    @file_path =
-      if action_name.to_s == 'create'
-        params[:file_name] = params[:file].original_filename if params[:file].present?
-
-        File.join(@path, params[:file_name])
-      elsif params[:file_path].present?
-        params[:file_path]
-      else
-        @path
-      end
+    @file_path = fetch_file_path
 
     params[:content] = params[:file] if params[:file].present?
 
@@ -232,6 +219,22 @@ class Projects::BlobController < Projects::ApplicationController
       file_content_encoding: params[:encoding],
       last_commit_sha: params[:last_commit_sha]
     }
+  end
+
+  def fetch_file_path
+    file_params = params.permit(:file, :file_name, :file_path)
+
+    if action_name.to_s == 'create'
+      file_name = file_params[:file].present? ? file_params[:file].original_filename : file_params[:file_name]
+
+      return if file_name.nil?
+
+      return File.join(@path, file_name)
+    end
+
+    return file_params[:file_path] if file_params[:file_path].present?
+
+    @path
   end
 
   def validate_diff_params

@@ -9,9 +9,13 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
+**Status:** Beta
 
 > - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/3610) in GitLab 16.6 [with a flag](../../../../administration/feature_flags.md) named `packages_dependency_proxy_maven`. Disabled by default.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/415218) in GitLab 16.8. Feature flag `packages_dependency_proxy_maven` removed.
+> - [Enabled on GitLab.com and self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/415218) in GitLab 16.8. Feature flag `packages_dependency_proxy_maven` removed.
+
+WARNING:
+The dependency proxy is in [beta](../../../../policy/experiment-beta-support.md#beta). Review the documentation carefully before you use this feature.
 
 The GitLab dependency proxy for packages is a local proxy for frequently pulled packages.
 It is implemented as a pull-through cache that works at the project level.
@@ -90,7 +94,7 @@ The dependency proxy uses the [same permissions as the package registry](../inde
 | Internal           | Developer                                             | **{check-circle}** Yes  | **{check-circle}** Yes   | Package file returned from either the cache or the remote registry. The file is published to the cache. |
 | Private            | Anonymous                                             | **{dotted-circle}** No  | **{dotted-circle}** No   | Request rejected |
 | Private            | Reporter                                              | **{check-circle}** Yes  | **{dotted-circle}** No   | Package file returned from either the cache or the remote registry. |
-| Internal           | Developer                                             | **{check-circle}** Yes  | **{check-circle}** Yes   | Package file returned from either the cache or the remote registry. The file is published to the cache. |
+| Private           | Developer                                             | **{check-circle}** Yes  | **{check-circle}** Yes   | Package file returned from either the cache or the remote registry. The file is published to the cache. |
 
 At a minimum, any user who can use the dependency proxy can also use the project's package registry.
 
@@ -258,7 +262,7 @@ However, you might encounter one of the following responses:
 :::TabTitle Maven
 
 ```shell
-curl --verbose "https://<username>:<personal access token>@gitlab.example.com/api/v4/projects/<project_id>/dependency_proxy/packages/maven/<group id and artifact id>/<version>/<file_name>"
+curl --fail-with-body --verbose "https://<username>:<personal access token>@gitlab.example.com/api/v4/projects/<project_id>/dependency_proxy/packages/maven/<group id and artifact id>/<version>/<file_name>"
 ```
 
 - `<username>` and `<personal access token>` are the credentials to access the dependency proxy of the GitLab instance.
@@ -276,7 +280,7 @@ For example, given a package with:
 The request to manually pull a package is:
 
 ```shell
-curl --verbose "https://<username>:<personal access token>@gitlab.example.com/api/v4/projects/<project_id>/dependency_proxy/packages/maven/com/my_company/my_package/1.2.3/my_package-1.2.3.pom"
+curl --fail-with-body --verbose "https://<username>:<personal access token>@gitlab.example.com/api/v4/projects/<project_id>/dependency_proxy/packages/maven/com/my_company/my_package/1.2.3/my_package-1.2.3.pom"
 ```
 
 ::EndTabs

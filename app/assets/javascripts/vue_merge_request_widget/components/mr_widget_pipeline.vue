@@ -7,15 +7,17 @@ import {
   GlSprintf,
   GlTooltip,
   GlTooltipDirective,
+  GlButton,
 } from '@gitlab/ui';
 import SafeHtml from '~/vue_shared/directives/safe_html';
 import { s__, n__ } from '~/locale';
 import CiIcon from '~/vue_shared/components/ci_icon/ci_icon.vue';
 import { keepLatestDownstreamPipelines } from '~/ci/pipeline_details/utils/parsing_utils';
 import PipelineArtifacts from '~/ci/pipelines_page/components/pipelines_artifacts.vue';
-import LegacyPipelineMiniGraph from '~/ci/pipeline_mini_graph/legacy_pipeline_mini_graph.vue';
+import LegacyPipelineMiniGraph from '~/ci/pipeline_mini_graph/legacy_pipeline_mini_graph/legacy_pipeline_mini_graph.vue';
 import TimeAgoTooltip from '~/vue_shared/components/time_ago_tooltip.vue';
 import TooltipOnTruncate from '~/vue_shared/components/tooltip_on_truncate/tooltip_on_truncate.vue';
+import runPipelineMixin from '../mixins/run_pipeline';
 import { MT_MERGE_STRATEGY } from '../constants';
 
 export default {
@@ -27,6 +29,7 @@ export default {
     GlIcon,
     GlSprintf,
     GlTooltip,
+    GlButton,
     LegacyPipelineMiniGraph,
     PipelineArtifacts,
     TimeAgoTooltip,
@@ -36,6 +39,7 @@ export default {
     GlTooltip: GlTooltipDirective,
     SafeHtml,
   },
+  mixins: [runPipelineMixin],
   props: {
     pipeline: {
       type: Object,
@@ -85,6 +89,21 @@ export default {
       required: false,
       default: '',
     },
+    retargeted: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    detatchedPipeline: {
+      type: String,
+      required: false,
+      default: null,
+    },
+  },
+  data() {
+    return {
+      isCreatingPipeline: false,
+    };
   },
   computed: {
     downstreamPipelines() {
@@ -172,19 +191,37 @@ export default {
         </gl-sprintf>
       </p>
     </template>
+    <template v-else-if="retargeted">
+      <gl-icon name="status_canceled" class="gl-align-self-center gl-mr-3" />
+      <p class="gl-flex-grow-1 gl-flex gl-ml-3 gl-mb-0 text-muted" data-testid="retargeted-message">
+        {{
+          __(
+            'You should run a new pipeline, because the target branch has changed for this merge request.',
+          )
+        }}
+      </p>
+      <gl-button
+        v-if="detatchedPipeline"
+        category="tertiary"
+        variant="confirm"
+        size="small"
+        :loading="isCreatingPipeline"
+        data-testid="run-pipeline-button"
+        @click="runPipeline"
+      >
+        {{ __('Run pipeline') }}
+      </gl-button>
+    </template>
     <template v-else-if="!hasPipeline">
       <gl-loading-icon size="sm" />
-      <p
-        class="gl-flex-grow-1 gl-display-flex gl-ml-3 gl-mb-0"
-        data-testid="monitoring-pipeline-message"
-      >
+      <p class="gl-flex-grow-1 gl-flex gl-ml-3 gl-mb-0" data-testid="monitoring-pipeline-message">
         {{ $options.monitoringPipelineText }}
         <gl-link
           v-gl-tooltip
           :href="ciTroubleshootingDocsPath"
           target="_blank"
           :title="__('Get more information about troubleshooting pipelines')"
-          class="gl-display-flex gl-align-items-center gl-ml-2"
+          class="gl-flex gl-items-center gl-ml-2"
         >
           <gl-icon
             name="question-o"
@@ -195,15 +232,15 @@ export default {
     </template>
     <template v-else-if="hasPipeline">
       <ci-icon :status="status" class="gl-align-self-start gl-mt-2 gl-mr-3" />
-      <div class="ci-widget-container d-flex">
+      <div class="ci-widget-container gl-flex">
         <div class="ci-widget-content">
           <div class="media-body">
             <div
               data-testid="pipeline-info-container"
-              class="gl-display-flex gl-flex-wrap gl-align-items-center gl-justify-content-space-between"
+              class="gl-flex gl-flex-wrap gl-align-items-center gl-justify-content-space-between"
             >
               <p
-                class="mr-pipeline-title gl-align-self-start gl-m-0! gl-mr-3! gl-font-weight-bold gl-text-gray-900"
+                class="mr-pipeline-title gl-align-self-start gl-m-0! gl-mr-3! gl-font-bold gl-text-gray-900"
               >
                 {{ pipeline.details.event_type_name }}
                 <gl-link :href="pipeline.path" class="pipeline-id" data-testid="pipeline-id"
@@ -212,7 +249,7 @@ export default {
                 {{ pipeline.details.status.label }}
               </p>
               <div
-                class="gl-align-items-center gl-display-inline-flex gl-flex-grow-1 gl-justify-content-space-between"
+                class="gl-align-items-center gl-inline-flex gl-flex-grow-1 gl-justify-content-space-between"
               >
                 <legacy-pipeline-mini-graph
                   v-if="pipeline.details.stages"

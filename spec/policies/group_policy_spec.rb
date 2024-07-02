@@ -253,6 +253,18 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
       expect_allowed(*owner_permissions)
       expect_allowed(*admin_permissions)
     end
+
+    context 'when user is also an admin' do
+      before do
+        organization_owner.update!(admin: true)
+      end
+
+      it { expect_disallowed(:admin_organization) }
+
+      context 'with admin mode', :enable_admin_mode do
+        it { expect_allowed(:admin_organization) }
+      end
+    end
   end
 
   context 'migration bot' do
@@ -690,31 +702,31 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
       let_it_be(:private) { Gitlab::VisibilityLevel::PRIVATE }
       let_it_be(:policy) { :create_projects }
 
-      where(:restricted_visibility_levels, :group_visibility, :can_create_project?) do
-        []                                            | ref(:public)   | true
-        []                                            | ref(:internal) | true
-        []                                            | ref(:private)  | true
-        [ref(:public)]                                | ref(:public)   | true
-        [ref(:public)]                                | ref(:internal) | true
-        [ref(:public)]                                | ref(:private)  | true
-        [ref(:internal)]                              | ref(:public)   | true
-        [ref(:internal)]                              | ref(:internal) | true
-        [ref(:internal)]                              | ref(:private)  | true
-        [ref(:private)]                               | ref(:public)   | true
-        [ref(:private)]                               | ref(:internal) | true
-        [ref(:private)]                               | ref(:private)  | false
-        [ref(:public), ref(:internal)]                | ref(:public)   | true
-        [ref(:public), ref(:internal)]                | ref(:internal) | true
-        [ref(:public), ref(:internal)]                | ref(:private)  | true
-        [ref(:public), ref(:private)]                 | ref(:public)   | true
-        [ref(:public), ref(:private)]                 | ref(:internal) | true
-        [ref(:public), ref(:private)]                 | ref(:private)  | false
-        [ref(:private), ref(:internal)]               | ref(:public)   | true
-        [ref(:private), ref(:internal)]               | ref(:internal) | false
-        [ref(:private), ref(:internal)]               | ref(:private)  | false
-        [ref(:public), ref(:internal), ref(:private)] | ref(:public)   | false
-        [ref(:public), ref(:internal), ref(:private)] | ref(:internal) | false
-        [ref(:public), ref(:internal), ref(:private)] | ref(:private)  | false
+      where(:restricted_visibility_levels, :group_visibility, :can_create_project?, :can_create_subgroups?) do
+        []                                            | ref(:public)   | true  | true
+        []                                            | ref(:internal) | true  | true
+        []                                            | ref(:private)  | true  | true
+        [ref(:public)]                                | ref(:public)   | true  | true
+        [ref(:public)]                                | ref(:internal) | true  | true
+        [ref(:public)]                                | ref(:private)  | true  | true
+        [ref(:internal)]                              | ref(:public)   | true  | true
+        [ref(:internal)]                              | ref(:internal) | true  | true
+        [ref(:internal)]                              | ref(:private)  | true  | true
+        [ref(:private)]                               | ref(:public)   | true  | true
+        [ref(:private)]                               | ref(:internal) | true  | true
+        [ref(:private)]                               | ref(:private)  | false | false
+        [ref(:public), ref(:internal)]                | ref(:public)   | true  | true
+        [ref(:public), ref(:internal)]                | ref(:internal) | true  | true
+        [ref(:public), ref(:internal)]                | ref(:private)  | true  | true
+        [ref(:public), ref(:private)]                 | ref(:public)   | true  | true
+        [ref(:public), ref(:private)]                 | ref(:internal) | true  | true
+        [ref(:public), ref(:private)]                 | ref(:private)  | false | false
+        [ref(:private), ref(:internal)]               | ref(:public)   | true  | true
+        [ref(:private), ref(:internal)]               | ref(:internal) | false | false
+        [ref(:private), ref(:internal)]               | ref(:private)  | false | false
+        [ref(:public), ref(:internal), ref(:private)] | ref(:public)   | false | false
+        [ref(:public), ref(:internal), ref(:private)] | ref(:internal) | false | false
+        [ref(:public), ref(:internal), ref(:private)] | ref(:private)  | false | false
       end
 
       with_them do
@@ -726,6 +738,7 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
         context 'with non-admin user' do
           let(:current_user) { owner }
 
+          it { is_expected.to(can_create_subgroups? ? be_allowed(:create_subgroup) : be_disallowed(:create_subgroup)) }
           it { is_expected.to(can_create_project? ? be_allowed(policy) : be_disallowed(policy)) }
         end
 
@@ -1113,15 +1126,8 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
     end
   end
 
+  # This block can be removed when packages_dependency_proxy_pass_token_to_policy is rolled out
   describe 'dependency proxy' do
-    RSpec.shared_examples 'disabling admin_package feature flag' do
-      before do
-        stub_feature_flags(raise_group_admin_package_permission_to_owner: false)
-      end
-
-      it { is_expected.to be_allowed(:admin_dependency_proxy) }
-    end
-
     shared_examples 'disallows all dependency proxy access' do
       it { is_expected.to be_disallowed(:read_dependency_proxy) }
       it { is_expected.to be_disallowed(:admin_dependency_proxy) }
@@ -1164,7 +1170,6 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
           let(:current_user) { maintainer }
 
           it_behaves_like 'allows dependency proxy read access but not admin'
-          it_behaves_like 'disabling admin_package feature flag'
         end
 
         context 'owner' do
@@ -1172,8 +1177,6 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
 
           it { is_expected.to be_allowed(:read_dependency_proxy) }
           it { is_expected.to be_allowed(:admin_dependency_proxy) }
-
-          it_behaves_like 'disabling admin_package feature flag'
         end
       end
 
@@ -1216,8 +1219,16 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
         end
       end
 
+      context 'placeholder user' do
+        let_it_be(:placeholder_user) { create(:user, user_type: :placeholder, developer_of: group) }
+
+        subject { described_class.new(placeholder_user, group) }
+
+        it_behaves_like 'disallows all dependency proxy access'
+      end
+
       context 'all other user types' do
-        User::USER_TYPES.except(:human, :project_bot).each_value do |user_type|
+        User::USER_TYPES.except(:human, :project_bot, :placeholder).each_value do |user_type|
           context "with user_type #{user_type}" do
             before do
               current_user.update!(user_type: user_type)
@@ -1332,11 +1343,23 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
   end
 
   describe 'update_runners_registration_token' do
+    let(:allow_runner_registration_token) { true }
+
+    before do
+      stub_application_setting(allow_runner_registration_token: allow_runner_registration_token)
+    end
+
     context 'admin' do
       let(:current_user) { admin }
 
       context 'when admin mode is enabled', :enable_admin_mode do
         it { is_expected.to be_allowed(:update_runners_registration_token) }
+
+        context 'with registration tokens disabled' do
+          let(:allow_runner_registration_token) { false }
+
+          it { is_expected.to be_disallowed(:update_runners_registration_token) }
+        end
       end
 
       context 'when admin mode is disabled' do
@@ -1348,6 +1371,12 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
       let(:current_user) { owner }
 
       it { is_expected.to be_allowed(:update_runners_registration_token) }
+
+      context 'with registration tokens disabled' do
+        let(:allow_runner_registration_token) { false }
+
+        it { is_expected.to be_disallowed(:update_runners_registration_token) }
+      end
     end
 
     context 'with maintainer' do
@@ -1382,11 +1411,23 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
   end
 
   describe 'register_group_runners' do
+    let(:allow_runner_registration_token) { true }
+
+    before do
+      stub_application_setting(allow_runner_registration_token: allow_runner_registration_token)
+    end
+
     context 'admin' do
       let(:current_user) { admin }
 
       context 'when admin mode is enabled', :enable_admin_mode do
         it { is_expected.to be_allowed(:register_group_runners) }
+
+        context 'with registration tokens disabled' do
+          let(:allow_runner_registration_token) { false }
+
+          it { is_expected.to be_disallowed(:register_group_runners) }
+        end
 
         context 'with specific group runner registration disabled' do
           before do
@@ -1402,6 +1443,12 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
           end
 
           it { is_expected.to be_allowed(:register_group_runners) }
+
+          context 'with registration tokens disabled' do
+            let(:allow_runner_registration_token) { false }
+
+            it { is_expected.to be_disallowed(:register_group_runners) }
+          end
 
           context 'with specific group runner registration disabled' do
             before do
@@ -1430,6 +1477,12 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
       let(:current_user) { owner }
 
       it { is_expected.to be_allowed(:register_group_runners) }
+
+      context 'with registration tokens disabled' do
+        let(:allow_runner_registration_token) { false }
+
+        it { is_expected.to be_disallowed(:register_group_runners) }
+      end
 
       context 'with group runner registration disabled' do
         before do
@@ -1727,10 +1780,16 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
       specify { is_expected.to be_disallowed(:destroy_user_achievement) }
     end
 
-    context 'when current user can not see the group' do
+    context 'when current user is not a group member' do
       let(:current_user) { non_group_member }
 
-      specify { is_expected.to be_allowed(:read_achievement) }
+      specify { is_expected.to be_disallowed(:read_achievement) }
+
+      context 'when the group is public' do
+        let_it_be(:group) { create(:group, :public) }
+
+        specify { is_expected.to be_allowed(:read_achievement) }
+      end
     end
 
     context 'when current user is not an owner' do
@@ -1744,33 +1803,13 @@ RSpec.describe GroupPolicy, feature_category: :system_access do
     context 'with maintainer' do
       let(:current_user) { maintainer }
 
-      context 'with feature flag enabled' do
-        specify { is_expected.to be_disallowed(:admin_package) }
-      end
-
-      context 'with feature flag disabled' do
-        before do
-          stub_feature_flags(raise_group_admin_package_permission_to_owner: false)
-        end
-
-        specify { is_expected.to be_allowed(:admin_package) }
-      end
+      specify { is_expected.to be_disallowed(:admin_package) }
     end
 
     context 'with owner' do
       let(:current_user) { owner }
 
-      context 'with feature flag enabled' do
-        specify { is_expected.to be_allowed(:admin_package) }
-      end
-
-      context 'with feature flag disabled' do
-        before do
-          stub_feature_flags(raise_group_admin_package_permission_to_owner: false)
-        end
-
-        specify { is_expected.to be_allowed(:admin_package) }
-      end
+      specify { is_expected.to be_allowed(:admin_package) }
     end
   end
 end

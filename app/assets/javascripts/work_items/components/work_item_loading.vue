@@ -13,18 +13,11 @@ export default {
   components: {
     GlSkeletonLoader,
   },
-  props: {
-    twoColumnView: {
-      type: Boolean,
-      required: false,
-      default: false,
-    },
-  },
 };
 </script>
 
 <template>
-  <div v-if="twoColumnView" class="work-item-overview" data-testid="work-item-two-column-loading">
+  <div class="work-item-overview" data-testid="work-item-two-column-loading">
     <section>
       <gl-skeleton-loader :height="60" :width="600" data-testid="work-title-and-meta-loading">
         <!--- START work item title -->
@@ -65,7 +58,7 @@ export default {
 
       <!--- START work item attributes wrapper small/xs screen -->
       <div
-        class="work-item-attributes-wrapper gl-md-display-none!"
+        class="work-item-attributes-wrapper md:!gl-hidden"
         data-testid="work-item-attributes-xssm-loading"
       >
         <gl-skeleton-loader
@@ -107,7 +100,7 @@ export default {
 
     <!--- START work item attributes wrapper md/lg screens -->
     <aside
-      class="work-item-overview-right-sidebar gl-md-display-block! gl-display-none"
+      class="work-item-overview-right-sidebar gl-hidden md:!gl-block"
       data-testid="work-item-attributes-mdup-loading"
     >
       <div class="work-item-attributes-wrapper">
@@ -123,13 +116,5 @@ export default {
       </div>
     </aside>
     <!--- END work item attributes wrapper md/lg screens -->
-  </div>
-  <div v-else data-testid="work-item-single-column-loading" class="gl-max-w-26 gl-py-5">
-    <!--- START work item loading original loader -->
-    <gl-skeleton-loader :height="65" :width="240">
-      <rect width="240" height="20" x="5" y="0" rx="4" />
-      <rect width="100" height="20" x="5" y="45" rx="4" />
-    </gl-skeleton-loader>
-    <!--- END work item loading original loader -->
   </div>
 </template>

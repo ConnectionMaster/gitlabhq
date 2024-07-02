@@ -10,13 +10,11 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/214713) in GitLab 13.1 [with a flag](../../../administration/feature_flags.md) named `group_iterations`. Disabled by default.
-> - [Enabled on self-managed](https://gitlab.com/gitlab-org/gitlab/-/issues/221047) in GitLab 13.2.
-> - Moved to GitLab Premium in 13.9.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/221047) in GitLab 14.6. [Feature flag `group_iterations`](https://gitlab.com/gitlab-org/gitlab/-/issues/221047) removed.
+An iteration in GitLab refers to a time-boxed workflow that groups issues to be worked on during
+a specific period of time, usually lasting 1-3 weeks.
 
-Iterations are a way to track issues over a period of time. This allows teams
-to track velocity and volatility metrics. For tracking the same item over multiple concurrent periods, you can use iterations with [milestones](../../project/milestones/index.md).
+Teams can use iterations to track velocity and volatility metrics.
+For tracking the same item over multiple concurrent periods, you can use iterations with [milestones](../../project/milestones/index.md).
 Create and manage various [iteration cadences](#iteration-cadences) in a group.
 
 For example, you can use:
@@ -66,8 +64,10 @@ To create an iteration cadence:
    - From the **Upcoming iterations** dropdown list, select how many upcoming iterations should be
      created and maintained by GitLab.
    - Optional. To move incomplete issues to the next iteration, select the **Enable roll over** checkbox.
-     At the end of the current iteration, all open issues are added to the next iteration.
-     Issues are moved at midnight in the instance time zone (UTC by default). Administrators can change the instance time zone.
+     At the end of the current iteration, [Automation Bot](#gitlab-automation-bot-user) moves all open
+     issues to the next iteration.
+     Issues are moved at midnight in the instance time zone (UTC by default).
+     Administrators can change the instance time zone.
 1. Select **Create cadence**. The cadence list page opens.
 
 To manually manage the created cadence, see [Create an iteration manually](#create-an-iteration-manually).
@@ -165,6 +165,18 @@ To delete an iteration cadence:
 1. To the right of the cadence you want to delete, select the vertical ellipsis (**{ellipsis_v}**) and then select **Delete cadence**.
 1. Select **Delete cadence**.
 
+### GitLab Automation Bot user
+
+When iteration roll-over is enabled, at the end of the current iteration, all open issues are moved
+to the next iteration.
+
+Iterations are changed by the special GitLab Automation Bot user, which you can see in the issue
+[system notes](../../project/system_notes.md).
+This user isn't a [billable user](../../../subscriptions/self_managed/index.md#billable-users),
+so it does not count toward the license limit count.
+
+On GitLab.com, this is the `automation-bot1` user.
+
 ## Create an iteration manually
 
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/343889) the minimum user role from Developer to Reporter in GitLab 15.0.
@@ -207,7 +219,6 @@ To edit an iteration:
 
 ## Delete an iteration
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/292268) in GitLab 14.3.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab/-/issues/343889) the minimum user role from Developer to Reporter in GitLab 15.0.
 
 Prerequisites:
@@ -242,8 +253,6 @@ To view an iteration report:
 
 ### Iteration burndown and burnup charts
 
-> - Scoped burnup and burndown charts in subgroups and projects [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/326029) in GitLab 14.9.
-
 The iteration report includes [burndown and burnup charts](../../project/milestones/burndown_and_burnup_charts.md),
 similar to how they appear when viewing a [milestone](../../project/milestones/index.md):
 
@@ -251,8 +260,6 @@ similar to how they appear when viewing a [milestone](../../project/milestones/i
 - Burnup charts track the daily total count and weight of issues added to and completed in a given timebox.
 
 #### View iteration charts scoped to subgroups or projects
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/326029) in GitLab 14.9.
 
 View burndown and burnup charts for iterations created for a group in any of its
 subgroups or projects.

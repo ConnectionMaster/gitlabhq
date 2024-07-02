@@ -19,7 +19,6 @@ module Ci
 
     belongs_to :project, inverse_of: :builds
     belongs_to :runner
-    belongs_to :trigger_request
     belongs_to :erased_by, class_name: 'User'
     belongs_to :pipeline,
       ->(build) { in_partition(build) },
@@ -29,13 +28,20 @@ module Ci
       inverse_of: :builds
     belongs_to :project_mirror, primary_key: :project_id, foreign_key: :project_id, inverse_of: :builds
 
+    belongs_to :execution_config,
+      ->(build) { in_partition(build) },
+      class_name: 'Ci::BuildExecutionConfig',
+      foreign_key: :execution_config_id,
+      partition_foreign_key: :partition_id,
+      inverse_of: :builds
+
     RUNNER_FEATURES = {
-      upload_multiple_artifacts: -> (build) { build.publishes_artifacts_reports? },
-      refspecs: -> (build) { build.merge_request_ref? },
-      artifacts_exclude: -> (build) { build.supports_artifacts_exclude? },
-      multi_build_steps: -> (build) { build.multi_build_steps? },
-      return_exit_code: -> (build) { build.exit_codes_defined? },
-      fallback_cache_keys: -> (build) { build.fallback_cache_keys_defined? }
+      upload_multiple_artifacts: ->(build) { build.publishes_artifacts_reports? },
+      refspecs: ->(build) { build.merge_request_ref? },
+      artifacts_exclude: ->(build) { build.supports_artifacts_exclude? },
+      multi_build_steps: ->(build) { build.multi_build_steps? },
+      return_exit_code: ->(build) { build.exit_codes_defined? },
+      fallback_cache_keys: ->(build) { build.fallback_cache_keys_defined? }
     }.freeze
 
     DEGRADATION_THRESHOLD_VARIABLE_NAME = 'DEGRADATION_THRESHOLD'
@@ -115,7 +121,6 @@ module Ci
     delegate :apple_app_store_integration, to: :project
     delegate :google_play_integration, to: :project
     delegate :diffblue_cover_integration, to: :project
-    delegate :trigger_short_token, to: :trigger_request, allow_nil: true
     delegate :ensure_persistent_ref, to: :pipeline
     delegate :enable_debug_trace!, to: :metadata
 
@@ -138,6 +143,13 @@ module Ci
     scope :eager_load_job_artifacts, -> { includes(:job_artifacts) }
     scope :eager_load_tags, -> { includes(:tags) }
     scope :eager_load_for_archiving_trace, -> { preload(:project, :pending_state) }
+    scope :eager_load_for_api, -> do
+      preload(
+        :job_artifacts_archive, :job_artifacts, :runner, :tags, :runner_manager, :metadata,
+        pipeline: :project,
+        user: [:user_preference, :user_detail, :followees]
+      )
+    end
 
     scope :eager_load_everything, -> do
       includes(
@@ -165,26 +177,28 @@ module Ci
     scope :ref_protected, -> { where(protected: true) }
     scope :with_live_trace, -> { where_exists(Ci::BuildTraceChunk.scoped_build) }
     scope :with_stale_live_trace, -> { with_live_trace.finished_before(12.hours.ago) }
-    scope :finished_before, -> (date) { finished.where('finished_at < ?', date) }
+    scope :finished_before, ->(date) { finished.where('finished_at < ?', date) }
     scope :license_management_jobs, -> { where(name: %i[license_management license_scanning]) } # handle license rename https://gitlab.com/gitlab-org/gitlab/issues/8911
     # WARNING: This scope could lead to performance implications for large size of tables `ci_builds` and ci_runners`.
     # See https://gitlab.com/gitlab-org/gitlab/-/merge_requests/123131
-    scope :with_runner_type, -> (runner_type) { joins(:runner).where(runner: { runner_type: runner_type }) }
+    scope :with_runner_type, ->(runner_type) { joins(:runner).where(runner: { runner_type: runner_type }) }
 
-    scope :belonging_to_runner_manager, -> (runner_machine_id) {
+    scope :belonging_to_runner_manager, ->(runner_machine_id) {
       joins(:runner_manager_build).where(p_ci_runner_machine_builds: { runner_machine_id: runner_machine_id })
     }
 
-    scope :with_secure_reports_from_config_options, -> (job_types) do
+    scope :with_secure_reports_from_config_options, ->(job_types) do
       joins(:metadata).where("#{Ci::BuildMetadata.quoted_table_name}.config_options -> 'artifacts' -> 'reports' ?| array[:job_types]", job_types: job_types)
     end
 
     scope :with_coverage, -> { where.not(coverage: nil) }
     scope :without_coverage, -> { where(coverage: nil) }
     scope :with_coverage_regex, -> { where.not(coverage_regex: nil) }
+    scope :id_before, ->(id) { where(arel_table[:id].lt(id)) }
+    scope :id_after, ->(id) { where(arel_table[:id].gt(id)) }
 
-    scope :in_merge_request, ->(merge_request) do
-      joins(:pipeline).where(Ci::Pipeline.arel_table[:merge_request_id].eq(merge_request))
+    scope :in_merge_request, ->(merge_request_id) do
+      joins(:pipeline).where(Ci::Pipeline.arel_table[:merge_request_id].eq(merge_request_id))
     end
 
     acts_as_taggable
@@ -215,11 +229,11 @@ module Ci
 
       def clone_accessors
         %i[pipeline project ref tag options name
-           allow_failure stage stage_idx trigger_request
-           yaml_variables when environment coverage_regex
-           description tag_list protected needs_attributes
-           job_variables_attributes resource_group scheduling_type
-           ci_stage partition_id id_tokens interruptible].freeze
+          allow_failure stage stage_idx trigger_request
+          yaml_variables when environment coverage_regex
+          description tag_list protected needs_attributes
+          job_variables_attributes resource_group scheduling_type
+          ci_stage partition_id id_tokens interruptible].freeze
       end
 
       def supported_keyset_orderings
@@ -371,14 +385,14 @@ module Ci
       end
     end
 
-    def self.ids_in_merge_request(merge_request_ids)
-      in_merge_request(merge_request_ids).pluck(:id)
+    def self.ids_in_merge_request(merge_request_id)
+      in_merge_request(merge_request_id).pluck(:id)
     end
 
     # A Ci::Bridge may transition to `canceling` as a result of strategy: :depend
     # but only a Ci::Build will transition to `canceling`` via `.cancel`
     def supports_canceling?
-      Feature.enabled?(:ci_canceling_status, project, type: :wip) && cancel_gracefully?
+      Feature.enabled?(:ci_canceling_status, project) && cancel_gracefully?
     end
 
     def build_matcher
@@ -825,8 +839,8 @@ module Ci
 
     def steps
       [Gitlab::Ci::Build::Step.from_commands(self),
-       Gitlab::Ci::Build::Step.from_release(self),
-       Gitlab::Ci::Build::Step.from_after_script(self)].compact
+        Gitlab::Ci::Build::Step.from_release(self),
+        Gitlab::Ci::Build::Step.from_after_script(self)].compact
     end
 
     def runtime_hooks
@@ -1162,27 +1176,13 @@ module Ci
     end
 
     def job_jwt_variables
-      if id_tokens?
-        id_tokens_variables
-      else
-        predefined_jwt_variables
-      end
-    end
-
-    def predefined_jwt_variables
-      Gitlab::Ci::Variables::Collection.new.tap do |variables|
-        jwt = Gitlab::Ci::Jwt.for_build(self)
-        jwt_v2 = Gitlab::Ci::JwtV2.for_build(self)
-        variables.append(key: 'CI_JOB_JWT', value: jwt, public: false, masked: true)
-        variables.append(key: 'CI_JOB_JWT_V1', value: jwt, public: false, masked: true)
-        variables.append(key: 'CI_JOB_JWT_V2', value: jwt_v2, public: false, masked: true)
-      rescue OpenSSL::PKey::RSAError, Gitlab::Ci::Jwt::NoSigningKeyError => e
-        Gitlab::ErrorTracking.track_exception(e)
-      end
+      id_tokens_variables
     end
 
     def id_tokens_variables
       Gitlab::Ci::Variables::Collection.new.tap do |variables|
+        break variables unless id_tokens?
+
         id_tokens.each do |var_name, token_data|
           token = Gitlab::Ci::JwtV2.for_build(self, aud: expanded_id_token_aud(token_data['aud']))
 

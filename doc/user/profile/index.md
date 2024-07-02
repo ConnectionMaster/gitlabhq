@@ -41,9 +41,14 @@ Prerequisites:
   - Contain a project with [Container Registry](../packages/container_registry/index.md) tags.
   - Have a project that hosts [GitLab Pages](../project/pages/index.md). For more information,
     see [changing your username in the GitLab Team Handbook](https://handbook.gitlab.com/handbook/tools-and-tips/#change-your-username-at-gitlabcom).
-- Your username must be between 2 and 255 characters in length, and must not:
-  - Contain special characters or emoji.
-  - End with `.<reserved file extension>`, for example `jon.png`. However, `jonpng` is valid.
+- Your username:
+  - Must be between 2 and 255 characters in length.
+  - Must only include non-accented letters, digits, `_`, `-`, and `.`.
+  - Must not:
+    - Start with `-`.
+    - Contain emoji.
+    - End with `.` or `.<reserved file extension>`, for example `jon.png`, `jon.git` or `jon.atom`. However,
+      `jonpng` is valid.
 
 To change your username:
 
@@ -55,7 +60,7 @@ To change your username:
 
 ## Add emails to your user profile
 
-To add new email to your account:
+To add a new email address to your account:
 
 1. On the left sidebar, select your avatar.
 1. Select **Edit profile**.
@@ -65,17 +70,25 @@ To add new email to your account:
 1. Select **Add email address**.
 1. Verify your email address with the verification email received.
 
+The new email address is added as a secondary email address.
+You can use secondary email addresses to reset passwords but not to authenticate.
+You can update your [primary email address](#change-your-primary-email).
+
 NOTE:
 [Making your email non-public](#set-your-public-email) does not prevent it from being used for commit matching,
 [project imports](../project/import/index.md), and [group migrations](../group/import/index.md).
 
 ## Delete emails from your user profile
 
+> - Automatic deletion of unverified secondary email addresses [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/151562) in GitLab 17.0.
+
 You can delete a secondary email address from your account. You cannot delete your
 primary email address.
 
 If the deleted email address is used for any user emails, those user emails are
 sent to the primary email address instead.
+
+Unverified secondary email addresses are automatically deleted after three days.
 
 NOTE:
 Because of [issue 438600](https://gitlab.com/gitlab-org/gitlab/-/issues/438600), group notifications are still sent to
@@ -93,6 +106,9 @@ You can also [use the API to delete a secondary email address](../../api/users.m
 ## Make your user profile page private
 
 You can make your user profile visible to only you and GitLab administrators.
+
+NOTE:
+A GitLab administrator can [disable](../../administration/settings/account_and_limit_settings.md#allow-users-to-make-their-profiles-private) this setting, forcing all profiles to be made public.
 
 To make your profile private:
 
@@ -124,8 +140,6 @@ user profiles are only visible to authenticated users.
 
 ## Add details to your profile with a README
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/232157) in GitLab 14.5.
-
 You can add more information to your profile page with a README file. When you populate
 the README file with information, it's included on your profile page.
 
@@ -139,12 +153,13 @@ To create a new project and add its README to your profile:
    - In the **Project name** field, enter the name for your new project.
    - In the **Project URL** field, select your GitLab username.
    - In the **Project slug** field, enter your GitLab username.
+     All of these fields are case sensitive. If your username has capital letters, enter it into the project slug field with the capitals included.
 1. For **Visibility Level**, select **Public**.
    ![Proper project path for an individual on the hosted product](img/personal_readme_setup_v14_5.png)
 1. For **Project Configuration**, ensure **Initialize repository with a README** is selected.
 1. Select **Create project**.
-1. Create a README file inside this project. The file can be any valid [README or index file](../project/repository/index.md#readme-and-index-files).
-1. Populate the README file with [Markdown](../markdown.md), or another [supported markup language](../project/repository/index.md#supported-markup-languages).
+1. Create a README file inside this project. The file can be any valid [README or index file](../project/repository/files/index.md#readme-and-index-files).
+1. Populate the README file with [Markdown](../markdown.md), or another [supported markup language](../project/repository/files/index.md#supported-markup-languages).
 
 GitLab displays the contents of your README below your contribution graph.
 
@@ -189,8 +204,6 @@ To show private contributions:
 
 ## Add your gender pronouns
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/332405) in GitLab 14.0.
-
 You can add your gender pronouns to your GitLab account to be displayed next to
 your name in your profile.
 
@@ -203,8 +216,6 @@ To specify your pronouns:
 
 ## Add your name pronunciation
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/25742) in GitLab 14.2.
-
 You can add your name pronunciation to your GitLab account. This is displayed in your profile, below
 your name.
 
@@ -216,8 +227,6 @@ To add your name pronunciation:
 1. Select **Update profile settings**.
 
 ## Set your current status
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/56649) in GitLab 13.10, users can schedule the clearing of their status.
 
 You can provide a custom status message for your user profile along with an emoji that describes it.
 This may be helpful when you are out of office or otherwise not available.
@@ -238,11 +247,6 @@ You can also set your current status from [your user settings](#access-your-user
 If you select the **Busy** checkbox, remember to clear it when you become available again.
 
 ## Set a busy status indicator
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/259649) in GitLab 13.6.
-> - It was [deployed behind a feature flag](../feature_flags.md), disabled by default.
-> - [Became enabled by default](https://gitlab.com/gitlab-org/gitlab/-/issues/281073) in GitLab 13.8.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/329163) in GitLab 13.12.
 
 To indicate to others that you are busy, you can set an indicator.
 
@@ -266,7 +270,6 @@ You can set your local time zone to:
 
 - Display your local time on your profile, and in places where hovering over your name shows information about you.
 - Align your contribution calendar with your local time to better reflect when your contributions were made
-  ([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/335343) in GitLab 14.5).
 
 To set your time zone:
 
@@ -360,20 +363,6 @@ You can disable following and being followed by other users.
 NOTE:
 When this feature is being disabled, all current followed/following connections are deleted.
 
-## Advanced code search with zoekt
-
-### Disable searching code with Zoekt
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/388519) as a beta feature [with a flag](../feature_flags.md) named `search_code_with_zoekt`. Enabled by default.
-
-You can disable searching with Zoekt and use Elasticsearch instead.
-
-1. On the left sidebar, select your avatar.
-1. Select **Edit profile**.
-1. Select **Preferences**.
-1. Clear the **Enable advanced code search** checkbox.
-1. Select **Save changes**.
-
 ## View a user's activity
 
 GitLab tracks [user contribution activity](contributions_calendar.md).
@@ -402,6 +391,33 @@ To view your activity:
    - **Designs**: Designs you added, updated, and removed in your projects.
    - **Team**: Projects you joined and left.
 
+## Sign-in services
+
+Instead of using a regular username and password to sign in to GitLab, you can use a sign-in service instead.
+
+### Connect a sign-in service
+
+To connect a sign-in service to use for signing in to GitLab:
+
+1. On the left sidebar, select your avatar.
+1. Select **Edit profile**.
+1. Select **Account**.
+1. Locate the **Service sign-in** section.
+1. Under the **Connected Accounts** section, select the button that corresponds with the service you want to sign in
+   with.
+1. Follow the instructions for the selected service to start signing in with it.
+
+### Disconnect a sign-in service
+
+To disconnect a sign-in service used for signing in to GitLab:
+
+1. On the left sidebar, select your avatar.
+1. Select **Edit profile**.
+1. Select **Account**.
+1. Locate the **Service sign-in** section.
+1. Under the **Connected Accounts** section, select **Disconnect** next to the button that corresponds with the service
+   you no longer want to sign in with.
+
 ## Session duration
 
 ### Stay signed in for two weeks
@@ -425,8 +441,6 @@ GitLab administrators can [turn off the **Remember me** setting](../../administr
 that require sessions to expire periodically for security or compliance purposes.
 
 ### Cookies used for sign-in
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/20340) in GitLab 13.1.
 
 When you sign in, three cookies are set:
 

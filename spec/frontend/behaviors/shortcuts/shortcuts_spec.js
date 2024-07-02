@@ -6,6 +6,7 @@ import { waitForElement } from '~/lib/utils/dom_utils';
 import { setHTMLFixture, resetHTMLFixture } from 'helpers/fixtures';
 import Shortcuts, { LOCAL_MOUSETRAP_DATA_KEY } from '~/behaviors/shortcuts/shortcuts';
 import MarkdownPreview from '~/behaviors/preview_markdown';
+import { useMockInternalEventsTracking } from 'helpers/tracking_internal_events_helper';
 
 const mockSearchInput = document.createElement('input');
 
@@ -121,6 +122,7 @@ describe('Shortcuts', () => {
 
   describe('focusSearch', () => {
     let event;
+    const { bindInternalEventDocument } = useMockInternalEventsTracking();
 
     beforeEach(() => {
       event = new KeyboardEvent('keydown', { cancelable: true });
@@ -136,10 +138,18 @@ describe('Shortcuts', () => {
     it('cancels the default behaviour of the event', () => {
       expect(event.defaultPrevented).toBe(true);
     });
+
+    it('triggers internal_event tracking', () => {
+      const { trackEventSpy } = bindInternalEventDocument(document.body);
+      expect(trackEventSpy).toHaveBeenCalledWith(
+        'press_keyboard_shortcut_to_activate_command_palette',
+      );
+    });
   });
 
   describe('focusSearchFile', () => {
     let event;
+    const { bindInternalEventDocument } = useMockInternalEventsTracking();
 
     beforeEach(() => {
       jest.spyOn(mockSearchInput, 'dispatchEvent');
@@ -166,6 +176,24 @@ describe('Shortcuts', () => {
 
     it('dispatches an `input` event on the search input', () => {
       expect(mockSearchInput.dispatchEvent).toHaveBeenCalledWith(new Event('input'));
+    });
+
+    it('triggers internal_event tracking', () => {
+      jest.spyOn(mockSearchInput, 'dispatchEvent');
+      event = new KeyboardEvent('keydown', { key: 't' }, { cancelable: true });
+      Shortcuts.focusSearchFile(event);
+      const { trackEventSpy } = bindInternalEventDocument(document.body);
+
+      expect(trackEventSpy).toHaveBeenCalledWith('click_go_to_file_shortcut');
+    });
+
+    it('prefils current path from breadcrumbs', async () => {
+      setHTMLFixture('<div class="js-repo-breadcrumbs" data-current-path="files/test"></div>');
+
+      event = new KeyboardEvent('keydown', { cancelable: true });
+      await Shortcuts.focusSearchFile(event);
+
+      expect(mockSearchInput.value).toBe('~files/test/');
     });
   });
 

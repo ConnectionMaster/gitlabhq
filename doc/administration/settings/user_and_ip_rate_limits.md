@@ -26,8 +26,7 @@ By default, all Git operations are first tried unauthenticated. Because of this,
 may trigger the rate limits configured for unauthenticated requests.
 
 NOTE:
-[In GitLab 14.8 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/344807),
-the rate limits for API requests don't affect requests made by the frontend, as these are always
+The rate limits for API requests don't affect requests made by the frontend, as these are always
 counted as web traffic.
 
 ## Enable unauthenticated API request rate limit
@@ -88,8 +87,6 @@ To enable the authenticated request rate limit:
 
 ## Use a custom rate limit response
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/50693) in GitLab 13.8.
-
 A request that exceeds a rate limit returns a `429` response code and a
 plain-text body, which by default is `Retry later`.
 
@@ -116,8 +113,6 @@ To modify the maximum number of requests:
 
 ## Response headers
 
-> - [Introduced](https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/731) in GitLab 13.8, the `RateLimit` headers. `Retry-After` was introduced in an earlier version.
-
 When a client exceeds the associated rate limit, the following requests are
 blocked. The server may respond with rate-limiting information allowing the
 requester to retry after a specific period of time. These information are
@@ -135,8 +130,6 @@ attached into the response headers.
 
 ## Use an HTTP header to bypass rate limiting
 
-> - [Introduced](https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/622) in GitLab 13.6.
-
 Depending on the needs of your organization, you may want to enable rate limiting
 but have some requests bypass the rate limiter.
 
@@ -151,7 +144,7 @@ GitLab. For example:
    - Erase `Gitlab-Bypass-Rate-Limiting`.
    - Set `Gitlab-Bypass-Rate-Limiting` to a value other than `1` on all requests that
      should be affected by rate limiting.
-1. Set the environment variable  `GITLAB_THROTTLE_BYPASS_HEADER`.
+1. Set the environment variable `GITLAB_THROTTLE_BYPASS_HEADER`.
    - For [Linux package installations](https://docs.gitlab.com/omnibus/settings/environment-variables.html),
      set `'GITLAB_THROTTLE_BYPASS_HEADER' => 'Gitlab-Bypass-Rate-Limiting'` in `gitlab_rails['env']`.
    - For self-compiled installations, set `export GITLAB_THROTTLE_BYPASS_HEADER=Gitlab-Bypass-Rate-Limiting`
@@ -171,8 +164,6 @@ To disable the bypass mechanism, make sure the environment variable
 `GITLAB_THROTTLE_BYPASS_HEADER` is unset or empty.
 
 ## Allow specific users to bypass authenticated request rate limiting
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/49127) in GitLab 13.7.
 
 Similarly to the bypass header described above, it is possible to allow
 a certain set of users to bypass the rate limiter. This only applies
@@ -196,8 +187,6 @@ are marked with `"throttle_safelist":"throttle_user_allowlist"` in
 At application startup, the allowlist is logged in [`auth.log`](../logs/index.md#authlog).
 
 ## Try out throttling settings before enforcing them
-
-> - [Introduced](https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/629) in GitLab 13.6.
 
 You can try out throttling settings by setting the `GITLAB_THROTTLE_DRY_RUN` environment variable to
 a comma-separated list of throttle names.
@@ -238,14 +227,22 @@ the rate limiting in the settings. The settings in the Admin Area
 take effect immediately, while setting the environment variable
 requires a restart of all the Puma processes.
 
-<!-- ## Troubleshooting
+## Troubleshooting
 
-Include any troubleshooting steps that you can foresee. If you know beforehand what issues
-one might have when setting this up, or when something is changed, or on upgrading, it's
-important to describe those, too. Think of things that may go wrong and include them here.
-This is important to minimize requests for support, and to avoid doc comments with
-questions that you know someone might ask.
+### Disable throttling after accidentally locking administrators out
 
-Each scenario can be a third-level heading, for example `### Getting error message X`.
-If you have none to add when creating a doc, leave this section in place
-but commented out to help encourage others to add to it in the future. -->
+If many users connect to GitLab through the same proxy or network gateway,
+it is possible that, if a rate limit is too low, that limit will also lock administrators out,
+because GitLab sees them using the same IP as the requests that triggered the throttling.
+
+Administrators can use [the Rails console](../operations/rails_console.md) to disable the same limits as listed for
+[the `GITLAB_THROTTLE_DRY_RUN` variable](#try-out-throttling-settings-before-enforcing-them).
+For example:
+
+```ruby
+Gitlab::CurrentSettings.update!(throttle_authenticated_web_enabled: false)
+```
+
+In this example, the `throttle_authenticated_web` parameter has the `_enabled` name suffix.
+
+To set numeric values for the limits, replace the `_enabled` name suffix with the `_period_in_seconds` and `_requests_per_period` suffixes.

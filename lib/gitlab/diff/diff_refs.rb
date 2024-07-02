@@ -7,7 +7,7 @@ module Gitlab
       attr_reader :start_sha
       attr_reader :head_sha
 
-      def initialize(base_sha:, start_sha: base_sha, head_sha:)
+      def initialize(base_sha:, head_sha:, start_sha: base_sha)
         @base_sha = base_sha
         @start_sha = start_sha
         @head_sha = head_sha
@@ -48,9 +48,9 @@ module Gitlab
           straight = start_sha == base_sha
 
           CompareService.new(project, head_sha).execute(project,
-                                                        start_sha,
-                                                        base_sha: base_sha,
-                                                        straight: straight)
+            start_sha,
+            base_sha: base_sha,
+            straight: straight)
         end
       end
     end

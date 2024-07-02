@@ -6,12 +6,17 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
   let_it_be(:project) { create(:project) }
   let_it_be_with_refind(:pipeline) { create(:ci_pipeline, project: project) }
 
+  describe 'associations' do
+    it { is_expected.to belong_to(:trigger_request) }
+  end
+
   describe 'delegations' do
     subject { described_class.new }
 
     it { is_expected.to delegate_method(:merge_request?).to(:pipeline) }
     it { is_expected.to delegate_method(:merge_request_ref?).to(:pipeline) }
     it { is_expected.to delegate_method(:legacy_detached_merge_request_pipeline?).to(:pipeline) }
+    it { is_expected.to delegate_method(:trigger_short_token).to(:trigger_request) }
   end
 
   describe '#clone' do
@@ -93,7 +98,7 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
            pipeline_id report_results pending_state pages_deployments
            queuing_entry runtime_metadata trace_metadata
            dast_site_profile dast_scanner_profile stage_id dast_site_profiles_build
-           dast_scanner_profiles_build auto_canceled_by_partition_id].freeze
+           dast_scanner_profiles_build auto_canceled_by_partition_id execution_config_id execution_config].freeze
       end
 
       before_all do
@@ -207,7 +212,7 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
       end
 
       context 'when it has a dynamic environment' do
-        let_it_be(:other_developer) { create(:user).tap { |u| project.add_developer(u) } }
+        let_it_be(:other_developer) { create(:user, developer_of: project) }
 
         let(:environment_name) { 'review/$CI_COMMIT_REF_SLUG-$GITLAB_USER_ID' }
 
@@ -452,11 +457,25 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
       let(:build) { create(:ci_build, :created, project: project, resource_group: resource_group) }
 
       it 'is waiting for resource when build is enqueued' do
-        expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(resource_group.id)
+        expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorkerV2).to receive(:perform_async).with(resource_group.id)
 
         expect { build.enqueue! }.to change { build.status }.from('created').to('waiting_for_resource')
 
         expect(build.waiting_for_resource_at).not_to be_nil
+      end
+
+      context 'when `assign_resource_worker_deduplicate_until_executing` FF is disabled' do
+        before do
+          stub_feature_flags(assign_resource_worker_deduplicate_until_executing: false)
+        end
+
+        it 'is waiting for resource when build is enqueued' do
+          expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(resource_group.id)
+
+          expect { build.enqueue! }.to change { build.status }.from('created').to('waiting_for_resource')
+
+          expect(build.waiting_for_resource_at).not_to be_nil
+        end
       end
 
       context 'when build is waiting for resource' do
@@ -470,7 +489,7 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
 
         it 'releases a resource when build finished' do
           expect(build.resource_group).to receive(:release_resource_from).with(build).and_return(true).and_call_original
-          expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(build.resource_group_id)
+          expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorkerV2).to receive(:perform_async).with(build.resource_group_id)
 
           build.enqueue_waiting_for_resource!
           build.success!
@@ -478,9 +497,30 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
 
         it 're-checks the resource group even if the processable does not retain a resource' do
           expect(build.resource_group).to receive(:release_resource_from).with(build).and_return(false).and_call_original
-          expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(build.resource_group_id)
+          expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorkerV2).to receive(:perform_async).with(build.resource_group_id)
 
           build.success!
+        end
+
+        context 'when `assign_resource_worker_deduplicate_until_executing` FF is disabled' do
+          before do
+            stub_feature_flags(assign_resource_worker_deduplicate_until_executing: false)
+          end
+
+          it 'releases a resource when build finished' do
+            expect(build.resource_group).to receive(:release_resource_from).with(build).and_return(true).and_call_original
+            expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(build.resource_group_id)
+
+            build.enqueue_waiting_for_resource!
+            build.success!
+          end
+
+          it 're-checks the resource group even if the processable does not retain a resource' do
+            expect(build.resource_group).to receive(:release_resource_from).with(build).and_return(false).and_call_original
+            expect(Ci::ResourceGroups::AssignResourceFromResourceGroupWorker).to receive(:perform_async).with(build.resource_group_id)
+
+            build.success!
+          end
         end
 
         context 'when build has prerequisites' do
@@ -563,29 +603,86 @@ RSpec.describe Ci::Processable, feature_category: :continuous_integration do
     end
   end
 
+  describe 'manual_job?' do
+    context 'when job is manual' do
+      subject { build(:ci_build, :manual) }
+
+      it { expect(subject.manual_job?).to be_truthy }
+    end
+
+    context 'when job is not manual' do
+      subject { build(:ci_build) }
+
+      it { expect(subject.manual_job?).to be_falsey }
+    end
+  end
+
+  describe 'manual_confirmation_message' do
+    context 'when job is manual' do
+      subject { build(:ci_build, :manual, :with_manual_confirmation) }
+
+      it 'return manual_confirmation from option' do
+        expect(subject.manual_confirmation_message).to eq('Please confirm. Do you want to proceed?')
+      end
+    end
+
+    context 'when job is not manual' do
+      subject { build(:ci_build) }
+
+      it { expect(subject.manual_confirmation_message).to be_nil }
+    end
+  end
+
   describe 'state transition: any => [:failed]' do
+    using RSpec::Parameterized::TableSyntax
+
     let!(:processable) { create(:ci_build, :running, pipeline: pipeline, user: create(:user)) }
 
     before do
       allow(processable).to receive(:can_auto_cancel_pipeline_on_job_failure?).and_return(can_auto_cancel_pipeline_on_job_failure)
+      allow(processable).to receive(:allow_failure?).and_return(allow_failure)
     end
 
-    context 'when the processable can cancel the pipeline' do
-      let(:can_auto_cancel_pipeline_on_job_failure) { true }
+    where(:can_auto_cancel_pipeline_on_job_failure, :allow_failure, :result) do
+      true  | true  | false
+      true  | false | true
+      false | true  | false
+      false | false | false
+    end
 
-      it 'cancels the pipeline' do
-        expect(processable.pipeline).to receive(:cancel_async_on_job_failure)
+    with_them do
+      it 'behaves as expected' do
+        if result
+          expect(processable.pipeline).to receive(:cancel_async_on_job_failure)
+        else
+          expect(processable.pipeline).not_to receive(:cancel_async_on_job_failure)
+        end
+
         processable.drop!
       end
     end
+  end
 
-    context 'when the processable cannot cancel the pipeline' do
-      let(:can_auto_cancel_pipeline_on_job_failure) { false }
+  describe 'find_dependencies_with_accessible_artifacts' do
+    let(:build) { create(:ci_build, :created, project: project, pipeline: pipeline) }
+    let(:build2) { create(:ci_build, :created, project: project, pipeline: pipeline) }
+    let!(:job_artifact) { create(:ci_job_artifact, :dotenv, job: build2, accessibility: accessibility) }
 
-      it 'does not cancel the pipeline' do
-        expect(processable.pipeline).not_to receive(:cancel_async_on_job_failure)
-        processable.drop!
-      end
+    let!(:job_variable_1) { create(:ci_job_variable, :dotenv_source, job: build2) }
+    let!(:job_variable_2) { create(:ci_job_variable, job: build2) }
+
+    subject { build.find_dependencies_with_accessible_artifacts([build2]) }
+
+    context 'inherits only jobs whose artifacts are public' do
+      let(:accessibility) { 'public' }
+
+      it { expect(subject).to eq([build2]) }
+    end
+
+    context 'does not inherits jobs whose artifacts are private' do
+      let(:accessibility) { 'private' }
+
+      it { expect(subject).to eq([]) }
     end
   end
 end

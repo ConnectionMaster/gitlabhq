@@ -11,8 +11,6 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 **Status:** Beta
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/18997) in GitLab 14.1.
-
 WARNING:
 The Helm chart registry for GitLab is under development and isn't ready for production use due to
 limited functionality. This [epic](https://gitlab.com/groups/gitlab-org/-/epics/6366) details the remaining
@@ -50,7 +48,7 @@ Once built, a chart can be uploaded to the desired channel with `curl` or `helm 
 - With `curl`:
 
   ```shell
-  curl --request POST \
+  curl --fail-with-body --request POST \
        --form 'chart=@mychart-0.1.0.tgz' \
        --user <username>:<access_token> \
        https://gitlab.example.com/api/v4/projects/<project_id>/packages/helm/api/<channel>/charts
@@ -95,7 +93,7 @@ stages:
 upload:
   stage: upload
   script:
-    - 'curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@mychart-0.1.0.tgz" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/<channel>/charts"'
+    - 'curl --fail-with-body --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@mychart-0.1.0.tgz" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/<channel>/charts"'
 ```
 
 - `<username>`: the GitLab username or the deploy token username.

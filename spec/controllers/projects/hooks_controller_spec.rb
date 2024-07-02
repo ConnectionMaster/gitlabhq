@@ -219,7 +219,7 @@ RSpec.describe Projects::HooksController, feature_category: :webhooks do
     it_behaves_like 'Web hook destroyer'
 
     context 'when user does not have permission' do
-      let(:user) { create(:user, developer_projects: [project]) }
+      let(:user) { create(:user, developer_of: project) }
 
       it 'renders a 404' do
         delete :destroy, params: params
@@ -274,7 +274,7 @@ RSpec.describe Projects::HooksController, feature_category: :webhooks do
     context 'when the endpoint receives requests above the limit', :freeze_time, :clean_gitlab_redis_rate_limiting do
       before do
         allow(Gitlab::ApplicationRateLimiter).to receive(:rate_limits)
-          .and_return(project_testing_hook: { threshold: 1, interval: 1.minute })
+          .and_return(web_hook_test: { threshold: 1, interval: 1.minute })
       end
 
       it 'prevents making test requests' do

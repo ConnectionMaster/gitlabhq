@@ -22,8 +22,6 @@ The GitLab Dependency Proxy:
 
 - Is turned on by default.
 - Can be turned off by an administrator.
-- Requires the [Puma web server](../operations/puma.md)
-  to be enabled. Puma is enabled by default in GitLab 13.0 and later.
 
 ## Turn off the Dependency Proxy
 
@@ -124,8 +122,7 @@ installations under `shared/dependency_proxy/` (relative to the Git home directo
 
 ### Using object storage
 
-Instead of relying on the local storage, you can use an object storage to
-store the blobs of the Dependency Proxy. In GitLab 13.2 and later, you should use the
+Instead of relying on the local storage, you can use the
 [consolidated object storage settings](../object_storage.md#configure-a-single-storage-connection-for-all-object-types-consolidated-form).
 This section describes the earlier configuration format. [Migration steps still apply](#migrate-local-dependency-proxy-blobs-and-manifests-to-object-storage).
 
@@ -202,8 +199,6 @@ This section describes the earlier configuration format. [Migration steps still 
 
 #### Migrate local Dependency Proxy blobs and manifests to object storage
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/79663) in GitLab 14.8.
-
 After [configuring object storage](#using-object-storage),
 use the following task to migrate existing Dependency Proxy blobs and manifests from local storage
 to remote storage. The processing is done in a background worker and requires no downtime.
@@ -270,8 +265,9 @@ The default expiration and the expiration on GitLab.com is 15 minutes.
 
    ```ruby
    gitlab_workhorse['env'] = {
-    "http_proxy" => "http://USERNAME:PASSWORD@example.com:8080",
-    "https_proxy" => "http://USERNAME:PASSWORD@example.com:8080"
+     "http_proxy" => "http://USERNAME:PASSWORD@example.com:8080",
+     "https_proxy" => "http://USERNAME:PASSWORD@example.com:8080"
+   }
    ```
 
 1. Save the file and [reconfigure GitLab](../restart_gitlab.md#reconfigure-a-linux-package-installation) for the changes to take effect.

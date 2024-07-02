@@ -154,7 +154,7 @@ export default {
 <template>
   <div>
     <div
-      class="gl-display-flex gl-align-items-center gl-line-height-20 gl-text-gray-900 gl-font-weight-bold"
+      class="gl-display-flex gl-align-items-center gl-leading-20 gl-text-gray-900 gl-font-bold"
       @click.self="collapse"
     >
       <span class="hide-collapsed" data-testid="title" @click="collapse">
@@ -180,7 +180,7 @@ export default {
         v-gl-tooltip.viewport.html
         category="tertiary"
         size="small"
-        class="gl-text-gray-900! gl-ml-auto hide-collapsed gl-mr-n2 shortcut-sidebar-dropdown-toggle"
+        class="gl-text-gray-900! gl-ml-auto hide-collapsed -gl-mr-2 shortcut-sidebar-dropdown-toggle"
         :title="editTooltipText"
         :aria-label="editAriaLabelText"
         :aria-keyshortcuts="editKeyshortcutsText"

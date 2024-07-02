@@ -135,7 +135,7 @@ export default {
     :aria-label="$options.i18n.downloadArtifacts"
     :items="items"
     icon="download"
-    placement="right"
+    placement="bottom-end"
     text-sr-only
     data-testid="pipeline-multi-actions-dropdown"
     @shown="onDisclosureDropdownShown"
@@ -144,7 +144,7 @@ export default {
     <template #header>
       <div
         aria-hidden="true"
-        class="gl-display-flex gl-align-items-center gl-p-4! gl-min-h-8 gl-font-sm gl-font-weight-bold gl-text-gray-900 gl-border-b-1 gl-border-b-solid gl-border-b-gray-200"
+        class="gl-display-flex gl-align-items-center gl-p-4! gl-min-h-8 gl-font-sm gl-font-bold gl-text-gray-900 gl-border-b-1 gl-border-b-solid gl-border-b-gray-200"
       >
         {{ $options.i18n.downloadArtifacts }}
       </div>

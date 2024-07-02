@@ -105,8 +105,7 @@ GET /users?external=true
 GitLab supports bot users such as the [alert bot](../operations/incident_management/integrations.md)
 or the [support bot](../user/project/service_desk/configure.md#support-bot-user).
 You can exclude the following types of [internal users](../development/internal_users.md#internal-users)
-from the users' list with the `exclude_internal=true` parameter
-([introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/241144) in GitLab 13.4):
+from the users' list with the `exclude_internal=true` parameter:
 
 - Alert bot
 - Support bot
@@ -138,7 +137,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed, GitLab Dedicated
 
-> - The `namespace_id` field in the response was [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/82045) in GitLab 14.10.
 > - The `created_by` field in the response was [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/93092) in GitLab 15.6.
 > - The `scim_identities` field in the response [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/324247) in GitLab 16.1.
 > - The `auditors` field in the response [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/418023) in GitLab 16.2.
@@ -550,11 +548,9 @@ over `password`. In addition, `reset_password` and
 `force_random_password` can be used together.
 
 NOTE:
-From [GitLab 12.1](https://gitlab.com/gitlab-org/gitlab-foss/-/merge_requests/29888/), `private_profile` defaults to `false`.
-From [GitLab 15.8](https://gitlab.com/gitlab-org/gitlab/-/issues/231301), `private_profile` defaults to the value determined by [this](../administration/settings/account_and_limit_settings.md#set-profiles-of-new-users-to-private-by-default) setting.
-
-NOTE:
-From [GitLab 13.2](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/35604), `bio` defaults to `""` instead of `null`.
+`private_profile` defaults to the value of the
+[Set profiles of new users to private by default](../administration/settings/account_and_limit_settings.md#set-profiles-of-new-users-to-private-by-default) setting.
+`bio` defaults to `""` instead of `null`.
 
 ```plaintext
 POST /users
@@ -685,7 +681,11 @@ DETAILS:
 **Offering:** Self-managed, GitLab Dedicated
 
 Deletes a user. Available only for administrators.
-This returns a `204 No Content` status code if the operation was successfully, `404` if the resource was not found or `409` if the user cannot be soft deleted.
+This returns a:
+
+- `204 No Content` status code if the operation was successful.
+- `404` if the resource was not found.
+- `409` if the user cannot be soft deleted.
 
 ```plaintext
 DELETE /users/:id
@@ -1062,15 +1062,15 @@ Example response:
 
 ## User counts
 
-Get the counts (same as in the upper-right menu) of the authenticated user.
+Get the counts (same as in the upper-left menu) of the authenticated user.
 
 | Attribute                         | Type   | Description                                                                  |
 | --------------------------------- | ------ | ---------------------------------------------------------------------------- |
-| `assigned_issues`                 | number | Number of issues that are open and assigned to the current user. [Added](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/66909) in GitLab 14.2. |
-| `assigned_merge_requests`         | number | Number of merge requests that are active and assigned to the current user. [Added](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/50026) in GitLab 13.8. |
-| `merge_requests`                  | number | [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/50026) in GitLab 13.8. Equivalent to and replaced by `assigned_merge_requests`. |
-| `review_requested_merge_requests` | number | Number of merge requests that the current user has been requested to review. [Added](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/50026) in GitLab 13.8. |
-| `todos`                           | number | Number of pending to-do items for current user. [Added](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/66909) in GitLab 14.2. |
+| `assigned_issues`                 | number | Number of issues that are open and assigned to the current user.             |
+| `assigned_merge_requests`         | number | Number of merge requests that are active and assigned to the current user.   |
+| `merge_requests`                  | number | [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/50026) in GitLab 13.8. Equivalent to and replaced by `assigned_merge_requests`.        |
+| `review_requested_merge_requests` | number | Number of merge requests that the current user has been requested to review. |
+| `todos`                           | number | Number of pending to-do items for current user.                              |
 
 ```plaintext
 GET /user_counts
@@ -1126,6 +1126,58 @@ Example response:
   "username": "service_account_6018816a18e515214e0c34c2b33523fc",
   "name": "Service account user"
 }
+```
+
+## List service account users
+
+DETAILS:
+**Tier:** Premium, Ultimate
+**Offering:** Self-managed, GitLab Dedicated
+
+> - Ability to list all service account users [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/416729) in GitLab 17.1.
+
+Prerequisites:
+
+- You must be an administrator of the self-managed instance.
+
+Lists all service account users.
+
+This function takes pagination parameters `page` and `per_page` to restrict the list of users.
+
+This API endpoint requires the user to be an instance admin.
+
+Example request:
+
+```plaintext
+GET /service_accounts
+```
+
+```shell
+curl --request GET --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/service_accounts"
+```
+
+Supported attributes:
+
+| Attribute    | Type     | Required  | Description                                                 |
+|:-------------|:---------|:----------|:------------------------------------------------------------|
+| `order_by`   | string   | no        | Orders list of users by `username` or `id` Default is `id`. |
+| `sort`       | string   | no        | Specifies sorting by `asc` or `desc`. Default is `desc`.    |
+
+Example response:
+
+```json
+[
+  {
+    "id": 114,
+    "username": "service_account_33",
+    "name": "Service account user"
+  },
+  {
+    "id": 137,
+    "username": "service_account_34",
+    "name": "john doe"
+  }
+]
 ```
 
 ## List user projects
@@ -1356,7 +1408,7 @@ This also adds an audit event.
 
 Deletes key owned by the authenticated user.
 
-This returns a `204 No Content` status code if the operation was successfully
+This returns a `204 No Content` status code if the operation was successful
 or `404` if the resource was not found.
 
 ```plaintext
@@ -1541,8 +1593,7 @@ Example response:
 
 ## Get a specific GPG key for a given user
 
-Get a specific GPG key for a given user. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/43693)
-in GitLab 13.5, this endpoint can be accessed without administrator authentication.
+Get a specific GPG key for a given user. This endpoint can be accessed without administrator authentication.
 
 ```plaintext
 GET /users/:id/gpg_keys/:key_id
@@ -2040,8 +2091,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/263107) in GitLab 13.7.
-
 Approves the specified user. Available only for administrators.
 
 ```plaintext
@@ -2245,8 +2294,6 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17176) in GitLab 13.6.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/267553) in GitLab 13.8.
 > - The `expires_at` attribute default was [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/120213) in GitLab 16.0.
 
 Use this API to create a new personal access token. Token values are returned once so,
@@ -2539,7 +2586,47 @@ Example response:
 ```json
 {
     "id": 9171,
-    "token": "glrt-kyahzxLaj4Dc1jQf4xjX",
+    "token": "<access-token>",
     "token_expires_at": null
+}
+```
+
+## Upload a current user avatar
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148130) in GitLab 17.0.
+
+Upload an avatar to current user.
+
+```plaintext
+PUT /user/avatar
+```
+
+| Attribute | Type              | Required | Description                                                                                                 |
+|-----------|-------------------|----------|-------------------------------------------------------------------------------------------------------------|
+| `avatar`  | string            | Yes      | The file to be uploaded. The ideal image size is 192 x 192 pixels. The maximum file size allowed is 200 KiB. |
+
+To upload an avatar from your file system, use the `--form` argument. This causes
+cURL to post data using the header `Content-Type: multipart/form-data`. The
+`file=` parameter must point to an image file on your file system and be
+preceded by `@`. For example:
+
+Example request:
+
+```shell
+curl --request PUT --header "PRIVATE-TOKEN: <your_access_token>" \
+     --form "avatar=@avatar.png" \
+     --url "https://gitlab.example.com/api/v4/user/avatar"
+```
+
+Returned object:
+
+Returns `400 Bad Request` for file sizes greater than 200 KiB.
+
+If successful, returns [`200`](rest/index.md#status-codes) and the following
+response attributes:
+
+```json
+{
+  "avatar_url": "http://gdk.test:3000/uploads/-/system/user/avatar/76/avatar.png",
 }
 ```

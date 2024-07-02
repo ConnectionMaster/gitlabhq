@@ -7,20 +7,21 @@ import {
   CLUSTER_HEALTH_ERROR,
   HEALTH_BADGES,
   SYNC_STATUS_BADGES,
-  STATUS_TRUE,
-  STATUS_FALSE,
-  STATUS_UNKNOWN,
-  REASON_PROGRESSING,
   HELM_RELEASES_RESOURCE_TYPE,
   KUSTOMIZATIONS_RESOURCE_TYPE,
 } from '~/environments/constants';
-import fluxKustomizationStatusQuery from '~/environments/graphql/queries/flux_kustomization_status.query.graphql';
-import fluxHelmReleaseStatusQuery from '~/environments/graphql/queries/flux_helm_release_status.query.graphql';
+import { fluxSyncStatus } from '~/environments/helpers/k8s_integration_helper';
 import KubernetesConnectionStatus from '~/environments/environment_details/components/kubernetes/kubernetes_connection_status.vue';
+import KubernetesConnectionStatusBadge from '~/environments/environment_details/components/kubernetes/kubernetes_connection_status_badge.vue';
+import {
+  k8sResourceType,
+  connectionStatus,
+} from '~/environments/graphql/resolvers/kubernetes/constants';
 
 export default {
   components: {
     KubernetesConnectionStatus,
+    KubernetesConnectionStatusBadge,
     GlLoadingIcon,
     GlBadge,
     GlPopover,
@@ -58,132 +59,111 @@ export default {
       type: String,
       required: true,
     },
-  },
-  apollo: {
-    fluxKustomizationStatus: {
-      query: fluxKustomizationStatusQuery,
-      variables() {
-        return {
-          configuration: this.configuration,
-          fluxResourcePath: this.fluxResourcePath,
-        };
-      },
-      skip() {
-        return Boolean(
-          !this.fluxResourcePath || this.fluxResourcePath?.includes(HELM_RELEASES_RESOURCE_TYPE),
-        );
-      },
-      error(err) {
-        this.fluxApiError = err.message;
-      },
+    fluxResourceStatus: {
+      type: Array,
+      required: false,
+      default: () => [],
     },
-    fluxHelmReleaseStatus: {
-      query: fluxHelmReleaseStatusQuery,
-      variables() {
-        return {
-          configuration: this.configuration,
-          fluxResourcePath: this.fluxResourcePath,
-        };
-      },
-      skip() {
-        return Boolean(
-          !this.fluxResourcePath || this.fluxResourcePath?.includes(KUSTOMIZATIONS_RESOURCE_TYPE),
-        );
-      },
-      error(err) {
-        this.fluxApiError = err.message;
-      },
+    fluxApiError: {
+      type: String,
+      required: false,
+      default: '',
     },
   },
   data() {
     return {
-      fluxApiError: '',
+      clusterResourceTypeParams: {
+        [k8sResourceType.k8sServices]: {
+          resourceType: k8sResourceType.k8sServices,
+          connectionParams: null,
+        },
+        [k8sResourceType.k8sPods]: {
+          resourceType: k8sResourceType.k8sPods,
+          connectionParams: null,
+        },
+        [k8sResourceType.fluxKustomizations]: {
+          resourceType: k8sResourceType.fluxKustomizations,
+          connectionParams: {
+            fluxResourcePath: this.fluxResourcePath,
+          },
+        },
+        [k8sResourceType.fluxHelmReleases]: {
+          resourceType: k8sResourceType.fluxHelmReleases,
+          connectionParams: {
+            fluxResourcePath: this.fluxResourcePath,
+          },
+        },
+      },
     };
   },
   computed: {
+    fluxConnectionParams() {
+      if (this.isUsingKustomizationConfiguration) {
+        return {
+          resourceType: k8sResourceType.fluxKustomizations,
+          connectionParams: {
+            fluxResourcePath: this.fluxResourcePath,
+          },
+        };
+      }
+      if (this.isUsingHelmConfiguration) {
+        return {
+          resourceType: k8sResourceType.fluxHelmReleases,
+          connectionParams: {
+            fluxResourcePath: this.fluxResourcePath,
+          },
+        };
+      }
+      return {};
+    },
+    isUsingKustomizationConfiguration() {
+      return Boolean(this.fluxResourcePath?.includes(KUSTOMIZATIONS_RESOURCE_TYPE));
+    },
+    isUsingHelmConfiguration() {
+      return Boolean(this.fluxResourcePath?.includes(HELM_RELEASES_RESOURCE_TYPE));
+    },
     healthBadge() {
       return HEALTH_BADGES[this.clusterHealthStatus];
-    },
-    hasKustomizations() {
-      return this.fluxKustomizationStatus?.length;
-    },
-    hasHelmReleases() {
-      return this.fluxHelmReleaseStatus?.length;
-    },
-    isLoading() {
-      return (
-        this.$apollo.queries.fluxKustomizationStatus.loading ||
-        this.$apollo.queries.fluxHelmReleaseStatus.loading
-      );
     },
     fluxBadgeId() {
       return `${this.environmentName}-flux-sync-badge`;
     },
-    fluxCRD() {
-      if (!this.hasKustomizations && !this.hasHelmReleases) {
-        return [];
-      }
-
-      return this.hasKustomizations ? this.fluxKustomizationStatus : this.fluxHelmReleaseStatus;
-    },
-    fluxAnyStalled() {
-      return this.fluxCRD.find((condition) => {
-        return condition.status === STATUS_TRUE && condition.type === 'Stalled';
-      });
-    },
-    fluxAnyReconcilingWithBadConfig() {
-      return this.fluxCRD.find((condition) => {
-        return (
-          condition.status === STATUS_UNKNOWN &&
-          condition.type === 'Ready' &&
-          condition.reason === REASON_PROGRESSING
-        );
-      });
-    },
-    fluxAnyReconciling() {
-      return this.fluxCRD.find((condition) => {
-        return condition.status === STATUS_TRUE && condition.type === 'Reconciling';
-      });
-    },
-    fluxAnyReconciled() {
-      return this.fluxCRD.find((condition) => {
-        return condition.status === STATUS_TRUE && condition.type === 'Ready';
-      });
-    },
-    fluxAnyFailed() {
-      return this.fluxCRD.find((condition) => {
-        return condition.status === STATUS_FALSE && condition.type === 'Ready';
-      });
-    },
     syncStatusBadge() {
-      if (!this.fluxCRD.length && this.fluxApiError) {
+      if (!this.fluxResourceStatus.length && this.fluxApiError) {
         return { ...SYNC_STATUS_BADGES.unavailable, popoverText: this.fluxApiError };
       }
-      if (!this.fluxCRD.length) {
+      if (!this.fluxResourceStatus.length) {
         return SYNC_STATUS_BADGES.unavailable;
       }
-      if (this.fluxAnyFailed) {
-        return { ...SYNC_STATUS_BADGES.failed, popoverText: this.fluxAnyFailed.message };
+
+      const fluxStatus = fluxSyncStatus(this.fluxResourceStatus);
+
+      switch (fluxStatus.status) {
+        case 'failed':
+          return {
+            ...SYNC_STATUS_BADGES.failed,
+            popoverText: fluxStatus.message,
+          };
+        case 'stalled':
+          return {
+            ...SYNC_STATUS_BADGES.stalled,
+            popoverText: fluxStatus.message,
+          };
+        case 'reconcilingWithBadConfig':
+          return {
+            ...SYNC_STATUS_BADGES.reconciling,
+            popoverText: fluxStatus.message,
+          };
+        case 'reconciling':
+          return SYNC_STATUS_BADGES.reconciling;
+        case 'reconciled':
+          return SYNC_STATUS_BADGES.reconciled;
+        default:
+          return SYNC_STATUS_BADGES.unknown;
       }
-      if (this.fluxAnyStalled) {
-        return { ...SYNC_STATUS_BADGES.stalled, popoverText: this.fluxAnyStalled.message };
-      }
-      if (this.fluxAnyReconcilingWithBadConfig) {
-        return {
-          ...SYNC_STATUS_BADGES.reconciling,
-          popoverText: this.fluxAnyReconcilingWithBadConfig.message,
-        };
-      }
-      if (this.fluxAnyReconciling) {
-        return SYNC_STATUS_BADGES.reconciling;
-      }
-      if (this.fluxAnyReconciled) {
-        return SYNC_STATUS_BADGES.reconciled;
-      }
-      return SYNC_STATUS_BADGES.unknown;
     },
-    isReconnectButtonShown() {
-      return this.glFeatures.k8sWatchApi;
+    isFluxConnectionStatus() {
+      return Boolean(this.fluxConnectionParams.resourceType);
     },
   },
   methods: {
@@ -193,13 +173,16 @@ export default {
   },
   i18n: {
     healthLabel: s__('Environment|Environment status'),
-    syncStatusLabel: s__('Environment|Sync status'),
+    syncStatusLabel: s__('Environment|Flux Sync'),
+    dashboardStatusLabel: s__('Environment|Dashboard'),
   },
-  badgeContainerClasses: 'gl-display-flex gl-align-items-center gl-flex-shrink-0 gl-mr-3 gl-mb-2',
+  k8sResourceType,
+  connectionStatus,
+  badgeContainerClasses: 'gl-flex gl-items-center gl-shrink-0 gl-mr-3 gl-mb-2',
 };
 </script>
 <template>
-  <div class="gl-display-flex gl-flex-wrap">
+  <div class="gl-flex gl-flex-wrap">
     <div :class="$options.badgeContainerClasses">
       <span class="gl-mr-3">{{ $options.i18n.healthLabel }}</span>
       <gl-loading-icon v-if="!clusterHealthStatus" size="sm" inline />
@@ -211,11 +194,26 @@ export default {
         >{{ healthBadge.text }}
       </gl-badge>
     </div>
-
-    <div :class="$options.badgeContainerClasses">
+    <kubernetes-connection-status
+      #default="{ connectionProps }"
+      data-testid="flux-connection-status"
+      :class="$options.badgeContainerClasses"
+      :configuration="configuration"
+      :namespace="namespace"
+      :resource-type-param="fluxConnectionParams"
+    >
       <span class="gl-mr-3">{{ $options.i18n.syncStatusLabel }}</span>
-      <gl-loading-icon v-if="isLoading" size="sm" inline />
-      <template v-else-if="syncStatusBadge">
+      <kubernetes-connection-status-badge
+        v-if="
+          isFluxConnectionStatus &&
+          connectionProps.connectionStatus !== $options.connectionStatus.connected
+        "
+        data-testid="flux-status-badge"
+        :popover-id="$options.k8sResourceType.fluxKustomizations"
+        :connection-status="connectionProps.connectionStatus"
+        @reconnect="connectionProps.reconnect"
+      />
+      <template v-else>
         <gl-badge
           :id="fluxBadgeId"
           :icon="syncStatusBadge.icon"
@@ -234,13 +232,22 @@ export default {
           </gl-sprintf>
         </gl-popover>
       </template>
-    </div>
+    </kubernetes-connection-status>
     <kubernetes-connection-status
-      v-if="isReconnectButtonShown"
+      #default="{ connectionProps }"
+      data-testid="dashboard-status-badge"
       :configuration="configuration"
       :namespace="namespace"
-      :resource-type="resourceType"
+      :resource-type-param="clusterResourceTypeParams[resourceType]"
+      :class="$options.badgeContainerClasses"
       @error="handleError"
-    />
+    >
+      <span class="gl-mr-3">{{ $options.i18n.dashboardStatusLabel }}</span>
+      <kubernetes-connection-status-badge
+        :popover-id="resourceType"
+        :connection-status="connectionProps.connectionStatus"
+        @reconnect="connectionProps.reconnect"
+      />
+    </kubernetes-connection-status>
   </div>
 </template>

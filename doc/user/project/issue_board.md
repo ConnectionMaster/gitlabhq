@@ -10,6 +10,8 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
+> - Milestones and iterations shown on issue cards [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/25758) in GitLab 16.11.
+
 The issue board is a software project management tool used to plan,
 organize, and visualize a workflow for a feature or product release.
 
@@ -34,7 +36,7 @@ To let your team members organize their own workflows, use
 [multiple issue boards](#use-cases-for-multiple-issue-boards). This allows creating multiple issue
 boards in the same project.
 
-![GitLab issue board - Core](img/issue_boards_core_v14_1.png)
+![GitLab issue board - Core](img/issue_boards_core_v17_1.png)
 
 Different issue board features are available in different [GitLab tiers](https://about.gitlab.com/pricing/):
 
@@ -46,16 +48,13 @@ Different issue board features are available in different [GitLab tiers](https:/
 
 Read more about [GitLab Enterprise features for issue boards](#gitlab-enterprise-features-for-issue-boards).
 
-![GitLab issue board - Premium](img/issue_boards_premium_v14_1.png)
+![GitLab issue board - Premium](img/issue_boards_premium_v17_1.png)
 
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 Watch a [video presentation](https://youtu.be/vjccjHI7aGI) (April 2020) of
 the issue board feature.
 
 ## Multiple issue boards
-
-> - Multiple issue boards per project [moved](https://gitlab.com/gitlab-org/gitlab-foss/-/issues/53811) to GitLab Free in 12.1.
-> - Multiple issue boards per group are available in GitLab Premium.
 
 Multiple issue boards allow for more than one issue board for:
 
@@ -69,7 +68,7 @@ Using the search box at the top of the menu, you can filter the listed boards.
 When you have ten or more boards available, a **Recent** section is also shown in the menu, with
 shortcuts to your last four visited boards.
 
-![Multiple issue boards](img/issue_boards_multiple_v13_6.png)
+![Multiple issue boards](img/issue_boards_multiple_v17_1.png)
 
 When you're revisiting an issue board in a project or group with multiple boards,
 GitLab automatically loads the last board you visited.
@@ -94,7 +93,7 @@ Prerequisites:
 
 To delete the currently active issue board:
 
-1. In the upper-left corner of the issue board page, select the dropdown list with the current board name.
+1. In the upper-right corner of the issue board page, select **Configure board** (**{settings}**).
 1. Select **Delete board**.
 1. Select **Delete** to confirm.
 
@@ -133,7 +132,7 @@ If you have the labels **Backend**, **Frontend**, **Staging**, and
 - Move issues between lists to organize them according to the labels you've set.
 - Add multiple issues to lists in the board by selecting one or more existing issues.
 
-![issue card moving](img/issue_board_move_issue_card_list_v13_6.png)
+![issue card moving](img/issue_board_move_issue_card_list_v17_1.png)
 
 ### Use cases for multiple issue boards
 
@@ -217,6 +216,12 @@ card includes:
 - Associated labels
 - Issue number
 - Assignee
+- Weight
+- Milestone
+- Iteration (in the Premium and Ultimate tier)
+- Due date
+- Time tracking estimate
+- Health status
 
 ## Ordering issues in a list
 
@@ -267,23 +272,20 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - Setting current iteration as scope [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/196804) in GitLab 13.8.
-> - Moved to GitLab Premium in 13.9.
-
 An issue board can be associated with a [milestone](milestones/index.md),
 [labels](labels.md), assignee, weight, and current [iteration](../group/iterations/index.md),
 which automatically filter the board issues accordingly.
 This allows you to create unique boards according to your team's need.
 
-![Create scoped board](img/issue_board_creation_v13_6.png)
+![Create scoped board](img/issue_board_creation_v17_1.png)
 
-You can define the scope of your board when creating it or by selecting the **Edit board** button.
+You can define the scope of your board when creating it or by selecting the **Configure board** (**{settings}**) button.
 After a milestone, iteration, assignee, or weight is assigned to an issue board, you can no longer
 filter through these in the search bar. To do that, you need to remove the desired scope
 (for example, milestone, assignee, or weight) from the issue board.
 
 If you don't have editing permission in a board, you're still able to see the configuration by
-selecting **View scope**.
+selecting **Board configuration** (**{settings}**).
 
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 Watch a [video presentation](https://youtu.be/m5UTNCSqaDk) of
@@ -295,13 +297,11 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - Moved to GitLab Premium in 13.9.
-
 The top of each list indicates the sum of issue weights for the issues that
 belong to that list. This is useful when using boards for capacity allocation,
 especially in combination with [assignee lists](#assignee-lists).
 
-![issue board summed weights](img/issue_board_summed_weights_v13_6.png)
+![issue board summed weights](img/issue_board_summed_weights_v17_1.png)
 
 ### Assignee lists
 
@@ -328,7 +328,7 @@ Now that the assignee list is added, you can assign or unassign issues to that u
 by [moving issues](#move-issues-and-lists) to and from an assignee list.
 To remove an assignee list, just as with a label list, select the trash icon.
 
-![Assignee lists](img/issue_board_assignee_lists_v14_1.png)
+![Assignee lists](img/issue_board_assignee_lists_v17_1.png)
 
 ### Milestone lists
 
@@ -354,16 +354,13 @@ Like the assignee lists, you're able to [drag issues](#move-issues-and-lists)
 to and from a milestone list to manipulate the milestone of the dragged issues.
 As in other list types, select the trash icon to remove a list.
 
-![Milestone lists](img/issue_board_milestone_lists_v14_1.png)
+![Milestone lists](img/issue_board_milestone_lists_v17_1.png)
 
 ### Iteration lists
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/250479) in GitLab 13.11 [with a flag](../../administration/feature_flags.md) named `iteration_board_lists`. Enabled by default.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/75404) in GitLab 14.6. Feature flag `iteration_board_lists` removed.
 
 You can create lists of issues in an iteration.
 
@@ -381,17 +378,13 @@ To add an iteration list:
 Like the milestone lists, you're able to [drag issues](#move-issues-and-lists)
 to and from a iteration list to manipulate the iteration of the dragged issues.
 
-![Iteration lists](img/issue_board_iteration_lists_v13_10.png)
+![Iteration lists](img/issue_board_iteration_lists_v17_1.png)
 
 ### Group issues in swimlanes
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - Grouping by epic [introduced](https://gitlab.com/groups/gitlab-org/-/epics/3352) in GitLab 13.6.
-> - Editing issue titles in the issue sidebar [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/232745) in GitLab 13.8.
-> - Editing iteration in the issue sidebar [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/290232) in GitLab 13.9.
 
 With swimlanes you can visualize issues grouped by epic.
 Your issue board keeps all the other features, but with a different visual organization of issues.
@@ -406,10 +399,10 @@ Prerequisites:
 
 To group issues by epic in an issue board:
 
-1. Select **Group by**.
-1. Select **Epic**.
+1. Select **View options** (**{preferences}**).
+1. Select **Epic swimlanes**.
 
-![Epics Swimlanes](img/epics_swimlanes_v14_1.png)
+![Epics Swimlanes](img/epics_swimlanes_v17_1.png)
 
 To edit an issue without leaving this view, select the issue card (not its title), and a sidebar
 appears on the right. There you can see and edit the issue's:
@@ -438,8 +431,6 @@ You can also [drag issues](#move-issues-and-lists) to change their position and 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - Moved to GitLab Premium in 13.9.
 
 You can set a work in progress (WIP) limit for each issue list on an issue board. When a limit is
 set, the list's header shows the number of issues in the list and the soft limit of issues. A line in the list separates items within the limit from those in excess of the limit.
@@ -470,14 +461,12 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/210452) in GitLab 13.10: View blocking issues when hovering over the "blocked" icon.
-
 If an issue is [blocked by another issue](issues/related_issues.md#blocking-issues), an icon appears next to its title to indicate its blocked
 status.
 
 When you hover over the blocked icon (**{issue-block}**), a detailed information popover is displayed.
 
-![Blocked issues](img/issue_boards_blocked_icon_v13_10.png)
+![Blocked issues](img/issue_boards_blocked_icon_v17_1.png)
 
 ## Actions you can take on an issue board
 
@@ -493,8 +482,6 @@ When you hover over the blocked icon (**{issue-block}**), a detailed information
 - Close an issue (by dragging it to the **Closed** list).
 
 ### Edit an issue
-
-> - Editing title, iteration, and confidentiality [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/248908) in GitLab 14.1.
 
 You can edit an issue without leaving the board view.
 To open the right sidebar, select an issue card (not its title).
@@ -521,12 +508,18 @@ Additionally, you can also see the time tracking value.
 
 ### Create a new list
 
-To create a new list, in the upper-right corner of the issue board, select **Create**.
+To create a new list:
 
-![creating a new list in an issue board](img/issue_board_add_list_v14_1.png)
+1. Scroll to the right of the board, and then select **New list**.
+   The new list panel opens.
 
-Then, choose the label, user or milestone to base the new list on. The new list is inserted
-at the end of the lists, before **Closed**. To move and reorder lists, drag them around.
+   ![creating a new list in an issue board](img/issue_board_add_list_v17_1.png)
+
+1. Choose the label, user, milestone or iteration to base the new list on.
+1. Select **Add to board**.
+
+The new list is inserted at the right end of the lists, before **Closed**.
+To move and reorder lists, drag them around.
 
 ### Remove a list
 
@@ -575,9 +568,6 @@ The steps depend on the scope of the list:
    If it's a label list, remove the label. If it's an [assignee list](#assignee-lists), unassign the user.
 
 ### Filter issues
-
-> - Filtering by iteration [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/118742) in GitLab 13.6.
-> - Filtering by issue type [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/268152) in GitLab 14.6.
 
 You can use the filters on top of your issue board to show only
 the results you want. It's similar to the filtering used in the [issue tracker](issues/index.md).
@@ -679,7 +669,7 @@ FLAG:
 On self-managed GitLab, by default this feature is not available. To make it available, ask an
 administrator to [enable the feature flag](../../administration/feature_flags.md) named `board_multi_select`.
 On GitLab.com and GitLab Dedicated, this feature is not available.
-The feature is not ready for production use.
+This feature is not ready for production use.
 
 You can select multiple issue cards, then drag the group to another position within the list, or to
 another list. This makes it faster to reorder many issues at once.

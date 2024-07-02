@@ -2,6 +2,7 @@
 
 module Organizations
   class Organization < MainClusterwide::ApplicationRecord
+    include Gitlab::Utils::StrongMemoize
     include Gitlab::SQL::Pattern
     include Gitlab::VisibilityLevel
 
@@ -14,6 +15,7 @@ module Organizations
     has_many :namespaces
     has_many :groups
     has_many :projects
+    has_many :snippets
 
     has_one :settings, class_name: "OrganizationSetting"
     has_one :organization_detail, inverse_of: :organization, autosave: true
@@ -67,12 +69,23 @@ module Organizations
       path
     end
 
+    def owner_user_ids
+      # rubocop:disable Database/AvoidUsingPluckWithoutLimit -- few owners, and not used with IN clause
+      organization_users.owners.pluck(:user_id)
+      # rubocop:enable Database/AvoidUsingPluckWithoutLimit
+    end
+    strong_memoize_attr :owner_user_ids
+
     def user?(user)
       organization_users.exists?(user: user)
     end
 
     def owner?(user)
       organization_users.owners.exists?(user: user)
+    end
+
+    def add_owner(user)
+      organization_users.owners.create(user: user)
     end
 
     def web_url(only_path: nil)

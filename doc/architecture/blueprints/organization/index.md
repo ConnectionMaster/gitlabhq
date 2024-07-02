@@ -28,8 +28,8 @@ This document is a work in progress and represents the current state of the Orga
 Organizations solve the following problems:
 
 1. Enables grouping of top-level Groups. For example, the following top-level Groups would belong to the Organization `GitLab`:
-    1. `https://gitlab.com/gitlab-org/`
-    1. `https://gitlab.com/gitlab-com/`
+   1. `https://gitlab.com/gitlab-org/`
+   1. `https://gitlab.com/gitlab-com/`
 1. Allows different Organizations to be isolated. Top-level Groups of the same Organization can interact with each other but not with Groups in other Organizations, providing clear boundaries for an Organization, similar to a self-managed instance. Isolation should have a positive impact on performance and availability as things like User dashboards can be scoped to Organizations.
 1. Allows integration with Cells. Isolating Organizations makes it possible to allocate and distribute them across different Cells.
 1. Removes the need to define hierarchies. An Organization is a container that could be filled with whatever hierarchy/entity set makes sense (Organization, top-level Groups, etc.)
@@ -123,6 +123,34 @@ The Organization MVC for Cells 1.0 will contain the following functionality:
 - User Profile. Each [User Profile will be scoped to the Organization](../cells/impacted_features/user-profile.md).
 - Isolation. Organizations themselves are not fully isolated, isolation is a result of being on a Secondary Cell. We aim to complete [phase 1 of Organization isolation](https://gitlab.com/groups/gitlab-org/-/epics/11837), with the goal to `define sharding_key` and `desired_sharding_key` rules.
 
+##### Dependencies on other services
+
+- Organizations rely on the Topology Service
+  - to guarantee the uniqueness of global claims (like usernames, emails, namespaces, SSH public keys, and more) across the cluster.
+  - provides IDs that are unique across the cluster.
+- Organizations rely on the router to route requests to the correct Cell based on eg. path, token prefix, users, or SSH public keys.
+- All Cells have their own application secrets
+- Application settings are synchronized across Cells
+
+##### Some affected features
+
+- All forms of authentication. As the Topology Service cannot classify the request with an unauthenticated user, the process is as follows:
+  1. Cell #1 displays the login form.
+  1. Cell #1 identifies the user based on the request data.
+  1. Cell #1 looks up the user's associated Cell from the Topology Service.
+  1. Cell #1 sets a cookie indicating the associated Cell and redirects the user.
+  1. The router routes the request to the correct Cell based on the cookie.
+  1. Cell X authenticates the user
+- Audit events are not available as there is an ongoing discussion related to a ClickHouse migration.
+- Billing stays at top-level Group.
+- Enterprise Users or verified domains are not required to be used with Organizations.
+- Public visibility of Groups and Projects, or unauthenticated requests are not allowed apart from Cell #1.
+
+##### Open questions
+
+- To minimize the number of cluster-wide resources, consider refactoring [Standalone resources](../../../api/api_resources.md#standalone-resources) to scope them to an Organization, Group, or Project.
+- Consider refactoring global endpoints (e.g. `/jwt/auth`) to be scoped to an Organization, Group, or Project, unless they are supporting cluster-wide resources.
+
 #### Organizations on Cells 1.5 (FY25Q3-FY25Q3)
 
 Organizations in the context of Cells 1.5 will contain the following functionality:
@@ -190,15 +218,11 @@ For a deeper exploration of the impact on select features, see the [list of feat
 
 ### Alignment between Organization and Fulfillment
 
-Fulfillment is supportive of an entity above top-level groups. Their perspective is outlined in issue [#1138](https://gitlab.com/gitlab-org/fulfillment-meta/-/issues/1138).
+Fulfillment enhancements for Organizations will happen in a different timeline to the [Cells](../cells/index.md) project and should not be seen as blockers to any Cells timelines.
 
-#### Goals of Fulfillment
+For Cells 1.0, Billing remains at the top-level Group. Said otherwise, Billing will not occur at the Organization level. The guidance for Cells 1.0 is for GitLab.com SaaS customers to use a single top-level Group to keep Billing consolidated.
 
-- Fulfillment has a longstanding plan to move billing from the top-level Group to a level above. This would mean that a license applies to an Organization and all its top-level Groups.
-- Fulfillment uses Zuora for billing and would like to have a 1-to-1 relationship between an Organization and their Zuora entity called BillingAccount. They want to move away from tying a license to a single top-level Group.
-- If a customer needs multiple Organizations, they will need to have a separate BillingAccount per each.
-- Ideally, a self-managed instance has a single Organization by default, which should be enough for most customers.
-- Fulfillment prefers only one additional entity.
+We are currently [evaluating future architecture designs](https://gitlab.com/gitlab-org/gitlab/-/issues/443708) (e.g. Zuora Billing Accounts being aligned to Organizations) but have yet to determine the North star direction and how/if it aligns to the Cells iterations.
 
 ### Open-source Contributions in Organizations
 

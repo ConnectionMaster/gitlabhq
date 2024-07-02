@@ -4,7 +4,10 @@ module Gitlab
   module Cleanup
     module OrphanJobArtifactFinalObjects
       class BatchFromList
+        include Gitlab::Utils::StrongMemoize
         include StorageHelpers
+
+        GOOGLE_PROVIDER = 'google'
 
         def initialize(entries, logger: Gitlab::AppLogger)
           @entries = entries
@@ -32,7 +35,7 @@ module Gitlab
           # This is why for sanity check, we still want to make sure that there is no matching
           # job artifact record in the database before we delete the object.
           paths_with_job_artifact_records(objects.keys).each do |non_orphan_path|
-            log_skipping_object(non_orphan_path)
+            log_skipping_no_artifact_record(non_orphan_path)
             objects.delete(non_orphan_path)
           end
 
@@ -48,16 +51,36 @@ module Gitlab
 
         def each_fog_file
           entries.each do |entry|
-            yield build_fog_file(entry)
+            # NOTE: If the object store is configured to use bucket prefix, the GenerateList task
+            # would have included the bucket_prefix in paths in the orphans list CSV.
+            path_with_bucket_prefix, size = entry.split(',')
+
+            fog_file = build_fog_file(path_with_bucket_prefix, size)
+
+            if fog_file
+              yield fog_file
+            else
+              log_skipping_non_existent_object(path_with_bucket_prefix)
+            end
           end
         end
 
-        def build_fog_file(line)
-          # NOTE: If the object store is configured to use bucket prefix, the GenerateList task would have included the
-          # bucket_prefix in paths in the orphans list CSV.
-          path_with_bucket_prefix, size = line.split(',')
-          artifacts_directory.files.new(key: path_with_bucket_prefix, content_length: size)
+        def build_fog_file(path, size)
+          if google_provider?
+            # For Google provider, we support rollback of deletions, thus we need to fetch
+            # the `generation` attribute of the object before we delete it.
+            # Here we use `metadata` instead of `get` because we only want to get the metadata and
+            # not download the object content. Note that `files.metadata` is only available in `fog-google`.
+            artifacts_directory.files.metadata(path)
+          else
+            artifacts_directory.files.new(key: path, content_length: size)
+          end
         end
+
+        def google_provider?
+          configuration.connection.provider.downcase == GOOGLE_PROVIDER
+        end
+        strong_memoize_attr :google_provider?
 
         def path_without_bucket_prefix(path)
           # `path` contains the fog file's key. It is the object path relative to the artifacts bucket, for example:
@@ -79,8 +102,12 @@ module Gitlab
           ::Ci::JobArtifact.where(file_final_path: paths).pluck(:file_final_path) # rubocop:disable CodeReuse/ActiveRecord -- intentionally used pluck directly to keep it simple.
         end
 
-        def log_skipping_object(path)
+        def log_skipping_no_artifact_record(path)
           logger.info("Found job artifact record for object #{path}, skipping.")
+        end
+
+        def log_skipping_non_existent_object(path)
+          logger.info("No object found for #{path}, skipping.")
         end
       end
     end

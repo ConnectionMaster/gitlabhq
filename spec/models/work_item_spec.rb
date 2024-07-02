@@ -48,9 +48,9 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
     subject { parent_item.reload.work_item_children_by_relative_position }
 
     let_it_be(:parent_item) { create(:work_item, :objective, project: reusable_project) }
-    let_it_be(:oldest_item) { create(:work_item, :objective, created_at: 5.hours.ago, project: reusable_project) }
+    let_it_be(:oldest_item) { create(:work_item, :objective, project: reusable_project) }
     let_it_be(:middle_item) { create(:work_item, :objective, project: reusable_project) }
-    let_it_be(:newest_item) { create(:work_item, :objective, created_at: 5.hours.from_now, project: reusable_project) }
+    let_it_be(:newest_item) { create(:work_item, :objective, project: reusable_project) }
 
     let_it_be_with_reload(:link_to_oldest_item) do
       create(:parent_link, work_item_parent: parent_item, work_item: oldest_item)
@@ -64,7 +64,7 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
       create(:parent_link, work_item_parent: parent_item, work_item: newest_item)
     end
 
-    context 'when ordered by relative position and created_at' do
+    context 'when ordered by relative position' do
       using RSpec::Parameterized::TableSyntax
 
       where(:oldest_item_position, :middle_item_position, :newest_item_position, :expected_order) do
@@ -73,6 +73,11 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
         nil | 1   | 2   | lazy { [middle_item, newest_item, oldest_item] }
         2   | 3   | 1   | lazy { [newest_item, oldest_item, middle_item] }
         1   | 2   | 3   | lazy { [oldest_item, middle_item, newest_item] }
+        1   | 3   | 2   | lazy { [oldest_item, newest_item, middle_item] }
+        2   | 1   | 3   | lazy { [middle_item, oldest_item, newest_item] }
+        3   | 1   | 2   | lazy { [middle_item, newest_item, oldest_item] }
+        3   | 2   | 1   | lazy { [newest_item, middle_item, oldest_item] }
+        1   | 2   | 1   | lazy { [oldest_item, newest_item, middle_item] }
       end
 
       with_them do
@@ -280,13 +285,11 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
       end
 
       it_behaves_like 'internal event tracking' do
-        let(:work_item) { create(:work_item) }
         let(:event) { Gitlab::UsageDataCounters::IssueActivityUniqueCounter::ISSUE_CREATED }
-        let(:project) { work_item.project }
-        let(:user) { work_item.author }
-        let(:namespace) { project.namespace }
+        let(:project) { reusable_project }
+        let(:user) { create(:user) }
 
-        subject(:service_action) { work_item }
+        subject(:service_action) { create(:work_item, project: reusable_project, author: user) }
       end
     end
 
@@ -317,6 +320,16 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
 
           expect(work_item.namespace).to eq(work_item.project.project_namespace)
         end
+      end
+    end
+
+    context 'with title containing preceding or trailing spaces' do
+      let_it_be(:work_item) { build(:work_item, project: reusable_project, title: " some title ") }
+
+      it 'removes spaces from title' do
+        work_item.save!
+
+        expect(work_item.title).to eq("some title")
       end
     end
   end
@@ -389,9 +402,17 @@ RSpec.describe WorkItem, feature_category: :portfolio_management do
       let(:link_reference_url) { 'http://localhost/namespace/project/-/work_items/1' }
 
       it 'matches with expected attributes' do
-        expect(match_data['namespace']).to eq('namespace')
-        expect(match_data['project']).to eq('project')
+        expect(match_data['group_or_project_namespace']).to eq('namespace/project')
         expect(match_data['work_item']).to eq('1')
+      end
+
+      context 'when work item exists in a group' do
+        let(:link_reference_url) { 'http://localhost/groups/group/sub_group/-/work_items/1' }
+
+        it 'matches with expected attributes' do
+          expect(match_data['group_or_project_namespace']).to eq('group/sub_group')
+          expect(match_data['work_item']).to eq('1')
+        end
       end
     end
   end

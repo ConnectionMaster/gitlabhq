@@ -10,9 +10,7 @@ identifiers:
 - project
 - user
 - namespace
-product_section: ops
-product_stage: package
-product_group: group::package registry
+product_group: package_registry
 milestone: "15.11"
 introduced_by_url: https://gitlab.com/gitlab-org/gitlab/-/merge_requests/115545
 distributions:

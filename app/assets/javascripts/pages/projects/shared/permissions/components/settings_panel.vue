@@ -81,6 +81,11 @@ export default {
       'ProjectSettings|Highlight the usage of hidden unicode characters. These have innocent uses for right-to-left languages, but can also be used in potential exploits.',
     ),
     confirmButtonText: __('Save changes'),
+    emailsLabel: s__('ProjectSettings|Email notifications'),
+    showDiffPreviewLabel: s__('ProjectSettings|Include diff previews'),
+    showDiffPreviewHelpText: s__(
+      'ProjectSettings|Emails are not encrypted. Concerned administrators may want to disable diff previews.',
+    ),
   },
   VISIBILITY_LEVEL_PRIVATE_INTEGER,
   VISIBILITY_LEVEL_INTERNAL_INTEGER,
@@ -121,6 +126,11 @@ export default {
       required: true,
     },
     canDisableEmails: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    canSetDiffPreviewInEmail: {
       type: Boolean,
       required: false,
       default: false,
@@ -280,8 +290,8 @@ export default {
       lfsEnabled: true,
       requestAccessEnabled: true,
       enforceAuthChecksOnUploads: true,
-      highlightChangesClass: false,
       emailsEnabled: true,
+      showDiffPreviewInEmail: true,
       cveIdRequestEnabled: true,
       featureAccessLevelEveryone,
       featureAccessLevelMembers,
@@ -382,6 +392,14 @@ export default {
     monitorOperationsFeatureAccessLevelOptions() {
       return this.featureAccessLevelOptions.filter(([value]) => value <= this.monitorAccessLevel);
     },
+    findDiffPreviewValue: {
+      get() {
+        return this.emailsEnabled && this.showDiffPreviewInEmail;
+      },
+      set(newValue) {
+        this.showDiffPreviewInEmail = newValue;
+      },
+    },
   },
 
   watch: {
@@ -464,7 +482,6 @@ export default {
           // When from Internal->Private narrow access for only members
           this.pagesAccessLevel = featureAccessLevel.PROJECT_MEMBERS;
         }
-        this.highlightChanges();
       } else if (oldValue === VISIBILITY_LEVEL_PRIVATE_INTEGER) {
         // if changing away from private, make enabled features more permissive
         if (this.issuesAccessLevel > featureAccessLevel.NOT_ENABLED)
@@ -499,8 +516,6 @@ export default {
           this.monitorAccessLevel = featureAccessLevel.EVERYONE;
         if (this.containerRegistryAccessLevel === featureAccessLevel.PROJECT_MEMBERS)
           this.containerRegistryAccessLevel = featureAccessLevel.EVERYONE;
-
-        this.highlightChanges();
       } else if (
         value === VISIBILITY_LEVEL_PUBLIC_INTEGER &&
         this.packageRegistryAccessLevel === featureAccessLevel.EVERYONE
@@ -531,13 +546,6 @@ export default {
   },
 
   methods: {
-    highlightChanges() {
-      this.highlightChangesClass = true;
-      this.$nextTick(() => {
-        this.highlightChangesClass = false;
-      });
-    },
-
     visibilityAllowed(option) {
       return this.allowedVisibilityOptions.includes(option);
     },
@@ -611,14 +619,14 @@ export default {
         </div>
         <span
           v-if="!visibilityAllowed(visibilityLevel)"
-          class="gl-display-block gl-text-gray-500 gl-mt-2"
+          class="gl-block gl-text-gray-500 gl-mt-2"
           >{{
             s__(
               'ProjectSettings|Visibility options for this fork are limited by the current visibility of the source project.',
             )
           }}</span
         >
-        <span class="gl-display-block gl-text-gray-500 gl-mt-2">
+        <span class="gl-block gl-text-gray-500 gl-mt-2">
           <gl-sprintf :message="visibilityLevelDescription">
             <template #membersPageLink="{ content }">
               <gl-link class="gl-link" :href="membersPagePath">{{ content }}</gl-link>
@@ -626,10 +634,10 @@ export default {
           </gl-sprintf>
         </span>
         <div class="gl-mt-4">
-          <strong class="gl-display-block">{{ s__('ProjectSettings|Additional options') }}</strong>
+          <strong class="gl-block">{{ s__('ProjectSettings|Additional options') }}</strong>
           <label
             v-if="visibilityLevel !== $options.VISIBILITY_LEVEL_PRIVATE_INTEGER"
-            class="gl-line-height-28 gl-font-weight-normal gl-mb-0"
+            class="gl-leading-28 gl-font-normal gl-mb-0"
           >
             <input
               :value="requestAccessEnabled"
@@ -641,7 +649,7 @@ export default {
           </label>
           <label
             v-if="visibilityLevel !== $options.VISIBILITY_LEVEL_PUBLIC_INTEGER"
-            class="gl-line-height-28 gl-font-weight-normal gl-display-block gl-mb-0"
+            class="gl-leading-28 gl-font-normal gl-block gl-mb-0"
           >
             <input
               :value="enforceAuthChecksOnUploads"
@@ -650,7 +658,7 @@ export default {
             />
             <input v-model="enforceAuthChecksOnUploads" type="checkbox" />
             {{ s__('ProjectSettings|Require authentication to view media files') }}
-            <span class="gl-text-gray-500 gl-display-block gl-ml-5 gl-mt-n3">{{
+            <span class="gl-text-gray-500 gl-block gl-ml-5 -gl-mt-3">{{
               s__('ProjectSettings|Prevents direct linking to potentially sensitive media files')
             }}</span>
           </label>
@@ -658,7 +666,6 @@ export default {
       </project-setting-row>
     </div>
     <div
-      :class="{ 'highlight-changes': highlightChangesClass }"
       class="gl-border-1 gl-border-solid gl-border-t-none gl-border-gray-100 gl-mb-5 gl-py-3 gl-px-5 gl-bg-gray-10"
     >
       <project-setting-row
@@ -758,7 +765,7 @@ export default {
               "
             >
               <template #link="{ content }">
-                <span class="d-block">
+                <span class="gl-display-block">
                   <gl-link :href="lfsObjectsRemovalHelpPath" target="_blank">
                     {{ content }}
                   </gl-link>
@@ -770,7 +777,11 @@ export default {
         <project-setting-row
           ref="pipeline-settings"
           :label="$options.i18n.ciCdLabel"
-          :help-text="s__('ProjectSettings|Build, test, and deploy your changes.')"
+          :help-text="
+            s__(
+              'ProjectSettings|Build, test, and deploy your changes. Does not apply to project integrations.',
+            )
+          "
         >
           <project-feature-setting
             v-model="buildsAccessLevel"
@@ -1021,8 +1032,10 @@ export default {
         />
       </project-setting-row>
     </div>
+
     <project-setting-row v-if="canDisableEmails" ref="email-settings" class="mb-3">
       <label class="js-emails-enabled">
+        <h5>{{ $options.i18n.emailsLabel }}</h5>
         <input
           :value="emailsEnabled"
           type="hidden"
@@ -1035,6 +1048,21 @@ export default {
           }}</template>
         </gl-form-checkbox>
       </label>
+      <project-setting-row
+        v-if="canSetDiffPreviewInEmail"
+        ref="enable-diff-preview-settings"
+        class="gl-px-7"
+      >
+        <input
+          :value="findDiffPreviewValue"
+          type="hidden"
+          name="project[project_setting_attributes][show_diff_preview_in_email]"
+        />
+        <gl-form-checkbox v-model="findDiffPreviewValue" :disabled="!emailsEnabled">
+          {{ $options.i18n.showDiffPreviewLabel }}
+          <template #help>{{ $options.i18n.showDiffPreviewHelpText }}</template>
+        </gl-form-checkbox>
+      </project-setting-row>
     </project-setting-row>
     <project-setting-row class="mb-3">
       <input

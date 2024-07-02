@@ -1,6 +1,17 @@
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
+import toast from '~/vue_shared/plugins/global_toast';
+import { sprintf, __ } from '~/locale';
 import { ACTION_EDIT, ACTION_DELETE } from '~/vue_shared/components/list_actions/constants';
-import { QUERY_PARAM_END_CURSOR, QUERY_PARAM_START_CURSOR } from './constants';
+import {
+  TIMESTAMP_TYPE_CREATED_AT,
+  TIMESTAMP_TYPE_UPDATED_AT,
+} from '~/vue_shared/components/resource_lists/constants';
+import {
+  SORT_CREATED_AT,
+  SORT_UPDATED_AT,
+  QUERY_PARAM_END_CURSOR,
+  QUERY_PARAM_START_CURSOR,
+} from './constants';
 
 const availableProjectActions = (userPermissions) => {
   const baseActions = [];
@@ -17,10 +28,14 @@ const availableProjectActions = (userPermissions) => {
 };
 
 const availableGroupActions = (userPermissions) => {
-  const baseActions = [ACTION_EDIT];
+  const baseActions = [];
+
+  if (userPermissions.viewEditPage) {
+    baseActions.push(ACTION_EDIT);
+  }
 
   if (userPermissions.removeGroup) {
-    return [...baseActions, ACTION_DELETE];
+    baseActions.push(ACTION_DELETE);
   }
 
   return baseActions;
@@ -58,18 +73,31 @@ export const formatProjects = (projects) =>
   );
 
 export const formatGroups = (groups) =>
-  groups.map(({ id, webUrl, parent, maxAccessLevel: accessLevel, userPermissions, ...group }) => ({
-    ...group,
-    id: getIdFromGraphQLId(id),
-    webUrl,
-    parent: parent?.id || null,
-    accessLevel,
-    editPath: `${webUrl}/-/edit`,
-    availableActions: availableGroupActions(userPermissions),
-    actionLoadingStates: {
-      [ACTION_DELETE]: false,
-    },
-  }));
+  groups.map(
+    ({
+      id,
+      fullName,
+      webUrl,
+      parent,
+      maxAccessLevel: accessLevel,
+      userPermissions,
+      organizationEditPath: editPath,
+      ...group
+    }) => ({
+      ...group,
+      id: getIdFromGraphQLId(id),
+      name: fullName,
+      fullName,
+      webUrl,
+      parent: parent?.id || null,
+      accessLevel,
+      editPath,
+      availableActions: availableGroupActions(userPermissions),
+      actionLoadingStates: {
+        [ACTION_DELETE]: false,
+      },
+    }),
+  );
 
 export const onPageChange = ({
   startCursor,
@@ -91,4 +119,27 @@ export const onPageChange = ({
   }
 
   return routeQuery;
+};
+
+export const renderDeleteSuccessToast = (item, type) => {
+  toast(
+    sprintf(__("%{type} '%{name}' is being deleted."), {
+      type,
+      name: item.name,
+    }),
+  );
+};
+
+export const timestampType = (sortName) => {
+  const SORT_MAP = {
+    [SORT_CREATED_AT]: TIMESTAMP_TYPE_CREATED_AT,
+    [SORT_UPDATED_AT]: TIMESTAMP_TYPE_UPDATED_AT,
+  };
+
+  return SORT_MAP[sortName] || TIMESTAMP_TYPE_CREATED_AT;
+};
+
+export const deleteParams = () => {
+  // Overridden in EE
+  return {};
 };

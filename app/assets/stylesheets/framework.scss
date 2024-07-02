@@ -12,7 +12,6 @@
 @import 'framework/blocks';
 @import 'framework/breadcrumbs';
 @import 'framework/buttons';
-@import 'framework/badges';
 @import 'framework/calendar';
 @import 'framework/callout';
 @import 'framework/common';
@@ -26,7 +25,6 @@
 @import 'framework/header';
 @import 'framework/top_bar';
 @import 'framework/highlight';
-@import 'framework/labels';
 @import 'framework/lists';
 @import 'framework/logo';
 @import 'framework/markdown_area';
@@ -38,8 +36,6 @@
 @import 'framework/secondary_navigation_elements';
 @import 'framework/selects';
 @import 'framework/sidebar';
-@import 'framework/contextual_sidebar_header';
-@import 'framework/contextual_sidebar';
 @import 'framework/super_sidebar';
 @import 'framework/brand_logo';
 @import 'framework/tables';
@@ -68,3 +64,4 @@
 @import 'framework/diffs';
 @import 'framework/new_card';
 @import 'framework/tanuki_bot';
+@import 'framework/crud';

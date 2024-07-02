@@ -5,12 +5,14 @@ require 'spec_helper'
 RSpec.describe API::ProjectContainerRepositories, feature_category: :container_registry do
   include ExclusiveLeaseHelpers
 
+  include_context 'container registry client stubs'
+
   let_it_be(:project) { create(:project, :private) }
   let_it_be(:project2) { create(:project, :public) }
-  let_it_be(:maintainer) { create(:user) }
-  let_it_be(:developer) { create(:user) }
-  let_it_be(:reporter) { create(:user) }
-  let_it_be(:guest) { create(:user) }
+  let_it_be(:maintainer) { create(:user, maintainer_of: [project, project2]) }
+  let_it_be(:developer) { create(:user, developer_of: [project, project2]) }
+  let_it_be(:reporter) { create(:user, reporter_of: [project, project2]) }
+  let_it_be(:guest) { create(:user, guest_of: [project, project2]) }
 
   let(:root_repository) { create(:container_repository, :root, project: project) }
   let(:test_repository) { create(:container_repository, project: project) }
@@ -36,18 +38,6 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
   let(:snowplow_gitlab_standard_context) do
     { user: api_user, project: project, namespace: project.namespace,
       property: 'i_package_container_user' }
-  end
-
-  before_all do
-    project.add_maintainer(maintainer)
-    project.add_developer(developer)
-    project.add_reporter(reporter)
-    project.add_guest(guest)
-
-    project2.add_maintainer(maintainer)
-    project2.add_developer(developer)
-    project2.add_reporter(reporter)
-    project2.add_guest(guest)
   end
 
   before do
@@ -213,9 +203,7 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
               end
 
               before do
-                allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(true)
-
-                allow_next_instance_of(ContainerRegistry::GitlabApiClient) do |client|
+                stub_container_registry_gitlab_api_support(supported: true) do |client|
                   allow(client).to receive(:tags).and_return(response_body)
                 end
               end
@@ -241,7 +229,8 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
                       last: last_param,
                       name: nil,
                       before: nil,
-                      referrers: nil
+                      referrers: nil,
+                      referrer_type: nil
                     )
                   end
 
@@ -487,7 +476,16 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
           context 'when the repository is migrated', :saas do
             context 'when the Gitlab API is supported' do
               before do
-                allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(true)
+                stub_container_registry_gitlab_api_support(supported: true) do |client|
+                  allow(client).to receive(:tags).and_return(response_body)
+                end
+              end
+
+              let(:response_body) do
+                {
+                  pagination: {},
+                  response_body: ::Gitlab::Json.parse(tags_response.to_json)
+                }
               end
 
               context 'when the Gitlab API returns a tag' do
@@ -501,19 +499,6 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
                       created_at: 1.minute.ago
                     }
                   ]
-                end
-
-                let_it_be(:response_body) do
-                  {
-                    pagination: {},
-                    response_body: ::Gitlab::Json.parse(tags_response.to_json)
-                  }
-                end
-
-                before do
-                  allow_next_instance_of(ContainerRegistry::GitlabApiClient) do |client|
-                    allow(client).to receive(:tags).and_return(response_body)
-                  end
                 end
 
                 it_behaves_like 'returning the tag'
@@ -546,28 +531,11 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
                   ]
                 end
 
-                let_it_be(:response_body) do
-                  {
-                    pagination: {},
-                    response_body: ::Gitlab::Json.parse(tags_response.to_json)
-                  }
-                end
-
-                before do
-                  allow_next_instance_of(ContainerRegistry::GitlabApiClient) do |client|
-                    allow(client).to receive(:tags).and_return(response_body)
-                  end
-                end
-
                 it_behaves_like 'returning the tag'
               end
 
               context 'when the Gitlab API does not return a tag' do
-                before do
-                  allow_next_instance_of(ContainerRegistry::GitlabApiClient) do |client|
-                    allow(client).to receive(:tags).and_return({ pagination: {}, response_body: {} })
-                  end
-                end
+                let_it_be(:tags_response) { {} }
 
                 it 'returns not found' do
                   subject
@@ -580,7 +548,7 @@ RSpec.describe API::ProjectContainerRepositories, feature_category: :container_r
 
             context 'when the Gitlab API is not supported' do
               before do
-                allow(ContainerRegistry::GitlabApiClient).to receive(:supports_gitlab_api?).and_return(false)
+                stub_container_registry_gitlab_api_support(supported: false)
                 stub_container_registry_tags(repository: root_repository.path, tags: %w[rootA], with_manifest: true)
               end
 

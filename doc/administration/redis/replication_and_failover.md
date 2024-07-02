@@ -17,14 +17,14 @@ In Redis lingo, `primary` is called `master`. In this document, `primary` is use
 instead of `master`, except the settings where `master` is required.
 
 Using [Redis](https://redis.io/) in scalable environment is possible using a **Primary** x **Replica**
-topology with a [Redis Sentinel](https://redis.io/docs/manual/sentinel/) service to watch and automatically
+topology with a [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) service to watch and automatically
 start the failover procedure.
 
 Redis requires authentication if used with Sentinel. See
-[Redis Security](https://redis.io/docs/manual/security/) documentation for more
+[Redis Security](https://redis.io/docs/latest/operate/rc/security/) documentation for more
 information. We recommend using a combination of a Redis password and tight
 firewall rules to secure your Redis service.
-You are highly encouraged to read the [Redis Sentinel](https://redis.io/docs/manual/sentinel/) documentation
+You are highly encouraged to read the [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) documentation
 before configuring Redis with GitLab to fully understand the topology and
 architecture.
 
@@ -68,7 +68,7 @@ When a **Primary** fails to respond, it's the application's responsibility
 for a new **Primary**).
 
 To get a better understanding on how to correctly set up Sentinel, read
-the [Redis Sentinel](https://redis.io/docs/manual/sentinel/) documentation first, as
+the [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) documentation first, as
 failing to configure it correctly can lead to data loss or can bring your
 whole cluster down, invalidating the failover effort.
 
@@ -498,8 +498,6 @@ which ideally should not have Redis or Sentinels on it for a HA setup.
 
 ### Step 5. Enable Monitoring
 
-> - [Introduced](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/3786) in GitLab 12.0.
-
 If you enable Monitoring, it must be enabled on **all** Redis servers.
 
 1. Make sure to collect [`CONSUL_SERVER_NODES`](../postgresql/replication_and_failover.md#consul-information), which are the IP addresses or DNS records of the Consul server nodes, for the next step. Note they are presented as `Y.Y.Y.Y consul1.gitlab.example.com Z.Z.Z.Z`
@@ -723,7 +721,7 @@ To make this work with Sentinel:
    - Redis URLs should be in the format: `redis://:PASSWORD@SENTINEL_PRIMARY_NAME`, where:
      - `PASSWORD` is the plaintext password for the Redis instance.
      - `SENTINEL_PRIMARY_NAME` is the Sentinel primary name set with `redis['master_name']`,
-        for example `gitlab-redis-cache`.
+       for example `gitlab-redis-cache`.
 
 1. Save the file and reconfigure GitLab for the change to take effect:
 

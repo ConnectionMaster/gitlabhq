@@ -14,6 +14,7 @@ RSpec.describe Organizations::Organization, type: :model, feature_category: :cel
     it { is_expected.to have_many(:users).through(:organization_users).inverse_of(:organizations) }
     it { is_expected.to have_many(:organization_users).inverse_of(:organization) }
     it { is_expected.to have_many :projects }
+    it { is_expected.to have_many :snippets }
   end
 
   describe 'validations' do
@@ -113,6 +114,21 @@ RSpec.describe Organizations::Organization, type: :model, feature_category: :cel
       it 'does not have id 1' do
         expect(organization.id).not_to eq(1)
       end
+    end
+  end
+
+  describe '#owner_user_ids' do
+    let_it_be(:organization_users) { create_list(:organization_user, 3, :owner, organization: organization) }
+
+    it 'returns the owner user ids' do
+      expect(organization.owner_user_ids).to contain_exactly(*organization_users.map(&:user_id))
+    end
+
+    it 'memoize results' do
+      ActiveRecord::QueryRecorder.new { organization.owner_user_ids }
+      second_query = ActiveRecord::QueryRecorder.new { organization.owner_user_ids }
+
+      expect(second_query.count).to eq(0)
     end
   end
 
@@ -279,6 +295,18 @@ RSpec.describe Organizations::Organization, type: :model, feature_category: :cel
 
     context 'when user is not an organization user' do
       it { is_expected.to eq false }
+    end
+  end
+
+  describe '#add_owner' do
+    let_it_be(:user) { create(:user) }
+
+    before_all do
+      organization.add_owner(user)
+    end
+
+    it 'adds user as an owner', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/463107' do
+      expect(organization.owner?(user)).to eq(true)
     end
   end
 

@@ -44,7 +44,7 @@ The following are possible solutions for problems where users cannot sign in:
   Alternatively, self-managed administrators can [add a user identity](../../../administration/admin_area.md#user-identities).
 - The **Identity** (`extern_uid`) value stored by GitLab is updated by SCIM whenever `id` or `externalId` changes. Users
   cannot sign in unless the GitLab identifier (`extern_uid`) of the sign-in method matches the ID sent by the provider, such as
-  the  `NameId` sent by SAML. This value is also used by SCIM to match users on the `id`, and is updated by SCIM whenever the `id` or `externalId` values change.
+  the `NameId` sent by SAML. This value is also used by SCIM to match users on the `id`, and is updated by SCIM whenever the `id` or `externalId` values change.
 - On GitLab.com, the SCIM `id` and SCIM `externalId` must be configured to the same value as the SAML `NameId`. You can trace SAML responses
   using [debugging tools](troubleshooting.md#saml-debugging-tools), and check any errors against the
   [SAML troubleshooting](troubleshooting.md) information.
@@ -205,6 +205,22 @@ this:
 1. If the update returns a status code `204`, have the user attempt to sign in
    using SAML SSO.
 
+## 403 Forbidden response for disable action
+
+If you [restrict group access by IP address](../access_and_permissions.md#restrict-group-access-by-ip-address),
+SCIM deprovisioning might fail with the error response:
+
+```plaintext
+{"message":"403 Forbidden"}
+```
+
+This is a [known issue](https://gitlab.com/gitlab-org/gitlab/-/issues/429607) when restricting group access by IP
+address.
+
+To work around this issue, use the Group SCIM API to
+[update a single SCIM provisioned user](../../../development/internal_api/index.md#update-a-single-scim-provisioned-user)
+to set the user's `active` state to `false`.
+
 ## Azure Active Directory
 
 The following troubleshooting information is specifically for SCIM provisioned through Azure Active Directory.
@@ -236,8 +252,8 @@ invalid JSON primitives (such as `.`). Removing or URL encoding these characters
 
 ### `(Field) can't be blank` sync error
 
-When checking the Audit Events for the provisioning, you sometimes see a `Namespace can't be blank, Name can't be blank,
-and User can't be blank.` error.
+When checking the Audit Events for the provisioning, you sometimes see a
+`Namespace can't be blank, Name can't be blank, and User can't be blank.` error.
 
 This error can occur because not all required fields (such as first name and last name) are present for all users
 being mapped.

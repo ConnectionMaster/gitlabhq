@@ -259,6 +259,7 @@ export const mockNoteSubmitSuccessMutationResponse = {
           name: 'Administrator',
           username: 'root',
           webUrl: 'http://127.0.0.1:3000/root',
+          webPath: '/root',
           __typename: 'UserCore',
         },
         awardEmoji: {
@@ -281,6 +282,7 @@ export const mockNoteSubmitSuccessMutationResponse = {
           width: 695,
           __typename: 'DiffPosition',
         },
+        imported: false,
         userPermissions: {
           adminNote: true,
           repositionNote: true,

@@ -59,11 +59,9 @@ export default {
 };
 </script>
 <template>
-  <div v-if="isPaginationVisible" class="gl--flex-center">
+  <div v-if="isPaginationVisible" class="gl-flex gl-justify-center gl-items-center">
     <gl-keyset-pagination
       v-bind="pageInfo"
-      :prev-text="$options.translations.previousPageButtonLabel"
-      :next-text="$options.translations.nextPageButtonLabel"
       :prev-button-link="previousLink"
       :next-button-link="nextLink"
       :disabled="disabled"

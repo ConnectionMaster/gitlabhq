@@ -1,5 +1,5 @@
 ---
-stage: Service Management
+stage: Monitor
 group: Respond
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
@@ -9,8 +9,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/4638) in GitLab 14.1.
 
 Escalation Policies protect your company from missed critical alerts. Escalation Policies contain
 time-boxed steps that automatically page the next responder in the escalation step if the responder

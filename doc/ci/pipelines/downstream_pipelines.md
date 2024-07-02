@@ -226,6 +226,10 @@ syntax for the OS running GitLab. If GitLab is running on Linux but using a Wind
 runner for testing, the path separator for the trigger job is `/`. Other CI/CD
 configuration for jobs that use the Windows runner, like scripts, use <code>&#92;</code>.
 
+You cannot use CI/CD variables in an `include` section in a dynamic child pipeline's configuration.
+[Issue 378717](https://gitlab.com/gitlab-org/gitlab/-/issues/378717) proposes fixing
+this issue.
+
 ### Run child pipelines with merge request pipelines
 
 Pipelines, including child pipelines, run as branch pipelines by default when not using
@@ -309,7 +313,7 @@ trigger_pipeline:
 
 ## View a downstream pipeline
 
-In the [pipeline graph view](index.md#view-full-pipeline-graph), downstream pipelines display
+In the [pipeline details page](index.md#pipeline-details), downstream pipelines display
 as a list of cards on the right of the graph. From this view, you can:
 
 - Select a trigger job to see the triggered downstream pipeline's jobs.
@@ -433,7 +437,7 @@ trigger_job:
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/422282) from GitLab Premium to GitLab Free in 16.8.
 
 After you trigger a multi-project pipeline, the downstream pipeline displays
-to the right of the [pipeline graph](index.md#visualize-pipelines).
+to the right of the [pipeline graph](index.md#view-pipelines).
 
 In [pipeline mini graphs](index.md#pipeline-mini-graphs), the downstream pipeline
 displays to the right of the mini graph.
@@ -491,7 +495,7 @@ upstream pipeline:
 Use [`needs:project`](../yaml/index.md#needsproject) to fetch artifacts from an
 upstream pipeline:
 
-1. In GitLab 15.9 and later, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-project-to-the-job-token-allowlist) of the upstream project.
+1. In GitLab 15.9 and later, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-group-or-project-to-the-job-token-allowlist) of the upstream project.
 1. In the upstream pipeline, save the artifacts in a job with the [`artifacts`](../yaml/index.md#artifacts)
    keyword, then trigger the downstream pipeline with a trigger job:
 
@@ -544,7 +548,7 @@ because the downstream pipeline attempts to fetch artifacts from the latest bran
 To fetch the artifacts from the upstream `merge request` pipeline instead of the `branch` pipeline,
 pass `CI_MERGE_REQUEST_REF_PATH` to the downstream pipeline using [variable inheritance](#pass-yaml-defined-cicd-variables):
 
-1. In GitLab 15.9 and later, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-project-to-the-job-token-allowlist) of the upstream project.
+1. In GitLab 15.9 and later, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-group-or-project-to-the-job-token-allowlist) of the upstream project.
 1. In a job in the upstream pipeline, save the artifacts using the [`artifacts`](../yaml/index.md#artifacts) keyword.
 1. In the job that triggers the downstream pipeline, pass the `$CI_MERGE_REQUEST_REF_PATH` variable:
 
@@ -682,7 +686,7 @@ is available.
 
 ### Pass a predefined variable
 
-To pass information about the upstream pipeline using [predefined CI/CD variables](../variables/predefined_variables.md).
+To pass information about the upstream pipeline using [predefined CI/CD variables](../variables/predefined_variables.md)
 use interpolation. Save the predefined variable as a new job variable in the trigger
 job, which is passed to the downstream pipeline. For example:
 
@@ -888,4 +892,4 @@ Only trigger multi-project pipelines with tag names that do not match branch nam
 
 In GitLab 15.9 and later, CI/CD job tokens are scoped to the project that the pipeline executes under. Therefore, the job token in a downstream pipeline cannot be used to access an upstream project by default.
 
-To resolve this, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-project-to-the-job-token-allowlist).
+To resolve this, [add the downstream project to the job token scope allowlist](../jobs/ci_job_token.md#add-a-group-or-project-to-the-job-token-allowlist).

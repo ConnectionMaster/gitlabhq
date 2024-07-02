@@ -12,7 +12,13 @@ import isShowingLabelsQuery from '~/graphql_shared/client/is_showing_labels.quer
 import WorkItemTypeIcon from '~/work_items/components/work_item_type_icon.vue';
 import { TYPE_ISSUE } from '~/issues/constants';
 import { updateHistory } from '~/lib/utils/url_utility';
-import { mockLabelList, mockIssue, mockIssueFullPath, mockIssueDirectNamespace } from './mock_data';
+import {
+  mockLabelList,
+  mockIssue,
+  mockIssueFullPath,
+  mockIssueDirectNamespace,
+  mockMilestone,
+} from './mock_data';
 
 jest.mock('~/lib/utils/url_utility');
 
@@ -75,6 +81,7 @@ describe('Board card component', () => {
         allowSubEpics: false,
         issuableType: TYPE_ISSUE,
         isGroupBoard,
+        disabled: false,
       },
     });
   };
@@ -143,6 +150,25 @@ describe('Board card component', () => {
   it('renders item direct namespace path with full reference path in a tooltip', () => {
     expect(wrapper.find('.board-item-path').text()).toBe(mockIssueDirectNamespace);
     expect(wrapper.find('.board-item-path').attributes('title')).toBe(mockIssueFullPath);
+  });
+
+  describe('milestone', () => {
+    it('does not render milestone if issue has no milestone', () => {
+      expect(wrapper.findByTestId('issue-milestone').exists()).toBe(false);
+    });
+
+    it('renders milestone if issue has a milestone assigned', () => {
+      createWrapper({
+        props: {
+          item: {
+            ...issue,
+            milestone: mockMilestone,
+          },
+        },
+      });
+
+      expect(wrapper.findByTestId('issue-milestone').exists()).toBe(true);
+    });
   });
 
   describe('blocked', () => {

@@ -10,8 +10,6 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/10683) in GitLab 13.2.
-
 With Load Performance Testing, you can test the impact of any pending code changes
 to your application's backend in [GitLab CI/CD](../index.md).
 
@@ -96,7 +94,7 @@ template that is included with GitLab.
 NOTE:
 For large scale k6 tests you need to ensure the GitLab Runner instance performing the actual
 test is able to handle running the test. Refer to [k6's guidance](https://k6.io/docs/testing-guides/running-large-tests#hardware-considerations)
-for spec details. The [default shared GitLab.com runners](../runners/saas/linux_saas_runner.md)
+for spec details. The [default shared GitLab.com runners](../runners/hosted_runners/linux.md)
 likely have insufficient specs to handle most large k6 tests.
 
 This template runs the
@@ -149,7 +147,7 @@ summary values from the test.
 
 If [GitLab Pages](../../user/project/pages/index.md) is enabled, you can view the report directly in your browser.
 
-### Load Performance testing in Review Apps
+### Load Performance testing in review apps
 
 The CI/CD YAML configuration example above works for testing against static environments,
 but it can be extended to work with [review apps](../review_apps/index.md) or

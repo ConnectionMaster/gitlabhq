@@ -41,7 +41,8 @@ module Gitlab
                       commit_author: 'MergeRequest::DiffCommitUser',
                       committer: 'MergeRequest::DiffCommitUser',
                       merge_request_diff_commits: 'MergeRequestDiffCommit',
-                      work_item_type: 'WorkItems::Type' }.freeze
+                      work_item_type: 'WorkItems::Type',
+                      user_contributions: 'User' }.freeze
 
         BUILD_MODELS = %i[Ci::Build Ci::Bridge commit_status generic_commit_status].freeze
 
@@ -148,7 +149,7 @@ module Gitlab
         def setup_diff
           diff = @relation_hash.delete('diff_export') || @relation_hash.delete('utf8_diff')
 
-          parsed_relation_hash['diff'] = diff
+          parsed_relation_hash['diff'] = diff.delete("\x00")
         end
 
         def setup_pipeline
@@ -230,7 +231,7 @@ module Gitlab
         def compute_relative_position
           return unless max_relative_position
 
-          max_relative_position + (@relation_index + 1) * Gitlab::RelativePositioning::IDEAL_DISTANCE
+          max_relative_position + ((@relation_index + 1) * Gitlab::RelativePositioning::IDEAL_DISTANCE)
         end
 
         def max_relative_position

@@ -1,8 +1,6 @@
 ---
 key_path: redis_hll_counters.error_tracking.error_tracking_total_unique_counts_weekly
 description: Total unique users accessing error tracking routes
-product_section: ops
-product_stage: monitor
 product_group: respond
 value_type: number
 status: active
@@ -11,13 +9,12 @@ introduced_by_url: https://gitlab.com/gitlab-org/gitlab/-/merge_requests/82543
 time_frame: 7d
 data_source: redis_hll
 data_category: optional
-instrumentation_class: AggregatedMetric
-options:
-  aggregate:
-    attribute: user.id
-  events:
-    - error_tracking_view_list
-    - error_tracking_view_details
+instrumentation_class: RedisHLLMetric
+events:
+- name: error_tracking_view_list
+  unique: user.id
+- name: error_tracking_view_details
+  unique: user.id
 distribution:
 - ce
 - ee

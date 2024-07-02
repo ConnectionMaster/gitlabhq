@@ -1,5 +1,5 @@
 <script>
-import { GlAccordion, GlAccordionItem, GlIcon } from '@gitlab/ui';
+import { GlAccordion, GlAccordionItem, GlIcon, GlLink } from '@gitlab/ui';
 
 import { BULK_IMPORT_STATIC_ITEMS } from '~/import/constants';
 import { STATUSES } from '../constants';
@@ -11,9 +11,15 @@ export default {
     GlAccordion,
     GlAccordionItem,
     GlIcon,
+    GlLink,
   },
 
   props: {
+    failuresHref: {
+      type: String,
+      required: false,
+      default: '',
+    },
     stats: {
       type: Object,
       required: false,
@@ -63,8 +69,8 @@ export default {
 
 <template>
   <gl-accordion :header-level="3">
-    <gl-accordion-item :title="__('Details')">
-      <ul class="gl-p-0 gl-mb-3 gl-list-style-none gl-font-sm">
+    <gl-accordion-item :title="__('View details')">
+      <ul class="gl-p-0 gl-mb-3 gl-list-none gl-font-sm">
         <li v-for="key in Object.keys(stats)" :key="key" data-testid="import-stat-item">
           <div class="gl-display-flex gl-w-28 gl-align-items-center">
             <gl-icon :size="12" class="gl-mr-2 gl-flex-shrink-0" v-bind="statsIconProps(key)" />
@@ -73,6 +79,9 @@ export default {
           </div>
         </li>
       </ul>
+      <gl-link v-if="failuresHref" :href="failuresHref"
+        >{{ s__('Import|Show errors') }} &gt;</gl-link
+      >
     </gl-accordion-item>
   </gl-accordion>
 </template>

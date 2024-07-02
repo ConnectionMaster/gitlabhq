@@ -135,7 +135,7 @@ export default {
             cache.writeQuery({
               ...queryArgs,
               data: produce(sourceData, (draftState) => {
-                const linkedItemsWidget = draftState.workspace.workItems.nodes[0].widgets?.find(
+                const linkedItemsWidget = draftState.workspace.workItem?.widgets?.find(
                   (widget) => widget.type === WIDGET_TYPE_LINKED_ITEMS,
                 );
 
@@ -204,7 +204,7 @@ export default {
         :checked="linkedItemType"
       />
     </gl-form-group>
-    <p class="gl-font-weight-bold gl-mb-2">
+    <p class="gl-font-bold gl-mb-2">
       {{ $options.i18n.linkItemInputLabel }}
     </p>
     <div class="gl-mb-5">

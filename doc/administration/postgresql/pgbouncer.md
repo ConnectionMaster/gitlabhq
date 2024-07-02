@@ -95,8 +95,6 @@ Do not backup or restore GitLab through a PgBouncer connection: it causes a GitL
 
 ## Enable Monitoring
 
-> - [Introduced](https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/3786) in GitLab 12.0.
-
 If you enable Monitoring, it must be enabled on **all** PgBouncer servers.
 
 1. Create/edit `/etc/gitlab/gitlab.rb` and add the following configuration:
@@ -277,8 +275,8 @@ Additionally, `current_connections` should be greater than 1.
 
 ### Message: `LOG:  invalid CIDR mask in address`
 
-See the suggested fix [in Geo documentation](../geo/replication/troubleshooting/index.md#message-log--invalid-cidr-mask-in-address).
+See the suggested fix [in Geo documentation](../geo/replication/troubleshooting/replication.md#message-log--invalid-cidr-mask-in-address).
 
 ### Message: `LOG:  invalid IP mask "md5": Name or service not known`
 
-See the suggested fix [in Geo documentation](../geo/replication/troubleshooting/index.md#message-log--invalid-ip-mask-md5-name-or-service-not-known).
+See the suggested fix [in Geo documentation](../geo/replication/troubleshooting/replication.md#message-log--invalid-ip-mask-md5-name-or-service-not-known).

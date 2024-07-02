@@ -74,7 +74,7 @@ If GitLab fails to process or store these tokens, an `Invalid JWT` error occurs.
 To resolve this issue on your self-managed GitLab instance:
 
 - Confirm your self-managed GitLab instance is publicly available to:
-  - GitLab.com (if you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#connect-the-gitlab-for-jira-cloud-app)).
+  - GitLab.com (if you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#install-the-gitlab-for-jira-cloud-app-from-the-atlassian-marketplace)).
   - Jira Cloud (if you [installed the app manually](jira_cloud_app.md#install-the-gitlab-for-jira-cloud-app-manually)).
 - Ensure the token request sent to the `/-/jira_connect/events/installed` endpoint when you install the app is accessible from Jira.
   The following command should return a `401 Unauthorized`:
@@ -88,7 +88,7 @@ To resolve this issue on your self-managed GitLab instance:
 
 Depending on how you installed the app, you might want to check the following:
 
-- If you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#connect-the-gitlab-for-jira-cloud-app),
+- If you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#install-the-gitlab-for-jira-cloud-app-from-the-atlassian-marketplace),
   switch between GitLab versions in the GitLab for Jira Cloud app:
 
 <!-- markdownlint-disable MD044 -->
@@ -190,11 +190,23 @@ GitLab Support can then investigate the issue in the GitLab.com server logs.
 NOTE:
 These steps can only be completed by GitLab Support.
 
-[In Kibana](https://log.gprd.gitlab.net/app/r/s/0FdPP), the logs should be filtered for
-`json.meta.caller_id: JiraConnect::InstallationsController#update` and `NOT json.status: 200`.
-If you have been provided the `X-Request-Id` value, you can use that against `json.correlation_id` to narrow down the results.
+Each `GET` request made to the Jira Connect Proxy URL `https://gitlab.com/-/jira_connect/installations` generates two log entries.
 
-Each `GET` request to the Jira Connect Proxy URL `https://gitlab.com/-/jira_connect/installations` generates two log entries.
+To locate the relevant log entries in Kibana, either:
+
+- If you have the `X-Request-Id` value or correlation ID for the `GET` request to
+  `https://gitlab.com/-/jira_connect/installations`, the
+  [Kibana](https://log.gprd.gitlab.net/app/r/s/0FdPP) logs should be filtered for
+  `json.meta.caller_id: JiraConnect::InstallationsController#update`, `NOT json.status: 200`
+   and `json.correlation_id: <X-Request-Id>`. This should return two log entries.
+
+- If you have the self-managed URL for the customer:
+  1. The [Kibana](https://log.gprd.gitlab.net/app/r/s/QVsD4) logs should be filtered for
+     `json.meta.caller_id: JiraConnect::InstallationsController#update`, `NOT json.status: 200`
+     and `json.params.value: {"instance_url"=>"https://gitlab.example.com"}`. The self-managed URL
+     must not have a leading slash. This should return one of the log entries.
+  1. Add the `json.correlation_id` to the filter.
+  1. Remove the `json.params.value` filter. This should return the other log entry.
 
 For the first log:
 
@@ -207,8 +219,30 @@ For the second log, you might have one of the following scenarios:
   - `json.message`, `json.jira_status_code`, and `json.jira_body` are present.
   - `json.message` is `Proxy lifecycle event received error response` or similar.
   - `json.jira_status_code` and `json.jira_body` might contain the response received from the self-managed instance or a proxy in front of the instance.
-  - If `json.jira_status_code` is `401 Unauthorized` and `json.jira_body` is empty,
-    [**Jira Connect Proxy URL**](jira_cloud_app.md#set-up-your-instance) might not be set to `https://gitlab.com`.
+  - If `json.jira_status_code` is `401 Unauthorized` and `json.jira_body` is `(empty)`:
+    - [**Jira Connect Proxy URL**](jira_cloud_app.md#set-up-your-instance) might not be set to `https://gitlab.com`.
+    - The self-managed instance might be blocking outgoing connections. Ensure that the self-managed instance can connect to `connect-install-keys.atlassian.com`.
+    - The self-managed instance is unable to decrypt the JWT token from Jira. [From GitLab 16.11](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/147234),
+      the [`exceptions_json.log`](../logs/index.md#exceptions_jsonlog) contains more information about the error.
+    - If a [reverse proxy](jira_cloud_app.md#using-a-reverse-proxy) is in front of your self-managed instance,
+      the `Host` header sent to the self-managed instance might not match the reverse proxy FQDN.
+      Check the [Workhorse logs](../logs/index.md#workhorse-logs) on the self-managed instance:
+
+      ```shell
+      grep /-/jira_connect/events/installed /var/log/gitlab/gitlab-workhorse/current
+      ```
+
+      The output might contain the following:
+
+      ```json
+      {
+        "host":"gitlab.mycompany.com:443", // The host should match the reverse proxy FQDN entered into the GitLab for Jira Cloud app
+        "remote_ip":"34.74.226.3", // This IP should be within the GitLab.com IP range https://docs.gitlab.com/ee/user/gitlab_com/#ip-range
+        "status":401,
+        "uri":"/-/jira_connect/events/installed"
+      }
+      ```
+
 - Scenario 2:
   - `json.exception.class` and `json.exception.message` are present.
   - `json.exception.class` and `json.exception.message` contain whether an issue occurred while contacting the self-managed instance.
@@ -225,6 +259,10 @@ A `403 Forbidden` is returned if the user information cannot be fetched from Jir
 
 To resolve this issue, ensure the Jira user that installs and configures the app
 meets certain [requirements](jira_cloud_app.md#jira-user-requirements).
+
+This error might also occur if you use a rewrite or subfilter with a [reverse proxy](jira_cloud_app.md#using-a-reverse-proxy).
+The app key used in requests contains part of the server hostname, which some reverse proxy filters might capture.
+The app key in Atlassian and GitLab must match for authentication to work correctly.
 
 ## `Failed to load Jira Connect Application ID`
 
@@ -249,5 +287,19 @@ To resolve this issue:
    curl --include "https://gitlab.example.com/-/jira_connect/oauth_application_id"
    ```
 
-1. If you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#connect-the-gitlab-for-jira-cloud-app),
+1. If you [installed the app from the official Atlassian Marketplace listing](jira_cloud_app.md#install-the-gitlab-for-jira-cloud-app-from-the-atlassian-marketplace),
    ensure [**Jira Connect Proxy URL**](jira_cloud_app.md#set-up-your-instance) is set to `https://gitlab.com` without leading slashes.
+
+## `Missing required parameter: client_id`
+
+When you sign in to the GitLab for Jira Cloud app after you point the app
+to your self-managed instance, you might get the following error:
+
+```plaintext
+Missing required parameter: client_id
+```
+
+To resolve this issue, ensure all prerequisites for your installation method have been met:
+
+- [Prerequisites for connecting the GitLab for Jira Cloud app](jira_cloud_app.md#prerequisites)
+- [Prerequisites for installing the GitLab for Jira Cloud app manually](jira_cloud_app.md#prerequisites-1)

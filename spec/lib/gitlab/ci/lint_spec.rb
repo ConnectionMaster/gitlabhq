@@ -8,7 +8,7 @@ RSpec.describe Gitlab::Ci::Lint, feature_category: :pipeline_composition do
 
   let(:sha) { nil }
   let(:verify_project_sha) { nil }
-  let(:ref) { project.default_branch }
+  let(:ref) { project&.default_branch }
   let(:kwargs) do
     {
       project: project,
@@ -18,7 +18,7 @@ RSpec.describe Gitlab::Ci::Lint, feature_category: :pipeline_composition do
     }.compact
   end
 
-  let(:lint) { described_class.new(**kwargs) }
+  let(:lint) { described_class.new(project: project, **kwargs) }
 
   describe '#validate' do
     subject { lint.validate(content, dry_run: dry_run, ref: ref) }
@@ -223,6 +223,101 @@ RSpec.describe Gitlab::Ci::Lint, feature_category: :pipeline_composition do
           script: echo
           needs: [build]
         YAML
+      end
+    end
+
+    context 'when a pipeline ref variable is used in an `include`' do
+      let(:dry_run) { false }
+
+      let(:content) do
+        <<~YAML
+          include:
+            - project: "#{project.full_path}"
+              ref: ${CI_COMMIT_REF_NAME}
+              file: '.gitlab-ci-include.yml'
+
+          show-parent-variable:
+            stage : .pre
+            script:
+              - echo I am running a variable ${CI_COMMIT_REF_NAME}
+        YAML
+      end
+
+      let(:included_content) do
+        <<~YAML
+          another_job:
+            script: echo
+        YAML
+      end
+
+      before do
+        project.add_developer(user)
+
+        project.repository.create_file(
+          project.creator,
+          '.gitlab-ci-include.yml',
+          included_content,
+          message: 'Add .gitlab-ci-include.yml',
+          branch_name: 'master'
+        )
+      end
+
+      after do
+        project.repository.delete_file(
+          project.creator,
+          '.gitlab-ci-include.yml',
+          message: 'Remove .gitlab-ci-include.yml',
+          branch_name: 'master'
+        )
+      end
+
+      it 'passes the ref name to YamlProcessor' do
+        expect(Gitlab::Ci::YamlProcessor)
+          .to receive(:new)
+          .with(content, a_hash_including(ref: project.default_branch))
+          .and_call_original
+
+        expect(subject.includes).to contain_exactly(
+          {
+            type: :file,
+            location: '.gitlab-ci-include.yml',
+            blob: "http://localhost/#{project.full_path}/-/blob/#{project.commit.sha}/.gitlab-ci-include.yml",
+            raw: "http://localhost/#{project.full_path}/-/raw/#{project.commit.sha}/.gitlab-ci-include.yml",
+            extra: { project: project.full_path, ref: project.default_branch },
+            context_project: project.full_path,
+            context_sha: project.commit.sha
+          }
+        )
+      end
+
+      context 'when the ref is a tag' do
+        before do
+          project.repository.add_tag(project.creator, 'test', project.commit.id)
+          allow(project.repository).to receive(:branch_names_contains).and_return([])
+        end
+
+        after do
+          project.repository.rm_tag(project.creator, 'test')
+        end
+
+        it 'passes the ref name to YamlProcessor' do
+          expect(Gitlab::Ci::YamlProcessor)
+            .to receive(:new)
+            .with(content, a_hash_including(ref: 'test'))
+            .and_call_original
+
+          expect(subject.includes).to contain_exactly(
+            {
+              type: :file,
+              location: '.gitlab-ci-include.yml',
+              blob: "http://localhost/#{project.full_path}/-/blob/#{project.commit.sha}/.gitlab-ci-include.yml",
+              raw: "http://localhost/#{project.full_path}/-/raw/#{project.commit.sha}/.gitlab-ci-include.yml",
+              extra: { project: project.full_path, ref: 'test' },
+              context_project: project.full_path,
+              context_sha: project.commit.sha
+            }
+          )
+        end
       end
     end
 

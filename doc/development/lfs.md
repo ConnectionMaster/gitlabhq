@@ -8,6 +8,36 @@ info: Any user with at least the Maintainer role can merge updates to this conte
 This page contains developer-centric information for GitLab team members. For the
 user documentation, see [Git Large File Storage](../topics/git/lfs/index.md).
 
+This diagram is a high-level explanation of a Git `push` when Git LFS is in use:
+
+```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
+flowchart LR
+accTitle: Git pushes with Git LFS
+accDescr: Explains how the LFS hook routes new files depending on type
+
+A[Git push] -->B[LFS hook]
+    B -->C[Pointers]
+    B -->D[Binary files]
+    C -->E[Repository]
+    D -->F[LFS server]
+```
+
+This diagram is a high-level explanation of a Git `pull` when Git LFS is in use:
+
+```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
+flowchart LR
+accTitle: Git pull using Git LFS
+accDescr: Explains how the LFS hook pulls LFS assets from the LFS server, and everything else from the Git repository
+
+A[User] -->|initiates<br>git pull| B[Repository]
+    B -->|Pull data and<br>LFS transfers| C[LFS hook]
+    C -->|LFS pointers| D[LFS server]
+    D -->|Binary<br>files| C
+    C -->|Pull data and<br>binary files| A
+```
+
 ## Controllers and Services
 
 ### Repositories::GitHttpClientController
@@ -61,6 +91,7 @@ These services create and delete `LfsFileLock`.
 ## Example authentication
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 sequenceDiagram
 autonumber
     alt Over HTTPS
@@ -85,6 +116,7 @@ autonumber
 ## Example clone
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 sequenceDiagram
     Note right of Git client: Typical Git clone things happen first
     Note right of Git client: Authentication for LFS comes next
@@ -111,6 +143,7 @@ sequenceDiagram
 ## Example push
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 sequenceDiagram
     Note right of Git client: Typical Git push things happen first.
     Note right of Git client: Suthentication for LFS comes next.
@@ -154,11 +187,10 @@ details may have changed, it should still serve as a good introduction.
 
 ## Including LFS blobs in project archives
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/15079) in GitLab 13.5.
-
 The following diagram illustrates how GitLab resolves LFS files for project archives:
 
 ```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
 sequenceDiagram
     autonumber
     Client->>+Workhorse: GET /group/project/-/archive/master.zip
@@ -189,8 +221,8 @@ sequenceDiagram
    appropriate Gitaly server.
 1. The Gitaly server calls `git archive <ref>` to begin generating
    the Git archive on-the-fly. If the `include_lfs_blobs` flag is enabled,
-   Gitaly enables a custom LFS smudge filter via the `-c
-   filter.lfs.smudge=/path/to/gitaly-lfs-smudge` Git option.
+   Gitaly enables a custom LFS smudge filter with the `-c filter.lfs.smudge=/path/to/gitaly-lfs-smudge`
+   Git option.
 1. When `git` identifies a possible LFS pointer using the
    `.gitattributes` file, `git` calls `gitaly-lfs-smudge` and provides the
    LFS pointer via the standard input. Gitaly provides `GL_PROJECT_PATH`
@@ -211,7 +243,7 @@ sequenceDiagram
 1. The archive data is sent back to the client.
 
 In step 7, the `gitaly-lfs-smudge` filter must talk to Workhorse, not to
-Rails, or an invalid LFS blob is saved. To support this, GitLab 13.5
+Rails, or an invalid LFS blob is saved. To support this, GitLab
 [changed the default Omnibus configuration to have Gitaly talk to the Workhorse](https://gitlab.com/gitlab-org/omnibus-gitlab/-/merge_requests/4592)
 instead of Rails.
 

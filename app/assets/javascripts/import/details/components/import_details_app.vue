@@ -10,17 +10,17 @@ export default {
     {
       key: 'type',
       label: __('Type'),
-      tdClass: 'gl-white-space-nowrap',
+      tdClass: 'gl-whitespace-nowrap',
     },
     {
       key: 'title',
       label: __('Title'),
-      tdClass: 'gl-md-w-30 gl-word-break-word',
+      tdClass: 'gl-md-w-30 gl-break-anywhere',
     },
     {
       key: 'provider_url',
       label: __('URL'),
-      tdClass: 'gl-white-space-nowrap',
+      tdClass: 'gl-whitespace-nowrap',
     },
     {
       key: 'details',

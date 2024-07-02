@@ -31,6 +31,18 @@ module Gitlab
               expect(result.builds.first[:id_tokens]).to eq({ TEST_ID_TOKEN: { aud: 'https://gitlab.com' } })
             end
           end
+
+          context 'when a job has manual_confirmation' do
+            let(:config_content) do
+              YAML.dump(
+                test: { stage: 'test', script: 'echo', manual_confirmation: 'manual confirmation message' }
+              )
+            end
+
+            it 'includes `manual_confirmation`' do
+              expect(result.builds.first[:options][:manual_confirmation]).to eq('manual confirmation message')
+            end
+          end
         end
 
         describe '#config_metadata' do
@@ -126,6 +138,16 @@ module Gitlab
 
             result.included_components
             result.included_components
+          end
+        end
+
+        describe '#clear_jobs!' do
+          it 'clears jobs' do
+            expect { result.clear_jobs! }.to change { result.jobs }.to eq({})
+          end
+
+          it 'keeps stages' do
+            expect { result.clear_jobs! }.not_to change { result.stages }
           end
         end
       end

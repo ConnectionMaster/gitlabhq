@@ -11,18 +11,18 @@ module Resolvers
     authorizes_object!
 
     argument :id, Types::GlobalIDType[List],
-             required: false,
-             description: 'Find a list by its global ID.'
+      required: false,
+      description: 'Find a list by its global ID.'
 
     argument :issue_filters, Types::Boards::BoardIssueInputType,
-             required: false,
-             description: 'Filters applied when getting issue metadata in the board list.'
+      required: false,
+      description: 'Filters applied when getting issue metadata in the board list.'
 
     alias_method :board, :object
 
     def resolve_with_lookahead(id: nil, issue_filters: {})
       lists = board_lists(id)
-      context.scoped_set!(:issue_filters, item_filters(issue_filters, board.resource_parent))
+      context.scoped_set!(:issue_filters, item_filters(issue_filters))
 
       List.preload_preferences_for_user(lists, current_user) if load_preferences?
 

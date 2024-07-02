@@ -50,19 +50,16 @@ export default {
     <template #head(systemId)="{ label }">
       {{ label }}
       <help-popover>
-        {{ s__('Runners|The unique ID for each runner that uses this configuration.') }}
+        {{ s__('Runners|The ID of the machine hosting the runner.') }}
       </help-popover>
     </template>
     <template #cell(status)="{ item = {} }">
       <runner-status-badge
-        class="gl-vertical-align-middle"
+        class="gl-align-middle"
         :contacted-at="item.contactedAt"
         :status="item.status"
       />
-      <runner-job-status-badge
-        class="gl-vertical-align-middle"
-        :job-status="item.jobExecutionStatus"
-      />
+      <runner-job-status-badge class="gl-align-middle" :job-status="item.jobExecutionStatus" />
     </template>
     <template #cell(version)="{ item = {} }">
       {{ item.version }}

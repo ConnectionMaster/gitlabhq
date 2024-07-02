@@ -5,29 +5,38 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 type: reference, howto
 ---
 
-# Authentication configuration
+# Authentication
 
-WARNING:
-**DO NOT** use credentials that are valid for production systems, production servers, or any that
-contain production data.
+For complete coverage, the DAST analyzer must authenticate with the application being tested. This
+requires configuring the authentication credentials and authentication method in the DAST CI/CD job.
 
-WARNING:
-**DO NOT** run an authenticated scan against a production server.
-Authenticated scans may perform **any** function that the authenticated user can,
-including modifying or deleting data, submitting forms, and following links.
-Only run an authenticated scan against non-production systems or servers.
+DAST requires authentication to:
 
-Authentication logs a user in before a DAST scan so that the analyzer can test
-as much of the application as possible when searching for vulnerabilities.
+- Simulate real-world attacks and identify vulnerabilities that might be exploited by
+  attackers.
+- Test user-specific features and custom behavior that may only be visible after authentication.
 
-DAST uses a browser to authenticate the user so that the login form has the necessary JavaScript
-and styling required to submit the form. DAST finds the username and password fields and fills them with their respective values.
-The login form is submitted, and when the response returns, a series of checks verify if authentication was successful.
-DAST saves the credentials for reuse when crawling the target application.
+The DAST job authenticates itself to the application, most commonly by filling in and submitting a
+login form on a browser. After the form is submitted, the DAST job confirms that authentication was
+successful. If authentication was successful, the DAST job continues and also saves the credentials
+for reuse when crawling the target application. If not, the DAST job stops.
 
-If DAST fails to authenticate, the scan halts and the CI job fails.
+Authentication methods supported by DAST include:
 
-Authentication supports single-step login forms, multi-step login forms, single sign-on, and authenticating to URLs outside of the configured target URL.
+- Single-step login form
+- Multi-step login form
+- Authenticating to URLs outside the configured target URL
+
+When choosing authentication credentials:
+
+- **DO NOT** use credentials that are valid for production systems, production servers, or used to access production data.
+- **DO NOT** run an authenticated scan against a production server. Authenticated scans may perform
+  **any** function that the authenticated user can, including modifying or deleting data, submitting
+  forms, and following links. Only run an authenticated scan against non-production systems or
+  servers.
+- Provide credentials that allow DAST to test the entire application.
+- Note the credentials' expiry date, if any, for future reference. For example, with a password
+  manager such as 1Password.
 
 ## Getting started
 
@@ -58,28 +67,29 @@ To run a DAST authenticated scan:
 
 ### Available CI/CD variables
 
-| CI/CD variable                                 | Type                                      | Description                                                                                                                                                                                                                                                                                     |
-|:-----------------------------------------------|:------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `DAST_AUTH_COOKIES`                            | string                                    | Set to a comma-separated list of cookie names to specify which cookies are used for authentication.                                                                                                                                                                                             |
-| `DAST_AUTH_REPORT`                             | boolean                                   | Set to `true` to generate a report detailing steps taken during the authentication process. You must also define `gl-dast-debug-auth-report.html` as a CI job artifact to be able to access the generated report. The report's content aids when debugging authentication failures.             |
-| `DAST_AUTH_TYPE`                               | string                                    | The authentication type to use. Example: `basic-digest`.                                                                                                                                                                                                                                        |
-| `DAST_AUTH_URL`                                | URL                                       | The URL of the page containing the login form on the target website. `DAST_USERNAME` and `DAST_PASSWORD` are submitted with the login form to create an authenticated scan. Example: `https://login.example.com`.                                                                               |
-| `DAST_AUTH_VERIFICATION_LOGIN_FORM`            | boolean                                   | Verifies successful authentication by checking for the absence of a login form after the login form has been submitted.                                                                                                                                                                         |
-| `DAST_AUTH_VERIFICATION_SELECTOR`              | [selector](#finding-an-elements-selector) | A selector describing an element whose presence is used to determine if authentication has succeeded after the login form is submitted. Example: `css:.user-photo`.                                                                                                                             |
-| `DAST_AUTH_VERIFICATION_URL`                   | URL                                       | A URL that is compared to the URL in the browser to determine if authentication has succeeded after the login form is submitted. Example: `"https://example.com/loggedin_page"`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/207335) in GitLab 13.8.                             |
-| `DAST_BROWSER_PATH_TO_LOGIN_FORM`              | [selector](#finding-an-elements-selector) | A comma-separated list of selectors representing elements to click on prior to entering the `DAST_USERNAME` and `DAST_PASSWORD` into the login form. Example: `"css:.navigation-menu,css:.login-menu-item"`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/326633) in GitLab 14.1. |
-| `DAST_EXCLUDE_URLS`                            | URLs                                      | The URLs to skip during the authenticated scan; comma-separated. Regular expression syntax can be used to match multiple URLs. For example, `.*` matches an arbitrary character sequence.                                                                                                       |
-| `DAST_FIRST_SUBMIT_FIELD`                      | [selector](#finding-an-elements-selector) | A selector describing the element that is clicked on to submit the username form of a multi-page login process. For example, `css:button[type='user-submit']`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/9894) in GitLab 12.4.                                                 |
-| `DAST_PASSWORD`                                | string                                    | The password to authenticate to in the website. Example: `P@55w0rd!`                                                                                                                                                                                                                            |
-| `DAST_PASSWORD_FIELD`                          | [selector](#finding-an-elements-selector) | A selector describing the element used to enter the password on the login form. Example: `id:password`                                                                                                                                                                                      |
-| `DAST_SUBMIT_FIELD`                            | [selector](#finding-an-elements-selector) | A selector describing the element clicked on to submit the login form for a single-page login form, or the password form for a multi-page login form. For example, `css:button[type='submit']`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/9894) in GitLab 12.4.                |
-| `DAST_USERNAME`                                | string                                    | The username to authenticate to in the website. Example: `admin`                                                                                                                                                                                                                                |
-| `DAST_USERNAME_FIELD`                          | [selector](#finding-an-elements-selector) | A selector describing the element used to enter the username on the login form. Example: `name:username`                                                                                                                                                                                    |
-| `DAST_AUTH_DISABLE_CLEAR_FIELDS`               | boolean                                   | Disables clearing of username and password fields before attempting manual login. Set to `false` by default.                                                                                                                                                                                    |
+| CI/CD variable                       | Type                                        | Description                                                                                                                                                                                                                                                                         |
+|:-------------------------------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `DAST_AUTH_AFTER_LOGIN_ACTIONS`      | string                                      | A comma-separated list of actions to be run after login but before login verification. Currently supports "click" actions. Example: `click(on=id:change_to_bar_graph),click(on=css:input[name=username])`.                                                                          |
+| `DAST_AUTH_BEFORE_LOGIN_ACTIONS`     | [selector](#finding-an-elements-selector)   | A comma-separated list of selectors representing elements to click on prior to entering the `DAST_AUTH_USERNAME` and `DAST_AUTH_PASSWORD` into the login form. Example: `"css:.navigation-menu,css:.login-menu-item"`.                                                              |
+| `DAST_AUTH_CLEAR_INPUT_FIELDS`       | boolean                                     | Disables clearing of username and password fields before attempting manual login. Set to `false` by default.                                                                                                                                                                        |
+| `DAST_AUTH_COOKIE_NAMES`             | string                                      | Set to a comma-separated list of cookie names to specify which cookies are used for authentication.                                                                                                                                                                                 |
+| `DAST_AUTH_FIRST_SUBMIT_FIELD`       | [selector](#finding-an-elements-selector)   | A selector describing the element that is clicked on to submit the username form of a multi-page login process. Example, `css:button[type='user-submit']`.                                                                                                                          |
+| `DAST_AUTH_PASSWORD_FIELD`           | [selector](#finding-an-elements-selector)   | A selector describing the element used to enter the password on the login form. Example: `id:password`                                                                                                                                                                              |
+| `DAST_AUTH_PASSWORD`                 | string                                      | The password to authenticate to in the website. Example: `P@55w0rd!`.                                                                                                                                                                                                               |
+| `DAST_AUTH_REPORT`                   | boolean                                     | Set to `true` to generate a report detailing steps taken during the authentication process. You must also define `gl-dast-debug-auth-report.html` as a CI job artifact to be able to access the generated report. The report's content aids when debugging authentication failures. |
+| `DAST_AUTH_SUBMIT_FIELD`             | [selector](#finding-an-elements-selector)   | A selector describing the element clicked on to submit the login form for a single-page login form, or the password form for a multi-page login form. Example: `css:button[type='submit']`.                                                                                         |
+| `DAST_AUTH_SUCCESS_IF_AT_URL`        | URL                                         | A URL that is compared to the URL in the browser to determine if authentication has succeeded after the login form is submitted. Example: `"https://example.com/loggedin_page"`.                                                                                                    |
+| `DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND` | [selector](#finding-an-elements-selector)   | A selector describing an element whose presence is used to determine if authentication has succeeded after the login form is submitted. Example: `css:.user-photo`.                                                                                                                 |
+| `DAST_AUTH_SUCCESS_IF_NO_LOGIN_FORM` | boolean                                     | Verifies successful authentication by checking for the absence of a login form after the login form has been submitted.                                                                                                                                                             |
+| `DAST_AUTH_TYPE`                     | string                                      | The authentication type to use. Example: `basic-digest`.                                                                                                                                                                                                                            |
+| `DAST_AUTH_URL`                      | URL                                         | The URL of the page containing the login form on the target website. `DAST_AUTH_USERNAME` and `DAST_AUTH_PASSWORD` are submitted with the login form to create an authenticated scan. Example: `https://login.example.com`.                                                         |
+| `DAST_AUTH_USERNAME_FIELD`           | [selector](#finding-an-elements-selector)   | A selector describing the element used to enter the username on the login form. Example: `name:username`.                                                                                                                                                                           |
+| `DAST_AUTH_USERNAME`                 | string                                      | The username to authenticate to in the website. Example: `admin`.                                                                                                                                                                                                                   |
+| `DAST_SCOPE_EXCLUDE_URLS`            | URLs                                        | The URLs to skip during the authenticated scan; comma-separated. Regular expression syntax can be used to match multiple URLs. For example, `.*` matches an arbitrary character sequence.                                                                                           |
 
 ### Update the target website
 
-The target website, defined using the CI/CD variable `DAST_WEBSITE`, is the URL DAST uses to begin crawling your application.
+The target website, defined using the CI/CD variable `DAST_TARGET_URL`, is the URL DAST uses to begin crawling your application.
 
 For best crawl results on an authenticated scan, the target website should be a URL accessible only after the user is authenticated.
 Often, this is the URL of the page the user lands on after they're logged in.
@@ -92,7 +102,7 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com/dashboard/welcome"
+    DAST_TARGET_URL: "https://example.com/dashboard/welcome"
     DAST_AUTH_URL: "https://example.com/login"
 ```
 
@@ -101,7 +111,7 @@ dast:
 To use an [HTTP authentication scheme](https://www.chromium.org/developers/design-documents/http-authentication/) such as Basic Authentication you can set the `DAST_AUTH_TYPE` value to `basic-digest`.
 Other schemes such as Negotiate or NTLM may work but aren't officially supported due to current lack of automated test coverage.
 
-Configuration requires the CI/CD variables `DAST_AUTH_TYPE`, `DAST_AUTH_URL`, `DAST_USERNAME`, `DAST_PASSWORD` to be defined for the DAST job. If you don't have a unique login URL, set `DAST_AUTH_URL` to the same URL as `DAST_WEBSITE`.
+Configuration requires the CI/CD variables `DAST_AUTH_TYPE`, `DAST_AUTH_URL`, `DAST_AUTH_USERNAME`, `DAST_AUTH_PASSWORD` to be defined for the DAST job. If you don't have a unique login URL, set `DAST_AUTH_URL` to the same URL as `DAST_TARGET_URL`.
 
 ```yaml
 include:
@@ -109,18 +119,18 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
+    DAST_TARGET_URL: "https://example.com"
     DAST_AUTH_TYPE: "basic-digest"
     DAST_AUTH_URL: "https://example.com"
 ```
 
-Do **not** define `DAST_USERNAME` and `DAST_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
+Do **not** define `DAST_AUTH_USERNAME` and `DAST_AUTH_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
 See [Custom CI/CD variables](../../../../../ci/variables/index.md#for-a-project) for more information.
 
 ### Configuration for a single-step login form
 
 A single-step login form has all login form elements on a single page.
-Configuration requires the CI/CD variables `DAST_AUTH_URL`, `DAST_USERNAME`, `DAST_USERNAME_FIELD`, `DAST_PASSWORD`, `DAST_PASSWORD_FIELD`, and `DAST_SUBMIT_FIELD` to be defined for the DAST job.
+Configuration requires the CI/CD variables `DAST_AUTH_URL`, `DAST_AUTH_USERNAME`, `DAST_AUTH_USERNAME_FIELD`, `DAST_AUTH_PASSWORD`, `DAST_AUTH_PASSWORD_FIELD`, and `DAST_AUTH_SUBMIT_FIELD` to be defined for the DAST job.
 
 You should set up the URL and selectors of fields in the job definition YAML, for example:
 
@@ -130,14 +140,14 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
+    DAST_TARGET_URL: "https://example.com"
     DAST_AUTH_URL: "https://example.com/login"
-    DAST_USERNAME_FIELD: "css:[name=username]"
-    DAST_PASSWORD_FIELD: "css:[name=password]"
-    DAST_SUBMIT_FIELD: "css:button[type=submit]"
+    DAST_AUTH_USERNAME_FIELD: "css:[name=username]"
+    DAST_AUTH_PASSWORD_FIELD: "css:[name=password]"
+    DAST_AUTH_SUBMIT_FIELD: "css:button[type=submit]"
 ```
 
-Do **not** define `DAST_USERNAME` and `DAST_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
+Do **not** define `DAST_AUTH_USERNAME` and `DAST_AUTH_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
 See [Custom CI/CD variables](../../../../../ci/variables/index.md#for-a-project) for more information.
 
 ### Configuration for a multi-step login form
@@ -148,12 +158,12 @@ If the username is valid, a second form on the subsequent page has the password 
 Configuration requires the CI/CD variables to be defined for the DAST job:
 
 - `DAST_AUTH_URL`
-- `DAST_USERNAME`
-- `DAST_USERNAME_FIELD`
-- `DAST_FIRST_SUBMIT_FIELD`
-- `DAST_PASSWORD`
-- `DAST_PASSWORD_FIELD`
-- `DAST_SUBMIT_FIELD`.
+- `DAST_AUTH_USERNAME`
+- `DAST_AUTH_USERNAME_FIELD`
+- `DAST_AUTH_FIRST_SUBMIT_FIELD`
+- `DAST_AUTH_PASSWORD`
+- `DAST_AUTH_PASSWORD_FIELD`
+- `DAST_AUTH_SUBMIT_FIELD`.
 
 You should set up the URL and selectors of fields in the job definition YAML, for example:
 
@@ -163,15 +173,15 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
+    DAST_TARGET_URL: "https://example.com"
     DAST_AUTH_URL: "https://example.com/login"
-    DAST_USERNAME_FIELD: "css:[name=username]"
-    DAST_FIRST_SUBMIT_FIELD: "css:button[name=next]"
-    DAST_PASSWORD_FIELD: "css:[name=password]"
-    DAST_SUBMIT_FIELD: "css:button[type=submit]"
+    DAST_AUTH_USERNAME_FIELD: "css:[name=username]"
+    DAST_AUTH_FIRST_SUBMIT_FIELD: "css:button[name=next]"
+    DAST_AUTH_PASSWORD_FIELD: "css:[name=password]"
+    DAST_AUTH_SUBMIT_FIELD: "css:button[type=submit]"
 ```
 
-Do **not** define `DAST_USERNAME` and `DAST_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
+Do **not** define `DAST_AUTH_USERNAME` and `DAST_AUTH_PASSWORD` in the YAML job definition file as this could present a security risk. Instead, create them as masked CI/CD variables using the GitLab UI.
 See [Custom CI/CD variables](../../../../../ci/variables/index.md#for-a-project) for more information.
 
 ### Configuration for Single Sign-On (SSO)
@@ -185,7 +195,7 @@ Check the [known limitations](#known-limitations) of DAST authentication to dete
 
 ### Clicking to go to the login form
 
-Define `DAST_BROWSER_PATH_TO_LOGIN_FORM` to provide a path of elements to click on from the `DAST_AUTH_URL` so that DAST can access the
+Define `DAST_AUTH_BEFORE_LOGIN_ACTIONS` to provide a path of elements to click on from the `DAST_AUTH_URL` so that DAST can access the
 login form. This method is suitable for applications that show the login form in a pop-up (modal) window or when the login form does not
 have a unique URL.
 
@@ -197,17 +207,17 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
+    DAST_TARGET_URL: "https://example.com"
     DAST_AUTH_URL: "https://example.com/login"
-    DAST_BROWSER_PATH_TO_LOGIN_FORM: "css:.navigation-menu,css:.login-menu-item"
+    DAST_AUTH_BEFORE_LOGIN_ACTIONS: "css:.navigation-menu,css:.login-menu-item"
 ```
 
 ### Excluding logout URLs
 
 If DAST crawls the logout URL while running an authenticated scan, the user is logged out, resulting in the remainder of the scan being unauthenticated.
-It is therefore recommended to exclude logout URLs using the CI/CD variable `DAST_EXCLUDE_URLS`. DAST isn't accessing any excluded URLs, ensuring the user remains logged in.
+It is therefore recommended to exclude logout URLs using the CI/CD variable `DAST_SCOPE_EXCLUDE_URLS`. DAST isn't accessing any excluded URLs, ensuring the user remains logged in.
 
-Provided URLs can be either absolute URLs, or regular expressions of URL paths relative to the base path of the `DAST_WEBSITE`. For example:
+Provided URLs can be either absolute URLs, or regular expressions of URL paths relative to the base path of the `DAST_TARGET_URL`. For example:
 
 ```yaml
 include:
@@ -215,8 +225,8 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com/welcome/home"
-    DAST_EXCLUDE_URLS: "https://example.com/logout,/user/.*/logout"
+    DAST_TARGET_URL: "https://example.com/welcome/home"
+    DAST_SCOPE_EXCLUDE_URLS: "https://example.com/logout,/user/.*/logout"
 ```
 
 ### Finding an element's selector
@@ -237,7 +247,7 @@ Selectors have the format `type`:`search string`. DAST searches for the selector
 Chrome DevTools element selector tool is an effective way to find a selector.
 
 1. Open Chrome and go to the page where you would like to find a selector, for example, the login page for your site.
-1. Open the `Elements` tab in Chrome DevTools with the keyboard shortcut `Command + Shift + c` in macOS or `Ctrl + Shift + c` in Windows.
+1. Open the `Elements` tab in Chrome DevTools with the keyboard shortcut `Command + Shift + c` in macOS or `Ctrl + Shift + c` in Windows or Linux.
 1. Select the `Select an element in the page to select it` tool.
    ![search-elements](../img/dast_auth_browser_scan_search_elements.png)
 1. Select the field on your page that you would like to know the selector for.
@@ -246,7 +256,7 @@ Chrome DevTools element selector tool is an effective way to find a selector.
 1. Once highlighted, you can see the element's details, including attributes that would make a good candidate for a selector.
 
 In this example, the `id="user_login"` appears to be a good candidate. You can use this as a selector as the DAST username field by setting
-`DAST_USERNAME_FIELD: "id:user_login"`.
+`DAST_AUTH_USERNAME_FIELD: "id:user_login"`.
 
 #### Choose the right selector
 
@@ -287,7 +297,7 @@ DAST tests for the absence of a login form if no verification checks are configu
 
 #### Verify based on the URL
 
-Define `DAST_AUTH_VERIFICATION_URL` as the URL displayed in the browser tab after the login form is successfully submitted.
+Define `DAST_AUTH_SUCCESS_IF_AT_URL` as the URL displayed in the browser tab after the login form is successfully submitted.
 
 DAST compares the verification URL to the URL in the browser after authentication.
 If they are not the same, authentication is unsuccessful.
@@ -300,13 +310,13 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
-    DAST_AUTH_VERIFICATION_URL: "https://example.com/user/welcome"
+    DAST_TARGET_URL: "https://example.com"
+    DAST_AUTH_SUCCESS_IF_AT_URL: "https://example.com/user/welcome"
 ```
 
 #### Verify based on presence of an element
 
-Define `DAST_AUTH_VERIFICATION_SELECTOR` as a [selector](#finding-an-elements-selector) that finds one or many elements on the page
+Define `DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND` as a [selector](#finding-an-elements-selector) that finds one or many elements on the page
 displayed after the login form is successfully submitted. If no element is found, authentication is unsuccessful.
 Searching for the selector on the page displayed when login fails should return no elements.
 
@@ -318,13 +328,13 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
-    DAST_AUTH_VERIFICATION_SELECTOR: "css:.welcome-user"
+    DAST_TARGET_URL: "https://example.com"
+    DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND: "css:.welcome-user"
 ```
 
 #### Verify based on absence of a login form
 
-Define `DAST_AUTH_VERIFICATION_LOGIN_FORM` as `"true"` to indicate that DAST should search for the login form on the
+Define `DAST_AUTH_SUCCESS_IF_NO_LOGIN_FORM` as `"true"` to indicate that DAST should search for the login form on the
 page displayed after the login form is successfully submitted. If a login form is still present after logging in, authentication is unsuccessful.
 
 For example:
@@ -335,8 +345,8 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
-    DAST_AUTH_VERIFICATION_LOGIN_FORM: "true"
+    DAST_TARGET_URL: "https://example.com"
+    DAST_AUTH_SUCCESS_IF_NO_LOGIN_FORM: "true"
 ```
 
 ### Authentication tokens
@@ -351,7 +361,7 @@ by the authentication process.
 DAST considers cookies, local storage and session storage values set with sufficiently "random" values to be authentication tokens.
 For example, `sessionID=HVxzpS8GzMlPAc2e39uyIVzwACIuGe0H` would be viewed as an authentication token, while `ab_testing_group=A1` would not.
 
-The CI/CD variable `DAST_AUTH_COOKIES` can be used to specify the names of authentication cookies and bypass the randomness check used by DAST.
+The CI/CD variable `DAST_AUTH_COOKIE_NAMES` can be used to specify the names of authentication cookies and bypass the randomness check used by DAST.
 Not only can this make the authentication process more robust, but it can also increase vulnerability check accuracy for checks that
 inspect authentication tokens.
 
@@ -363,8 +373,8 @@ include:
 
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
-    DAST_AUTH_COOKIES: "sessionID,refreshToken"
+    DAST_TARGET_URL: "https://example.com"
+    DAST_AUTH_COOKIE_NAMES: "sessionID,refreshToken"
 ```
 
 ## Known limitations
@@ -417,11 +427,8 @@ An example configuration where the authentication debug report is exported may l
 ```yaml
 dast:
   variables:
-    DAST_WEBSITE: "https://example.com"
+    DAST_TARGET_URL: "https://example.com"
     DAST_AUTH_REPORT: "true"
-  artifacts:
-    paths: [gl-dast-debug-auth-report.html]
-    when: always
 ```
 
 ### Known problems
@@ -442,7 +449,7 @@ Suggested actions:
 - Check the target application authentication is deployed and running.
 - Check the `DAST_AUTH_URL` is correct.
 - Check the GitLab Runner can access the `DAST_AUTH_URL`.
-- Check the `DAST_BROWSER_PATH_TO_LOGIN_FORM` is valid if used.
+- Check the `DAST_AUTH_BEFORE_LOGIN_ACTIONS` is valid if used.
 
 #### Scan doesn't crawl authenticated pages
 
@@ -458,7 +465,7 @@ Suggested actions:
 
 - Generate the [authentication report](#configure-the-authentication-report) and look at the screenshot from the `Login submit` to verify that the login worked as expected.
 - Verify the logged authentication tokens are those used by your application.
-- If using cookies to store authentication tokens, set the names of the authentication token cookies using `DAST_AUTH_COOKIES`.
+- If using cookies to store authentication tokens, set the names of the authentication token cookies using `DAST_AUTH_COOKIE_NAMES`.
 
 #### Unable to find elements with selector
 
@@ -471,7 +478,7 @@ DAST failed to find the username, password, first submit button, or submit butto
 Suggested actions:
 
 - Generate the [authentication report](#configure-the-authentication-report) to use the screenshot from the `Login page` to verify that the page loaded correctly.
-- Load the login page in a browser and verify the [selectors](#finding-an-elements-selector) configured in `DAST_USERNAME_FIELD`, `DAST_PASSWORD_FIELD`, `DAST_FIRST_SUBMIT_FIELD`, and `DAST_SUBMIT_FIELD` are correct.
+- Load the login page in a browser and verify the [selectors](#finding-an-elements-selector) configured in `DAST_AUTH_USERNAME_FIELD`, `DAST_AUTH_PASSWORD_FIELD`, `DAST_AUTH_FIRST_SUBMIT_FIELD`, and `DAST_AUTH_SUBMIT_FIELD` are correct.
 
 #### Failed to authenticate user
 
@@ -507,12 +514,12 @@ Suggested actions:
 - Generate the [authentication report](#configure-the-authentication-report) and verify the `Request` for the `Login submit` is correct.
 - It's possible that the authentication report `Login submit` request and response are empty. This occurs when there is no request that would result
   in a full page reload, such as a request made when submitting a HTML form. This occurs when using websockets or AJAX to submit the login form.
-- If the page displayed following user authentication genuinely has elements matching the login form selectors, configure `DAST_AUTH_VERIFICATION_URL`
-  or `DAST_AUTH_VERIFICATION_SELECTOR` to use an alternate method of verifying the login attempt.
+- If the page displayed following user authentication genuinely has elements matching the login form selectors, configure `DAST_AUTH_SUCCESS_IF_AT_URL`
+  or `DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND` to use an alternate method of verifying the login attempt.
 
 #### Requirement unsatisfied, selector returned no results
 
-DAST cannot find an element matching the selector provided in `DAST_AUTH_VERIFICATION_SELECTOR` on the page displayed following user login.
+DAST cannot find an element matching the selector provided in `DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND` on the page displayed following user login.
 
 ```plaintext
 2022-12-07T06:39:33.239 INF AUTH  requirement is unsatisfied, searching DOM using selector returned no results want="has element css:[name=welcome]"
@@ -521,11 +528,11 @@ DAST cannot find an element matching the selector provided in `DAST_AUTH_VERIFIC
 Suggested actions:
 
 - Generate the [authentication report](#configure-the-authentication-report) and look at the screenshot from the `Login submit` to verify that the expected page is displayed.
-- Ensure the `DAST_AUTH_VERIFICATION_SELECTOR` [selector](#finding-an-elements-selector) is correct.
+- Ensure the `DAST_AUTH_SUCCESS_IF_ELEMENT_FOUND` [selector](#finding-an-elements-selector) is correct.
 
 #### Requirement unsatisfied, browser not at URL
 
-DAST detected that the page displayed following user login has a URL different to what was expected according to `DAST_AUTH_VERIFICATION_URL`.
+DAST detected that the page displayed following user login has a URL different to what was expected according to `DAST_AUTH_SUCCESS_IF_AT_URL`.
 
 ```plaintext
 2022-12-07T11:28:00.241 INF AUTH  requirement is unsatisfied, browser is not at URL browser_url="https://example.com/home" want="is at url https://example.com/user/dashboard"
@@ -534,7 +541,7 @@ DAST detected that the page displayed following user login has a URL different t
 Suggested actions:
 
 - Generate the [authentication report](#configure-the-authentication-report) and look at the screenshot from the `Login submit` to verify that the expected page is displayed.
-- Ensure the `DAST_AUTH_VERIFICATION_URL` is correct.
+- Ensure the `DAST_AUTH_SUCCESS_IF_AT_URL` is correct.
 
 #### Requirement unsatisfied, HTTP login request status code
 
@@ -563,4 +570,4 @@ Suggestion actions:
 
 - Generate the [authentication report](#configure-the-authentication-report) and look at the screenshot from the `Login submit` to verify that the login worked as expected.
 - Using the browser's developer tools, investigate the cookies and local/session storage objects created while logging in. Ensure there is an authentication token created with sufficiently random value.
-- If using cookies to store authentication tokens, set the names of the authentication token cookies using `DAST_AUTH_COOKIES`.
+- If using cookies to store authentication tokens, set the names of the authentication token cookies using `DAST_AUTH_COOKIE_NAMES`.

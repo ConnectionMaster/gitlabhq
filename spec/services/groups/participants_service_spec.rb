@@ -25,7 +25,7 @@ RSpec.describe Groups::ParticipantsService, feature_category: :groups_and_projec
 
     it 'returns results in correct order' do
       expect(service_result.pluck(:username)).to eq([
-        'all', developer.username, parent_group.full_path, subgroup.full_path
+        'all', developer.username, parent_group.full_path, group.full_path, subgroup.full_path
       ])
     end
 
@@ -80,13 +80,31 @@ RSpec.describe Groups::ParticipantsService, feature_category: :groups_and_projec
     context 'when search param is given' do
       let(:params) { { search: 'johnd' } }
 
-      let_it_be(:member_1) { create(:user, name: 'John Doe').tap { |u| group.add_guest(u) } }
-      let_it_be(:member_2) { create(:user, name: 'Jane Doe ').tap { |u| group.add_guest(u) } }
+      let_it_be(:member_1) { create(:user, name: 'John Doe', guest_of: group) }
+      let_it_be(:member_2) { create(:user, name: 'Jane Doe ', guest_of: group) }
 
       it 'only returns matching members' do
         users = service_result.select { |hash| hash[:type].eql?('User') }
 
         expect(users.pluck(:username)).to eq([member_1.username])
+      end
+
+      context 'when user search already returns enough results' do
+        let(:params) { { search: 'bb' } }
+
+        let(:matching_group) { create(:group, path: 'bb') }
+
+        before do
+          matching_group.add_developer(developer)
+
+          described_class::SEARCH_LIMIT.times { |i| create(:user, name: "bb#{i}", guest_of: group) }
+        end
+
+        it 'does not return any groups' do
+          group_items = service_result.select { |hash| hash[:type].eql?('Group') }
+
+          expect(group_items).to be_empty
+        end
       end
     end
   end

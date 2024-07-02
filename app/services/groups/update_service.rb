@@ -4,13 +4,16 @@ module Groups
   class UpdateService < Groups::BaseService
     include UpdateVisibilityLevel
 
-    SETTINGS_PARAMS = [:allow_mfa_for_subgroups].freeze
+    SETTINGS_PARAMS = [
+      :allow_mfa_for_subgroups,
+      :remove_dormant_members,
+      :remove_dormant_members_period,
+      :early_access_program_participant
+    ].freeze
 
     def execute
       reject_parent_id!
       remove_unallowed_params
-
-      invert_emails_disabled_to_emails_enabled
 
       before_assignment_hook(group, params)
 
@@ -138,6 +141,7 @@ module Groups
     # overridden in EE
     def remove_unallowed_params
       params.delete(:emails_enabled) unless can?(current_user, :set_emails_disabled, group)
+      params.delete(:max_artifacts_size) unless can?(current_user, :update_max_artifacts_size, group)
 
       unless can?(current_user, :update_default_branch_protection, group)
         params.delete(:default_branch_protection)
@@ -147,6 +151,7 @@ module Groups
       unless can?(current_user, :admin_namespace, group)
         params.delete(:math_rendering_limits_enabled)
         params.delete(:lock_math_rendering_limits_enabled)
+        params.delete(:allow_runner_registration_token)
       end
     end
 

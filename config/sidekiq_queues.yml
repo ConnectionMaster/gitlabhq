@@ -43,6 +43,8 @@
   - 1
 - - analytics_usage_trends_counter_job
   - 1
+- - app_sec_container_scanning_scan_image
+  - 1
 - - app_sec_dast_scanner_profiles_builds_consistency
   - 1
 - - app_sec_dast_scans_consistency
@@ -119,6 +121,8 @@
   - 1
 - - bitbucket_server_import_import_pull_request
   - 1
+- - bitbucket_server_import_import_pull_request_note
+  - 1
 - - bitbucket_server_import_import_pull_request_notes
   - 1
 - - bitbucket_server_import_stage_finish_import
@@ -155,6 +159,8 @@
   - 1
 - - bulk_imports_transform_references
   - 1
+- - bulk_imports_user_contributions_export
+  - 1
 - - chaos
   - 2
 - - chat_notification
@@ -179,6 +185,8 @@
   - 1
 - - ci_unlock_pipelines_in_queue
   - 1
+- - ci_update_approval_rules_for_related_mrs
+  - 1
 - - ci_update_build_names
   - 1
 - - ci_upstream_projects_subscriptions_cleanup
@@ -186,6 +194,8 @@
 - - ci_user_cancel_pipeline
   - 1
 - - click_house_audit_event_partition_sync
+  - 1
+- - click_house_buffer_sync
   - 1
 - - click_house_ci_finished_builds_sync
   - 1
@@ -228,12 +238,6 @@
 - - compliance_management_update_default_framework
   - 1
 - - compliance_management_violation_export_mailer
-  - 1
-- - container_registry_migration_enqueuer
-  - 1
-- - container_registry_migration_guard
-  - 1
-- - container_registry_migration_observer
   - 1
 - - container_repository
   - 1
@@ -329,6 +333,10 @@
   - 1
 - - export_csv
   - 1
+- - export_segmented_export
+  - 1
+- - export_segmented_export_finalisation
+  - 1
 - - external_service_reactive_caching
   - 1
 - - file_hook
@@ -379,6 +387,8 @@
   - 1
 - - groups_export_memberships
   - 1
+- - groups_reset_seat_callouts
+  - 1
 - - groups_schedule_bulk_repository_shard_moves
   - 1
 - - groups_update_repository_storage
@@ -415,10 +425,14 @@
   - 1
 - - integrations_irker
   - 1
+- - integrations_propagate_integration_descendant
+  - 1
 - - integrations_slack_event
   - 1
 - - invalid_gpg_signature_update
   - 2
+- - issuable_create_reminder
+  - 1
 - - issuable_export_csv
   - 1
 - - issuable_label_links_destroy
@@ -491,8 +505,6 @@
   - 1
 - - merge_requests_notify_approvers
   - 1
-- - merge_requests_process_approval_auto_merge
-  - 1
 - - merge_requests_process_auto_merge_from_event
   - 1
 - - merge_requests_remove_user_approval_rules
@@ -510,6 +522,8 @@
 - - migrate_external_diffs
   - 1
 - - ml_experiment_tracking_associate_ml_candidate_to_package
+  - 1
+- - namespaces_cascade_duo_features_enabled
   - 1
 - - namespaces_free_user_cap_group_over_limit_notification
   - 1
@@ -534,6 +548,8 @@
 - - object_storage
   - 1
 - - onboarding_create_iterable_trigger
+  - 1
+- - onboarding_create_iterable_triggers
   - 1
 - - onboarding_issue_created
   - 1
@@ -577,6 +593,8 @@
   - 3
 - - product_analytics_initialize_snowplow_product_analytics
   - 1
+- - product_analytics_move_funnels
+  - 1
 - - product_analytics_post_push
   - 1
 - - product_analytics_sync_funnels
@@ -610,6 +628,8 @@
 - - projects_import_export_parallel_project_export
   - 1
 - - projects_import_export_relation_export
+  - 1
+- - projects_import_export_relation_import
   - 1
 - - projects_import_export_wait_relation_exports
   - 1
@@ -695,7 +715,11 @@
   - 1
 - - search_zoekt_delete_project
   - 1
+- - search_zoekt_indexing_task
+  - 1
 - - search_zoekt_namespace_indexer
+  - 1
+- - search_zoekt_namespace_initial_indexing
   - 1
 - - search_zoekt_project_transfer
   - 1
@@ -717,6 +741,8 @@
   - 1
 - - security_refresh_project_policies
   - 1
+- - security_scan_execution_policies_create_pipeline
+  - 1
 - - security_scan_execution_policies_rule_schedule
   - 1
 - - security_scan_result_policies_add_approvers_to_rules
@@ -726,6 +752,8 @@
 - - security_scan_result_policies_sync_merge_request_approvals
   - 1
 - - security_scan_result_policies_sync_project
+  - 1
+- - security_scan_result_policies_unblock_fail_open_approval_rules
   - 1
 - - security_scans
   - 2
@@ -791,6 +819,8 @@
   - 1
 - - vulnerabilities_statistics_adjustment
   - 1
+- - vulnerabilities_update_archived_attribute_of_vulnerability_reads
+  - 1
 - - vulnerabilities_update_namespace_ids_of_vulnerability_reads
   - 1
 - - vulnerability_exports_export
@@ -809,9 +839,15 @@
   - 1
 - - work_items_import_work_items_csv
   - 1
-- - work_items_rolledup_dates_update_parent_rolledup_dates_event_handler
+- - work_items_rolledup_dates_bulk_update_handler
+  - 1
+- - work_items_rolledup_dates_update_milestone_related_work_item_dates_event_handler
+  - 1
+- - work_items_rolledup_dates_update_multiple_rolledup_dates
   - 1
 - - work_items_rolledup_dates_update_rolledup_dates
+  - 1
+- - work_items_rolledup_dates_update_rolledup_dates_event_handler
   - 1
 - - work_items_update_parent_objectives_progress
   - 1

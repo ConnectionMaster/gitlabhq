@@ -1,5 +1,6 @@
 import { GlIcon } from '@gitlab/ui';
 import { mount } from '@vue/test-utils';
+import Vue, { nextTick } from 'vue';
 import { extendedWrapper } from 'helpers/vue_test_utils_helper';
 import { securityFeatures } from 'jest/security_configuration/mock_data';
 import FeatureCard from '~/security_configuration/components/feature_card.vue';
@@ -12,6 +13,10 @@ import {
 } from '~/vue_shared/security_reports/constants';
 import { manageViaMRErrorMessage } from '../constants';
 import { makeFeature } from './utils';
+
+const MockComponent = Vue.component('MockComponent', {
+  render: (createElement) => createElement('span'),
+});
 
 describe('FeatureCard component', () => {
   let feature;
@@ -49,6 +54,10 @@ describe('FeatureCard component', () => {
     findLinks({ text: 'Configuration guide', href: feature.configurationHelpPath });
 
   const findSecondarySection = () => wrapper.findByTestId('secondary-feature');
+
+  const findSlotComponent = () => wrapper.findComponent(MockComponent);
+
+  const findFeatureStatus = () => wrapper.findByTestId('feature-status');
 
   const expectAction = (action) => {
     const expectEnableAction = action === 'enable';
@@ -131,7 +140,7 @@ describe('FeatureCard component', () => {
       });
 
       it(`shows the status "${expectedStatus}"`, () => {
-        expect(wrapper.findByTestId('feature-status').text()).toBe(expectedStatus);
+        expect(findFeatureStatus().text()).toBe(expectedStatus);
       });
 
       if (configured) {
@@ -367,7 +376,7 @@ describe('FeatureCard component', () => {
 
       if (expectedStatus) {
         it(`should show the status "${expectedStatus}"`, () => {
-          expect(wrapper.findByTestId('feature-status').text()).toBe(expectedStatus);
+          expect(findFeatureStatus().text()).toBe(expectedStatus);
         });
       }
     });
@@ -385,8 +394,39 @@ describe('FeatureCard component', () => {
       });
 
       it(`should not show a status`, () => {
-        expect(wrapper.findByTestId('feature-status').exists()).toBe(false);
+        expect(findFeatureStatus().exists()).toBe(false);
       });
+    });
+  });
+
+  describe('when a slot component is passed', () => {
+    beforeEach(() => {
+      feature = makeFeature({
+        slotComponent: MockComponent,
+      });
+      createComponent({ feature });
+    });
+
+    it('renders the component properly', () => {
+      expect(wrapper.findComponent(MockComponent).exists()).toBe(true);
+    });
+  });
+
+  describe('when the overrideStatus event is emitted', () => {
+    beforeEach(() => {
+      feature = makeFeature({
+        slotComponent: MockComponent,
+      });
+      createComponent({ feature });
+    });
+
+    it('sets the overrideStatus', async () => {
+      expect(findFeatureStatus().html()).toContain('Available with Ultimate');
+
+      findSlotComponent().vm.$emit('overrideStatus', true);
+      await nextTick();
+
+      expect(findFeatureStatus().html()).toContain('Enabled');
     });
   });
 });

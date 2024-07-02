@@ -7,6 +7,7 @@ import {
   GlLink,
   GlLoadingIcon,
   GlTable,
+  GlForm,
   GlFormInput,
   GlDropdown,
   GlDropdownItem,
@@ -36,7 +37,7 @@ import TimelineChart from './timeline_chart.vue';
 const isValidErrorId = (errorId) => {
   return /^[0-9]+$/.test(errorId);
 };
-export const tableDataClass = 'gl-display-flex gl-md-display-table-cell gl-align-items-center';
+export const tableDataClass = 'gl-flex md:gl-table-cell gl-align-items-center';
 export default {
   FIRST_PAGE: 1,
   PREV_PAGE: 1,
@@ -46,31 +47,31 @@ export default {
     {
       key: 'error',
       label: __('Error'),
-      thClass: 'gl-w-40p',
+      thClass: 'gl-w-8/20',
       tdClass: `${tableDataClass}`,
     },
     {
       key: 'timeline',
       label: __('Timeline'),
-      thClass: 'gl-text-center gl-w-20p',
+      thClass: 'gl-text-center gl-w-4/20',
       tdClass: `${tableDataClass} gl-text-center`,
     },
     {
       key: 'events',
       label: __('Events'),
-      thClass: 'gl-text-center gl-w-10p',
+      thClass: 'gl-text-center gl-w-2/20',
       tdClass: `${tableDataClass} gl-text-center`,
     },
     {
       key: 'users',
       label: __('Users'),
-      thClass: 'gl-text-center gl-w-10p',
+      thClass: 'gl-text-center gl-w-2/20',
       tdClass: `${tableDataClass} gl-text-center`,
     },
     {
       key: 'lastSeen',
       label: __('Last seen'),
-      thClass: 'gl-text-center gl-w-10p',
+      thClass: 'gl-text-center gl-w-2/20',
       tdClass: `${tableDataClass} gl-text-center`,
     },
     {
@@ -100,6 +101,7 @@ export default {
     GlLink,
     GlLoadingIcon,
     GlTable,
+    GlForm,
     GlFormInput,
     GlSprintf,
     GlPagination,
@@ -322,7 +324,7 @@ export default {
             <gl-dropdown
               :text="__('Recent searches')"
               class="filtered-search-history-dropdown-wrapper"
-              toggle-class="filtered-search-history-dropdown-toggle-button gl-shadow-none! gl-border-r-gray-200! gl-border-1! gl-rounded-0!"
+              toggle-class="filtered-search-history-dropdown-toggle-button !gl-shadow-none gl-border-r-gray-200! gl-border-1! gl-rounded-0!"
               :disabled="loading"
             >
               <div v-if="!$options.hasLocalStorage" class="gl-px-5">
@@ -343,14 +345,15 @@ export default {
               <div v-else class="gl-px-5">{{ __("You don't have any recent searches") }}</div>
             </gl-dropdown>
             <div class="filtered-search-input-container gl-flex-grow-1">
-              <gl-form-input
-                v-model="errorSearchQuery"
-                class="gl-pl-3! filtered-search"
-                :disabled="loading"
-                :placeholder="__('Search or filter results…')"
-                autofocus
-                @keyup.enter.native="searchByQuery(errorSearchQuery)"
-              />
+              <gl-form @submit.prevent="searchByQuery(errorSearchQuery)">
+                <gl-form-input
+                  v-model="errorSearchQuery"
+                  class="gl-pl-3! filtered-search"
+                  :disabled="loading"
+                  :placeholder="__('Search or filter results…')"
+                  autofocus
+                />
+              </gl-form>
             </div>
             <div class="gl-search-box-by-type-right-icons">
               <gl-button
@@ -412,7 +415,7 @@ export default {
 
       <!-- Results Table -->
       <template v-else>
-        <h4 class="gl-display-block gl-md-display-none! gl-my-5">{{ __('Open errors') }}</h4>
+        <h4 class="gl-block md:!gl-hidden gl-my-5">{{ __('Open errors') }}</h4>
 
         <gl-table
           class="error-list-table gl-mt-5"
@@ -425,7 +428,7 @@ export default {
         >
           <!-- table head -->
           <template #head(error)>
-            <div class="gl-display-none gl-md-display-block">{{ __('Open errors') }}</div>
+            <div class="gl-hidden md:gl-block">{{ __('Open errors') }}</div>
           </template>
           <template #head(events)="data">
             {{ data.label }}

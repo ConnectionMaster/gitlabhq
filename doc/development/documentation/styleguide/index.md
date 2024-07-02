@@ -96,7 +96,7 @@ Also, keep the following guidance in mind:
   use **custom settings for project integrations**.
 - Format [dates and times](https://learn.microsoft.com/en-us/style-guide/a-z-word-list-term-collections/term-collections/date-time-terms)
   consistently and for an international audience.
-- Use [images](#images), including screenshots, sparingly.
+- Use [illustrations](#illustrations), including screenshots, sparingly.
 - For [UI text](#ui-text), allow for up to 30% expansion and contraction in translation.
   To see how much a string expands or contracts in another language, paste the string
   into [Google Translate](https://translate.google.com/) and review the results.
@@ -568,7 +568,7 @@ indentation as the list item. You can do this with:
 - [Code blocks](#code-blocks)
 - [Blockquotes](#blockquotes)
 - [Alert boxes](#alert-boxes)
-- [Images](#images)
+- [Illustrations](#illustrations)
 - [Tabs](#tabs)
 
 Nested items should always align with the first character of the list
@@ -857,13 +857,13 @@ Follow these guidelines for link text.
 
 As much as possible, use text that follows one of these patterns:
 
-- `For more information, see [LINK TEXT](LINK)`.
-- `To [DO THIS THING], see [LINK TEXT](LINK)`
+- `For more information, see [link text](link.md)`.
+- `To [DO THIS THING], see [link text](link.md)`
 
 For example:
 
-- `For more information, see [merge requests](LINK).`
-- `To create a review app, see [review apps](LINK).`
+- `For more information, see [merge requests](link.md).`
+- `To create a review app, see [review apps](link.md).`
 
 You can expand on this text by using phrases like
 `For more information about this feature, see...`
@@ -872,8 +872,8 @@ Do not use the following constructions:
 
 - `Learn more about...`
 - `To read more...`.
-- `For more information, see the [Merge requests](LINK) page.`
-- `For more information, see the [Merge requests](LINK) documentation.`
+- `For more information, see the [Merge requests](link.md) page.`
+- `For more information, see the [Merge requests](link.md) documentation.`
 
 #### Descriptive text rather than `here`
 
@@ -881,18 +881,18 @@ Use descriptive text for links, rather than words like `here` or `this page.`
 
 For example, instead of:
 
-- `For more information, see [this page](LINK).`
-- `For more information, go [here](LINK).`
+- `For more information, see [this page](link.md).`
+- `For more information, go [here](link.md).`
 
 Use:
 
-- `For more information, see [merge requests](LINK)`.
+- `For more information, see [merge requests](link.md)`.
 
 #### Links to issues
 
 When linking to an issue, include the issue number in the link. For example:
 
-- `For more information, see [issue 12345](LINK).`
+- `For more information, see [issue 12345](link.md).`
 
 Do not use the pound sign (`issue #12345`).
 
@@ -1121,21 +1121,29 @@ To describe multiple fields, use unordered list items:
    - **Branch name** must be a regular expression.
    - **User** must be a user with at least the **Maintainer** role.
 
-## Images
+## Illustrations
 
-Images, including screenshots, can help a reader better understand a concept.
-However, they should be used sparingly because:
+Illustrations can help the reader understand a concept, where they are in a complicated process,
+or how they should interact with the application.
+
+Use illustrations sparingly because:
 
 - They tend to become out-of-date.
 - They are difficult and expensive to localize.
-- They cannot be read by screen readers.
+- Their content cannot be read by screen readers.
 
-When needed, use images to help the reader understand:
+Types of illustrations used in GitLab documentation are:
 
-- Where they are in a complicated process.
-- How they should interact with the application.
+- Screenshot. Use a screenshot when you need to show a portion of the GitLab user interface.
+- Diagram. Use a diagram to illustrate a process or the relationship between entities, for example.
 
-### Capture the image
+Use illustrations only to supplement text, not replace it.
+
+### Screenshot
+
+Use a screenshot when you need to show a portion of the GitLab user interface.
+
+#### Capture the screenshot
 
 When you take screenshots:
 
@@ -1155,7 +1163,7 @@ When you take screenshots:
   a documentation page for a consistent reading experience. Ensure your navigation theme
   is **Indigo** and the syntax highlighting theme is **Light**. These are the default preferences.
 
-### Add callouts
+#### Add callouts
 
 If you need to emphasize an area in a screenshot, use an arrow.
 
@@ -1166,7 +1174,7 @@ If you need to emphasize an area in a screenshot, use an arrow.
 
 ![callout example](img/callouts.png)
 
-### Save the image
+#### Save the image
 
 - Resize any wide or tall screenshots if needed, but make sure the screenshot is
   still clear after being resized and compressed.
@@ -1184,23 +1192,9 @@ If you need to emphasize an area in a screenshot, use an arrow.
   the `.md` document that you're working on is located.
 - Consider using PNG images instead of JPEG.
 - Compress GIFs with <https://ezgif.com/optimize> or similar tool.
-- Images should be used (only when necessary) to illustrate the description
-  of a process, not to replace it.
 - See also how to link and embed [videos](#videos) to illustrate the documentation.
 
-### Add the image link to content
-
-The Markdown code for including an image in a document is:
-`![Image description which will be the alt tag](img/document_image_title_vX_Y.png)`
-
-The image description is the alt text for the rendered image on the
-documentation site. For accessibility and SEO, use [descriptions](https://webaim.org/techniques/alttext/)
-that:
-
-- Are accurate, succinct, and unique.
-- Don't use **image of** or **graphic of** to describe the image.
-
-### Compress images
+#### Compress images
 
 You should always compress any new images you add to the documentation. One
 known tool is [`pngquant`](https://pngquant.org/), which is cross-platform and
@@ -1239,7 +1233,7 @@ copy of `https://gitlab.com/gitlab-org/gitlab`, run in a terminal:
   bin/pngquant compress doc/user/img
   ```
 
-### Animated images
+#### Animated images
 
 Avoid using animated images (such as animated GIFs). They can be distracting
 and annoying for users.
@@ -1250,7 +1244,44 @@ include a visual representation to help readers understand it, you can:
 - Use a static image (screenshot) and if necessary, add callouts to emphasize an area of the screen.
 - Create a short video of the interaction and link to it.
 
-### Automatic screenshot generator
+#### Add the image link to content
+
+The Markdown code for including an image in a document is:
+`![Image description, used for alt tag](img/document_image_title_vX_Y.png)`
+
+#### Alternative text
+
+Alt text provides an accessible experience.
+Screen readers use alt text to describe the image, and alt text displays
+if an image fails to download.
+
+Alt text should describe the context of the image, not the content. Add context that
+relates to the topic of the page or section. Consider what you would say about the image
+if you were helping someone read and interact with the page and they couldn't see it.
+
+Do:
+
+`![A runner sending a request to the Docker API.](img/document_image_title_vX_Y.png)`
+
+Do not:
+
+`![Runner and Docker architecture](img/document_image_title_vX_Y.png)`
+
+When writing alt text:
+
+- Write short, descriptive alt text in 155 characters or fewer. Screen readers
+typically stop reading after this amount.
+- If the image has complex information, like a workflow diagram, use a short alt text to identify the image and
+include detailed information in the text.
+- Use complete sentences.
+- Use punctuation.
+- Use sentence case and avoid using all-caps. Some screenreaders read capitals as individual letters.
+- Don't use phrases like **Image of** or **Graphic of**.
+- Don't use a string of keywords. Include keywords in a complete sentence to enhance context.
+- Introduce the image in the section text, not the alt text.
+- Try to avoid repeating content that you've already used in the section text.
+
+#### Automatic screenshot generator
 
 You can use an automatic screenshot generator to take and compress screenshots.
 
@@ -1262,7 +1293,7 @@ You can use an automatic screenshot generator to take and compress screenshots.
 1. Identify the location of the screenshots, based on the `gitlab/doc` location defined by the `it` parameter in your script.
 1. Commit the newly created screenshots.
 
-#### Extending the tool
+##### Extending the tool
 
 To add an additional screenshot generator:
 
@@ -1289,7 +1320,7 @@ To add an additional screenshot generator:
 You can take a screenshot of a page with `visit <path>`.
 To avoid blank screenshots, use `expect` to wait for the content to load.
 
-##### Single-element screenshots
+###### Single-element screenshots
 
 You can take a screenshot of a single element.
 
@@ -1303,6 +1334,59 @@ You can take a screenshot of a single element.
   ```
 
 Use `spec/docs_screenshots/container_registry_docs.rb` as a guide to create your own scripts.
+
+### Diagram
+
+Use a diagram to illustrate a process or the relationship between entities, for example.
+
+Use [Mermaid](https://mermaid.js.org/#/) to create a diagram. This method has several advantages
+over a static image format (screenshot):
+
+- The Mermaid format is easier to maintain because:
+  - Their definition is stored as a code block in the documentation's Markdown source.
+  - The diagram is rendered dynamically at runtime.
+  - Text content that may change over time, such as feature names, can be found using text search
+    tools and edited.
+- The diagram is rendered as an scalable image, better suited to various output devices and sizes.
+
+#### Create a diagram
+
+To create a diagram:
+
+1. Use the [Mermaid Live Editor](https://mermaid.live/) to create the diagram.
+1. Copy the content of the **Code** pane into a `mermaid` code block in the Markdown file. For more
+   details, see [Mermaid](../../../user/markdown.md#mermaid).
+1. Optional. To add GitLab font styling to your diagram, add this line between the Mermaid
+   code block declaration and the type of diagram:
+
+   ```plaintext
+   %%{init: { "fontFamily": "GitLab Sans" }}%%
+   ```
+
+1. To improve accessibility of diagrams, add a title and description. Add these lines on the next
+   line after declaring the type of diagram, like `flowchart` or `sequenceDiagram`:
+
+   ```yaml
+   accTitle: your diagram title here
+   accDescr: describe what your diagram does in a single sentence, with no line breaks.
+   ```
+
+For example, this flowchart contains both accessibility and font information:
+
+````markdown
+```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
+flowchart TD
+    accTitle: Example diagram title
+    accDescr: A description of your diagram
+
+    A[Start here] -->|action| B[next step]
+```
+````
+
+The Mermaid diagram syntax can be difficult to learn. To make this a little easier, see the Mermaid
+[Beginner's Guide](https://mermaid.js.org/intro/getting-started.html) and the examples on the
+Mermaid site.
 
 ## Emoji
 
@@ -1362,15 +1446,13 @@ videos that might be out-of-date.
 
 ```markdown
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
-For an overview, see [Video Title](link-to-video).
+For an overview, see [Video Title](https://link-to-video).
 <!-- Video published on YYYY-MM-DD -->
 ```
 
 You can link any up-to-date video that's useful to the GitLab user.
 
 ### Embed videos
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-docs/-/merge_requests/472) in GitLab 12.1.
 
 The [GitLab documentation site](https://docs.gitlab.com) supports embedded
 videos.
@@ -1433,7 +1515,7 @@ With this formatting:
 Linking to click-through demos should follow similar guidelines to [videos](#videos).
 
 ```markdown
-For a click-through demo, see [Demo Title](link-to-demo).
+For a click-through demo, see [Demo Title](https://link-to-demo).
 <!-- Demo published on YYYY-MM-DD -->
 ```
 
@@ -1559,7 +1641,7 @@ For more information, see [Legal disclaimer for future features](../versions.md#
 
 ### Details
 
-`DETAILS:` alert boxes are used for [tier badges](#product-tier-badges).
+`DETAILS:` alert boxes are used for [product availability details](#product-availability-details).
 
 ## Blockquotes
 
@@ -1659,138 +1741,11 @@ in the GitLab product documentation.
 If a feature or product name contains spaces, don't split the name with a line break.
 When names change, it is more complicated to search or grep text that has line breaks.
 
-### Product tier badges
+### Product availability details
 
-Tier badges provide information about a feature and are displayed under the topic title.
+Product availability details provide information about a feature and are displayed under the topic title.
 
-#### When to add tier badges
-
-Assign tier badges under:
-
-- Most H1 topic titles, except the pages under `doc/development/*` and `doc/solutions/*`.
-- Topic titles that don't apply to the same tier as the H1.
-
-The H1 tier badge should be the badge that applies to the lowest tier for the features on the page.
-
-#### When not to add tier badges
-
-Do not assign tier badges:
-
-- When a feature does not have one obvious subscription tier or offering.
-  For example, if a feature applies to one tier for SaaS and a different tier for self-managed.
-
-In this case, do any or all of the following:
-
-- Use a `NOTE` in an alert box to describe the tiers.
-- Add tier badges under other topic titles where this information makes more sense.
-- Do not add tier badges under the H1.
-
-##### Pages that don't need a tier badge
-
-Some pages won't have a tier badge, because no obvious tier badge applies. For example:
-
-- Tutorials.
-- Pages that compare features from different tiers.
-- Pages in the `/development` folder. These pages are automatically assigned a `Contribute` badge.
-- Pages in the `/solutions` folder. These pages are automatically assigned a `Solutions` badge.
-
-#### Available product tier badges
-
-Tier badges are how we refer to the information that's displayed under a topic title.
-
-Tier badges include the tier, offering, status, and history.
-
-The Markdown for tier badges should look like the following:
-
-```markdown
-# Topic title
-
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, Self-managed, GitLab Dedicated
-**Status:** Experiment
-
-> - [Introduced](<link-to-issue>) in GitLab 16.3.
-> - Updated in GitLab 16.4.
-```
-
-For offering, use any combination of these words, in this order, separated by commas:
-
-- GitLab.com
-- Self-managed
-- GitLab Dedicated
-
-For example:
-
-- GitLab.com
-- GitLab.com, Self-managed
-- Self-managed
-- Self-managed, GitLab Dedicated
-
-For tier, choose one:
-
-- Free, Premium, Ultimate
-- Premium, Ultimate
-- Ultimate
-
-For status, choose one:
-
-- Beta
-- Experiment
-
-Generally available features should not have a status.
-
-##### Duplicating tier, offering, or status on subheadings
-
-If a subheading has the same tier, offering, or status as its parent
-topic, you don't need to repeat the information in the subheading's
-badge.
-
-For example, if the heading 1 is:
-
-```markdown
-# My title
-
-DETAILS:
-**Offering:** GitLab.com
-**Tier:** Premium, Ultimate
-```
-
-Any lower-level heading that applies to a different tier but same offering would be:
-
-```markdown
-## My title
-
-DETAILS:
-**Tier:** Ultimate
-```
-
-##### Inline tier badges
-
-Do not add tier badges inline with other text.
-The single source of truth for a feature should be the topic where the
-functionality is described.
-
-If you need to mention a tier inline, write it in plain text. For example,
-for an API topic:
-
-```markdown
-IDs of the users to assign the issue to. Ultimate only.
-```
-
-For more examples, see the [REST API style guide](../restful_api_styleguide.md).
-
-##### Administrator documentation tier badges
-
-Topics that are only for instance administrators should have the `Self-managed` tier.
-Instance administrator documentation often includes sections that mention:
-
-- Changing the `gitlab.rb` or `gitlab.yml` files.
-- Accessing the rails console or running Rake tasks.
-- Doing things in the Admin Area.
-
-These pages should also mention if the tasks can only be accomplished by an
-instance administrator.
+Read more about [product availability details](availability_details.md).
 
 ## Specific sections
 
@@ -1799,9 +1754,8 @@ sections are outlined in this section.
 
 ### Help and feedback section
 
-This section ([introduced](https://gitlab.com/gitlab-org/gitlab-docs/-/merge_requests/319) in GitLab 11.4)
-is displayed at the end of each document and can be omitted by adding a key into
-the front matter:
+This section is displayed at the end of each document and can be omitted
+by adding a key into the front matter:
 
 ```yaml
 ---
@@ -2075,8 +2029,8 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** Self-managed
 
- - Information specific to Geo.
- - ...
+- Information specific to Geo.
+- ...
 
 ## X.Y.0
 

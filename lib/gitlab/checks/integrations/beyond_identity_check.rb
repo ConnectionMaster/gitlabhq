@@ -5,16 +5,15 @@ module Gitlab
     module Integrations
       class BeyondIdentityCheck < ::Gitlab::Checks::BaseBulkChecker
         LOG_MESSAGE = 'Starting BeyondIdentity scan...'
-        COMMIT_HAS_NO_SIGNATURE_ERROR = 'Commit is not signed by a GPG signature'
+        COMMIT_HAS_NO_SIGNATURE_ERROR = 'Commit is not signed with a GPG signature'
+        INTEGRATION_VERIFICATION_PERIOD = 1.day
 
         def initialize(integration_check)
           @changes_access = integration_check.changes_access
-          @integration = ::Integrations::BeyondIdentity.for_instance.first
         end
 
         def validate!
-          return unless integration_activated?
-          return if updated_from_web?
+          return if skip_validation?
 
           logger.log_timed(LOG_MESSAGE) do
             commits = changes_access.commits
@@ -28,8 +27,11 @@ module Gitlab
             commits.each(&:gpg_commit)
 
             commits.each do |commit|
-              unless commit.signature.verified?
+              signature = commit.signature
+              if !signature.verified?
                 raise ::Gitlab::GitAccess::ForbiddenError, "Signature of the commit #{commit.sha} is not verified"
+              elsif !reverified_with_integration?(signature.gpg_key)
+                raise ::Gitlab::GitAccess::ForbiddenError, "GPG Key used to sign commit #{commit.sha} is not verified"
               end
             end
           end
@@ -37,11 +39,40 @@ module Gitlab
 
         private
 
-        attr_reader :integration
+        def skip_validation?
+          return true unless integration&.activated?
+          return true if updated_from_web?
+          return true if integration.exclude_service_accounts? && user_access.user.service_account?
 
-        def integration_activated?
-          integration.present? && integration.activated?
+          false
         end
+
+        def reverified_with_integration?(key)
+          strong_memoize_with(:verified_by_integration, key) do
+            break false unless key.present?
+
+            gpg_key = key.is_a?(GpgKeySubkey) ? key.gpg_key : key
+            break false unless key.externally_verified?
+            break true if gpg_key.updated_at > INTEGRATION_VERIFICATION_PERIOD.ago
+
+            verified_externally?(gpg_key).tap do |verified_externally|
+              key.update!(externally_verified: verified_externally)
+            end
+          end
+        end
+
+        def verified_externally?(key)
+          integration.execute({ key_id: key.primary_keyid, committer_email: key.user.email })
+
+          true
+        rescue ::Gitlab::BeyondIdentity::Client::ApiError => _
+          false
+        end
+
+        def integration
+          project.beyond_identity_integration || ::Integrations::BeyondIdentity.for_instance.first
+        end
+        strong_memoize_attr :integration
       end
     end
   end

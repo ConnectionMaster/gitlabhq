@@ -49,7 +49,7 @@ module Gitlab
             event.attributes
               .except(*blocked_state_event_attributes)
               .merge(entity_key => new_entity.id,
-                     'state' => ResourceStateEvent.states[event.state])
+                'state' => ResourceStateEvent.states[event.state])
           end
         end
 
@@ -62,15 +62,20 @@ module Gitlab
           event.attributes
             .except('id')
             .merge(entity_key => new_entity.id,
-                   'milestone_id' => milestone&.id,
-                   'action' => ResourceMilestoneEvent.actions[event.action],
-                   'state' => ResourceMilestoneEvent.states[event.state])
+              'milestone_id' => milestone&.id,
+              'action' => ResourceMilestoneEvent.actions[event.action],
+              'state' => ResourceMilestoneEvent.states[event.state])
         end
 
         def copy_events(table_name, events_to_copy)
           events_to_copy.find_in_batches do |batch|
             events = batch.filter_map do |event|
               yield(event)
+            end
+
+            # A cloned resource is not imported from another project
+            events.each do |event|
+              event['imported_from'] = ::Import::HasImportSource::IMPORT_SOURCES[:none] if event['imported_from']
             end
 
             ApplicationRecord.legacy_bulk_insert(table_name, events) # rubocop:disable Gitlab/BulkInsert

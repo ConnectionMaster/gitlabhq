@@ -2,7 +2,6 @@
 // eslint-disable-next-line no-restricted-imports
 import { mapState, mapGetters } from 'vuex';
 import { __ } from '~/locale';
-import glFeatureFlagsMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 import ScopeSidebarNavigation from '~/search/sidebar/components/scope_sidebar_navigation.vue';
 import SidebarPortal from '~/super_sidebar/components/sidebar_portal.vue';
 import { toggleSuperSidebarCollapsed } from '~/super_sidebar/super_sidebar_collapsed_state_manager';
@@ -48,7 +47,6 @@ export default {
     MilestonesFilters,
     AllScopesStartFilters,
   },
-  mixins: [glFeatureFlagsMixin()],
   computed: {
     ...mapState(['searchType']),
     ...mapGetters(['currentScope']),
@@ -59,9 +57,7 @@ export default {
       return this.searchType === SEARCH_TYPE_ADVANCED;
     },
     isZoektSearch() {
-      return (
-        this.searchType === SEARCH_TYPE_ZOEKT && this.glFeatures.searchAddArchivedFilterToZoekt
-      );
+      return this.searchType === SEARCH_TYPE_ZOEKT;
     },
     showIssuesFilters() {
       return this.currentScope === SCOPE_ISSUES;
@@ -100,12 +96,12 @@ export default {
   <section>
     <dom-element-listener selector="#js-open-mobile-filters" @click="toggleFiltersFromSidebar" />
     <sidebar-portal>
-      <all-scopes-start-filters />
       <div
-        class="gl-px-5 gl-pt-3 gl-pb-2 gl-m-0 gl-reset-line-height gl-font-weight-bold gl-font-sm super-sidebar-context-header"
+        class="gl-px-4 gl-py-3 gl-m-0 gl-leading-reset gl-font-bold super-sidebar-context-header"
       >
         {{ $options.i18n.headerText }}
       </div>
+      <all-scopes-start-filters />
       <scope-sidebar-navigation />
       <issues-filters v-if="showIssuesFilters" />
       <merge-requests-filters v-if="showMergeRequestFilters" />

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class Groups::DependencyProxyForContainersController < ::Groups::DependencyProxy::ApplicationController
-  include Gitlab::Utils::StrongMemoize
   include DependencyProxy::GroupAccess
   include SendFileUpload
   include ::PackagesHelper # for event tracking
@@ -16,7 +15,7 @@ class Groups::DependencyProxyForContainersController < ::Groups::DependencyProxy
 
   attr_reader :token
 
-  feature_category :dependency_proxy
+  feature_category :virtual_registry
   urgency :low
 
   def manifest
@@ -122,12 +121,6 @@ class Groups::DependencyProxyForContainersController < ::Groups::DependencyProxy
 
   def manifest_file_name
     @manifest_file_name ||= Gitlab::PathTraversal.check_path_traversal!("#{image}:#{tag}.json")
-  end
-
-  def group
-    strong_memoize(:group) do
-      Group.find_by_full_path(params[:group_id], follow_redirects: true)
-    end
   end
 
   def image

@@ -1,7 +1,7 @@
 ---
 status: proposed
 creation-date: "2023-10-10"
-authors: [ "@thomasrandolph", "@patrickbajao", "@igor.drozdov", "@jerasmus", "@iamphill", "@slashmanov", "@psjakubowska" ]
+authors: [ "@patrickbajao", "@igor.drozdov", "@jerasmus", "@iamphill", "@slashmanov", "@psjakubowska", "@thomasrandolph" ]
 coach: [ "@ntepluhina" ]
 approvers: [ ]
 owning-stage: "~devops::create"
@@ -21,6 +21,19 @@ to improve all areas of diff rendering, from the backend creation of diffs to th
 the diffs.
 
 All the diffs features related to this document are [listed on a dedicated page](features.md).
+
+## Work breakdown
+
+[Rapid Diffs work](https://gitlab.com/groups/gitlab-org/-/epics/13236) is split into 3 stages and can be tracked in the following epics:
+
+1. [Stage 0 — foundation](https://gitlab.com/groups/gitlab-org/-/epics/13764):
+    - Have foundational components in place.
+    - Stream diffs on MR, commit and compare revisions pages.
+1. [Stage 1 — baseline features](https://gitlab.com/groups/gitlab-org/-/epics/13765):
+    - Most of the features are working (dicussions, navigation, review, etc.)
+1. [Stage 2 — production ready](https://gitlab.com/groups/gitlab-org/-/epics/13767):
+    - Feature specs pass against Rapid Diffs
+    - Full accessibility compliance
 
 ## Motivation
 
@@ -120,14 +133,14 @@ To measure our success, we need to set meaningful metrics. These metrics should 
 1. The RRD app loads less than or equal to 150 KiB of markup, images, styles, fonts, etc. (compressed / "across-the-wire")<sup>1</sup>.
 1. The Time to First Diff (`mr-diffs-mark-first-diff-file-shown`) happens before 3 seconds mark.
 1. The RRD app can execute in total isolation from the rest of the GitLab product:
-    1. "Execute" means the app can load, display data, and allows user interaction ("read-only").
-    1. If a part of the application is only used in merge requests or diffs, it is considered part of the Diffs application.
-    1. If a part of the application must be brought in from the rest of the product, it is not considered part of the Diffs load (as defined in metrics 3 and 4).
-    1. If a part of the application must be brought in from the rest of the product, it may not block functionality of the Diffs application.
-    1. If a part of the application must be brought in from the rest of the product, it must be loaded asynchronously.
-    1. If a part of the application meets 5.1-5.5 _(such as: the Markdown editor is loaded asynchronously when the user would like to leave a comment on a diff)_ and its inclusion causes a budget overflow:
-       - It must be added to a list of documented exceptions that we accept are out of bounds and out of our control.
-       - The exceptions list should be addressed on a regular basis to determine the ongoing value of overflowing our budget.
+   1. "Execute" means the app can load, display data, and allows user interaction ("read-only").
+   1. If a part of the application is only used in merge requests or diffs, it is considered part of the Diffs application.
+   1. If a part of the application must be brought in from the rest of the product, it is not considered part of the Diffs load (as defined in metrics 3 and 4).
+   1. If a part of the application must be brought in from the rest of the product, it may not block functionality of the Diffs application.
+   1. If a part of the application must be brought in from the rest of the product, it must be loaded asynchronously.
+   1. If a part of the application meets 5.1-5.5 _(such as: the Markdown editor is loaded asynchronously when the user would like to leave a comment on a diff)_ and its inclusion causes a budget overflow:
+      - It must be added to a list of documented exceptions that we accept are out of bounds and out of our control.
+      - The exceptions list should be addressed on a regular basis to determine the ongoing value of overflowing our budget.
 
 ---
 <sup>1</sup>: [The Performance Inequality Gap, 2023](https://infrequently.org/2022/12/performance-baseline-2023/)
@@ -188,7 +201,7 @@ To improve the perceived performance of the page we should implement the followi
 1. Limit the number of diffs rendered on the page at first.
 1. Use [HTML streaming](https://gitlab.com/gitlab-org/frontend/rfcs/-/issues/101)
    to render the rest of the diffs.
-    1. Use Web Components to hook into diff files appearing on the page.
+   1. Use Web Components to hook into diff files appearing on the page.
 1. Apply `content-visibility` whenever possible to reduce redraw overhead.
 1. Render diff discussions asynchronously.
 
@@ -233,7 +246,7 @@ flowchart LR
 
 ```
 
-<sup>*</sup>: Front end obscures many unexplored phases. It is likely that the front end will need caches, databases, API abstractions (over sub-modules like network connectivity, etc.), and more. While these have not been expanded on, "Front end" stands in for all of that complexity here.
+<sup>\*</sup>: Front end obscures many unexplored phases. It is likely that the front end will need caches, databases, API abstractions (over sub-modules like network connectivity, etc.), and more. While these have not been expanded on, "Front end" stands in for all of that complexity here.
 
 ###### Gitaly
 
@@ -266,6 +279,170 @@ sequenceDiagram
 sequenceDiagram
     Back end ->> Cache: Give me the diff template for scenario XYZ
     Cache ->> Back end: Static template to render diff in scenario XYZ
+```
+
+- Repeated render of a diff
+
+```mermaid
+sequenceDiagram
+    Back end ->> Cache: Give me the compiled UI for diff ABC123
+    alt Cache miss
+        Cache ->> Back end: ☹️
+        Back end ->> Cache: Cache the compiled UI for diff ABC123
+    else
+        Cache ->> Back end: Existing compiled diff UI
+    end
+```
+
+###### Diff Storage
+
+```mermaid
+sequenceDiagram
+    Back end ->> Diff Storage: Give me the raw diff of this file
+    Diff Storage ->> Back end: Raw diff
+```
+
+###### Backend
+
+- First files rendered on page load
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Back end
+    participant Authorization
+    participant HAML
+    participant Cache
+    participant Database
+    participant Diff storage
+    participant Gitaly
+
+    Client ->> Back end: Page load request
+    Back end ->> Authorization: Check is good request
+    alt Unauthorized
+        Authorization ->> Back end: No!
+        Back end ->> Client: 403 or 404
+    else
+        Authorization ->> Back end: Authorized.
+        alt MR Diff
+            Back end ->> Database: Get N files
+            Database ->> Back end: Files
+            Back end ->> Diff storage: Get diffs of N files
+            Diff storage ->> Back end: Diffs
+        else
+            Back end ->> Gitaly: Get diffs of N files
+            Gitaly ->> Back end: Diffs
+        end
+        loop Iterate through each diff file
+            Back end ->> HAML: Render diff file
+            HAML ->> Cache: Give me the cached rendered UI per file
+            alt Cache miss
+                Cache ->> HAML: Nada!
+                HAML ->> Cache: Cache rendered UI per file
+                Cache ->> HAML: Cached, rendered UI per file
+            else
+                Cache ->> HAML: Cached, rendered UI per file
+            end
+            HAML ->> Back end: Rendered UI
+        end
+        Back end ->> Client: Respond with application layout with rendered UI
+    end
+```
+
+- Future files rendered and streamed to the front end
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Back end
+    participant Authorization
+    participant HAML
+    participant Cache
+    participant Database
+    participant Diff storage
+    participant Gitaly
+
+    Client ->> Back end: Stream request
+    Back end ->> Authorization: Check is good request
+    alt All the possible unhappy paths
+        Authorization ->> Back end: No!
+        Back end ->> Client: 403
+    else
+        Authorization ->> Back end: Authorized.
+        alt MR Diff
+            Back end ->> Database: Get files
+            Database ->> Back end: Files
+            Back end ->> Diff storage: Get diffs
+            Diff storage ->> Back end: Diffs
+        else
+            Back end ->> Gitaly: Get diffs
+            Gitaly ->> Back end: Diffs
+        end
+        loop Iterate through each diff file
+            Back end ->> HAML: Render diff file
+            HAML ->> Cache: Give me the cached rendered UI per file
+            alt Cache miss
+                Cache ->> HAML: Nada!
+                HAML ->> Cache: Cache rendered UI per file
+                Cache ->> HAML: Cached, rendered UI per file
+            else
+                Cache ->> HAML: Cached, rendered UI per file
+            end
+            HAML ->> Back end: Rendered UI
+        end
+        Back end ->> Client: Stream rendered UI per file
+    end
+```
+
+###### Web API
+
+The Web API provides both internal and public access to the back end implementation for diffs.
+
+Eventually, this diagram should expand (and possibly split) to show each endpoint that our application or a user could interface with, and what each of those endpoints expects and returns.
+
+Note that this is separate from the Back End diagrams, which elaborate on business logic and implementation details.
+The API endpoints are consumer-facing and so have different requirements and structures.
+
+```mermaid
+sequenceDiagram
+    actor Web User
+    participant Endpoints
+    participant Back end
+
+    Web User ->> Endpoints: Give me the diff for [x] file
+    Endpoints ->> Back end: User [u] is requesting [x] diff
+    Back end ->> Endpoints: Here is the resolved, rendered UI for that diff
+    Endpoints ->> Web User: "Do with this diff whatever you'd like to"
+```
+
+###### A complete, single render
+
+```mermaid
+sequenceDiagram
+actor User
+participant UI
+participant UX as Interaction handlers
+participant FeApp as Front end behaviors
+participant FeData as Data abstraction
+participant FeNet as Network connectivity
+participant API as Web API
+participant BE as Back end
+participant xxx
+participant Cache
+participant Database
+participant Gitaly
+
+User -->> BE: (MR page load)
+BE ->> xxx: ???
+xxx ->> Cache: ???
+Cache ->> xxx: ???
+xxx ->> Database: ???
+Database ->> xxx: ???
+xxx ->> Gitaly: ???
+Gitaly ->> xxx: ???
+xxx ->> BE: Rendered HTML
+BE ->> User: A rendered diffs page for the MR
+
 ```
 
 ### Accessibility
@@ -311,7 +488,7 @@ Possible structure could include:
 </table>
 ```
 
-See [WAI tutorial on tables](https://www.w3.org/WAI/tutorials/tables) for
+See [WAI tutorial on tables](https://www.w3.org/WAI/tutorials/tables/) for
 more implementation guidelines.
 
 Each file table should include a short summary of changes that will read out:
@@ -332,7 +509,7 @@ more generic elements together with ARIA support can be used.
 #### Visual indicators
 
 It is important that each visual indicator should have a screen reader text
-denoting the meaning of that indicator. When needed, use `gl-sr-only` or `gl-sr-only-focusable`
+denoting the meaning of that indicator. When needed, use `gl-sr-only` (in conjunction with `focus:gl-not-sr-only` if needed)
 class to make the element accessible by screen readers, but not by sighted users.
 
 Some of the visual indicators that require alternatives for assistive technology are:

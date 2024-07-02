@@ -92,7 +92,7 @@ class WebHookService
 
     ServiceResponse.success(message: response.body, payload: { http_status: response.code })
   rescue *Gitlab::HTTP::HTTP_ERRORS, JSON::ParserError,
-         Gitlab::Json::LimitedEncoder::LimitExceeded, URI::InvalidURIError => e
+    Gitlab::Json::LimitedEncoder::LimitExceeded, URI::InvalidURIError => e
     execution_duration = ::Gitlab::Metrics::System.monotonic_time - start_time
     error_message = e.to_s
 
@@ -218,7 +218,6 @@ class WebHookService
 
   def build_custom_headers(values_redacted: false)
     return {} unless hook.custom_headers.present?
-    return {} unless Feature.enabled?(:custom_webhook_headers, hook.parent, type: :beta)
 
     return hook.custom_headers.transform_values { '[REDACTED]' } if values_redacted
 
@@ -287,7 +286,6 @@ class WebHookService
 
   def request_payload
     return data unless hook.custom_webhook_template.present?
-    return data unless Feature.enabled?(:custom_webhook_template, hook.parent, type: :beta)
 
     start_time = Gitlab::Metrics::System.monotonic_time
     rendered_template = render_custom_template(hook.custom_webhook_template, data.deep_stringify_keys)

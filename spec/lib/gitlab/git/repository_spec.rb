@@ -726,7 +726,7 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
 
     it 'has the correct matching line' do
       expect(subject).to contain_exactly("#{ref}:encoding/CHANGELOG\u00001\u0000#{content}\n",
-                                         "#{ref}:anotherfile\u00001\u0000#{content}\n")
+        "#{ref}:anotherfile\u00001\u0000#{content}\n")
     end
   end
 
@@ -740,8 +740,8 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
 
       it 'returns matched files' do
         expect(result).to contain_exactly('files/ruby/popen.rb',
-                                          'files/ruby/regex.rb',
-                                          'files/ruby/version_info.rb')
+          'files/ruby/regex.rb',
+          'files/ruby/version_info.rb')
       end
     end
 
@@ -750,7 +750,7 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
 
       it 'raises error' do
         expect { result }.to raise_error(GRPC::InvalidArgument,
-                                         /missing argument to repetition operator: `*`/)
+          /missing argument to repetition operator: `*`/)
       end
     end
 
@@ -1231,9 +1231,9 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
           expect(service)
             .to receive(:list_blobs)
             .with(expected_newrevs,
-                  limit: Gitlab::Git::Repository::REV_LIST_COMMIT_LIMIT,
-                  with_paths: true,
-                  dynamic_timeout: nil)
+              limit: Gitlab::Git::Repository::REV_LIST_COMMIT_LIMIT,
+              with_paths: true,
+              dynamic_timeout: nil)
             .once
             .and_call_original
         end
@@ -1528,7 +1528,7 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
         it "returns the number of commits in the whole repository" do
           options = { all: true }
 
-          expect(repository.count_commits(options)).to eq(322)
+          expect(repository.count_commits(options)).to eq(325)
         end
       end
 
@@ -1857,9 +1857,6 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
 
     context 'with gitattributes' do
       before do
-        # this line can be removed once gitaly stops using info/attributes
-        repository.copy_gitattributes('gitattributes')
-
         # This line is added to make sure this test works when gitaly stops using
         # info/attributes. See https://gitlab.com/gitlab-org/gitaly/-/issues/5348 for details.
         repository.write_ref('HEAD', 'refs/heads/gitattributes')
@@ -1995,8 +1992,8 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
         expect(Gitlab::GitalyClient)
           .to receive(:call)
           .and_raise(new_detailed_error(GRPC::Core::StatusCodes::NOT_FOUND,
-                                        "tag was not found",
-                                        Gitaly::FindTagError.new(tag_not_found: Gitaly::ReferenceNotFoundError.new)))
+            "tag was not found",
+            Gitaly::FindTagError.new(tag_not_found: Gitaly::ReferenceNotFoundError.new)))
       end
 
       it_behaves_like 'a nonexistent tag'
@@ -2242,52 +2239,6 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
     end
   end
 
-  describe '#set_full_path' do
-    let(:full_path) { 'some/path' }
-
-    before do
-      repository.set_full_path(full_path: full_path)
-    end
-
-    it 'writes full_path to gitaly' do
-      repository.set_full_path(full_path: "not-the/real-path.git")
-
-      expect(repository.full_path).to eq('not-the/real-path.git')
-    end
-
-    context 'it is given an empty path' do
-      it 'does not write it to disk' do
-        repository.set_full_path(full_path: "")
-
-        expect(repository.full_path).to eq(full_path)
-      end
-    end
-
-    context 'repository does not exist' do
-      it 'raises NoRepository and does not call SetFullPath' do
-        repository = Gitlab::Git::Repository.new('default', 'does/not/exist.git', '', 'group/project')
-
-        expect(repository.gitaly_repository_client).not_to receive(:set_full_path)
-
-        expect do
-          repository.set_full_path(full_path: 'foo/bar.git')
-        end.to raise_error(Gitlab::Git::Repository::NoRepository)
-      end
-    end
-  end
-
-  describe '#full_path' do
-    let(:full_path) { 'some/path' }
-
-    before do
-      repository.set_full_path(full_path: full_path)
-    end
-
-    it 'returns the full path' do
-      expect(repository.full_path).to eq(full_path)
-    end
-  end
-
   describe '#merge_to_ref' do
     let(:repository) { mutable_repository }
     let(:branch_head) { '6d394385cf567f80a8fd85055db1ab4c5295806f' }
@@ -2302,8 +2253,8 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
 
     def merge_to_ref
       repository.merge_to_ref(user,
-          source_sha: left_sha, branch: right_branch, target_ref: target_ref,
-          message: 'Merge message', first_parent_ref: first_parent_ref)
+        source_sha: left_sha, branch: right_branch, target_ref: target_ref,
+        message: 'Merge message', first_parent_ref: first_parent_ref)
     end
 
     it 'generates a commit in the target_ref' do
@@ -2590,21 +2541,24 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
   describe '#disconnect_alternates' do
     let(:project) { mutable_project }
     let(:repository) { mutable_repository }
-    let(:pool_repository) { create(:pool_repository) }
+    let(:pool_repository) { create(:pool_repository, :ready, source_project: project) }
     let(:object_pool) { pool_repository.object_pool }
-
-    before do
-      object_pool.create # rubocop:disable Rails/SaveBang
-    end
 
     it 'does not raise an error when disconnecting a non-linked repository' do
       expect { repository.disconnect_alternates }.not_to raise_error
     end
 
     it 'can still access objects in the object pool' do
-      object_pool.link(repository)
-      new_commit_id = object_pool.repository.commit_files(
-        project.owner,
+      # Create a commit into a separate repository and fetch it into the object pool.
+      # Writing directly to an object pool fails as we don't support them in the
+      # authorization checks. Gitaly's pre-receive hook fails as a gl_repository is
+      # not set object pools.
+      #
+      # Write the commit into a fork of the project. Gitaly places the fork into the same partition
+      # with the main project and the object pool which enables fetching it later.
+      forked_project = create(:project, :fork_repository, forked_from_project: project)
+      new_commit_id = forked_project.repository.commit_files(
+        forked_project.owner,
         branch_name: object_pool.repository.root_ref,
         message: 'Add a file',
         actions: [{
@@ -2612,7 +2566,12 @@ RSpec.describe Gitlab::Git::Repository, feature_category: :source_code_managemen
           file_path: 'a.file',
           content: 'This is a file.'
         }]
-      ).newrev
+      )
+
+      # Fetch the new object into the object pool
+      Gitlab::GitalyClient::ObjectPoolService.new(object_pool).fetch(forked_project.repository)
+
+      object_pool.link(repository)
 
       expect(repository.commit(new_commit_id).id).to eq(new_commit_id)
 

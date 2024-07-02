@@ -175,15 +175,17 @@ RSpec.describe Gitlab::ImportExport::Project::TreeRestorer, feature_category: :i
           task_issue1 = Issue.find_by(title: 'task by issue_type')
           task_issue2 = Issue.find_by(title: 'task by both attributes')
           incident_issue = Issue.find_by(title: 'incident by work_item_type')
+          issue_with_invalid_type = Issue.find_by(title: 'invalid issue type')
           issue_type = WorkItems::Type.default_by_type(:issue)
           task_type = WorkItems::Type.default_by_type(:task)
 
           expect(task_issue1.work_item_type).to eq(task_type)
           expect(task_issue2.work_item_type).to eq(task_type)
           expect(incident_issue.work_item_type).to eq(WorkItems::Type.default_by_type(:incident))
+          expect(issue_with_invalid_type.work_item_type).to eq(issue_type)
 
           other_issue_types = Issue.preload(:work_item_type).where.not(
-            id: [task_issue1.id, task_issue2.id, incident_issue.id]
+            id: [task_issue1.id, task_issue2.id, incident_issue.id, issue_with_invalid_type]
           ).map(&:work_item_type)
 
           expect(other_issue_types).to all(eq(issue_type))
@@ -447,7 +449,7 @@ RSpec.describe Gitlab::ImportExport::Project::TreeRestorer, feature_category: :i
 
           aggregate_failures do
             expect(pipeline_schedule.description).to eq('Schedule Description')
-            expect(pipeline_schedule.ref).to eq('refs/heads/master')
+            expect(pipeline_schedule.ref).to eq('master')
             expect(pipeline_schedule.cron).to eq('0 4 * * 0')
             expect(pipeline_schedule.cron_timezone).to eq('UTC')
             expect(pipeline_schedule.active).to eq(false)
@@ -899,7 +901,7 @@ RSpec.describe Gitlab::ImportExport::Project::TreeRestorer, feature_category: :i
       end
 
       context 'with existing group models' do
-        let(:group) { create(:group).tap { |g| g.add_maintainer(user) } }
+        let(:group) { create(:group, maintainers: user) }
         let!(:project) do
           create(
             :project,
@@ -937,7 +939,7 @@ RSpec.describe Gitlab::ImportExport::Project::TreeRestorer, feature_category: :i
       end
 
       context 'with clashing milestones on IID' do
-        let(:group) { create(:group).tap { |g| g.add_maintainer(user) } }
+        let(:group) { create(:group, maintainers: user) }
         let!(:project) do
           create(
             :project,

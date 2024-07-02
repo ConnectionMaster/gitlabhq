@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'gitlab/housekeeper/push_options'
+
 module Gitlab
   module Housekeeper
     class Change
@@ -10,12 +12,23 @@ module Gitlab
         :labels,
         :keep_class,
         :changelog_type,
-        :mr_web_url
-      attr_reader :reviewers
+        :changelog_ee,
+        :mr_web_url,
+        :push_options,
+        :non_housekeeper_changes
+      attr_reader :assignees,
+        :reviewers
 
       def initialize
         @labels = []
+        @assignees = []
         @reviewers = []
+        @non_housekeeper_changes = []
+        @push_options = PushOptions.new
+      end
+
+      def assignees=(assignees)
+        @assignees = Array(assignees)
       end
 
       def reviewers=(reviewers)
@@ -36,12 +49,13 @@ module Gitlab
       end
 
       def commit_message
-        <<~MARKDOWN
+        <<~MARKDOWN.chomp
         #{title}
 
         #{mr_description}
 
         Changelog: #{changelog_type || 'other'}
+        #{changelog_ee ? "EE: true\n" : ''}
         MARKDOWN
       end
 
@@ -51,6 +65,10 @@ module Gitlab
             identifier.match?(filter)
           end
         end
+      end
+
+      def update_required?(category)
+        !category.in?(non_housekeeper_changes)
       end
 
       def valid?

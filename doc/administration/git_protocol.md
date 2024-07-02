@@ -2,7 +2,7 @@
 stage: Create
 group: Source Code
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-description: "Set and configure Git protocol v2"
+description: "Set and configure Git protocol v2 for your self-managed GitLab instance."
 ---
 
 # Configuring Git Protocol v2
@@ -10,8 +10,6 @@ description: "Set and configure Git protocol v2"
 DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed
-
-> - [Re-enabled](https://gitlab.com/gitlab-org/gitlab/-/issues/27828) in GitLab 12.8.
 
 Git protocol v2 improves the v1 wire protocol in several ways and is
 enabled by default in GitLab for HTTP requests. To enable SSH, additional

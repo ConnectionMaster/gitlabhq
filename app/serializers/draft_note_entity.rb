@@ -5,7 +5,7 @@ class DraftNoteEntity < Grape::Entity
   expose :id
   expose :author, using: NoteUserEntity
   expose :merge_request_id
-  expose :position, if: -> (note, _) { note.on_diff? }
+  expose :position, if: ->(note, _) { note.on_diff? }
   expose :line_code
   expose :file_identifier_hash
   expose :file_hash
@@ -16,6 +16,7 @@ class DraftNoteEntity < Grape::Entity
   expose :discussion_id
   expose :resolve_discussion
   expose :noteable_type
+  expose :internal
 
   expose :current_user do
     expose :can_edit do |note|

@@ -33,11 +33,7 @@ module Gitlab
       end
 
       def api_request?
-        if ::Feature.enabled?(:rate_limit_oauth_api, ::Feature.current_request)
-          matches?(API_PATH_REGEX)
-        else
-          logical_path.start_with?('/api')
-        end
+        matches?(API_PATH_REGEX)
       end
 
       def logical_path
@@ -100,6 +96,7 @@ module Gitlab
       def throttle_unauthenticated_web?
         (web_request? || frontend_request?) &&
           !should_be_skipped? &&
+          !git_path? &&
           # TODO: Column will be renamed in https://gitlab.com/gitlab-org/gitlab/-/issues/340031
           Gitlab::Throttle.settings.throttle_unauthenticated_enabled &&
           unauthenticated?
@@ -175,6 +172,12 @@ module Gitlab
           Gitlab::Throttle.settings.throttle_authenticated_packages_api_enabled
       end
 
+      def throttle_unauthenticated_git_http?
+        git_path? &&
+          Gitlab::Throttle.settings.throttle_unauthenticated_git_http_enabled &&
+          unauthenticated?
+      end
+
       def throttle_authenticated_git_lfs?
         git_lfs_path? &&
           Gitlab::Throttle.settings.throttle_authenticated_git_lfs_enabled
@@ -240,6 +243,10 @@ module Gitlab
 
       def packages_api_path?
         matches?(::Gitlab::Regex::Packages::API_PATH_REGEX)
+      end
+
+      def git_path?
+        matches?(::Gitlab::PathRegex.repository_git_route_regex)
       end
 
       def git_lfs_path?

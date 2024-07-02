@@ -541,6 +541,28 @@ module Gitlab
         Gitlab::Database::UnidirectionalCopyTrigger.on_table(table, connection: connection).name(old, new)
       end
 
+      # Installs a trigger in a table that assigns a sharding key from an associated table.
+      #
+      # table: The table to install the trigger in.
+      # sharding_key: The column to be assigned on `table`.
+      # parent_table: The associated table with the sharding key to be copied.
+      # parent_sharding_key: The sharding key on the parent table that will be copied to `sharding_key` on `table`.
+      # foreign_key: The column used to fetch the relevant record from `parent_table`.
+      def install_sharding_key_assignment_trigger(**args)
+        Gitlab::Database::Triggers::AssignDesiredShardingKey.new(**args.merge(connection: connection)).create
+      end
+
+      # Removes trigger used for assigning sharding keys.
+      #
+      # table: The table to install the trigger in.
+      # sharding_key: The column to be assigned on `table`.
+      # parent_table: The associated table with the sharding key to be copied.
+      # parent_sharding_key: The sharding key on the parent table that will be copied to `sharding_key` on `table`.
+      # foreign_key: The column used to fetch the relevant record from `parent_table`.
+      def remove_sharding_key_assignment_trigger(**args)
+        Gitlab::Database::Triggers::AssignDesiredShardingKey.new(**args.merge(connection: connection)).drop
+      end
+
       # Changes the type of a column concurrently.
       #
       # table - The table containing the column.
@@ -865,10 +887,10 @@ module Gitlab
         conditions = ActiveRecord::Base.sanitize_sql(
           [
             'job_class_name = :job_class_name AND table_name = :table_name AND column_name = :column_name AND job_arguments = :job_arguments',
-            job_class_name: 'CopyColumnUsingBackgroundMigrationJob',
-            table_name: table,
-            column_name: primary_key,
-            job_arguments: [columns, columns.map { |column| convert_to_bigint_column(column) }].to_json
+            { job_class_name: 'CopyColumnUsingBackgroundMigrationJob',
+              table_name: table,
+              column_name: primary_key,
+              job_arguments: [columns, columns.map { |column| convert_to_bigint_column(column) }].to_json }
           ])
 
         execute("DELETE FROM batched_background_migrations WHERE #{conditions}")
@@ -948,9 +970,9 @@ module Gitlab
       def copy_foreign_keys(table, old, new)
         foreign_keys_for(table, old).each do |fk|
           add_concurrent_foreign_key(fk.from_table,
-                                     fk.to_table,
-                                     column: new,
-                                     on_delete: fk.on_delete)
+            fk.to_table,
+            column: new,
+            on_delete: fk.on_delete)
         end
       end
 
@@ -1294,9 +1316,9 @@ into similar problems in the future (e.g. when new tables are created).
         new_limit = limit || old_col.limit
 
         add_column(table, new, new_type,
-                   limit: new_limit,
-                   precision: old_col.precision,
-                   scale: old_col.scale)
+          limit: new_limit,
+          precision: old_col.precision,
+          scale: old_col.scale)
 
         # We set the default value _after_ adding the column so we don't end up
         # updating any existing data with the default value. This isn't

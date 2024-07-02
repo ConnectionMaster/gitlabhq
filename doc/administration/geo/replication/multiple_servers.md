@@ -66,7 +66,7 @@ The following steps enable a GitLab site to serve as the Geo **primary** site.
 ### Step 1: Configure the **primary** frontend nodes
 
 NOTE:
-Avoid using [`geo_primary_role`](https://docs.gitlab.com/omnibus/roles/#gitlab-geo-roles) because it is intended for a single-node site.
+Do not use [`geo_primary_role`](https://docs.gitlab.com/omnibus/roles/#gitlab-geo-roles) because it is intended for a single-node site.
 
 1. Edit `/etc/gitlab/gitlab.rb` and add the following:
 
@@ -148,8 +148,8 @@ You can run the Geo tracking database on a single node as follows:
 
    ```shell
    gitlab-ctl pg-password-md5 gitlab_geo
-   # Enter password: <your_password_here>
-   # Confirm password: <your_password_here>
+   # Enter password: <your_tracking_db_password_here>
+   # Confirm password: <your_tracking_db_password_here>
    # fca0b89a972d69f00eb3ec98a5838484
    ```
 
@@ -194,7 +194,7 @@ After streaming replication is enabled in the secondary Geo site's read-replica 
 ### Step 4: Configure the frontend application nodes on the Geo **secondary** site
 
 NOTE:
-Avoid using [`geo_secondary_role`](https://docs.gitlab.com/omnibus/roles/#gitlab-geo-roles) because it is intended for a single-node site.
+Do not use [`geo_secondary_role`](https://docs.gitlab.com/omnibus/roles/#gitlab-geo-roles) because it is intended for a single-node site.
 
 In the minimal [architecture diagram](#architecture-overview) above, there are two
 machines running the GitLab application services. These services are enabled

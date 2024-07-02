@@ -20,7 +20,7 @@ By default, GitLab uses a single application database, referred to as the `main`
 
 To scale GitLab, you can configure GitLab to use multiple application databases.
 
-Due to [known issues](#known-issues), configuring GitLab with multiple databases is an [Experiment](../../policy/experiment-beta-support.md#experiment).
+Due to [known issues](#known-issues), configuring GitLab with multiple databases is in limited [beta](../../policy/experiment-beta-support.md#beta).
 
 After you have set up multiple databases, GitLab uses a second application database for
 [CI/CD features](../../ci/index.md), referred to as the `ci` database. We do not exclude hosting both databases on a single PostgreSQL instance.
@@ -40,16 +40,17 @@ databases. Some examples:
 ## Known issues
 
 - Once data is migrated to the `ci` database, you cannot migrate it back.
-- HA setups or PgBouncer setups are not yet supported by this procedure.
+- Significant downtime is expected for larger installations (database sizes of more 100 GB).
+- Running two databases [is not yet supported with Geo](https://gitlab.com/groups/gitlab-org/-/epics/8631).
 
 ## Migrate existing installations using a script
 
 > - A script for migrating existing Linux package installations was [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/368729) in GitLab 16.8.
 
-NOTE:
-If something unexpected happens during the migration, it is safe to start over.
-
 ### Existing Linux package installations
+
+This migration requires downtime.
+If something unexpected happens during the migration, it is safe to start over.
 
 #### Preparation
 
@@ -57,20 +58,20 @@ If something unexpected happens during the migration, it is safe to start over.
 
     - The database node that will store the `gitlabhq_production_ci` database needs enough space to store a copy of the existing database: we _duplicate_ `gitlabhq_production`. Run the following SQL query to find out how much space is needed. Add 25%, to ensure you will not run out of disk space.
 
-    ```shell
-    sudo gitlab-psql -c "SELECT pg_size_pretty( pg_database_size('gitlabhq_production') );"
-    ```
+      ```shell
+      sudo gitlab-psql -c "SELECT pg_size_pretty( pg_database_size('gitlabhq_production') );"
+      ```
 
     - During the process, a dump of the `gitlabhq_production` database needs to be temporarily stored on the filesystem of the node that will run the migration. Execute the following SQL statement to find out how much local disk space will be used. Add 25%, to ensure you will not run out of disk space.
 
-    ```shell
-    sudo gitlab-psql -c "select sum(pg_table_size(concat(table_schema,'.',table_name))) from information_schema.tables where table_catalog = 'gitlabhq_production' and table_type = 'BASE TABLE'"
-    ```
+      ```shell
+      sudo gitlab-psql -c "select sum(pg_table_size(concat(table_schema,'.',table_name))) from information_schema.tables where table_catalog = 'gitlabhq_production' and table_type = 'BASE TABLE'"
+      ```
 
 1. Plan for downtime. The downtime is dependent on the size of the `gitlabhq_production` database.
 
-    - We dump `gitlabhq_production` and restore it into a new `gitlabhq_production_ci` database. Database sizes below 100 GB should be done within 30 minutes.
-    - We advise to also plan some time for smaller tasks like modifying the configuration.
+   - We dump `gitlabhq_production` and restore it into a new `gitlabhq_production_ci` database. Database sizes below 50 GB should be done within 30 minutes. Larger databases need more time. For example, a 100 GB database needs 1-2 hours to be copied to the new database.
+   - We advise to also plan some time for smaller tasks like modifying the configuration.
 
 1. Create the new `gitlabhq_production_ci` database:
 
@@ -191,6 +192,33 @@ If something unexpected happens during the migration, it is safe to start over.
    ```
 
 1. Configure GitLab to [use multiple databases](#set-up-multiple-databases).
+
+### Existing Linux package installations using streaming replication
+
+To reduce downtime, you can set up streaming replication to migrate existing data from the `main` database to the `ci` database.
+This procedure results in two database clusters.
+
+This procedure can be both time- and resource-consuming.
+Consider their trade-offs with availability before executing it.
+
+To set up streaming replication for creating two database clusters:
+
+1. Set up streaming replication from the GitLab database to new database instance.
+1. When the new replica has caught up, [disable background migrations](../../development/database/batched_background_migrations.md#enable-or-disable-background-migrations).
+1. [Ensure all background migrations are finished](../../update/background_migrations.md#check-the-status-of-batched-background-migrations).
+1. Stop GitLab, except for PostgreSQL:
+
+   ```shell
+   sudo gitlab-ctl stop
+   sudo gitlab-ctl start postgresql
+   ```
+
+1. After the replication is complete, stop the streaming replication, and promote the replica to a primary instance.
+   You now have two database clusters, one for `main`, and one for `ci`.
+1. Configure GitLab to [use multiple databases](#set-up-multiple-databases).
+
+For more information on how to set up Streaming Replication,
+see [PostgreSQL replication and failover for Linux package installations](replication_and_failover.md).
 
 ## Set up multiple databases
 

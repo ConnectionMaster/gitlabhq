@@ -298,13 +298,10 @@ RSpec.describe Issue, feature_category: :team_planning do
       end
 
       it_behaves_like 'internal event tracking' do
-        let(:issue) { create(:issue) }
-        let(:project) { issue.project }
-        let(:user) { issue.author }
+        let(:project) { reusable_project }
         let(:event) { Gitlab::UsageDataCounters::IssueActivityUniqueCounter::ISSUE_CREATED }
-        let(:namespace) { project.namespace }
 
-        subject(:service_action) { issue }
+        subject { create(:issue, project: reusable_project, author: user) }
       end
     end
 
@@ -337,6 +334,27 @@ RSpec.describe Issue, feature_category: :team_planning do
           expect(issue.namespace).to eq(issue.project.project_namespace)
         end
       end
+    end
+  end
+
+  describe 'scopes for preloading' do
+    before_all do
+      create(:issue, project: reusable_project)
+    end
+
+    describe '.preload_namespace' do
+      subject(:preload_namespace) { described_class.in_projects(reusable_project).preload_namespace }
+
+      it { expect(preload_namespace.first.association(:namespace)).to be_loaded }
+    end
+
+    describe '.preload_routables' do
+      subject(:preload_routables) { described_class.in_projects(reusable_project).preload_routables }
+
+      it { expect(preload_routables.first.association(:project)).to be_loaded }
+      it { expect(preload_routables.first.project.association(:route)).to be_loaded }
+      it { expect(preload_routables.first.project.association(:namespace)).to be_loaded }
+      it { expect(preload_routables.first.project.namespace.association(:route)).to be_loaded }
     end
   end
 
@@ -1189,8 +1207,8 @@ RSpec.describe Issue, feature_category: :team_planning do
     end
 
     context 'with a group level issue' do
-      let(:group) { create(:group) }
-      let(:issue) { build(:work_item, namespace: group) }
+      let_it_be(:group) { create(:group) }
+      let(:issue) { build(:work_item, :group_level, namespace: group) }
 
       context 'when readable_by? is false' do
         it 'returns false' do
@@ -1200,19 +1218,37 @@ RSpec.describe Issue, feature_category: :team_planning do
       end
 
       context 'when readable_by? is true' do
+        before do
+          allow(issue).to receive(:readable_by?).and_return true
+        end
+
+        it { is_expected.to eq(true) }
+
         context 'when user.can_read_all_resources? is true' do
-          it 'returns true' do
+          before do
             allow(user).to receive(:can_read_all_resources?).and_return true
+          end
+
+          it { is_expected.to eq(true) }
+
+          it 'does not check project external authorization' do
+            expect(::Gitlab::ExternalAuthorization).not_to receive(:access_allowed?)
 
             is_expected.to eq(true)
           end
         end
 
         context 'when user.can_read_all_resources? is false' do
-          it 'returns false' do
+          before do
             allow(user).to receive(:can_read_all_resources?).and_return false
+          end
 
-            is_expected.to eq(false)
+          it { is_expected.to eq(true) }
+
+          it 'does not check project external authorization' do
+            expect(::Gitlab::ExternalAuthorization).not_to receive(:access_allowed?)
+
+            is_expected.to eq(true)
           end
         end
       end
@@ -2074,30 +2110,6 @@ RSpec.describe Issue, feature_category: :team_planning do
     it { is_expected.to eq(WorkItems::Type.default_by_type(::Issue::DEFAULT_ISSUE_TYPE)) }
   end
 
-  describe '#unsubscribe_email_participant' do
-    let_it_be(:email) { 'email@example.com' }
-
-    let_it_be(:issue1) do
-      create(:issue, project: reusable_project, external_author: email) do |issue|
-        issue.issue_email_participants.create!(email: email)
-      end
-    end
-
-    let_it_be(:issue2) do
-      create(:issue, project: reusable_project, external_author: email) do |issue|
-        issue.issue_email_participants.create!(email: email)
-      end
-    end
-
-    it 'deletes email for issue1' do
-      expect { issue1.unsubscribe_email_participant(email) }.to change { issue1.issue_email_participants.count }.by(-1)
-    end
-
-    it 'does not delete email for issue2 when issue1 is used' do
-      expect { issue1.unsubscribe_email_participant(email) }.not_to change { issue2.issue_email_participants.count }
-    end
-  end
-
   describe '#update_search_data!' do
     it 'copies namespace_id to search data' do
       issue = create(:issue)
@@ -2130,8 +2142,8 @@ RSpec.describe Issue, feature_category: :team_planning do
 
     context 'when issue belongs directly to a project' do
       let_it_be_with_reload(:project_issue) { create(:issue, project: reusable_project) }
-      let_it_be(:project_reporter) { create(:user).tap { |u| reusable_project.add_reporter(u) } }
-      let_it_be(:project_guest) { create(:user).tap { |u| reusable_project.add_guest(u) } }
+      let_it_be(:project_reporter) { create(:user, reporter_of: reusable_project) }
+      let_it_be(:project_guest) { create(:user, guest_of: reusable_project) }
 
       let(:issue_subject) { project_issue }
 
@@ -2187,8 +2199,8 @@ RSpec.describe Issue, feature_category: :team_planning do
     context 'when issue belongs directly to the group' do
       let_it_be(:group) { create(:group) }
       let_it_be_with_reload(:group_issue) { create(:issue, :group_level, namespace: group) }
-      let_it_be(:group_reporter) { create(:user).tap { |u| group.add_reporter(u) } }
-      let_it_be(:group_guest) { create(:user).tap { |u| group.add_guest(u) } }
+      let_it_be(:group_reporter) { create(:user, reporter_of: group) }
+      let_it_be(:group_guest) { create(:user, guest_of: group) }
 
       let(:issue_subject) { group_issue }
 
@@ -2278,6 +2290,102 @@ RSpec.describe Issue, feature_category: :team_planning do
       end
 
       it { is_expected.to be_truthy }
+    end
+  end
+
+  shared_examples 'a markdown field that parses work item references' do
+    shared_examples 'a html field with work item information' do
+      it 'parses the work item reference' do
+        html_link = Nokogiri::HTML.fragment(issue[:"#{field}_html"]).css('a').first
+
+        expect(html_link.text).to eq(expected_link_text)
+        expect(html_link[:href]).to eq(work_item_path)
+      end
+    end
+
+    let_it_be(:group) { create(:group) }
+
+    context 'when it is a group level issue', :aggregate_failures do
+      let(:issue) { create(:issue, :group_level, namespace: group, field => work_item_reference) }
+      let(:work_item_path) { Gitlab::UrlBuilder.build(group_work_item, only_path: true) }
+      let(:expected_link_text) { group_work_item.to_reference }
+
+      context 'when field contains a work item reference (URL)' do
+        let(:work_item_path) { Gitlab::UrlBuilder.build(group_work_item) }
+        let(:work_item_reference) { work_item_path }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a work item reference (short)' do
+        let(:work_item_reference) { group_work_item.to_reference }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a work item reference (full)' do
+        let(:work_item_reference) { group_work_item.to_reference(full: true) }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a project level work item reference (URL)' do
+        let(:work_item_path) { Gitlab::UrlBuilder.build(project_work_item) }
+        let(:work_item_reference) { work_item_path }
+        let(:expected_link_text) { "#{reusable_project.full_path}##{project_work_item.iid}" }
+
+        it_behaves_like 'a html field with work item information'
+      end
+    end
+
+    context 'when it is a project level issue', :aggregate_failures do
+      let(:issue) { create(:issue, :task, project: reusable_project, field => work_item_reference) }
+      let(:work_item_path) { Gitlab::UrlBuilder.build(project_work_item, only_path: true) }
+      let(:expected_link_text) { group_work_item.to_reference }
+
+      context 'when field contains a work item reference (URL)' do
+        let(:work_item_path) { Gitlab::UrlBuilder.build(project_work_item) }
+        let(:work_item_reference) { work_item_path }
+        let(:expected_link_text) { project_work_item.to_reference }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a work item reference (short)' do
+        let(:work_item_reference) { project_work_item.to_reference }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a work item reference (full)' do
+        let(:work_item_reference) { project_work_item.to_reference(full: true) }
+
+        it_behaves_like 'a html field with work item information'
+      end
+
+      context 'when field contains a group level work item reference (URL)' do
+        let(:work_item_path) { Gitlab::UrlBuilder.build(group_work_item) }
+        let(:work_item_reference) { work_item_path }
+        let(:expected_link_text) { "#{group.full_path}##{group_work_item.iid}" }
+
+        it_behaves_like 'a html field with work item information'
+      end
+    end
+  end
+
+  describe '#title_html' do
+    it_behaves_like 'a markdown field that parses work item references' do
+      let_it_be(:group_work_item) { create(:work_item, :group_level, namespace: group) }
+      let_it_be(:project_work_item) { create(:work_item, :task, project: reusable_project) }
+      let(:field) { :title }
+    end
+  end
+
+  describe '#description_html' do
+    it_behaves_like 'a markdown field that parses work item references' do
+      let_it_be(:group_work_item) { create(:work_item, :group_level, namespace: group) }
+      let_it_be(:project_work_item) { create(:work_item, :task, project: reusable_project) }
+      let(:field) { :description }
     end
   end
 end

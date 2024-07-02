@@ -18,9 +18,6 @@ import {
 } from '~/vue_shared/components/filtered_search_bar/constants';
 
 export default {
-  i18n: {
-    searchInputPlaceholder: __('Search or filter results…'),
-  },
   components: {
     FilteredSearchBar,
     GlSorting,
@@ -64,7 +61,10 @@ export default {
     },
     sortOptions: {
       type: Array,
-      required: true,
+      required: false,
+      default() {
+        return [];
+      },
     },
     activeSortOption: {
       type: Object,
@@ -74,17 +74,28 @@ export default {
       type: Boolean,
       required: true,
     },
+    searchInputPlaceholder: {
+      type: String,
+      required: false,
+      default: __('Search or filter results…'),
+    },
   },
   computed: {
     filteredSearchValue() {
       const tokens = prepareTokens(
         urlQueryToFilter(this.filteredSearchQuery, {
           filteredSearchTermKey: this.filteredSearchTermKey,
-          filterNamesAllowList: [FILTERED_SEARCH_TERM],
+          filterNamesAllowList: [
+            FILTERED_SEARCH_TERM,
+            ...this.filteredSearchTokens.map(({ type }) => type),
+          ],
         }),
       );
 
       return tokens.length ? tokens : [TOKEN_EMPTY_SEARCH_TERM];
+    },
+    shouldShowSort() {
+      return this.sortOptions.length;
     },
   },
   methods: {
@@ -93,6 +104,7 @@ export default {
         'filter',
         filterToQueryObject(processFilters(filters), {
           filteredSearchTermKey: this.filteredSearchTermKey,
+          shouldExcludeEmpty: true,
         }),
       );
     },
@@ -110,14 +122,15 @@ export default {
           :initial-filter-value="filteredSearchValue"
           sync-filter-and-sort
           :recent-searches-storage-key="filteredSearchRecentSearchesStorageKey"
-          :search-input-placeholder="$options.i18n.searchInputPlaceholder"
+          :search-input-placeholder="searchInputPlaceholder"
+          terms-as-tokens
           @onFilter="onFilter"
         />
       </div>
       <div v-if="$scopedSlots.default">
         <slot></slot>
       </div>
-      <div>
+      <div v-if="shouldShowSort" data-testid="groups-projects-sort">
         <gl-sorting
           class="gl-display-flex"
           dropdown-class="gl-w-full"

@@ -8,10 +8,21 @@ import {
 } from '@gitlab/cluster-client';
 import { connectionStatus } from '~/environments/graphql/resolvers/kubernetes/constants';
 import { updateConnectionStatus } from '~/environments/graphql/resolvers/kubernetes/k8s_connection_status';
+import { s__ } from '~/locale';
 
 export const handleClusterError = async (err) => {
   if (!err.response) {
     throw err;
+  }
+
+  const contentType = err.response.headers.get('Content-Type');
+
+  if (contentType !== 'application/json') {
+    throw new Error(
+      s__(
+        'KubernetesDashboard|There was a problem fetching cluster information. Refresh the page and try again.',
+      ),
+    );
   }
 
   const errorData = await err.response.json();
@@ -102,7 +113,6 @@ export const getK8sPods = ({
   query,
   configuration,
   namespace = '',
-  enableWatch = false,
   mapFn = mapWorkloadItem,
   queryField = 'k8sPods',
 }) => {
@@ -115,17 +125,15 @@ export const getK8sPods = ({
 
   return podsApi
     .then((res) => {
-      if (enableWatch) {
-        const watchPath = buildWatchPath({ resource: 'pods', namespace });
-        watchWorkloadItems({
-          client,
-          query,
-          configuration,
-          namespace,
-          watchPath,
-          queryField,
-        });
-      }
+      const watchPath = buildWatchPath({ resource: 'pods', namespace });
+      watchWorkloadItems({
+        client,
+        query,
+        configuration,
+        namespace,
+        watchPath,
+        queryField,
+      });
 
       const data = res?.items || [];
       return data.map(mapFn);

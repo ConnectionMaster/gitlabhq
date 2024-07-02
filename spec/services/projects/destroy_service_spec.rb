@@ -3,6 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publisher, feature_category: :groups_and_projects do
+  include ContainerRegistryHelpers
   include ProjectForksHelper
   include BatchDestroyDependentAssociationsHelper
 
@@ -38,6 +39,10 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
   end
 
   shared_examples 'deleting the project with pipeline and build' do
+    before do
+      stub_gitlab_api_client_to_support_gitlab_api(supported: false)
+    end
+
     context 'with pipeline and build related records', :sidekiq_inline do # which has optimistic locking
       let!(:pipeline) { create(:ci_pipeline, project: project) }
       let!(:build) { create(:ci_build, :artifacts, :with_runner_session, pipeline: pipeline) }
@@ -419,7 +424,7 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
       context 'when image repository tags deletion succeeds' do
         it 'removes tags' do
           expect_next_instance_of(Projects::ContainerRepository::DestroyService) do |service|
-            expect(service).to receive(:execute).and_return({ status: :sucess })
+            expect(service).to receive(:execute).and_return({ status: :success })
           end
 
           destroy_project(project, user)
@@ -641,7 +646,7 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
   end
 
   context 'when project has project bots' do
-    let!(:project_bot) { create(:user, :project_bot).tap { |user| project.add_maintainer(user) } }
+    let!(:project_bot) { create(:user, :project_bot, maintainer_of: project) }
 
     it 'deletes bot user as well' do
       expect_next_instance_of(Users::DestroyService, user) do |instance|
@@ -674,6 +679,10 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
   end
 
   context 'error while destroying', :sidekiq_inline do
+    before do
+      stub_gitlab_api_client_to_support_gitlab_api(supported: false)
+    end
+
     let!(:pipeline) { create(:ci_pipeline, project: project) }
     let!(:builds) { create_list(:ci_build, 2, :artifacts, pipeline: pipeline) }
     let!(:build_trace) { create(:ci_build_trace_chunk, build: builds[0]) }
@@ -694,7 +703,7 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
     end
   end
 
-  context 'associations destoyed in batches' do
+  context 'associations destroyed in batches' do
     let!(:merge_request) { create(:merge_request, source_project: project) }
     let!(:issue) { create(:issue, project: project) }
     let!(:label) { create(:label, project: project) }
@@ -715,6 +724,26 @@ RSpec.describe Projects::DestroyService, :aggregate_failures, :event_store_publi
       ].flatten
 
       expect(query_recorder.log).to include(*expected_queries)
+    end
+
+    context 'fails to destroy an association' do
+      let!(:pipeline) { create(:ci_pipeline, project: project) }
+      let!(:pipeline_artifact) { create(:ci_pipeline_artifact, pipeline: pipeline) }
+
+      before do
+        destroy_pipeline_double = instance_double('::Ci::DestroyPipelineService')
+
+        allow(::Ci::DestroyPipelineService)
+          .to receive(:new)
+          .and_return(destroy_pipeline_double)
+
+        allow(destroy_pipeline_double).to receive(:execute)
+      end
+
+      it 'raises a clear error message about the failed deletion' do
+        expect(destroy_project(project, user)).to be_falsey
+        expect(project.delete_error).to eq 'Cannot delete record because dependent pipeline artifacts exist'
+      end
     end
   end
 

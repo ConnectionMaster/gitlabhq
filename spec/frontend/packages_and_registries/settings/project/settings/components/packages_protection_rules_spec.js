@@ -31,14 +31,15 @@ describe('Packages protection rules project settings', () => {
   const $toast = { show: jest.fn() };
 
   const findSettingsBlock = () => wrapper.findComponent(SettingsBlock);
-  const findTable = () => extendedWrapper(wrapper.findByRole('table', /protected packages/i));
+  const findTable = () =>
+    extendedWrapper(wrapper.findByRole('table', { name: /protected packages/i }));
   const findTableBody = () => extendedWrapper(findTable().findAllByRole('rowgroup').at(1));
   const findTableRow = (i) => extendedWrapper(findTableBody().findAllByRole('row').at(i));
   const findTableRowButtonDelete = (i) => findTableRow(i).findByRole('button', { name: /delete/i });
   const findTableLoadingIcon = () => wrapper.findComponent(GlLoadingIcon);
   const findProtectionRuleForm = () => wrapper.findComponent(PackagesProtectionRuleForm);
   const findAddProtectionRuleButton = () =>
-    wrapper.findByRole('button', { name: /add package protection rule/i });
+    wrapper.findByRole('button', { name: /add protection rule/i });
   const findAlert = () => wrapper.findByRole('alert');
   const findModal = () => wrapper.findComponent(GlModal);
 
@@ -197,7 +198,7 @@ describe('Packages protection rules project settings', () => {
           .mockResolvedValueOnce(packagesProtectionRuleQueryPayload());
 
         const findPaginationButtonPrev = () =>
-          extendedWrapper(findPagination()).findByRole('button', { name: 'Previous' });
+          extendedWrapper(findPagination()).findByRole('button', { name: /previous/i });
 
         beforeEach(async () => {
           createComponent({ packagesProtectionRuleQueryResolver });
@@ -236,7 +237,7 @@ describe('Packages protection rules project settings', () => {
           );
 
         const findPaginationButtonNext = () =>
-          extendedWrapper(findPagination()).findByRole('button', { name: 'Next' });
+          extendedWrapper(findPagination()).findByRole('button', { name: /next/i });
 
         beforeEach(async () => {
           createComponent({ packagesProtectionRuleQueryResolver });
@@ -259,10 +260,10 @@ describe('Packages protection rules project settings', () => {
       });
     });
 
-    describe('column "Push protected up to access level" with selectbox (combobox)', () => {
+    describe('column "Minimum access level for push" with selectbox (combobox)', () => {
       const findComboboxInTableRow = (i) =>
         extendedWrapper(
-          findTableRow(i).findByRole('combobox', { name: /push protected up to access level/i }),
+          findTableRow(i).findByRole('combobox', { name: /minimum access level for push/i }),
         );
 
       it('contains combobox with respective access level', async () => {
@@ -273,7 +274,7 @@ describe('Packages protection rules project settings', () => {
         expect(findComboboxInTableRow(0).isVisible()).toBe(true);
         expect(findComboboxInTableRow(0).attributes('disabled')).toBeUndefined();
         expect(findComboboxInTableRow(0).element.value).toBe(
-          packagesProtectionRulesData[0].pushProtectedUpToAccessLevel,
+          packagesProtectionRulesData[0].minimumAccessLevelForPush,
         );
       });
 
@@ -282,7 +283,7 @@ describe('Packages protection rules project settings', () => {
 
         await waitForPromises();
 
-        ['Developer', 'Maintainer', 'Owner'].forEach((optionName) => {
+        ['Maintainer', 'Owner', 'Administrator'].forEach((optionName) => {
           const selectOption = findComboboxInTableRow(0).findByRole('option', { name: optionName });
           expect(selectOption.exists()).toBe(true);
         });
@@ -291,7 +292,7 @@ describe('Packages protection rules project settings', () => {
       describe('when value changes', () => {
         const accessLevelValueOwner = 'OWNER';
         const accessLevelValueMaintainer = 'MAINTAINER';
-        const accessLevelValueDeveloper = 'DEVELOPER';
+        const accessLevelValueAdmin = 'ADMIN';
 
         it('only changes the value of the selectbox in the same row', async () => {
           createComponent();
@@ -303,8 +304,8 @@ describe('Packages protection rules project settings', () => {
           expect(findComboboxInTableRow(0).props('value')).toBe(accessLevelValueOwner);
 
           expect(findComboboxInTableRow(1).props('value')).toBe(accessLevelValueMaintainer);
-          await findComboboxInTableRow(1).setValue(accessLevelValueDeveloper);
-          expect(findComboboxInTableRow(1).props('value')).toBe(accessLevelValueDeveloper);
+          await findComboboxInTableRow(1).setValue(accessLevelValueAdmin);
+          expect(findComboboxInTableRow(1).props('value')).toBe(accessLevelValueAdmin);
 
           expect(findComboboxInTableRow(0).props('value')).toBe(accessLevelValueOwner);
         });
@@ -324,7 +325,7 @@ describe('Packages protection rules project settings', () => {
           expect(updatePackagesProtectionRuleMutationResolver).toHaveBeenCalledWith({
             input: {
               id: packagesProtectionRulesData[0].id,
-              pushProtectedUpToAccessLevel: accessLevelValueOwner,
+              minimumAccessLevelForPush: accessLevelValueOwner,
             },
           });
         });
@@ -424,19 +425,19 @@ describe('Packages protection rules project settings', () => {
         });
 
         describe('when button is clicked', () => {
-          it('binds modal "confirmation for delete action"', async () => {
+          it('renders the "delete container protection rule" confirmation modal', async () => {
             createComponent();
 
             await waitForPromises();
 
+            await findTableRowButtonDelete(0).trigger('click');
+
             const modalId = getBinding(findTableRowButtonDelete(0).element, 'gl-modal');
 
             expect(findModal().props('modal-id')).toBe(modalId);
-            expect(findModal().props('title')).toBe(
-              'Are you sure you want to delete the package protection rule?',
-            );
-            expect(findModal().text()).toBe(
-              'Users with at least the Developer role for this project will be able to publish, edit, and delete packages.',
+            expect(findModal().props('title')).toBe('Delete package protection rule?');
+            expect(findModal().text()).toContain(
+              'Users with at least the Developer role for this project will be able to publish, edit, and delete packages with this package name.',
             );
           });
         });

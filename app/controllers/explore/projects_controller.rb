@@ -112,13 +112,13 @@ class Explore::ProjectsController < Explore::ApplicationController
     projects = ProjectsFinder.new(current_user: current_user, params: params.merge(finder_params)).execute
 
     projects = preload_associations(projects)
-    projects = projects.page(params[:page]).without_count
+    projects = projects.page(pagination_params[:page]).without_count
 
     prepare_projects_for_rendering(projects)
   end
 
   def load_topics
-    @topics = Projects::TopicsFinder.new(params: params.permit(:search)).execute.page(params[:page]).without_count
+    @topics = Projects::TopicsFinder.new(params: params.permit(:search)).execute.page(pagination_params[:page]).without_count
   end
 
   def load_topic
@@ -164,7 +164,7 @@ class Explore::ProjectsController < Explore::ApplicationController
   end
 
   def show_alert_if_search_is_disabled
-    if current_user || params[:name].blank? && params[:search].blank? || !html_request? || Feature.disabled?(:disable_anonymous_project_search, type: :ops)
+    if current_user || (params[:name].blank? && params[:search].blank?) || !html_request? || Feature.disabled?(:disable_anonymous_project_search, type: :ops)
       return
     end
 

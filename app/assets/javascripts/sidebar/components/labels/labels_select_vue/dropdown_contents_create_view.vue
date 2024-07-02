@@ -54,8 +54,8 @@ export default {
 </script>
 
 <template>
-  <div class="labels-select-contents-create js-labels-create">
-    <div class="dropdown-title d-flex gl-align-items-center pt-0 pb-2 gl-mb-0">
+  <div class="labels-select-contents-create">
+    <div class="dropdown-title gl-flex gl-items-center pt-0 pb-2 gl-mb-0">
       <gl-button
         :aria-label="__('Go back')"
         category="tertiary"
@@ -77,7 +77,7 @@ export default {
     <div class="dropdown-input">
       <gl-form-input
         v-model.trim="labelTitle"
-        :placeholder="__('Name new label')"
+        :placeholder="__('Label name')"
         :autofocus="true"
         data-testid="label-title"
       />
@@ -93,10 +93,10 @@ export default {
           @click.prevent="handleColorClick(color)"
         />
       </div>
-      <div class="color-input-container gl-display-flex">
+      <div class="color-input-container gl-flex">
         <gl-form-input
           v-model.trim="selectedColor"
-          class="gl-rounded-top-right-none gl-rounded-bottom-right-none gl-mr-n1 gl-mb-2 gl-w-8"
+          class="gl-rounded-top-right-none gl-rounded-bottom-right-none -gl-mr-1 gl-mb-2 gl-w-8"
           type="color"
           :value="selectedColor"
           :placeholder="__('Open color picker')"
@@ -114,7 +114,7 @@ export default {
         :disabled="disableCreate"
         category="primary"
         variant="confirm"
-        class="float-left d-flex gl-align-items-center"
+        class="float-left gl-flex gl-items-center"
         data-testid="create-click"
         @click="handleCreateClick"
       >

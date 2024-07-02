@@ -2,22 +2,36 @@
 stage: Create
 group: Code Creation
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: "Troubleshooting tips for common problems in Code Suggestions."
 ---
 
 # Troubleshooting Code Suggestions
 
 DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** GitLab.com, Self-managed, GitLab Dedicated. GitLab Duo Pro required.
+**Tier:** Premium or Ultimate with GitLab Duo Pro
+**Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
 When working with GitLab Duo Code Suggestions, you might encounter the following issues.
 
+## Verify Code Suggestions status in Admin Area
+
+Prerequisites:
+
+- You must be an administrator of the instance.
+
+You can verify that Code Suggestions is set up correctly on the server. Because you are checking this on the server side and not for a specific user, it does not guarantee that Code Suggestions will work for a specific user on client side.
+
+1. On the left sidebar, at the bottom, select **Admin Area**.
+1. Select **GitLab Duo Pro**.
+
+A flash message with Code Suggestions check status is displayed at the top of the page.
+
 ## Code Suggestions are not displayed
 
-If Code Suggestions are not displayed:
+If Code Suggestions are not displayed, follow these steps:
 
-- Ensure you have [installed a supported IDE extension](supported_extensions.md#supported-editor-extensions)
-- Ensure your administrator has [assigned you a seat](../../../../subscriptions/subscription-add-ons.md#assign-gitlab-duo-pro-seats).
+1. Ensure you have [installed a supported IDE extension](supported_extensions.md#supported-editor-extensions)
+1. Ensure your administrator has [assigned you a seat](../../../../subscriptions/subscription-add-ons.md#assign-gitlab-duo-pro-seats).
 
 If Code Suggestions are still not displayed, try the following troubleshooting steps.
 
@@ -27,7 +41,7 @@ If you are a self-managed user, ensure that Code Suggestions for the [GitLab Web
 
 1. On the left sidebar, select **Extensions > GitLab Workflow**.
 1. Select **Settings** (**{settings}**), and then select **Extension Settings**.
-1. In **GitLab > AI Assisted Code Suggestions**, select the **Enable code completion**
+1. In **GitLab > AI Assisted Code Suggestions**, select the **GitLab Duo Code Suggestions**
    checkbox.
 
 ### View Code Suggestions logs
@@ -46,6 +60,14 @@ If the settings are enabled, but Code Suggestions are still not displayed, try t
 ```
 
 To enable debug logging for the Language Server (LS), enable **GitLab › Ls: Debug**.
+
+### Code Suggestions not displayed in JetBrains IDEs
+
+1. Ensure you have properly [set up the extension](https://gitlab.com/gitlab-org/editor-extensions/gitlab-intellij-plugin#setup).
+1. From the **Tools > GitLab Duo** menu, select **Verify setup**. Make sure the Health Check passes.
+1. Verify that your JetBrains IDE natively supports the language of the file you are
+   working on. Go to **Settings** > **Languages & Frameworks** to see the full list of
+   languages and frameworks supported by your JetBrains IDE.
 
 ### Code Suggestions not displayed in Microsoft Visual Studio
 

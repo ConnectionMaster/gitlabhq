@@ -20,7 +20,7 @@ export default {
     copyLinkText: __('Copy link'),
     assignUserText: __('Assign to commenting user'),
     unassignUserText: __('Unassign from commenting user'),
-    reportAbuseText: __('Report abuse to administrator'),
+    reportAbuseText: __('Report abuse'),
   },
   components: {
     EmojiPicker: () => import('~/emoji/components/picker.vue'),
@@ -176,7 +176,7 @@ export default {
       v-if="isWorkItemAuthor"
       v-gl-tooltip
       :title="displayAuthorBadgeText"
-      class="gl-mr-3 gl-display-none gl-sm-display-block"
+      class="gl-mr-3 gl-hidden sm:gl-block"
       data-testid="author-badge"
     >
       {{ __('Author') }}
@@ -184,7 +184,7 @@ export default {
     <user-access-role-badge
       v-if="maxAccessLevelOfAuthor"
       v-gl-tooltip
-      class="gl-mr-3 gl-display-none gl-sm-display-block"
+      class="gl-mr-3 gl-hidden sm:gl-block"
       :title="displayMemberBadgeText"
       data-testid="max-access-level-badge"
     >
@@ -193,7 +193,7 @@ export default {
     <user-access-role-badge
       v-else-if="isAuthorContributor"
       v-gl-tooltip
-      class="gl-mr-3 gl-display-none gl-sm-display-block"
+      class="gl-mr-3 gl-hidden sm:gl-block"
       :title="displayContributorBadgeText"
       data-testid="contributor-badge"
     >
@@ -223,7 +223,7 @@ export default {
       v-gl-tooltip
       icon="ellipsis_v"
       text-sr-only
-      placement="right"
+      placement="bottom-end"
       :toggle-text="$options.i18n.moreActionsText"
       :title="$options.i18n.moreActionsText"
       category="tertiary"

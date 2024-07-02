@@ -24,7 +24,7 @@ func (srv *smartHTTPServiceServerWithInfoRefs) InfoRefsUploadPack(r *gitalypb.In
 
 func TestGetInfoRefsHandler(t *testing.T) {
 	addr := startSmartHTTPServer(t, &smartHTTPServiceServerWithInfoRefs{
-		InfoRefsUploadPackFunc: func(r *gitalypb.InfoRefsRequest, s gitalypb.SmartHTTPService_InfoRefsUploadPackServer) error {
+		InfoRefsUploadPackFunc: func(_ *gitalypb.InfoRefsRequest, _ gitalypb.SmartHTTPService_InfoRefsUploadPackServer) error {
 			return grpcstatus.Error(grpccodes.Unavailable, "error")
 		},
 	})
@@ -33,7 +33,7 @@ func TestGetInfoRefsHandler(t *testing.T) {
 	r := httptest.NewRequest("GET", "/?service=git-upload-pack", nil)
 	a := &api.Response{GitalyServer: api.GitalyServer{Address: addr}}
 
-	handleGetInfoRefs(NewHttpResponseWriter(w), r, a)
+	handleGetInfoRefs(NewHTTPResponseWriter(w), r, a)
 	require.Equal(t, 503, w.Code)
 
 	msg := "The git server, Gitaly, is not available at this time. Please contact your administrator.\n"

@@ -41,9 +41,9 @@ export default {
       import(
         /* webpackChunkName: 'IntegrationSectionGooglePlay' */ '~/integrations/edit/components/sections/google_play.vue'
       ),
-    IntegrationSectionGoogleCloudArtifactRegistry: () =>
+    IntegrationSectionGoogleArtifactManagement: () =>
       import(
-        /* webpackChunkName: 'IntegrationSectionGoogleCloudArtifactRegistry' */ 'ee_component/integrations/edit/components/sections/google_cloud_artifact_registry.vue'
+        /* webpackChunkName: 'IntegrationSectionGoogleArtifactManagement' */ 'ee_component/integrations/edit/components/sections/google_artifact_management.vue'
       ),
     IntegrationSectionGoogleCloudIAM: () =>
       import(
@@ -77,7 +77,7 @@ export default {
 </script>
 <template>
   <section>
-    <h4 class="gl-mt-0">
+    <h4 v-if="section.title" class="gl-mt-0">
       {{ section.title
       }}<gl-badge
         v-if="section.plan"

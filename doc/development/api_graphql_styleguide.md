@@ -45,8 +45,7 @@ with anyone who may work in this part of the codebase in the future. You can fin
 [recording on YouTube](https://www.youtube.com/watch?v=-9L_1MWrjkg), and the slides on
 [Google Slides](https://docs.google.com/presentation/d/1qOTxpkTdHIp1CRjuTvO-aXg0_rUtzE3ETfLUdnBB5uQ/edit)
 and in [PDF](https://gitlab.com/gitlab-org/create-stage/uploads/8e78ea7f326b2ef649e7d7d569c26d56/GraphQL_Deep_Dive__Create_.pdf).
-Everything covered in this deep dive was accurate as of GitLab 11.9, and while specific
-details may have changed after that release, it should still serve as a good introduction.
+Specific details may have changed since then, but it should still serve as a good introduction.
 
 ## GraphiQL
 
@@ -249,41 +248,36 @@ N+1 problems can be discovered during development of a feature by:
 - Adding a [request spec](#testing-tips-and-tricks) that asserts there are no (or limited) N+1
   problems with the feature.
 
-## Types
+## Fields
+
+### Types
 
 We use a code-first schema, and we declare what type everything is in Ruby.
 
-For example, `app/graphql/types/issue_type.rb`:
+For example, `app/graphql/types/project_type.rb`:
 
 ```ruby
-graphql_name 'Issue'
+graphql_name 'Project'
 
-field :iid, GraphQL::Types::ID, null: true
-field :title, GraphQL::Types::String, null: true
-
-# we also have a method here that we've defined, that extends `field`
-markdown_field :title_html, null: true
-field :description, GraphQL::Types::String, null: true
-markdown_field :description_html, null: true
+field :full_path, GraphQL::Types::ID, null: true
+field :name, GraphQL::Types::String, null: true
 ```
 
-We give each type a name (in this case `Issue`).
+We give each type a name (in this case `Project`).
 
-The `iid`, `title` and `description` are _scalar_ GraphQL types.
-`iid` is a `GraphQL::Types::ID`, a special string type that signifies a unique ID.
-`title` and `description` are regular `GraphQL::Types::String` types.
-
-The old scalar types `GraphQL:ID`, `GraphQL::INT_TYPE`, `GraphQL::STRING_TYPE`,
-`GraphQL:BOOLEAN_TYPE`, and `GraphQL::FLOAT_TYPE` are no longer allowed. Use `GraphQL::Types::ID`,
-`GraphQL::Types::Int`, `GraphQL::Types::String`, `GraphQL::Types::Boolean`, and `GraphQL::Types::Float`.
+The `full_path` and `name` are of _scalar_ GraphQL types.
+`full_path` is a `GraphQL::Types::ID`
+(see [when to use `GraphQL::Types::ID`](#when-to-use-graphqltypesid)).
+`name` is a regular `GraphQL::Types::String` type.
+You can also declare [custom GraphQL data types](#gitlab-custom-scalars)
+for scalar data types (for example `TimeType`).
 
 When exposing a model through the GraphQL API, we do so by creating a
-new type in `app/graphql/types`. You can also declare custom GraphQL data types
-for scalar data types (for example `TimeType`).
+new type in `app/graphql/types`.
 
 When exposing properties in a type, make sure to keep the logic inside
 the definition as minimal as possible. Instead, consider moving any
-logic into a presenter:
+logic into a [presenter](reusing_abstractions.md#presenters):
 
 ```ruby
 class Types::MergeRequestType < BaseObject
@@ -359,6 +353,67 @@ def reply_id
   Gitlab::GlobalId.build(object, id: object.reply_id)
 end
 ```
+
+### When to use `GraphQL::Types::ID`
+
+When we use `GraphQL::Types::ID` the field becomes a GraphQL `ID` type, which is serialized as a JSON string.
+However, `ID` has a special significance for clients. The [GraphQL spec](https://spec.graphql.org/October2021/#sec-ID) says:
+
+> The ID scalar type represents a unique identifier, often used to refetch an object or as the key for a cache.
+
+The GraphQL spec does not clarify what the scope should be for an `ID`'s uniqueness. At GitLab we have
+decided that an `ID` must be at least unique by type name. Type name is the `graphql_name` of one our of `Types::` classes, for example `Project`, or `Issue`.
+
+Following this:
+
+- `Project.fullPath` should be an `ID` because there will be no other `Project` with that `fullPath` across the API, and the field is also an identifier.
+- `Issue.iid` _should not_ be an `ID` because there can be many `Issue` types that have the same `iid` across the API.
+  Treating it as an `ID` would be problematic if the client has a cache of `Issue`s from different projects.
+- `Project.id` normally would qualify to be an `ID` because there can only be one `Project` with that ID value -
+  except we use [Global ID types](#global-ids) instead of `ID` types for database ID values so we would type it as a Global ID instead.
+
+This is summarized in the following table:
+
+| Field purpose | Use `GraphQL::Types::ID`? |
+|---------------|---------------------------|
+| Full path | **{check-circle}** Yes |
+| Database ID | **{dotted-circle}** No |
+| IID | **{dotted-circle}** No |
+
+### `markdown_field`
+
+`markdown_field` is a helper method that wraps `field` and should always be used for
+fields that return rendered Markdown.
+
+This helper renders a model's Markdown field using the
+existing `MarkupHelper` with the context of the GraphQL query
+available to the helper.
+
+Having the context available to the helper is needed for redacting
+links to resources that the current user is not allowed to see.
+
+Because rendering the HTML can cause queries, the complexity of a
+these fields is raised by 5 above the default.
+
+The Markdown field helper can be used as follows:
+
+```ruby
+markdown_field :note_html, null: false
+```
+
+This would generate a field that renders the Markdown field `note`
+of the model. This could be overridden by adding the `method:`
+argument.
+
+```ruby
+markdown_field :body_html, null: false, method: :note
+```
+
+The field is given this description by default:
+
+> The GitLab Flavored Markdown rendering of `note`
+
+This can be overridden by passing a `description:` argument.
 
 ### Connection types
 
@@ -1121,12 +1176,12 @@ is a `HashMap` where the keys are textual descriptions, and the values are URLs.
 ### Subscription tier badges
 
 If a field or argument is available to higher subscription tiers than the other fields,
-add the [tier badge](documentation/styleguide/index.md#product-tier-badges) inline.
+add the [availability details inline](documentation/styleguide/availability_details.md#inline-availability-details).
 
 For example:
 
 ```ruby
-description: '**(ULTIMATE ALL)** Full path of a custom template.'
+description: 'Full path of a custom template. Premium and Ultimate only.'
 ```
 
 ## Authorization
@@ -1424,11 +1479,10 @@ See [GraphQL BatchLoader](graphql_guide/batchloader.md).
 ### Correct use of `Resolver#ready?`
 
 Resolvers have two public API methods as part of the framework: `#ready?(**args)` and `#resolve(**args)`.
-We can use `#ready?` to perform set-up, validation, or early-return without invoking `#resolve`.
+We can use `#ready?` to perform set-up or early-return without invoking `#resolve`.
 
 Good reasons to use `#ready?` include:
 
-- Validating mutually exclusive arguments.
 - Returning `Relation.none` if we know before-hand that no results are possible.
 - Performing setup such as initializing instance variables (although consider lazily initialized methods for this).
 
@@ -1445,6 +1499,8 @@ For this reason, whenever you call a resolver (mainly in tests because framework
 abstractions Resolvers should not be considered re-usable, finders are to be
 preferred), remember to call the `ready?` method and check the boolean flag
 before calling `resolve`! An example can be seen in our [`GraphqlHelpers`](https://gitlab.com/gitlab-org/gitlab/-/blob/2d395f32d2efbb713f7bc861f96147a2a67e92f2/spec/support/helpers/graphql_helpers.rb#L20-27).
+
+For validating arguments, [validators](https://graphql-ruby.org/fields/validation.html) are preferred over using `#ready?`.
 
 ### Negated arguments
 
@@ -2005,6 +2061,31 @@ See [Validation](https://graphql-ruby.org/fields/validation.html),
 [Nullability](https://graphql-ruby.org/fields/arguments.html#nullability) and
 [Default Values](https://graphql-ruby.org/fields/arguments.html#default-values) for more details.
 
+### Mutually exclusive arguments
+
+Arguments can be marked as mutually exclusive, ensuring that they are not provided at the same time.
+When more than one of the listed arguments are given, a top-level error will be added.
+
+Example:
+
+```ruby
+argument :user_id, GraphQL::Types::String, required: false
+argument :username, GraphQL::Types::String, required: false
+
+validates mutually_exclusive: [:user_id, :username]
+```
+
+When exactly one argument is required, you can use the `exactly_one_of` validator.
+
+Example:
+
+```ruby
+argument :group_path, GraphQL::Types::String, required: false
+argument :project_path, GraphQL::Types::String, required: false
+
+validates exactly_one_of: [:group_path, :project_path]
+```
+
 ### Keywords
 
 Each GraphQL `argument` defined is passed to the `#resolve` method
@@ -2160,6 +2241,13 @@ Example:
 ```ruby
 field :created_at, Types::TimeType, null: true, description: 'Timestamp of when the issue was created.'
 ```
+
+### Global ID scalars
+
+All of our [Global IDs](#global-ids) are custom scalars. They are
+[dynamically created](https://gitlab.com/gitlab-org/gitlab/-/blob/45b3c596ef8b181bc893bd3b71613edf66064936/app/graphql/types/global_id_type.rb#L46)
+from the abstract scalar class
+[`Types::GlobalIDType`](https://gitlab.com/gitlab-org/gitlab/-/blob/45b3c596ef8b181bc893bd3b71613edf66064936/app/graphql/types/global_id_type.rb#L4).
 
 ## Testing
 

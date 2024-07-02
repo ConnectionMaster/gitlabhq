@@ -3,6 +3,7 @@
 class Admin::ApplicationSettingsController < Admin::ApplicationController
   include InternalRedirect
   include IntegrationsHelper
+  include DefaultBranchProtection
 
   # NOTE: Use @application_setting in this controller when you need to access
   # application_settings after it has been modified. This is because the
@@ -36,8 +37,8 @@ class Admin::ApplicationSettingsController < Admin::ApplicationController
   feature_category :error_tracking, [:reset_error_tracking_access_token]
 
   VALID_SETTING_PANELS = %w[general repository
-                            ci_cd reporting metrics_and_profiling
-                            network preferences].freeze
+    ci_cd reporting metrics_and_profiling
+    network preferences].freeze
 
   # The current size of a sidekiq job's jid is 24 characters. The size of the
   # jid is an internal detail of Sidekiq, and they do not guarantee that it'll
@@ -153,11 +154,7 @@ class Admin::ApplicationSettingsController < Admin::ApplicationController
     params[:application_setting][:package_metadata_purl_types]&.delete("")
     params[:application_setting][:package_metadata_purl_types]&.map!(&:to_i)
 
-    if params[:application_setting].key?(:required_instance_ci_template)
-      if params[:application_setting][:required_instance_ci_template].empty?
-        params[:application_setting][:required_instance_ci_template] = nil
-      end
-    end
+    normalize_default_branch_params!(:application_setting)
 
     remove_blank_params_for!(:elasticsearch_aws_secret_access_key, :eks_secret_access_key)
 
@@ -181,6 +178,14 @@ class Admin::ApplicationSettingsController < Admin::ApplicationController
       *::ApplicationSettingsHelper.visible_attributes,
       *::ApplicationSettingsHelper.external_authorization_service_attributes,
       *ApplicationSetting.kroki_formats_attributes.keys.map { |key| "kroki_formats_#{key}".to_sym },
+      { default_branch_protection_defaults: [
+        :allow_force_push,
+        :developer_can_initial_push,
+        {
+          allowed_to_merge: [:access_level],
+          allowed_to_push: [:access_level]
+        }
+      ] },
       :can_create_organization,
       :lets_encrypt_notification_email,
       :lets_encrypt_terms_of_service_accepted,
@@ -190,12 +195,12 @@ class Admin::ApplicationSettingsController < Admin::ApplicationController
       :notes_create_limit,
       :pipeline_limit_per_project_user_sha,
       :default_branch_name,
-      disabled_oauth_sign_in_sources: [],
-      import_sources: [],
-      package_metadata_purl_types: [],
-      restricted_visibility_levels: [],
-      repository_storages_weighted: {},
-      valid_runner_registrars: []
+      { disabled_oauth_sign_in_sources: [],
+        import_sources: [],
+        package_metadata_purl_types: [],
+        restricted_visibility_levels: [],
+        repository_storages_weighted: {},
+        valid_runner_registrars: [] }
     ]
   end
 

@@ -12,7 +12,7 @@ recommends these word choices. In addition:
 
 - The GitLab handbook contains a list of
   [top misused terms](https://handbook.gitlab.com/handbook/communication/top-misused-terms/).
-- The documentation [style guide](../styleguide#language) includes details
+- The documentation [style guide](../styleguide/index.md#language) includes details
   about language and capitalization.
 - The GitLab handbook provides guidance on the [use of third-party trademarks](https://handbook.gitlab.com/handbook/legal/policies/product-third-party-trademarks-guidelines/#process-for-adding-third-party-trademarks-to-gitlab).
 
@@ -35,7 +35,7 @@ When possible, use the full phrase: **the `.gitlab-ci.yml` file**
 Although users can specify another name for their CI/CD configuration file,
 in most cases, use **the `.gitlab-ci.yml` file** instead.
 
-## `&`
+## `&` (ampersand)
 
 Do not use Latin abbreviations. Use **and** instead, unless you are documenting a UI element that uses an `&`.
 
@@ -180,6 +180,21 @@ For example:
 
 - You can view merge request analytics for a project. They are displayed on the Merge Request Analytics dashboard.
 
+## ancestor
+
+To refer to a [parent item](#parent) that's one or more level above in the hierarchy,
+use **ancestor**.
+
+Do not use **grandparent**.
+
+Examples:
+
+- An ancestor group, a group in the project's hierarchy.
+- An ancestor epic, an epic in the issue's hierarchy.
+- A group and all its ancestors.
+
+See also: [child](#child), [descendant](#descendant), and [subgroup](#subgroup).
+
 ## and/or
 
 Instead of **and/or**, use **or** or rewrite the sentence to spell out both options.
@@ -237,12 +252,16 @@ Try to avoid **below** when referring to an example or table in a documentation 
 
 - In the following example, the dog has fleas.
 
-## Beta
+## beta
 
-Use uppercase for **Beta**. For example: **The XYZ feature is in Beta.** or **This Beta release is ready to test.**
+Use lowercase for **beta**. For example:
+
+- The feature is in beta.
+- This is a beta feature.
+- This beta release is ready to test.
 
 You might also want to link to [this topic](../../../policy/experiment-beta-support.md#beta)
-when writing about Beta features.
+when writing about beta features.
 
 ## blacklist
 
@@ -346,10 +365,26 @@ You can omit **CI/CD** when the context is clear, especially after the first use
 
 Do not use **CI/CD minutes**. This term was renamed to [**compute minutes**](#compute-minutes).
 
+## child
+
+Always use as a compound noun.
+
+Examples:
+
+- child issue
+- child epic
+- child objective
+- child key result
+- child pipeline
+
+See also: [descendant](#descendant), [parent](#parent) and [subgroup](#subgroup).
+
 ## click
 
 Do not use **click**. Instead, use **select** with buttons, links, menu items, and lists.
 **Select** applies to more devices, while **click** is more specific to a mouse.
+
+However, you can make an exception for **right-click** and **click-through demo**.
 
 ## cloud licensing
 
@@ -409,7 +444,7 @@ Use **compute** for the resources used by runners to run CI/CD jobs.
 Related terms:
 
 - [**compute minutes**](#compute-minutes): How compute usage is calculated. For example, `400 compute minutes`.
-- [**compute quota**](../../../ci/pipelines/cicd_minutes.md): The limit of compute minutes that a namespace can use each month.
+- [**compute quota**](../../../ci/pipelines/compute_minutes.md): The limit of compute minutes that a namespace can use each month.
 - **compute usage**: The number of compute minutes that the namespace has used from the monthly quota.
 
 ## compute minutes
@@ -518,6 +553,21 @@ Use title case for the GitLab Dependency Proxy.
 ## deploy board
 
 Use lowercase for **deploy board**.
+
+## descendant
+
+To refer to a [child item](#child) that's one or more level below in the hierarchy,
+use **descendant**.
+
+Do not use **grandchild**.
+
+Examples:
+
+- An descendant project, a project in the group's hierarchy.
+- An descendant issue, an issue in the epic's hierarchy.
+- A group and all its descendants.
+
+See also: [ancestor](#ancestor), [child](#child), and [subgroup](#subgroup).
 
 ## Developer
 
@@ -699,12 +749,18 @@ Instead of:
 
 Use **expand** instead of **open** when you are talking about expanding or collapsing a section in the UI.
 
-## Experiment
+## experiment
 
-Use uppercase for **Experiment**. For example: **The XYZ feature is an Experiment.** or **This Experiment is ready to test.**
+Use lowercase for **experiment**. For example:
+
+- This feature is an experiment.
+- These features are experiments.
+- This experiment is ready to test.
+
+If you must, you can use **experimental**.
 
 You might also want to link to [this topic](../../../policy/experiment-beta-support.md#experiment)
-when writing about Experiment features.
+when writing about experimental features.
 
 ## export
 
@@ -809,6 +865,20 @@ For **GB** and **MB**, follow the [Microsoft guidance](https://learn.microsoft.c
 
 Use title case for **Geo**.
 
+## generally available, general availability
+
+Use lowercase for **generally available** and **general availability**.
+For example:
+
+- This feature is generally available.
+
+Use **generally available** more often. For example,
+do not say:
+
+- This feature has reached general availability.
+
+You can use **GA** to indicate general availability if you spell it out on first use.
+
 ## Git suggestions
 
 Use sentence case for **Git suggestions**.
@@ -877,7 +947,7 @@ Do not use **the `gitlab` chart**, **the GitLab Chart**, or **the cloud-native c
 You use the **GitLab Helm chart** to deploy **cloud-native GitLab** in a Kubernetes cluster.
 
 If you use it in a context of describing the
-[different installation methods](index.md#how-to-document-different-installation-methods).
+[different installation methods](index.md#how-to-document-different-installation-methods)
 use `Helm chart (Kubernetes)`.
 
 ## GitLab Pages
@@ -1083,6 +1153,22 @@ Instead of:
 - In GitLab 14.1 and higher...
 - In GitLab 14.1 and above...
 - In GitLab 14.1 and newer...
+
+## level
+
+If you can, avoid using `level` in the context of an instance, project, or group.
+
+Use:
+
+- This setting is turned on for the instance.
+- This setting is turned on for the group and its subgroups.
+- This setting is turned on for projects.
+
+Instead of:
+
+- This setting is turned on at the instance level.
+- This setting is turned on at the group level.
+- This is a project-level setting.
 
 ## list
 
@@ -1335,7 +1421,7 @@ The current product offerings are:
 - [GitLab self-managed](#gitlab-self-managed)
 - [GitLab Dedicated](#gitlab-dedicated)
 
-The [tier badges](index.md#available-product-tier-badges) reflect these offerings.
+The [availability details](availability_details.md) reflect these offerings.
 
 ## older
 
@@ -1447,6 +1533,26 @@ The docs should match the case in the UI, and the page name should be bold. For 
 
 - On the **Test cases** page, ...
 
+## parent
+
+Always use as a compound noun.
+
+Do not use **direct [ancestor](#ancestor)** or **ascendant**.
+
+Examples:
+
+- parent directory
+- parent group
+- parent project
+- parent commit
+- parent issue
+- parent item
+- parent epic
+- parent objective
+- parent pipeline
+
+See also: [child](#child), and [subgroup](#subgroup).
+
 ## permissions
 
 Do not use [**roles**](#roles) and **permissions** interchangeably. Each user is assigned a role. Each role includes a set of permissions.
@@ -1521,6 +1627,8 @@ we would talk to a colleague, and to avoid differentiation between `we` and `the
 - You should set the variable. (It's recommended.)
 - Set the variable. (It's required.)
 - You can set the variable. (It's optional.)
+
+See also [recommended steps](index.md#recommended-steps).
 
 ## register
 
@@ -1720,6 +1828,14 @@ Instead of:
 
 Use **select** with buttons, links, menu items, and lists. **Select** applies to more devices,
 while **click** is more specific to a mouse.
+
+However, you can make an exception for **right-click** and **click-through demo**.
+
+## self-hosted model
+
+Use **self-hosted model** (lowercase) to refer to a language model that's hosted by a customer, rather than GitLab.
+
+The language model might be an LLM (large language model), but it might not be.
 
 ## self-managed
 
@@ -2039,6 +2155,21 @@ Do not use **utilize**. Use **use** instead. It's more succinct and easier for n
 Use sentence case for **Value stream forecasting**. On first mention on a page, use **GitLab Duo Value stream forecasting**.
 
 Thereafter, use **Value stream forecasting** by itself.
+
+## version, v
+
+To describe versions of GitLab, use **GitLab `<version number>`**. For example:
+
+- You must have GitLab 16.0 or later.
+
+To describe other software, use the same style as the documentation for that software.
+For example:
+
+- In Kubernetes 1.4, you can...
+
+Pay attention to spacing by the letter **v**. In semantic versioning, no space exists after the **v**. For example:
+
+- v1.2.3
 
 ## via
 

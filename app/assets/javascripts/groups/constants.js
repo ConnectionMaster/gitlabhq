@@ -32,13 +32,13 @@ export const SORTING_ITEM_NAME = {
 };
 
 export const SORTING_ITEM_CREATED = {
-  label: __('Created'),
+  label: __('Created date'),
   asc: 'created_asc',
   desc: 'created_desc',
 };
 
 export const SORTING_ITEM_UPDATED = {
-  label: __('Updated'),
+  label: __('Updated date'),
   asc: 'latest_activity_asc',
   desc: 'latest_activity_desc',
 };
@@ -48,6 +48,17 @@ export const SORTING_ITEM_STARS = {
   asc: 'stars_asc',
   desc: 'stars_desc',
 };
+
+export const EXPLORE_FILTERED_SEARCH_TERM_KEY = 'filter';
+export const EXPLORE_FILTERED_SEARCH_NAMESPACE = 'explore';
+export const EXPLORE_SORTING_ITEMS = [
+  SORTING_ITEM_NAME,
+  SORTING_ITEM_CREATED,
+  SORTING_ITEM_UPDATED,
+];
+
+export const OVERVIEW_TABS_FILTERED_SEARCH_TERM_KEY = 'filter';
+export const OVERVIEW_TABS_FILTERED_SEARCH_NAMESPACE = 'overview';
 
 export const OVERVIEW_TABS_SORTING_ITEMS = [
   SORTING_ITEM_NAME,
@@ -64,4 +75,5 @@ export const OVERVIEW_TABS_ARCHIVED_PROJECTS_SORTING_ITEMS = [
 
 export const FORM_FIELD_NAME = 'name';
 export const FORM_FIELD_PATH = 'path';
+export const FORM_FIELD_ID = 'id';
 export const FORM_FIELD_VISIBILITY_LEVEL = 'visibilityLevel';

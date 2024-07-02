@@ -8,27 +8,16 @@ export default {
     GlLink,
   },
 
-  inject: {
-    detailsPath: {
-      default: undefined,
-    },
-  },
-
   props: {
-    id: {
-      type: Number,
-      required: false,
-      default: null,
-    },
-    entityId: {
-      type: Number,
-      required: false,
-      default: null,
-    },
     hasFailures: {
       type: Boolean,
       required: false,
       default: false,
+    },
+    failuresHref: {
+      type: String,
+      required: false,
+      default: '',
     },
     status: {
       type: String,
@@ -48,32 +37,18 @@ export default {
 
       return STATUS_ICON_MAP[this.status];
     },
-
-    showDetails() {
-      return Boolean(this.detailsPathWithId) && this.hasFailures;
-    },
-
-    detailsPathWithId() {
-      if (!this.id || !this.entityId || !this.detailsPath) {
-        return null;
-      }
-
-      return this.detailsPath
-        .replace(':id', encodeURIComponent(this.id))
-        .replace(':entity_id', encodeURIComponent(this.entityId));
-    },
   },
 };
 </script>
 
 <template>
   <div>
-    <gl-badge :icon="mappedStatus.icon" :variant="mappedStatus.variant" size="md" icon-size="sm">
+    <gl-badge :icon="mappedStatus.icon" :variant="mappedStatus.variant" icon-size="sm">
       {{ mappedStatus.text }}
     </gl-badge>
 
-    <div v-if="showDetails" class="gl-mt-2">
-      <gl-link :href="detailsPathWithId">{{ s__('Import|See failures') }}</gl-link>
+    <div v-if="failuresHref" class="gl-mt-2">
+      <gl-link :href="failuresHref">{{ s__('Import|Show errors') }} &gt;</gl-link>
     </div>
   </div>
 </template>

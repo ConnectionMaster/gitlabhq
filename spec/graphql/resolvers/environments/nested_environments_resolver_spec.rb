@@ -12,7 +12,7 @@ RSpec.describe Resolvers::Environments::NestedEnvironmentsResolver, feature_cate
   let_it_be(:environment3) { create(:environment, project: project, name: 'folder1/test2') }
   let_it_be(:environment4) { create(:environment, project: project, name: 'folder2/test') }
 
-  let_it_be(:developer) { create(:user).tap { |u| project.add_developer(u) } }
+  let_it_be(:developer) { create(:user, developer_of: project) }
 
   let(:current_user) { developer }
 
@@ -20,24 +20,24 @@ RSpec.describe Resolvers::Environments::NestedEnvironmentsResolver, feature_cate
     it 'finds the nested environments when status matches' do
       expect(resolve_nested_environments(status: :created).to_a.pluck(:name, :size))
         .to match_array([
-                          ['test', 1],
+          ['test', 1],
                           ['folder1', 2],
                           ['folder2', 1]
-                        ])
+        ])
     end
 
     it 'finds the nested environments when searching by name' do
       expect(resolve_nested_environments(search: 'folder2').to_a.pluck(:name, :size))
         .to match_array([
-                          ['folder2', 1]
-                        ])
+          ['folder2', 1]
+        ])
     end
 
     it 'finds the nested environments when name matches exactly' do
       expect(resolve_nested_environments(name: 'test').to_a.pluck(:name, :size))
         .to match_array([
-                          ['test', 1]
-                        ])
+          ['test', 1]
+        ])
     end
   end
 

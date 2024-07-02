@@ -7,7 +7,8 @@ import { useMockLocationHelper } from 'helpers/mock_window_location_helper';
 import { createAlert } from '~/alert';
 import axios from '~/lib/utils/axios_utils';
 import { HTTP_STATUS_INTERNAL_SERVER_ERROR, HTTP_STATUS_OK } from '~/lib/utils/http_status';
-import { redirectTo } from '~/lib/utils/url_utility'; // eslint-disable-line import/no-deprecated
+import { visitUrl } from '~/lib/utils/url_utility';
+import CrudComponent from '~/vue_shared/components/crud_component.vue';
 import BroadcastMessagesBase from '~/admin/broadcast_messages/components/base.vue';
 import MessagesTable from '~/admin/broadcast_messages/components/messages_table.vue';
 import { generateMockMessages, MOCK_MESSAGES } from '../mock_data';
@@ -31,6 +32,9 @@ describe('BroadcastMessagesBase', () => {
         messagesCount: MOCK_MESSAGES.length,
         messages: MOCK_MESSAGES,
         ...props,
+      },
+      stubs: {
+        CrudComponent,
       },
     });
   }
@@ -64,7 +68,7 @@ describe('BroadcastMessagesBase', () => {
     await waitForPromises();
 
     expect(axiosMock.history.delete).toHaveLength(0);
-    expect(wrapper.vm.visibleMessages.length).toBe(MOCK_MESSAGES.length);
+    expect(findTable().props('messages')).toHaveLength(MOCK_MESSAGES.length);
   });
 
   it('does not remove a deleted message if the request fails', async () => {
@@ -75,7 +79,11 @@ describe('BroadcastMessagesBase', () => {
     findTable().vm.$emit('delete-message', id);
     await waitForPromises();
 
-    expect(wrapper.vm.visibleMessages.find((m) => m.id === id)).not.toBeUndefined();
+    expect(
+      findTable()
+        .props('messages')
+        .find((m) => m.id.id === id.id),
+    ).not.toBeUndefined();
     expect(createAlert).toHaveBeenCalledWith(
       expect.objectContaining({
         message: BroadcastMessagesBase.i18n.deleteError,
@@ -91,8 +99,12 @@ describe('BroadcastMessagesBase', () => {
     findTable().vm.$emit('delete-message', id);
     await waitForPromises();
 
-    expect(wrapper.vm.visibleMessages.find((m) => m.id === id)).toBeUndefined();
-    expect(wrapper.vm.totalMessages).toBe(MOCK_MESSAGES.length - 1);
+    expect(
+      findTable()
+        .props('messages')
+        .find((m) => m.id.id === id.id),
+    ).toBeUndefined();
+    expect(findPagination().props('totalItems')).toBe(MOCK_MESSAGES.length - 1);
   });
 
   it('redirects to the first page when totalMessages changes from 21 to 20', async () => {
@@ -107,6 +119,6 @@ describe('BroadcastMessagesBase', () => {
     findTable().vm.$emit('delete-message', id);
     await waitForPromises();
 
-    expect(redirectTo).toHaveBeenCalledWith(`${TEST_HOST}/admin/broadcast_messages?page=1`); // eslint-disable-line import/no-deprecated
+    expect(visitUrl).toHaveBeenCalledWith(`${TEST_HOST}/admin/broadcast_messages?page=1`);
   });
 });

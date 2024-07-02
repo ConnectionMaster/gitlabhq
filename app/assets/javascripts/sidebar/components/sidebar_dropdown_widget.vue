@@ -118,6 +118,9 @@ export default {
           this.hasCurrentAttribute = data?.workspace?.issuable.hasEpic;
         }
       },
+      skip() {
+        return !this.iid;
+      },
       error(error) {
         createAlert({
           message: this.i18n.currentFetchError,
@@ -168,7 +171,7 @@ export default {
       return this.issuableAttributesQueries[this.issuableAttribute];
     },
     attributeTitle() {
-      return this.currentAttribute?.title || this.i18n.noAttribute;
+      return this.currentAttribute?.title || __('None');
     },
     attributeUrl() {
       return this.currentAttribute?.webUrl;
@@ -325,7 +328,7 @@ export default {
         >
           <gl-link
             v-gl-tooltip="tooltipText"
-            class="gl-reset-color gl-hover-text-blue-800"
+            class="gl-text-inherit gl-hover-text-blue-800"
             :href="attributeUrl"
             :data-testid="`${formatIssuableAttribute.kebab}-link`"
           >

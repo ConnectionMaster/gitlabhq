@@ -75,7 +75,7 @@ export default {
       @switch="$emit('enableContentEditor')"
     />
     <div class="gl-display-flex">
-      <div v-if="canAttachFile" class="uploading-container gl-font-sm gl-line-height-32 gl-mr-3">
+      <div v-if="canAttachFile" class="uploading-container gl-font-sm gl-leading-32 gl-mr-3">
         <span class="uploading-progress-container hide">
           <gl-icon name="paperclip" />
           <span class="attaching-file-message"></span>
@@ -100,7 +100,7 @@ export default {
               <gl-button
                 variant="link"
                 category="primary"
-                class="retry-uploading-link gl-vertical-align-baseline gl-font-sm!"
+                class="retry-uploading-link gl-align-baseline gl-font-sm!"
               >
                 {{ content }}
               </gl-button>
@@ -109,7 +109,7 @@ export default {
               <gl-button
                 variant="link"
                 category="primary"
-                class="markdown-selector attach-new-file gl-vertical-align-baseline gl-font-sm!"
+                class="markdown-selector attach-new-file gl-align-baseline gl-font-sm!"
               >
                 {{ content }}
               </gl-button>
@@ -119,7 +119,7 @@ export default {
         <gl-button
           variant="link"
           category="primary"
-          class="button-cancel-uploading-files gl-vertical-align-baseline hide gl-font-sm!"
+          class="button-cancel-uploading-files gl-align-baseline hide gl-font-sm!"
         >
           {{ __('Cancel') }}
         </gl-button>

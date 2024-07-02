@@ -6,11 +6,9 @@ import waitForPromises from 'helpers/wait_for_promises';
 
 import { formType } from '~/boards/constants';
 import BoardTopBar from '~/boards/components/board_top_bar.vue';
-import BoardAddNewColumnTrigger from '~/boards/components/board_add_new_column_trigger.vue';
 import BoardsSelector from '~/boards/components/boards_selector.vue';
 import ConfigToggle from '~/boards/components/config_toggle.vue';
 import IssueBoardFilteredSearch from '~/boards/components/issue_board_filtered_search.vue';
-import NewBoardButton from '~/boards/components/new_board_button.vue';
 import ToggleFocus from '~/boards/components/toggle_focus.vue';
 import * as cacheUpdates from '~/boards/graphql/cache_updates';
 import { WORKSPACE_GROUP, WORKSPACE_PROJECT } from '~/issues/constants';
@@ -52,7 +50,6 @@ describe('BoardTopBar', () => {
       },
       provide: {
         swimlanesFeatureAvailable: false,
-        canAdminList: false,
         isSignedIn: false,
         fullPath: 'gitlab-org',
         boardType: 'group',
@@ -87,20 +84,12 @@ describe('BoardTopBar', () => {
       expect(wrapper.findComponent(IssueBoardFilteredSearch).exists()).toBe(true);
     });
 
-    it('renders NewBoardButton component', () => {
-      expect(wrapper.findComponent(NewBoardButton).exists()).toBe(true);
-    });
-
     it('renders ConfigToggle component', () => {
       expect(wrapper.findComponent(ConfigToggle).exists()).toBe(true);
     });
 
     it('renders ToggleFocus component', () => {
       expect(wrapper.findComponent(ToggleFocus).exists()).toBe(true);
-    });
-
-    it('does not render BoardAddNewColumnTrigger component', () => {
-      expect(wrapper.findComponent(BoardAddNewColumnTrigger).exists()).toBe(false);
     });
 
     it('emits setFilters when setFilters is emitted by filtered search', () => {
@@ -117,16 +106,6 @@ describe('BoardTopBar', () => {
       wrapper.findComponent(ConfigToggle).vm.$emit('showBoardModal', formType.edit);
       await nextTick();
       expect(findBoardsSelector().props('boardModalForm')).toEqual(formType.edit);
-    });
-  });
-
-  describe('when user can admin list', () => {
-    beforeEach(() => {
-      createComponent({ provide: { canAdminList: true } });
-    });
-
-    it('renders BoardAddNewColumnTrigger component', () => {
-      expect(wrapper.findComponent(BoardAddNewColumnTrigger).exists()).toBe(true);
     });
   });
 

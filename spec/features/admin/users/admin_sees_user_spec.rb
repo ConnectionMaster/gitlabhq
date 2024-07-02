@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe 'Admin::Users::User', feature_category: :user_management do
+RSpec.describe 'Admin::Users::User', feature_category: :user_management, quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/441334' do
   include Features::AdminUsersHelpers
   include Spec::Support::Helpers::ModalHelpers
 
@@ -131,8 +131,8 @@ RSpec.describe 'Admin::Users::User', feature_category: :user_management do
         visit admin_user_path(locked_user)
       end
 
-      it "displays `(Locked)` next to user's name" do
-        expect(page).to have_content("#{locked_user.name} (Locked)")
+      it "displays `Locked` next to user's name" do
+        expect(page).to have_content("#{locked_user.name} Locked")
       end
 
       it 'allows a user to be unlocked from the `User administration dropdown', :js do
@@ -140,7 +140,7 @@ RSpec.describe 'Admin::Users::User', feature_category: :user_management do
           click_action_in_user_dropdown(locked_user.id, 'Unlock')
         end
 
-        expect(page).not_to have_content("#{locked_user.name} (Locked)")
+        expect(page).not_to have_content("#{locked_user.name} Locked")
       end
     end
 

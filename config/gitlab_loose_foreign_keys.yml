@@ -193,20 +193,12 @@ dast_scanner_profiles_builds:
   - table: p_ci_builds
     column: ci_build_id
     on_delete: async_delete
-dast_scanner_profiles_tags:
-  - table: tags
-    column: tag_id
-    on_delete: async_delete
 dast_site_profiles_builds:
   - table: ci_builds
     column: ci_build_id
     on_delete: async_delete
   - table: p_ci_builds
     column: ci_build_id
-    on_delete: async_delete
-dast_site_profiles_pipelines:
-  - table: ci_pipelines
-    column: ci_pipeline_id
     on_delete: async_delete
 deployment_clusters:
   - table: clusters
@@ -245,6 +237,16 @@ merge_request_metrics:
   - table: ci_pipelines
     column: pipeline_id
     on_delete: async_nullify
+merge_request_requested_changes:
+  - table: merge_requests
+    column: merge_request_id
+    on_delete: async_delete
+  - table: projects
+    column: project_id
+    on_delete: async_delete
+  - table: users
+    column: user_id
+    on_delete: async_delete
 merge_requests:
   - table: ci_pipelines
     column: head_pipeline_id
@@ -259,6 +261,10 @@ ml_candidates:
     on_delete: async_nullify
   - table: p_ci_builds
     column: ci_build_id
+    on_delete: async_nullify
+namespace_details:
+  - table: users
+    column: creator_id
     on_delete: async_nullify
 namespaces:
   - table: organizations
@@ -279,6 +285,10 @@ p_ci_build_names:
   - table: projects
     column: project_id
     on_delete: async_delete
+p_ci_build_sources:
+  - table: projects
+    column: project_id
+    on_delete: async_delete
 p_ci_builds:
   - table: users
     column: user_id
@@ -289,6 +299,10 @@ p_ci_builds:
   - table: ci_runners
     column: runner_id
     on_delete: async_nullify
+p_ci_builds_execution_configs:
+  - table: projects
+    column: project_id
+    on_delete: async_delete
 p_ci_builds_metadata:
   - table: projects
     column: project_id
@@ -367,6 +381,10 @@ security_scans:
   - table: p_ci_builds
     column: build_id
     on_delete: async_delete
+snippets:
+  - table: organizations
+    column: organization_id
+    on_delete: async_nullify
 terraform_state_versions:
   - table: ci_builds
     column: ci_build_id

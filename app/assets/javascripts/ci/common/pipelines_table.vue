@@ -5,14 +5,14 @@ import { s__, __ } from '~/locale';
 import Tracking from '~/tracking';
 import { PIPELINE_ID_KEY, PIPELINE_IID_KEY, TRACKING_CATEGORIES } from '~/ci/constants';
 import { keepLatestDownstreamPipelines } from '~/ci/pipeline_details/utils/parsing_utils';
-import LegacyPipelineMiniGraph from '~/ci/pipeline_mini_graph/legacy_pipeline_mini_graph.vue';
+import LegacyPipelineMiniGraph from '~/ci/pipeline_mini_graph/legacy_pipeline_mini_graph/legacy_pipeline_mini_graph.vue';
 import PipelineFailedJobsWidget from '~/ci/pipelines_page/components/failure_widget/pipeline_failed_jobs_widget.vue';
 import PipelineOperations from '../pipelines_page/components/pipeline_operations.vue';
 import PipelineTriggerer from '../pipelines_page/components/pipeline_triggerer.vue';
 import PipelineUrl from '../pipelines_page/components/pipeline_url.vue';
 import PipelineStatusBadge from '../pipelines_page/components/pipeline_status_badge.vue';
 
-const HIDE_TD_ON_MOBILE = 'gl-display-none! gl-lg-display-table-cell!';
+const HIDE_TD_ON_MOBILE = '!gl-hidden lg:!gl-table-cell';
 
 /**
  * Pipelines Table
@@ -75,7 +75,7 @@ export default {
         {
           key: 'status',
           label: s__('Pipeline|Status'),
-          columnClass: 'gl-w-15p',
+          columnClass: 'gl-w-3/20',
           tdClass: this.tdClasses,
           thAttr: { 'data-testid': 'status-th' },
         },
@@ -83,27 +83,27 @@ export default {
           key: 'pipeline',
           label: __('Pipeline'),
           tdClass: `${this.tdClasses}`,
-          columnClass: 'gl-w-30p',
+          columnClass: 'gl-w-6/20',
           thAttr: { 'data-testid': 'pipeline-th' },
         },
         {
           key: 'triggerer',
           label: s__('Pipeline|Created by'),
           tdClass: `${this.tdClasses} ${HIDE_TD_ON_MOBILE}`,
-          columnClass: 'gl-w-15p',
+          columnClass: 'gl-w-3/20',
           thAttr: { 'data-testid': 'triggerer-th' },
         },
         {
           key: 'stages',
           label: s__('Pipeline|Stages'),
           tdClass: this.tdClasses,
-          columnClass: 'gl-w-quarter',
+          columnClass: 'gl-w-5/20',
           thAttr: { 'data-testid': 'stages-th' },
         },
         {
           key: 'actions',
           tdClass: this.tdClasses,
-          columnClass: 'gl-w-20p',
+          columnClass: 'gl-w-4/20',
           thAttr: { 'data-testid': 'actions-th' },
         },
       ];
@@ -129,6 +129,9 @@ export default {
     getProjectPath(item) {
       return cleanLeadingSeparator(item.project.full_path);
     },
+    getStages(item) {
+      return item?.details?.stages || [];
+    },
     failedJobsCount(pipeline) {
       return pipeline?.failed_builds_count || 0;
     },
@@ -136,11 +139,9 @@ export default {
       this.$emit('refresh-pipelines-table');
     },
     onRetryPipeline(pipeline) {
-      // This emit is only used by the `legacy_pipelines_table_wrapper`.
       this.$emit('retry-pipeline', pipeline);
     },
     onCancelPipeline(pipeline) {
-      // This emit is only used by the `legacy_pipelines_table_wrapper`.
       this.$emit('cancel-pipeline', pipeline);
     },
     trackPipelineMiniGraph() {
@@ -162,7 +163,7 @@ export default {
       fixed
     >
       <template #head(actions)>
-        <span class="gl-display-block gl-lg-display-none!">{{ s__('Pipeline|Actions') }}</span>
+        <span class="gl-block lg:!gl-hidden">{{ s__('Pipeline|Actions') }}</span>
         <slot name="table-header-actions"></slot>
       </template>
 
@@ -190,7 +191,7 @@ export default {
         <legacy-pipeline-mini-graph
           :downstream-pipelines="getDownstreamPipelines(item)"
           :pipeline-path="item.path"
-          :stages="item.details.stages"
+          :stages="getStages(item)"
           :update-dropdown="updateGraphDropdown"
           :upstream-pipeline="item.triggered_by"
           @miniGraphStageClick="trackPipelineMiniGraph"
@@ -214,7 +215,7 @@ export default {
           :pipeline-iid="item.iid"
           :pipeline-path="item.path"
           :project-path="getProjectPath(item)"
-          class="gl-ml-n4 gl-mt-n3 gl-mb-n1"
+          class="-gl-ml-4 -gl-mt-3 -gl-mb-1"
         />
       </template>
     </gl-table-lite>

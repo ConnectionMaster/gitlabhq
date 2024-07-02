@@ -63,7 +63,7 @@ class InvitesController < ApplicationController
 
   def member
     strong_memoize(:member) do
-      @token = params[:id]
+      @token = params[:id].to_s
       Member.find_by_invite_token(@token)
     end
   end
@@ -99,7 +99,7 @@ class InvitesController < ApplicationController
   end
 
   def initial_invite_email?
-    params[:invite_type] == Emails::Members::INITIAL_INVITE
+    params[:invite_type] == ::Members::InviteMailer::INITIAL_INVITE
   end
 
   def sign_in_redirect_params

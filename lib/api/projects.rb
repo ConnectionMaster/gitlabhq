@@ -87,30 +87,16 @@ module API
         accepted!
       end
 
-      def exempt_from_global_attachment_size?(user_project)
-        list = ::Gitlab::RackAttack::UserAllowlist.new(ENV['GITLAB_UPLOAD_API_ALLOWLIST'])
-        list.include?(user_project.id)
-      end
-
-      # Temporarily introduced for upload API: https://gitlab.com/gitlab-org/gitlab/-/issues/325788
-      def project_attachment_size(user_project)
-        return PROJECT_ATTACHMENT_SIZE_EXEMPT if exempt_from_global_attachment_size?(user_project)
-
-        user_project.max_attachment_size
-      end
-
-      # This is to help determine which projects to use in https://gitlab.com/gitlab-org/gitlab/-/issues/325788
-      def log_if_upload_exceed_max_size(user_project, file)
-        return if file.size <= user_project.max_attachment_size
-
-        if file.size > user_project.max_attachment_size
-          allowed = exempt_from_global_attachment_size?(user_project)
-          Gitlab::AppLogger.info({ message: "File exceeds maximum size", file_bytes: file.size, project_id: user_project.id, project_path: user_project.full_path, upload_allowed: allowed })
-        end
-      end
-
       def validate_projects_api_rate_limit_for_unauthenticated_users!
         check_rate_limit!(:projects_api_rate_limit_unauthenticated, scope: [ip_address]) if current_user.blank?
+      end
+
+      def validate_projects_api_rate_limit!
+        if current_user && Feature.enabled?(:rate_limit_groups_and_projects_api, current_user)
+          check_rate_limit_by_user_or_ip!(:projects_api)
+        else
+          validate_projects_api_rate_limit_for_unauthenticated_users!
+        end
       end
     end
 
@@ -125,21 +111,21 @@ module API
         use :pagination
 
         optional :simple, type: Boolean, default: false,
-                          desc: 'Return only the ID, URL, name, and path of each project'
+          desc: 'Return only the ID, URL, name, and path of each project'
       end
 
       params :sort_params do
         optional :order_by, type: String,
-                            values: %w[id name path created_at updated_at last_activity_at similarity] + Helpers::ProjectsHelpers::STATISTICS_SORT_PARAMS,
-                            default: 'created_at', desc: "Return projects ordered by field. #{Helpers::ProjectsHelpers::STATISTICS_SORT_PARAMS.join(', ')} are only available to admins. Similarity is available when searching and is limited to projects the user has access to."
+          values: %w[id name path created_at updated_at last_activity_at similarity] + Helpers::ProjectsHelpers::STATISTICS_SORT_PARAMS,
+          default: 'created_at', desc: "Return projects ordered by field. #{Helpers::ProjectsHelpers::STATISTICS_SORT_PARAMS.join(', ')} are only available to admins. Similarity is available when searching and is limited to projects the user has access to."
         optional :sort, type: String, values: %w[asc desc], default: 'desc',
-                        desc: 'Return projects sorted in ascending and descending order'
+          desc: 'Return projects sorted in ascending and descending order'
       end
 
       params :filter_params do
         optional :archived, type: Boolean, desc: 'Limit by archived status'
         optional :visibility, type: String, values: Gitlab::VisibilityLevel.string_values,
-                              desc: 'Limit by visibility'
+          desc: 'Limit by visibility'
         optional :search, type: String, desc: 'Return list of projects matching the search criteria'
         optional :search_namespaces, type: Boolean, desc: "Include ancestor namespaces when matching search criteria"
         optional :owned, type: Boolean, default: false, desc: 'Limit by owned by authenticated user'
@@ -228,7 +214,7 @@ module API
       end
 
       def add_import_params(params)
-        params[:import_type] = 'git' if params[:import_url]&.present?
+        params[:import_type] = 'git' if params[:import_url].present?
         params
       end
     end
@@ -247,6 +233,10 @@ module API
         use :with_custom_attributes
       end
       get ":user_id/projects", feature_category: :groups_and_projects, urgency: :low do
+        if Feature.enabled?(:rate_limit_groups_and_projects_api, current_user)
+          check_rate_limit_by_user_or_ip!(:user_projects_api)
+        end
+
         user = find_user(params[:user_id])
         not_found!('User') unless user
 
@@ -267,9 +257,13 @@ module API
         use :pagination
 
         optional :simple, type: Boolean, default: false,
-                          desc: 'Return only the ID, URL, name, and path of each project'
+          desc: 'Return only the ID, URL, name, and path of each project'
       end
       get ":user_id/contributed_projects", feature_category: :groups_and_projects, urgency: :low do
+        if Feature.enabled?(:rate_limit_groups_and_projects_api, current_user)
+          check_rate_limit_by_user_or_ip!(:user_contributed_projects_api)
+        end
+
         user = find_user(params[:user_id])
         not_found!('User') unless user
 
@@ -289,6 +283,10 @@ module API
         use :statistics_params
       end
       get ":user_id/starred_projects", feature_category: :groups_and_projects, urgency: :low do
+        if Feature.enabled?(:rate_limit_groups_and_projects_api, current_user)
+          check_rate_limit_by_user_or_ip!(:user_starred_projects_api)
+        end
+
         user = find_user(params[:user_id])
         not_found!('User') unless user
 
@@ -315,7 +313,7 @@ module API
       end
       # TODO: Set higher urgency https://gitlab.com/gitlab-org/gitlab/-/issues/211495
       get feature_category: :groups_and_projects, urgency: :low do
-        validate_projects_api_rate_limit_for_unauthenticated_users!
+        validate_projects_api_rate_limit!
         validate_updated_at_order_and_filter!
 
         present_projects load_projects
@@ -351,8 +349,8 @@ module API
 
         if project.saved?
           present_project project, with: Entities::Project,
-                                   user_can_admin_project: can?(current_user, :admin_project, project),
-                                   current_user: current_user
+            user_can_admin_project: can?(current_user, :admin_project, project),
+            current_user: current_user
         else
           if project.errors[:limit_reached].present?
             error!(project.errors[:limit_reached], 403)
@@ -399,8 +397,8 @@ module API
 
         if project.saved?
           present_project project, with: Entities::Project,
-                                   user_can_admin_project: can?(current_user, :admin_project, project),
-                                   current_user: current_user
+            user_can_admin_project: can?(current_user, :admin_project, project),
+            current_user: current_user
         else
           forbidden! if project.errors[:import_source_disabled].present?
 
@@ -437,12 +435,16 @@ module API
         use :with_custom_attributes
 
         optional :license, type: Boolean, default: false,
-                           desc: 'Include project license data'
+          desc: 'Include project license data'
       end
       # TODO: Set higher urgency https://gitlab.com/gitlab-org/gitlab/-/issues/357622
       get ":id", feature_category: :groups_and_projects, urgency: :low do
+        if Feature.enabled?(:rate_limit_groups_and_projects_api, current_user)
+          check_rate_limit_by_user_or_ip!(:project_api)
+        end
+
         options = {
-          with: current_user ? Entities::ProjectWithAccess : Entities::BasicProjectDetails,
+          with: current_user ? Entities::ProjectWithAccess : Entities::ProjectDetails,
           current_user: current_user,
           user_can_admin_project: can?(current_user, :admin_project, user_project),
           statistics: params[:statistics],
@@ -570,8 +572,10 @@ module API
 
         if result[:status] == :success
           present_project user_project, with: Entities::Project,
-                                        user_can_admin_project: can?(current_user, :admin_project, user_project),
-                                        current_user: current_user
+            user_can_admin_project: can?(current_user, :admin_project, user_project),
+            current_user: current_user
+        elsif result[:status] == :api_error
+          render_api_error!(result[:message], 400)
         else
           render_validation_error!(user_project)
         end
@@ -833,47 +837,11 @@ module API
 
         if result.success?
           { status: result.status }
-        elsif result.reason == :unprocessable_entity
-          render_api_error!(result.message, result.reason)
+        elsif result.reason
+          render_structured_api_error!({ 'message' => result.message, 'reason' => result.reason }, :unprocessable_entity)
         else
           { status: result.status, message: result.message, total_members_count: result.payload[:total_members_count] }
         end
-      end
-
-      desc 'Workhorse authorize the file upload' do
-        detail 'This feature was introduced in GitLab 13.11'
-        success code: 200
-        failure [
-          { code: 404, message: 'Not found' }
-        ]
-        tags %w[projects]
-      end
-      post ':id/uploads/authorize', feature_category: :not_owned do # rubocop:todo Gitlab/AvoidFeatureCategoryNotOwned
-        require_gitlab_workhorse!
-
-        status 200
-        content_type Gitlab::Workhorse::INTERNAL_API_CONTENT_TYPE
-        FileUploader.workhorse_authorize(has_length: false, maximum_size: project_attachment_size(user_project))
-      end
-
-      desc 'Upload a file' do
-        success code: 201, model: Entities::ProjectUpload
-        failure [
-          { code: 404, message: 'Not found' }
-        ]
-        tags %w[projects]
-      end
-      params do
-        requires :file, types: [Rack::Multipart::UploadedFile, ::API::Validations::Types::WorkhorseFile], desc: 'The attachment file to be uploaded', documentation: { type: 'file' }
-      end
-      post ":id/uploads", feature_category: :not_owned do # rubocop:todo Gitlab/AvoidFeatureCategoryNotOwned
-        log_if_upload_exceed_max_size(user_project, params[:file])
-
-        service = UploadService.new(user_project, params[:file])
-        service.override_max_attachment_size = project_attachment_size(user_project)
-        upload = service.execute
-
-        present upload, with: Entities::ProjectUpload
       end
 
       desc 'Get the users list of a project' do
@@ -912,11 +880,11 @@ module API
         optional :search, type: String, desc: 'Return list of groups matching the search criteria', documentation: { example: 'group' }
         optional :skip_groups, type: Array[Integer], coerce_with: ::API::Validations::Types::CommaSeparatedToIntegerArray.coerce, desc: 'Array of group ids to exclude from list'
         optional :with_shared, type: Boolean, default: false,
-                               desc: 'Include shared groups'
+          desc: 'Include shared groups'
         optional :shared_visible_only, type: Boolean, default: false,
-                                       desc: 'Limit to shared groups user has access to'
+          desc: 'Limit to shared groups user has access to'
         optional :shared_min_access_level, type: Integer, values: Gitlab::Access.all_values,
-                                           desc: 'Limit returned shared groups by minimum access level to the project'
+          desc: 'Limit returned shared groups by minimum access level to the project'
         use :pagination
       end
       get ':id/groups', feature_category: :source_code_management do

@@ -465,7 +465,7 @@ RSpec.describe Feature, :clean_gitlab_redis_feature_flag, stub_feature_flags: fa
         context 'when is dev_or_test_env' do
           it 'does raise exception' do
             expect { described_class.enabled?(:enabled_feature_flag, actor) }
-              .to raise_error /needs to include `FeatureGate` or implement `flipper_id`/
+              .to raise_error(/needs to include `FeatureGate` or implement `flipper_id`/)
           end
         end
       end
@@ -709,6 +709,60 @@ RSpec.describe Feature, :clean_gitlab_redis_feature_flag, stub_feature_flags: fa
           it 'does not change the global value' do
             expect { subject }.not_to change { described_class.enabled?(key) }.from(true)
           end
+        end
+      end
+    end
+
+    describe '.group_ids_for' do
+      subject { described_class.group_ids_for(key) }
+
+      let_it_be(:group) { create(:group) }
+      let_it_be(:project) { create(:project) }
+      let_it_be(:user) { create(:user) }
+
+      let(:key) { :awesome_feature }
+
+      it 'returns empty array' do
+        expect(subject).to be_empty
+      end
+
+      context 'when group actor is enabled' do
+        before do
+          described_class.enable(key, group)
+        end
+
+        it 'returns the group id' do
+          expect(subject).to eq([group.id.to_s])
+        end
+      end
+
+      context 'when global flag is enabled' do
+        before do
+          described_class.enable(key)
+        end
+
+        it 'returns empty array' do
+          expect(subject).to be_empty
+        end
+      end
+
+      context 'when project actor is enabled' do
+        before do
+          described_class.enable(key, project)
+        end
+
+        it 'returns empty array' do
+          expect(subject).to be_empty
+        end
+      end
+
+      context 'when user actor is enabled' do
+        before do
+          described_class.enable(key, user)
+        end
+
+        it 'returns empty array' do
+          expect(subject).to be_empty
         end
       end
     end

@@ -58,7 +58,6 @@ class GroupsFinder < UnionFinder
     return [Group.all] if current_user&.can_read_all_resources? && all_available?
 
     groups = [
-      membership_groups,
       authorized_groups,
       public_groups
     ].compact
@@ -80,12 +79,6 @@ class GroupsFinder < UnionFinder
       .self_and_descendants
   end
   # rubocop: enable CodeReuse/ActiveRecord
-
-  def membership_groups
-    return unless current_user
-
-    current_user.groups.self_and_descendants
-  end
 
   def authorized_groups
     return unless current_user

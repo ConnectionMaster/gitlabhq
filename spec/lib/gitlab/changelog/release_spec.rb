@@ -42,9 +42,9 @@ RSpec.describe Gitlab::Changelog::Release do
 
           ### fixed (1 change)
 
-          - [Entry title](#{commit.to_reference(full: true)}) \
+          - [Entry title](#{Gitlab::UrlBuilder.build(commit)}) \
           by #{author.to_reference(full: true)} \
-          ([merge request](#{mr.to_reference(full: true)}))
+          ([merge request](#{Gitlab::UrlBuilder.build(mr)}))
 
         OUT
       end
@@ -68,40 +68,11 @@ RSpec.describe Gitlab::Changelog::Release do
 
             ### fixed (1 change)
 
-            - [Entry title](#{commit.to_reference(full: true)}) \
+            - [Entry title](#{Gitlab::UrlBuilder.build(commit)}) \
             by #{author.to_reference(full: true)} \
-            ([merge request](#{mr.to_reference(full: true)}))
+            ([merge request](#{Gitlab::UrlBuilder.build(mr)}))
 
           OUT
-        end
-
-        context 'when feature flag "update_changelog_logic" is disabled' do
-          before do
-            stub_feature_flags(update_changelog_logic: false)
-          end
-
-          it 'uses a version with "v" at the start' do
-            allow(config).to receive(:contributor?).with(author).and_return(true)
-
-            release.add_entry(
-              title: 'Entry title',
-              commit: commit,
-              category: 'fixed',
-              author: author,
-              merge_request: mr
-            )
-
-            expect(release.to_markdown).to eq(<<~OUT)
-              ## v1.0.0 (2021-01-05)
-
-              ### fixed (1 change)
-
-              - [Entry title](#{commit.to_reference(full: true)}) \
-              by #{author.to_reference(full: true)} \
-              ([merge request](#{mr.to_reference(full: true)}))
-
-            OUT
-          end
         end
       end
     end
@@ -122,7 +93,7 @@ RSpec.describe Gitlab::Changelog::Release do
 
           ### fixed (1 change)
 
-          - [Entry title](#{commit.to_reference(full: true)}) \
+          - [Entry title](#{Gitlab::UrlBuilder.build(commit)}) \
           by #{author.to_reference(full: true)}
 
         OUT
@@ -145,7 +116,7 @@ RSpec.describe Gitlab::Changelog::Release do
 
           ### fixed (1 change)
 
-          - [Entry title](#{commit.to_reference(full: true)})
+          - [Entry title](#{Gitlab::UrlBuilder.build(commit)})
 
         OUT
       end
@@ -168,7 +139,7 @@ RSpec.describe Gitlab::Changelog::Release do
 
           ### fixed (1 change)
 
-          - [Entry title](#{commit.to_reference(full: true)}) \
+          - [Entry title](#{Gitlab::UrlBuilder.build(commit)}) \
           by #{author.to_reference(full: true)}
 
         OUT
@@ -191,7 +162,7 @@ RSpec.describe Gitlab::Changelog::Release do
 
           ### Bug fixes (1 change)
 
-          - [Entry title](#{commit.to_reference(full: true)})
+          - [Entry title](#{Gitlab::UrlBuilder.build(commit)})
 
         OUT
       end

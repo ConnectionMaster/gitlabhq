@@ -23,7 +23,7 @@ RSpec.describe Projects::ParticipantsService, feature_category: :groups_and_proj
     end
 
     it 'returns results in correct order' do
-      group = create(:group).tap { |g| g.add_owner(user) }
+      group = create(:group, owners: user)
 
       expect(run_service.pluck(:username)).to eq([
         noteable.author.username, 'all', user.username, group.full_path
@@ -142,6 +142,16 @@ RSpec.describe Projects::ParticipantsService, feature_category: :groups_and_proj
               group_1.full_path, subgroup.full_path
             ])
           end
+
+          context 'when user search already returns enough results' do
+            before do
+              described_class::SEARCH_LIMIT.times { |i| create(:user, name: "bb#{i}", guest_of: project) }
+            end
+
+            it 'does not return any groups' do
+              expect(group_items).to be_empty
+            end
+          end
         end
       end
     end
@@ -246,8 +256,8 @@ RSpec.describe Projects::ParticipantsService, feature_category: :groups_and_proj
 
     context 'when search param is given' do
       let_it_be(:project) { create(:project, :public) }
-      let_it_be(:member_1) { create(:user, name: 'John Doe').tap { |u| project.add_guest(u) } }
-      let_it_be(:member_2) { create(:user, name: 'Jane Doe ').tap { |u| project.add_guest(u) } }
+      let_it_be(:member_1) { create(:user, name: 'John Doe', guest_of: project) }
+      let_it_be(:member_2) { create(:user, name: 'Jane Doe ', guest_of: project) }
 
       let(:service) { described_class.new(project, create(:user), search: 'johnd') }
 

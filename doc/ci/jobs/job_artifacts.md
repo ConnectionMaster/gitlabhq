@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Pipeline Security
+group: Pipeline Execution
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -181,7 +181,7 @@ artifacts:
 
 ## Prevent a job from fetching artifacts
 
-Jobs downloads all artifacts from the completed jobs in previous stages by default.
+Jobs download all artifacts from the completed jobs in previous stages by default.
 To prevent a job from downloading any artifacts, set [`dependencies`](../yaml/index.md#dependencies)
 to an empty array (`[]`):
 
@@ -194,7 +194,6 @@ job:
 
 ## View all job artifacts in a project
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/31271) in GitLab 12.4 [with a flag](../../administration/feature_flags.md) named `artifacts_management_page`. Disabled by default.
 > - [Improved look](https://gitlab.com/gitlab-org/gitlab/-/issues/33418) in GitLab 15.6.
 > - [Improved performance](https://gitlab.com/gitlab-org/gitlab/-/issues/387765) in GitLab 15.9.
 > - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/407475) in GitLab 16.0. Feature flag `artifacts_management_page` removed.
@@ -249,8 +248,8 @@ For example:
 
   Files returned by this endpoint always have the `plain/text` content type.
 
-In both examples, replace `<project-id>` with a valid project ID. You can find the project ID on the,
-[project overview page](../../user/project/working_with_projects.md#access-the-project-overview-page-by-using-the-project-id).
+In both examples, replace `<project-id>` with a valid project ID. You can find the project ID on the
+[project overview page](../../user/project/working_with_projects.md#access-a-project-by-using-the-project-id).
 
 Artifacts for [parent and child pipelines](../pipelines/downstream_pipelines.md#parent-child-pipelines)
 are searched in hierarchical order from parent to child. For example, if both parent and
@@ -289,13 +288,13 @@ some artifacts file extensions directly in your browser. If the project is inter
 
 The following extensions are supported:
 
-| File extension | GitLab.com | Linux package with built-in NGINX |
-|----------|---------------------|--------------|
-|  `.html`   | **{check-circle}** Yes | **{check-circle}** Yes |
-|  `.json`   | **{check-circle}** Yes | **{check-circle}** Yes |
-|  `.xml`   | **{check-circle}** Yes | **{check-circle}** Yes |
-|  `.txt` | **{dotted-circle}** No | **{check-circle}** Yes |
-| `.log` | **{dotted-circle}** No | **{check-circle}** Yes |
+| File extension | GitLab.com             | Linux package with built-in NGINX |
+|----------------|------------------------|-----------------------------------|
+| `.html`        | **{check-circle}** Yes | **{check-circle}** Yes            |
+| `.json`        | **{check-circle}** Yes | **{check-circle}** Yes            |
+| `.xml`         | **{check-circle}** Yes | **{check-circle}** Yes            |
+| `.txt`         | **{dotted-circle}** No | **{check-circle}** Yes            |
+| `.log`         | **{dotted-circle}** No | **{check-circle}** Yes            |
 
 ### From a URL
 
@@ -362,10 +361,7 @@ With this configuration, GitLab adds **artifact 1** as a link to `file.txt` to t
 
 ## Keep artifacts from most recent successful jobs
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/16267) in GitLab 13.0.
-> - [Feature flag removed](https://gitlab.com/gitlab-org/gitlab/-/issues/229936) in GitLab 13.4.
-> - [Made optional with a CI/CD setting](https://gitlab.com/gitlab-org/gitlab/-/issues/241026) in GitLab 13.8.
-> - Artifacts for [blocked](https://gitlab.com/gitlab-org/gitlab/-/issues/387087) or [failed](https://gitlab.com/gitlab-org/gitlab/-/issues/266958) pipelines no longer kept indefinitely in GitLab 16.7.
+> - Artifacts for [blocked](https://gitlab.com/gitlab-org/gitlab/-/issues/387087) or [failed](https://gitlab.com/gitlab-org/gitlab/-/issues/266958) pipelines changed to no longer be kept indefinitely in GitLab 16.7.
 
 By default artifacts are always kept for successful pipelines for the most recent commit on each ref.
 Any [`expire_in`](#with-an-expiry) configuration does not apply to the most recent artifacts.

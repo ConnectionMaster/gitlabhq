@@ -31,11 +31,11 @@ describe('RunnerTypeBadge', () => {
     ({ jobStatus, classes, text }) => {
       createComponent({ props: { jobStatus } });
 
-      expect(findBadge().props()).toMatchObject({ size: 'md', variant: 'muted' });
+      expect(findBadge().props()).toMatchObject({ variant: 'muted' });
       expect(findBadge().classes().sort()).toEqual(
         [
           ...classes,
-          'gl-inset-border-1-gray-400',
+          'gl-shadow-inner-1-gray-400',
           'gl-max-w-full',
           'gl-text-truncate',
           'gl-bg-transparent!',

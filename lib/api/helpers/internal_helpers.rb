@@ -44,6 +44,8 @@ module API
         response_with_status(code: 503, success: false, message: e.message)
       rescue Gitlab::GitAccess::NotFoundError => e
         response_with_status(code: 404, success: false, message: e.message)
+      rescue Gitlab::GitAccessProject::CreationError => e
+        response_with_status(code: 422, success: false, message: e.message)
       end
 
       # rubocop:disable Gitlab/ModuleWithInstanceVariables
@@ -63,7 +65,8 @@ module API
         access_checker_klass.new(actor.key_or_user, container, protocol,
           authentication_abilities: ssh_authentication_abilities,
           repository_path: repository_path,
-          redirected_path: redirected_path)
+          redirected_path: redirected_path,
+          push_options: params[:push_options])
       end
 
       def access_checker_klass

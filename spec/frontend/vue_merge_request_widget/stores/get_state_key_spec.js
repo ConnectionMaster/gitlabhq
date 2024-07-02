@@ -1,4 +1,5 @@
 import getStateKey from '~/vue_merge_request_widget/stores/get_state_key';
+import { DETAILED_MERGE_STATUS, MWCP_MERGE_STRATEGY } from '~/vue_merge_request_widget/constants';
 
 describe('getStateKey', () => {
   it('should return proper state name', () => {
@@ -22,44 +23,14 @@ describe('getStateKey', () => {
 
     expect(bound()).toEqual('preparing');
 
-    context.detailedMergeStatus = null;
-
-    expect(bound()).toEqual('checking');
-
     context.detailedMergeStatus = 'MERGEABLE';
 
     expect(bound()).toEqual('readyToMerge');
-
-    context.autoMergeEnabled = true;
-    context.hasMergeableDiscussionsState = true;
-
-    expect(bound()).toEqual('autoMergeEnabled');
 
     context.canMerge = true;
     context.isSHAMismatch = true;
 
     expect(bound()).toEqual('shaMismatch');
-
-    context.canMerge = false;
-    context.detailedMergeStatus = 'DISCUSSIONS_NOT_RESOLVED';
-
-    expect(bound()).toEqual('unresolvedDiscussions');
-
-    context.detailedMergeStatus = 'DRAFT_STATUS';
-
-    expect(bound()).toEqual('draft');
-
-    context.detailedMergeStatus = 'CI_MUST_PASS';
-
-    expect(bound()).toEqual('pipelineFailed');
-
-    context.shouldBeRebased = true;
-
-    expect(bound()).toEqual('rebase');
-
-    context.hasConflicts = true;
-
-    expect(bound()).toEqual('conflicts');
 
     context.detailedMergeStatus = 'CHECKING';
 
@@ -79,25 +50,28 @@ describe('getStateKey', () => {
     expect(bound()).toEqual('archived');
   });
 
-  it('returns rebased state key', () => {
-    const context = {
-      mergeStatus: 'checked',
-      autoMergeEnabled: false,
+  describe('AutoMergeStrategy "merge_when_checks_pass"', () => {
+    const createContext = (detailedMergeStatus, preferredAutoMergeStrategy, autoMergeEnabled) => ({
       canMerge: true,
-      onlyAllowMergeIfPipelineSucceeds: true,
-      isPipelineFailed: true,
-      hasMergeableDiscussionsState: false,
-      isPipelineBlocked: false,
-      canBeMerged: false,
-      shouldBeRebased: true,
-      projectArchived: false,
-      branchMissing: false,
       commitsCount: 2,
-      hasConflicts: false,
-      draft: false,
-    };
-    const bound = getStateKey.bind(context);
+      detailedMergeStatus,
+      preferredAutoMergeStrategy,
+      autoMergeEnabled,
+    });
 
-    expect(bound()).toEqual('rebase');
+    it.each`
+      scenario                   | detailedMergeStatus                   | autoMergeEnabled | state
+      ${'MWCP and not approved'} | ${DETAILED_MERGE_STATUS.NOT_APPROVED} | ${false}         | ${'readyToMerge'}
+      ${'MWCP and approved'}     | ${DETAILED_MERGE_STATUS.MERGEABLE}    | ${false}         | ${'readyToMerge'}
+    `(
+      'when $scenario, state should equal $state',
+      ({ detailedMergeStatus, autoMergeEnabled, state }) => {
+        const bound = getStateKey.bind(
+          createContext(detailedMergeStatus, MWCP_MERGE_STRATEGY, autoMergeEnabled),
+        );
+
+        expect(bound()).toBe(state);
+      },
+    );
   });
 });

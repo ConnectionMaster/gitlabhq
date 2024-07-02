@@ -110,12 +110,12 @@ module Gitlab
     # This is a nice reference article on autoloading/eager loading:
     # http://blog.arkency.com/2014/11/dont-forget-about-eager-load-when-extending-autoload
     config.eager_load_paths.push(*%W[#{config.root}/lib
-                                     #{config.root}/app/models/badges
-                                     #{config.root}/app/models/hooks
-                                     #{config.root}/app/models/members
-                                     #{config.root}/app/graphql/resolvers/concerns
-                                     #{config.root}/app/graphql/mutations/concerns
-                                     #{config.root}/app/graphql/types/concerns])
+      #{config.root}/app/models/badges
+      #{config.root}/app/models/hooks
+      #{config.root}/app/models/members
+      #{config.root}/app/graphql/resolvers/concerns
+      #{config.root}/app/graphql/mutations/concerns
+      #{config.root}/app/graphql/types/concerns])
 
     config.generators.templates.push("#{config.root}/generator_templates")
 
@@ -267,12 +267,9 @@ module Gitlab
     config.assets.paths << "#{config.root}/vendor/assets/fonts"
 
     config.assets.precompile << "application_utilities.css"
-    config.assets.precompile << "application_utilities_to_be_replaced.css"
     config.assets.precompile << "application_utilities_dark.css"
-    config.assets.precompile << "application_utilities_to_be_replaced_dark.css"
     config.assets.precompile << "application_dark.css"
     config.assets.precompile << "tailwind.css"
-    config.assets.precompile << "tailwind_all_the_way.css"
 
     config.assets.precompile << "print.css"
     config.assets.precompile << "mailer.css"
@@ -297,6 +294,7 @@ module Gitlab
     config.assets.precompile << "page_bundles/clusters.css"
     config.assets.precompile << "page_bundles/commits.css"
     config.assets.precompile << "page_bundles/commit_description.css"
+    config.assets.precompile << "page_bundles/commit_rapid_diffs.css"
     config.assets.precompile << "page_bundles/cycle_analytics.css"
     config.assets.precompile << "page_bundles/dashboard.css"
     config.assets.precompile << "page_bundles/dashboard_projects.css"
@@ -320,11 +318,13 @@ module Gitlab
     config.assets.precompile << "page_bundles/issues_show.css"
     config.assets.precompile << "page_bundles/jira_connect.css"
     config.assets.precompile << "page_bundles/learn_gitlab.css"
+    config.assets.precompile << "page_bundles/log_viewer.css"
     config.assets.precompile << "page_bundles/login.css"
     config.assets.precompile << "page_bundles/members.css"
     config.assets.precompile << "page_bundles/merge_conflicts.css"
     config.assets.precompile << "page_bundles/merge_request_analytics.css"
     config.assets.precompile << "page_bundles/merge_request.css"
+    config.assets.precompile << "page_bundles/merge_request_rapid_diffs.css"
     config.assets.precompile << "page_bundles/merge_requests.css"
     config.assets.precompile << "page_bundles/milestone.css"
     config.assets.precompile << "page_bundles/ml_experiment_tracking.css"
@@ -379,6 +379,7 @@ module Gitlab
     config.assets.precompile << "emoji_sprites.css"
     config.assets.precompile << "errors.css"
     config.assets.precompile << "jira_connect.js"
+    config.assets.precompile << "xterm.css"
 
     config.assets.precompile << "themes/*.css"
 
@@ -398,12 +399,9 @@ module Gitlab
     config.assets.precompile << "icons.svg"
     config.assets.precompile << "icons.json"
     config.assets.precompile << "file_icons/file_icons.svg"
+    config.assets.precompile << "file_icons/file_icons.json"
     config.assets.precompile << "illustrations/*.svg"
     config.assets.precompile << "illustrations/*.png"
-
-    # Import css for xterm
-    config.assets.paths << "#{config.root}/node_modules/xterm/src/"
-    config.assets.precompile << "xterm.css"
 
     # Import path for EE specific SCSS entry point
     # In CE it will import a noop file, in EE a functioning file
@@ -445,7 +443,7 @@ module Gitlab
 
     # Allow access to GitLab API from other domains
     config.middleware.insert_before Warden::Manager, Rack::Cors do
-      headers_to_expose = %w[Link X-Total X-Total-Pages X-Per-Page X-Page X-Next-Page X-Prev-Page X-Gitlab-Blob-Id X-Gitlab-Commit-Id X-Gitlab-Content-Sha256 X-Gitlab-Encoding X-Gitlab-File-Name X-Gitlab-File-Path X-Gitlab-Last-Commit-Id X-Gitlab-Ref X-Gitlab-Size]
+      headers_to_expose = %w[Link X-Total X-Total-Pages X-Per-Page X-Page X-Next-Page X-Prev-Page X-Gitlab-Blob-Id X-Gitlab-Commit-Id X-Gitlab-Content-Sha256 X-Gitlab-Encoding X-Gitlab-File-Name X-Gitlab-File-Path X-Gitlab-Last-Commit-Id X-Gitlab-Ref X-Gitlab-Size X-Request-Id]
 
       allow do
         origins Gitlab.config.gitlab.url
@@ -495,6 +493,14 @@ module Gitlab
         end
       end
 
+      allow do
+        origins '*'
+        resource '/oauth/token/info',
+          headers: %w[Authorization],
+          credentials: false,
+          methods: %i[get head options]
+      end
+
       # These are routes from doorkeeper-openid_connect:
       # https://github.com/doorkeeper-gem/doorkeeper-openid_connect#routes
       allow do
@@ -509,8 +515,8 @@ module Gitlab
         allow do
           origins '*'
           resource openid_path,
-          credentials: false,
-          methods: %i[get head]
+            credentials: false,
+            methods: %i[get head]
         end
       end
 
@@ -519,8 +525,8 @@ module Gitlab
       allow do
         origins 'https://*.web-ide.gitlab-static.net'
         resource '/assets/webpack/*',
-                 credentials: false,
-                 methods: %i[get head]
+          credentials: false,
+          methods: %i[get head]
       end
     end
 
@@ -578,7 +584,7 @@ module Gitlab
 
       LOOSE_APP_ASSETS = lambda do |logical_path, filename|
         filename.start_with?(*asset_roots) &&
-          !['.js', '.css', '.md', '.vue', '.graphql', ''].include?(File.extname(logical_path))
+          ['.js', '.css', '.md', '.vue', '.graphql', ''].exclude?(File.extname(logical_path))
       end
 
       app.config.assets.precompile << LOOSE_APP_ASSETS
@@ -593,7 +599,7 @@ module Gitlab
 
     # We need this for initializers that need to be run before Zeitwerk is loaded
     initializer :before_zeitwerk, before: :setup_main_autoloader, after: :prepend_helpers_path do
-      Dir[Rails.root.join('config/initializers_before_autoloader/*.rb')].sort.each do |initializer|
+      Dir[Rails.root.join('config/initializers_before_autoloader/*.rb')].each do |initializer|
         load_config_initializer(initializer)
       end
     end

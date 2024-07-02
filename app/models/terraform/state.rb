@@ -24,7 +24,7 @@ module Terraform
       inverse_of: :terraform_state
 
     scope :ordered_by_name, -> { order(:name) }
-    scope :with_name, -> (name) { where(name: name) }
+    scope :with_name, ->(name) { where(name: name) }
 
     validates :project_id, :name, presence: true
     validates :uuid, presence: true, uniqueness: true, length: { is: UUID_LENGTH },
@@ -76,7 +76,7 @@ module Terraform
     # recreated: https://gitlab.com/gitlab-org/gitlab/-/issues/258960
     def migrate_legacy_version!(data:, version:, build:)
       current_file = latest_version.file.read
-      current_version = parse_serial(current_file) || version - 1
+      current_version = parse_serial(current_file) || (version - 1)
 
       update!(versioning_enabled: true)
 

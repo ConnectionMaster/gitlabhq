@@ -250,6 +250,7 @@ describe('issue_note', () => {
       expect(noteHeaderProps.createdAt).toBe(note.created_at);
       expect(noteHeaderProps.noteId).toBe(note.id);
       expect(noteHeaderProps.noteableType).toBe(NOTEABLE_TYPE_MAPPING[note.noteable_type]);
+      expect(noteHeaderProps.isImported).toBe(note.imported);
     });
 
     it('should render note actions', () => {
@@ -398,7 +399,6 @@ describe('issue_note', () => {
           note: updatedNote,
           noteText: params.noteText,
           resolveDiscussion: params.resolveDiscussion,
-          position: {},
           flashContainer: wrapper.vm.$el,
           callback: expect.any(Function),
           errorCallback: expect.any(Function),
@@ -420,23 +420,6 @@ describe('issue_note', () => {
       findNoteBody().vm.$emit('handleFormUpdate', { ...params, noteText: sensitiveMessage });
 
       expect(updateNote).not.toHaveBeenCalled();
-    });
-
-    it('does not stringify empty position', () => {
-      findNoteBody().vm.$emit('handleFormUpdate', params);
-
-      expect(updateNote.mock.calls[0][1].note.note.position).toBeUndefined();
-    });
-
-    it('stringifies populated position', () => {
-      const position = { test: true };
-      const expectation = JSON.stringify(position);
-      createWrapper({ note: { ...note, position } });
-
-      updateActions();
-      findNoteBody().vm.$emit('handleFormUpdate', params);
-
-      expect(updateNote.mock.calls[0][1].note.note.position).toBe(expectation);
     });
 
     describe('when updateNote returns errors', () => {

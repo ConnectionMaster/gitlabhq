@@ -507,8 +507,10 @@ Karma
 KCachegrind
 Kerberos
 Keycloak
+keyless
 keyset
 keyspace
+keystore
 keytab
 keytabs
 Kibana
@@ -533,6 +535,8 @@ ldapsearch
 Lefthook
 Leiningen
 Lemmy
+LLM
+LLMs
 libFuzzer
 Libgcrypt
 Libravatar
@@ -551,8 +555,10 @@ lookbehinds
 Lookbook
 lookups
 loopback
+LSP
 Lua
 Lucene
+Lucidchart
 macOS
 Mailchimp
 Maildir
@@ -561,6 +567,7 @@ Mailroom
 Makefile
 Makefiles
 malloc
+Maniphest
 Markdown
 markdownlint
 Marketo
@@ -622,6 +629,7 @@ Nanoc
 NAT
 navigations
 negatable
+Neovim
 Netlify
 NGINX
 ngrok
@@ -687,6 +695,7 @@ Phabricator
 phaser
 phasers
 phpenv
+Phorge
 PHPUnit
 PIDs
 pipenv

@@ -19,13 +19,13 @@ Must-reads:
   database-related changes and complex SQL queries, and having them reviewed
 - [Secure coding guidelines](secure_coding_guidelines.md)
 - [Pipelines for the GitLab project](pipelines/index.md)
+- [Avoiding required stops](avoiding_required_stops.md)
 
 Complementary reads:
 
-- [Avoiding required stops](avoiding_required_stops.md)
 - [Contribute to GitLab](contributing/index.md)
-- [Security process for developers](https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/developer.md#security-releases-critical-non-critical-as-a-developer)
-- [Patch release process for developers](https://gitlab.com/gitlab-org/release/docs/blob/master/general/patch/process.md#process-for-developers)
+- [Security process for developers](https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/engineer.md)
+- [Patch release process for developers](https://gitlab.com/gitlab-org/release/docs/-/tree/master/general/patch)
 - [Guidelines for implementing Enterprise Edition features](ee_features.md)
 - [Adding a new service component to GitLab](adding_service_component.md)
 - [Guidelines for changelogs](changelog.md)
@@ -87,8 +87,6 @@ Technical writers do not need to review the content, however, and any Maintainer
 other than the MR author can merge.
 
 ### Reviewer values
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/57293) in GitLab 14.1.
 
 As a reviewer or as a reviewee, make sure to familiarize yourself with
 the [reviewer values](https://handbook.gitlab.com/handbook/engineering/workflow/reviewer-values/) we strive for at GitLab.

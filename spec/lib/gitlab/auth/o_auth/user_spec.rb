@@ -31,19 +31,59 @@ RSpec.describe Gitlab::Auth::OAuth::User, feature_category: :system_access do
   let(:ldap_user_2) { Gitlab::Auth::Ldap::Person.new(Net::LDAP::Entry.new, 'ldapmain') }
 
   describe '.find_by_uid_and_provider' do
-    let(:dn) { 'CN=John Åström, CN=Users, DC=Example, DC=com' }
+    let(:provider) { 'provider' }
+    let(:uid) { 'uid' }
+    let(:user) { create(:user) }
+    let!(:identity) { create(:identity, provider: provider, extern_uid: uid, user: user) }
 
-    it 'retrieves the correct user' do
-      special_info = {
-        name: 'John Åström',
-        email: 'john@example.com',
-        nickname: 'jastrom'
-      }
-      special_hash = OmniAuth::AuthHash.new(uid: dn, provider: 'ldapmain', info: special_info)
-      special_chars_user = described_class.new(special_hash)
-      user = special_chars_user.save
+    context 'when user exists for given uid and provider' do
+      it 'returns the user for given uid and provider' do
+        expect(described_class.find_by_uid_and_provider(uid, provider)).to eq user
+      end
 
-      expect(described_class.find_by_uid_and_provider(dn, 'ldapmain')).to eq user
+      context "when user's identity with untrusted extern_uid" do
+        before do
+          identity.update!(trusted_extern_uid: false)
+        end
+
+        it 'raises Gitlab::Auth::OAuth::User::IdentityWithUntrustedExternUidError' do
+          expect { described_class.find_by_uid_and_provider(uid, provider) }
+            .to raise_error(Gitlab::Auth::OAuth::User::IdentityWithUntrustedExternUidError)
+        end
+      end
+    end
+
+    context 'when user does not exist for given uid and provider' do
+      it 'returns nil' do
+        expect(described_class.find_by_uid_and_provider('unknown-uid', provider)).to eq nil
+      end
+    end
+
+    context 'when identity exists for given uid and provider but is not tied to a user' do
+      before do
+        identity.update!(user: nil)
+      end
+
+      it 'returns nil' do
+        expect(described_class.find_by_uid_and_provider(uid, provider)).to eq nil
+      end
+    end
+
+    context 'for LDAP' do
+      let(:dn) { 'CN=John Åström, CN=Users, DC=Example, DC=com' }
+
+      it 'retrieves the correct user' do
+        special_info = {
+          name: 'John Åström',
+          email: 'john@example.com',
+          nickname: 'jastrom'
+        }
+        special_hash = OmniAuth::AuthHash.new(uid: dn, provider: 'ldapmain', info: special_info)
+        special_chars_user = described_class.new(special_hash)
+        user = special_chars_user.save
+
+        expect(described_class.find_by_uid_and_provider(dn, 'ldapmain')).to eq user
+      end
     end
   end
 
@@ -908,6 +948,13 @@ RSpec.describe Gitlab::Auth::OAuth::User, feature_category: :system_access do
 
         expect(oauth_user2.gl_user.username).to eq('johngitlab-ETC1')
       end
+
+      it 'generates the username with a counter for special characters' do
+        oauth_user.save # rubocop:disable Rails/SaveBang -- not an ActiveRecord model, no save! method
+        oauth_user2 = described_class.new(OmniAuth::AuthHash.new(uid: 'my-uid2', provider: provider, info: { nickname: 'johngitlab---ETC@othermail.com', email: 'john@othermail.com' }))
+
+        expect(oauth_user2.gl_user.username).to eq('johngitlab-ETC1')
+      end
     end
 
     context 'when username is a reserved word' do
@@ -934,17 +981,6 @@ RSpec.describe Gitlab::Auth::OAuth::User, feature_category: :system_access do
       it 'creates valid user with sanitized username' do
         expect(gl_user).to be_valid
         expect(gl_user.username).to eq('opie.the_opossum')
-      end
-
-      context 'and extra_slug_path_sanitization feature is disabled' do
-        before do
-          stub_feature_flags(extra_slug_path_sanitization: false)
-        end
-
-        it 'fails to create user' do
-          expect(gl_user).not_to be_valid
-          expect(gl_user.errors[:username]).to be_present
-        end
       end
     end
   end

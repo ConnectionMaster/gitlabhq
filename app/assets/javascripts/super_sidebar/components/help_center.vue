@@ -8,7 +8,7 @@ import {
 } from '@gitlab/ui';
 import GitlabVersionCheckBadge from '~/gitlab_version_check/components/gitlab_version_check_badge.vue';
 import { helpPagePath } from '~/helpers/help_page_helper';
-import { FORUM_URL, DOCS_URL, PROMO_URL } from 'jh_else_ce/lib/utils/url_utility';
+import { FORUM_URL, PROMO_URL } from 'jh_else_ce/lib/utils/url_utility';
 import { __, s__ } from '~/locale';
 import { STORAGE_KEY } from '~/whats_new/utils/notification';
 import Tracking from '~/tracking';
@@ -35,7 +35,7 @@ export default {
     shortcuts: __('Keyboard shortcuts'),
     version: __('Your GitLab version'),
     whatsnew: __("What's new"),
-    chat: s__('TanukiBot|GitLab Duo Chat'),
+    chat: s__('DuoChat|GitLab Duo Chat'),
   },
   props: {
     sidebarData: {
@@ -92,7 +92,7 @@ export default {
             },
             {
               text: this.$options.i18n.docs,
-              href: DOCS_URL,
+              href: this.sidebarData.docs_path,
               extraAttrs: {
                 ...this.trackingAttrs('gitlab_documentation'),
               },
@@ -113,7 +113,7 @@ export default {
             },
             {
               text: this.$options.i18n.contribute,
-              href: helpPagePath('', { anchor: 'contributing-to-gitlab' }),
+              href: helpPagePath('', { anchor: 'contribute-to-gitlab' }),
               extraAttrs: {
                 ...this.trackingAttrs('contribute_to_gitlab'),
               },
@@ -233,14 +233,14 @@ export default {
       :group="itemGroups.versionCheck"
     >
       <template #list-item="{ item }">
-        <span class="gl-display-flex gl-flex-direction-column gl-line-height-24">
-          <span class="gl-font-sm gl-font-weight-bold">
+        <span class="gl-display-flex gl-flex-direction-column gl-leading-24">
+          <span class="gl-font-sm gl-font-bold">
             {{ item.text }}
             <gl-emoji data-name="rocket" />
           </span>
           <span>
             <span class="gl-mr-2">{{ item.version }}</span>
-            <gitlab-version-check-badge v-if="updateSeverity" :status="updateSeverity" size="sm" />
+            <gitlab-version-check-badge v-if="updateSeverity" :status="updateSeverity" />
           </span>
         </span>
       </template>
@@ -261,10 +261,10 @@ export default {
     <gl-disclosure-dropdown-group :group="itemGroups.helpActions" bordered>
       <template #list-item="{ item }">
         <span
-          class="gl-display-flex gl-justify-content-space-between gl-align-items-center gl-my-n1"
+          class="gl-display-flex gl-justify-content-space-between gl-align-items-center -gl-my-1"
         >
           {{ item.text }}
-          <gl-badge v-if="item.count" pill size="sm" variant="info">{{ item.count }}</gl-badge>
+          <gl-badge v-if="item.count" pill variant="info">{{ item.count }}</gl-badge>
           <kbd v-else-if="item.shortcut" class="flat">?</kbd>
         </span>
       </template>

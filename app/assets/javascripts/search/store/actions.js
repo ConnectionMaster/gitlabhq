@@ -1,17 +1,18 @@
 import Api from '~/api';
 import { createAlert } from '~/alert';
 import axios from '~/lib/utils/axios_utils';
-import {
-  visitUrl,
-  setUrlParams,
-  getBaseURL,
-  queryToObject,
-  objectToQuery,
-} from '~/lib/utils/url_utility';
+import { visitUrl, setUrlParams, getNormalizedURL } from '~/lib/utils/url_utility';
 import { logError } from '~/lib/logger';
 import { __ } from '~/locale';
 import { labelFilterData } from '~/search/sidebar/components/label_filter/data';
-import { GROUPS_LOCAL_STORAGE_KEY, PROJECTS_LOCAL_STORAGE_KEY, SIDEBAR_PARAMS } from './constants';
+import { SCOPE_BLOB } from '~/search/sidebar/constants';
+import {
+  GROUPS_LOCAL_STORAGE_KEY,
+  PROJECTS_LOCAL_STORAGE_KEY,
+  SIDEBAR_PARAMS,
+  REGEX_PARAM,
+  LS_REGEX_HANDLE,
+} from '~/search/store/constants';
 import * as types from './mutation_types';
 import {
   loadDataFromLS,
@@ -20,6 +21,7 @@ import {
   isSidebarDirty,
   getAggregationsUrl,
   prepareSearchAggregations,
+  setDataToLS,
 } from './utils';
 
 export const fetchGroups = ({ commit }, search) => {
@@ -61,10 +63,10 @@ export const fetchProjects = ({ commit, state }, search) => {
 };
 
 export const preloadStoredFrequentItems = ({ commit }) => {
-  const storedGroups = loadDataFromLS(GROUPS_LOCAL_STORAGE_KEY);
+  const storedGroups = loadDataFromLS(GROUPS_LOCAL_STORAGE_KEY) || [];
   commit(types.LOAD_FREQUENT_ITEMS, { key: GROUPS_LOCAL_STORAGE_KEY, data: storedGroups });
 
-  const storedProjects = loadDataFromLS(PROJECTS_LOCAL_STORAGE_KEY);
+  const storedProjects = loadDataFromLS(PROJECTS_LOCAL_STORAGE_KEY) || [];
   commit(types.LOAD_FREQUENT_ITEMS, { key: PROJECTS_LOCAL_STORAGE_KEY, data: storedProjects });
 };
 
@@ -106,6 +108,10 @@ export const setQuery = ({ state, commit }, { key, value }) => {
   if (SIDEBAR_PARAMS.includes(key)) {
     commit(types.SET_SIDEBAR_DIRTY, isSidebarDirty(state.query, state.urlQuery));
   }
+
+  if (key === REGEX_PARAM) {
+    setDataToLS(LS_REGEX_HANDLE, value);
+  }
 };
 
 export const applyQuery = ({ state }) => {
@@ -141,25 +147,23 @@ export const setLabelFilterSearch = ({ commit }, { value }) => {
   commit(types.SET_LABEL_SEARCH_STRING, value);
 };
 
-const injectWildCardSearch = (state, link) => {
-  const urlObject = new URL(`${getBaseURL()}${link}`);
-  if (!state.urlQuery.search) {
-    const queryObject = queryToObject(urlObject.search);
-    urlObject.search = objectToQuery({ ...queryObject, search: '*' });
-  }
-
-  return urlObject.href;
-};
-
 export const fetchSidebarCount = ({ commit, state }) => {
   const items = Object.values(state.navigation)
     .filter((navigationItem) => !navigationItem.active && navigationItem.count_link)
     .map((navItem) => {
       const navigationItem = { ...navItem };
+      const modifications = {
+        search: state.query?.search || '*',
+      };
 
-      if (navigationItem.count_link) {
-        navigationItem.count_link = injectWildCardSearch(state, navigationItem.count_link);
+      if (navigationItem.scope === SCOPE_BLOB && loadDataFromLS(LS_REGEX_HANDLE)) {
+        modifications[REGEX_PARAM] = true;
       }
+
+      navigationItem.count_link = setUrlParams(
+        modifications,
+        getNormalizedURL(navigationItem.count_link),
+      );
 
       return navigationItem;
     });

@@ -52,7 +52,7 @@ RSpec.describe 'Group Packages', feature_category: :package_registry do
       it_behaves_like 'package details link'
 
       it 'allows you to navigate to the project page' do
-        find_by_testid('root-link', text: project.name).click
+        click_link(project.name)
 
         expect(page).to have_current_path(project_path(project))
         expect(page).to have_content(project.name)
@@ -70,6 +70,13 @@ RSpec.describe 'Group Packages', feature_category: :package_registry do
 
         it_behaves_like 'correctly sorted packages list', 'Project', ascending: true do
           let(:packages) { [npm_package, maven_package] }
+        end
+      end
+
+      context 'filtering' do
+        it_behaves_like 'shared package filtering' do
+          let_it_be(:package_one) { maven_package }
+          let_it_be(:package_two) { npm_package }
         end
       end
     end

@@ -4,9 +4,9 @@ import {
   GlDisclosureDropdownItem,
   GlFormCheckbox,
   GlIcon,
-  GlSprintf,
   GlTruncate,
-  GlLink,
+  GlBadge,
+  GlTooltipDirective,
 } from '@gitlab/ui';
 import { s__, __ } from '~/locale';
 import ListItem from '~/vue_shared/components/registry/list_item.vue';
@@ -20,9 +20,10 @@ import {
 } from '~/packages_and_registries/package_registry/constants';
 import { getPackageTypeLabel } from '~/packages_and_registries/package_registry/utils';
 import PackageTags from '~/packages_and_registries/shared/components/package_tags.vue';
+import PublishMessage from '~/packages_and_registries/shared/components/publish_message.vue';
 import PublishMethod from '~/packages_and_registries/package_registry/components/list/publish_method.vue';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
-import TimeagoTooltip from '~/vue_shared/components/time_ago_tooltip.vue';
+import glFeatureFlagsMixin from '~/vue_shared/mixins/gl_feature_flags_mixin';
 
 export default {
   name: 'PackageListRow',
@@ -31,14 +32,17 @@ export default {
     GlDisclosureDropdownItem,
     GlFormCheckbox,
     GlIcon,
-    GlSprintf,
     GlTruncate,
-    GlLink,
+    GlBadge,
     PackageTags,
+    PublishMessage,
     PublishMethod,
     ListItem,
-    TimeagoTooltip,
   },
+  directives: {
+    GlTooltip: GlTooltipDirective,
+  },
+  mixins: [glFeatureFlagsMixin()],
   inject: ['isGroupPage', 'canDeletePackages'],
   props: {
     packageEntity: {
@@ -65,27 +69,13 @@ export default {
       return this.packageEntity?.pipelines?.nodes[0];
     },
     projectName() {
-      return this.packageEntity.project.name;
+      return this.isGroupPage ? this.packageEntity.project?.name : '';
     },
-    projectLink() {
-      return this.packageEntity.project.webUrl;
+    projectUrl() {
+      return this.isGroupPage ? this.packageEntity.project?.webUrl : '';
     },
     pipelineUser() {
       return this.pipeline?.user?.name;
-    },
-    publishedMessage() {
-      if (this.isGroupPage) {
-        if (this.pipelineUser) {
-          return s__(`PackageRegistry|Published to %{projectName} by %{author}, %{date}`);
-        }
-        return s__(`PackageRegistry|Published to %{projectName}, %{date}`);
-      }
-
-      if (this.pipelineUser) {
-        return s__(`PackageRegistry|Published by %{author}, %{date}`);
-      }
-
-      return s__(`PackageRegistry|Published %{date}`);
     },
     errorStatusRow() {
       return this.packageEntity.status === PACKAGE_ERROR_STATUS;
@@ -98,13 +88,19 @@ export default {
     showTags() {
       return Boolean(this.packageEntity.tags?.nodes?.length);
     },
+    showBadgeProtected() {
+      return (
+        Boolean(this.glFeatures.packagesProtectedPackages) &&
+        Boolean(this.packageEntity.protectionRuleExists)
+      );
+    },
     nonDefaultRow() {
       return this.packageEntity.status && this.packageEntity.status !== PACKAGE_DEFAULT_STATUS;
     },
     errorPackageStyle() {
       return {
         'gl-text-red-500': this.errorStatusRow,
-        'gl-font-weight-normal': this.errorStatusRow,
+        'gl-font-normal': this.errorStatusRow,
       };
     },
   },
@@ -114,6 +110,7 @@ export default {
     errorPublishing: ERROR_PUBLISHING,
     warning: WARNING_TEXT,
     moreActions: __('More actions'),
+    badgeProtectedTooltipText: s__('PackageRegistry|A protection rule exists for this package.'),
   },
 };
 </script>
@@ -129,25 +126,42 @@ export default {
       />
     </template>
     <template #left-primary>
-      <div class="gl-display-flex gl-align-items-center gl-mr-3 gl-min-w-0">
+      <div
+        class="gl-display-flex gl-align-items-center gl-gap-3 gl-mr-5 gl-min-w-0"
+        data-testid="package-name"
+      >
         <router-link
           v-if="containsWebPathLink"
           :class="errorPackageStyle"
-          class="gl-text-body gl-min-w-0"
+          class="gl-text-body gl-min-w-0 gl-break-all"
           data-testid="details-link"
           :to="{ name: 'details', params: { id: packageId } }"
         >
-          <gl-truncate :text="packageEntity.name" />
+          {{ packageEntity.name }}
         </router-link>
-        <gl-truncate v-else :class="errorPackageStyle" :text="packageEntity.name" />
+        <span v-else :class="errorPackageStyle">
+          {{ packageEntity.name }}
+        </span>
 
-        <package-tags
-          v-if="showTags"
-          class="gl-ml-3"
-          :tags="packageEntity.tags.nodes"
-          hide-label
-          :tag-display-limit="1"
-        />
+        <div v-if="showTags || showBadgeProtected" class="gl-display-flex gl-gap-2">
+          <package-tags
+            v-if="showTags"
+            class="gl-ml-2"
+            :tags="packageEntity.tags.nodes"
+            hide-label
+            :tag-display-limit="1"
+          />
+
+          <gl-badge
+            v-if="showBadgeProtected"
+            v-gl-tooltip="{ title: $options.i18n.badgeProtectedTooltipText }"
+            class="gl-ml-2"
+            icon-size="sm"
+            variant="neutral"
+          >
+            {{ __('protected') }}
+          </gl-badge>
+        </div>
       </div>
     </template>
     <template #left-secondary>
@@ -171,27 +185,17 @@ export default {
       </div>
     </template>
 
-    <template #right-primary>
+    <template v-if="!errorStatusRow" #right-primary>
       <publish-method :pipeline="pipeline" />
     </template>
 
-    <template #right-secondary>
-      <span data-testid="right-secondary">
-        <gl-sprintf :message="publishedMessage">
-          <template v-if="isGroupPage" #projectName>
-            <gl-link
-              data-testid="root-link"
-              class="gl-text-decoration-underline"
-              :href="projectLink"
-              >{{ projectName }}</gl-link
-            >
-          </template>
-          <template #date>
-            <timeago-tooltip :time="packageEntity.createdAt" />
-          </template>
-          <template v-if="pipelineUser" #author>{{ pipelineUser }}</template>
-        </gl-sprintf>
-      </span>
+    <template v-if="!errorStatusRow" #right-secondary>
+      <publish-message
+        :author="pipelineUser"
+        :project-name="projectName"
+        :project-url="projectUrl"
+        :publish-date="packageEntity.createdAt"
+      />
     </template>
 
     <template v-if="packageEntity.userPermissions.destroyPackage" #right-action>

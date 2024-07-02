@@ -4,16 +4,16 @@ require 'spec_helper'
 
 RSpec.describe API::Issues, feature_category: :team_planning do
   let_it_be(:user) { create(:user) }
-  let_it_be(:project, reload: true) { create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace) }
+  let_it_be(:project, reload: true) { create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, reporters: user) }
   let_it_be(:private_mrs_project) do
-    create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, merge_requests_access_level: ProjectFeature::PRIVATE)
+    create(:project, :public, :repository, creator_id: user.id, namespace: user.namespace, merge_requests_access_level: ProjectFeature::PRIVATE, reporters: user)
   end
 
-  let_it_be(:group) { create(:group, :public) }
+  let_it_be(:group) { create(:group, :public, reporters: user) }
 
   let_it_be(:user2)       { create(:user) }
   let_it_be(:non_member)  { create(:user) }
-  let_it_be(:guest)       { create(:user) }
+  let_it_be(:guest)       { create(:user, guest_of: [group, project, private_mrs_project]) }
   let_it_be(:author)      { create(:author) }
   let_it_be(:assignee)    { create(:assignee) }
   let_it_be(:admin)       { create(:user, :admin) }
@@ -87,15 +87,6 @@ RSpec.describe API::Issues, feature_category: :team_planning do
       target_project: private_mrs_project,
       description: "closes #{issue.to_reference(private_mrs_project)}"
     )
-  end
-
-  before_all do
-    group.add_reporter(user)
-    group.add_guest(guest)
-    project.add_reporter(user)
-    project.add_guest(guest)
-    private_mrs_project.add_reporter(user)
-    private_mrs_project.add_guest(guest)
   end
 
   before do
@@ -725,13 +716,20 @@ RSpec.describe API::Issues, feature_category: :team_planning do
     end
 
     it 'returns 404 if issue id not found' do
-      get api("/projects/#{project.id}/issues/54321", user)
+      get api("/projects/#{project.id}/issues/#{non_existing_record_id}", user)
       expect(response).to have_gitlab_http_status(:not_found)
     end
 
     it 'returns 404 if the issue ID is used' do
-      get api("/projects/#{project.id}/issues/#{issue.id}", user)
+      # Make sure other issues don't exist with a matching id or iid to avoid flakyness
+      max_id = [Issue.maximum(:iid), Issue.maximum(:id)].max + 10
+      new_issue = create(:issue, project: project, id: max_id)
 
+      # make sure it does work with iid
+      get api("/projects/#{project.id}/issues/#{new_issue.iid}", user)
+      expect(response).to have_gitlab_http_status(:ok)
+
+      get api("/projects/#{project.id}/issues/#{new_issue.id}", user)
       expect(response).to have_gitlab_http_status(:not_found)
     end
 

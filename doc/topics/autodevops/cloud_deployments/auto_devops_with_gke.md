@@ -48,7 +48,7 @@ NOTE:
 Every new Google Cloud Platform (GCP) account receives [$300 in credit](https://console.cloud.google.com/freetrial),
 and in partnership with Google, GitLab is able to offer an additional $200 for new
 GCP accounts to get started with the GitLab integration with Google Kubernetes Engine.
-[Follow this link](https://cloud.google.com/partners/partnercredit/?pcn_code=0014M00001h35gDQAQ#contact-form)
+[Follow this link](https://cloud.google.com/partners?pcn_code=0014M00001h35gDQAQ#contact-form)
 and apply for credit.
 
 ## Create a Kubernetes cluster
@@ -175,7 +175,7 @@ The jobs are separated into stages:
   are allowed to fail in the test stage:
 
   - The `test` job runs unit and integration tests by detecting the language and
-    framework ([Auto Test](../stages.md#auto-test-deprecated))
+    framework ([Auto Test](../stages.md#auto-test))
   - The `code_quality` job checks the code quality and is allowed to fail
     ([Auto Code Quality](../stages.md#auto-code-quality))
   - The `container_scanning` job checks the Docker container if it has any

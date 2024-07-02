@@ -14,14 +14,20 @@ You can use [`include`](index.md#include) to include external YAML files in your
 
 ## Include a single configuration file
 
-To include a single configuration file, use either of these syntax options:
+To include a single configuration file, use `include` by itself with a single file
+with either of these syntax options:
 
-- `include` by itself with a single file. If this is a local file, it is the same as [`include:local`](index.md#includelocal).
-  If this is a remote file, it is the same as [`include:remote`](index.md#includeremote).
-
-  ```yaml
-  include: '/templates/.after-script-template.yml'
+- ```yaml
+  include: 'my-config.yml'
   ```
+
+- ```yaml
+  include:
+    - 'my-config.yml'
+  ```
+
+If the file is a local file, the behavior is the same as [`include:local`](index.md#includelocal).
+If the file is a remote file, it is the same as [`include:remote`](index.md#includeremote).
 
 ## Include an array of configuration files
 
@@ -33,7 +39,7 @@ You can include an array of configuration files:
   ```yaml
   include:
     - 'https://gitlab.com/awesome-project/raw/main/.before-script-template.yml'
-    - '/templates/.after-script-template.yml'
+    - 'templates/.after-script-template.yml'
   ```
 
 - You can define a single item array:
@@ -48,7 +54,7 @@ You can include an array of configuration files:
   ```yaml
   include:
     - remote: 'https://gitlab.com/awesome-project/raw/main/.before-script-template.yml'
-    - local: '/templates/.after-script-template.yml'
+    - local: 'templates/.after-script-template.yml'
     - template: Auto-DevOps.gitlab-ci.yml
   ```
 
@@ -57,11 +63,11 @@ You can include an array of configuration files:
   ```yaml
   include:
     - 'https://gitlab.com/awesome-project/raw/main/.before-script-template.yml'
-    - '/templates/.after-script-template.yml'
+    - 'templates/.after-script-template.yml'
     - template: Auto-DevOps.gitlab-ci.yml
     - project: 'my-group/my-project'
       ref: main
-      file: '/templates/.gitlab-ci-template.yml'
+      file: 'templates/.gitlab-ci-template.yml'
   ```
 
 ## Use `default` configuration from an included configuration file
@@ -85,7 +91,7 @@ default:
 Content of `.gitlab-ci.yml`:
 
 ```yaml
-include: '/templates/.before-script-template.yml'
+include: 'templates/.before-script-template.yml'
 
 rspec1:
   script:
@@ -375,9 +381,6 @@ In `include` sections in your `.gitlab-ci.yml` file, you can use:
 - The `CI_PIPELINE_SOURCE` and `CI_PIPELINE_TRIGGERED` [predefined variables](../variables/predefined_variables.md).
 - The `$CI_COMMIT_REF_NAME` [predefined variable](../variables/predefined_variables.md).
 
-  When used in `include`, the `CI_COMMIT_REF_NAME` variable returns the full
-  ref path, like `refs/heads/branch-name`.
-
 For example:
 
 ```yaml
@@ -392,6 +395,10 @@ so these variables cannot be used with `include`.
 
 For an example of how you can include predefined variables, and the variables' impact on CI/CD jobs,
 see this [CI/CD variable demo](https://youtu.be/4XR8gw3Pkos).
+
+You cannot use CI/CD variables in an `include` section in a dynamic child pipeline's configuration.
+[Issue 378717](https://gitlab.com/gitlab-org/gitlab/-/issues/378717) proposes fixing
+this issue.
 
 ## Use `rules` with `include`
 
@@ -468,27 +475,49 @@ test:
 
 In this example, GitLab checks for the existence of `file.md` in the current project.
 
-There is a known issue if you configure `include` with `rules:exists` to add a configuration file
+There is a known issue if you configure `include` with `rules:exists` in an include file
 from a different project. GitLab checks for the existence of the file in the _other_ project.
 For example:
 
 ```yaml
+# Pipeline configuration in my-group/my-project
 include:
-- project: my-group/my-project-2
-  ref: main
-  file: test-file.yml
-  rules:
-    - exists:
-        - file.md
+  - project: my-group/other-project
+    ref: other_branch
+    file: other-file.yml
 
 test:
-  stage: test
   script: exit 0
+
+# other-file.yml in my-group/other-project on ref other_branch
+include:
+  - project: my-group/my-project
+    ref: main
+    file: my-file.yml
+    rules:
+      - exists:
+          - file.md
 ```
 
-In this example, GitLab checks for the existence of `test-file.yml` in `my-group/my-project-2`,
-not the current project. Follow [issue 386040](https://gitlab.com/gitlab-org/gitlab/-/issues/386040)
-for information about work to improve this behavior.
+In this example, GitLab searches for the existence of `file.md` in `my-group/other-project`
+on commit ref `other_branch`, not the project/ref in which the pipeline runs.
+
+To change the search context you can use [`rules:exists:paths`](index.md#rulesexistspaths)
+with [`rules:exists:project`](index.md#rulesexistsproject).
+For example:
+
+```yaml
+include:
+  - project: my-group/my-project
+    ref: main
+    file: my-file.yml
+    rules:
+      - exists:
+          paths:
+            - file.md
+          project: my-group/my-project
+          ref: main
+```
 
 ### `include` with `rules:changes`
 
@@ -571,3 +600,21 @@ which configuration file is the source of the loop or excessive included files.
 
 In [GitLab 16.0 and later](https://gitlab.com/gitlab-org/gitlab/-/issues/207270) self-managed users can
 change the [maximum includes](../../administration/settings/continuous_integration.md#maximum-includes) value.
+
+### `SSL_connect SYSCALL returned=5 errno=0 state=SSLv3/TLS write client hello` and other network failures
+
+When using [`include:remote`](index.md#includeremote), GitLab tries to fetch the remote file
+through HTTP(S). This process can fail because of a variety of connectivity issues.
+
+The `SSL_connect SYSCALL returned=5 errno=0 state=SSLv3/TLS write client hello` error
+happens when GitLab can't establish an HTTPS connection to the remote host. This issue
+can be caused if the remote host has rate limits to prevent overloading the server
+with requests.
+
+For example, the [GitLab Pages](../../user/project/pages/index.md) server for GitLab.com
+is rate limited. Repeated attempts to fetch CI/CD configuration files hosted on GitLab Pages
+can cause the rate limit to be reached and cause the error. You should avoid hosting
+CI/CD configuration files on a GitLab Pages site.
+
+When possible, use [`include:project`](index.md#includeproject) to fetch configuration
+files from other projects within the GitLab instance without making external HTTP(S) requests.

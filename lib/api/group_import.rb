@@ -65,6 +65,7 @@ module API
         requires :name, type: String, desc: 'Group name'
         requires :file, type: ::API::Validations::Types::WorkhorseFile, desc: 'The group export file to be imported', documentation: { type: 'file' }
         optional :parent_id, type: Integer, desc: "The ID of the parent group that the group will be imported into. Defaults to the current user's namespace."
+        optional :organization_id, type: Integer, default: -> { Current.organization_id }, desc: "The ID of the organization that the group will be part of. "
       end
       post 'import' do
         authorize_create_group!
@@ -76,7 +77,8 @@ module API
           name: params[:name],
           parent_id: params[:parent_id],
           visibility_level: closest_allowed_visibility_level,
-          import_export_upload: ImportExportUpload.new(import_file: params[:file])
+          import_export_upload: ImportExportUpload.new(import_file: params[:file]),
+          organization_id: params[:organization_id]
         }
 
         response = ::Groups::CreateService.new(current_user, group_params).execute

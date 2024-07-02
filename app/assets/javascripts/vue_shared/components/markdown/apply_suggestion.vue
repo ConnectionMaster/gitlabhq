@@ -62,7 +62,7 @@ export default {
   <gl-disclosure-dropdown
     data-testid="apply-suggestion-dropdown"
     fluid-width
-    placement="right"
+    placement="bottom-end"
     size="small"
     :disabled="disabled"
     :toggle-text="dropdownText"
@@ -82,6 +82,7 @@ export default {
         :placeholder="defaultCommitMessage"
         submit-on-enter
         data-testid="commit-message-field"
+        no-resize
         @submit="onApply"
       />
 
@@ -90,7 +91,7 @@ export default {
       </span>
 
       <gl-button
-        class="gl-w-auto! gl-mt-3 gl-align-self-end"
+        class="!gl-w-auto gl-mt-3 gl-align-self-end"
         category="primary"
         variant="confirm"
         data-testid="commit-with-custom-message-button"
