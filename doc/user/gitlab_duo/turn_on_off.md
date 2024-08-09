@@ -60,6 +60,33 @@ To resolve this problem, try editing your Apache proxy settings:
   RewriteRule ^/?(.*) "ws://127.0.0.1:8181/$1" [P,L]
 ```
 
+## Run a health check for GitLab Duo
+
+DETAILS:
+**Offering:** Self-managed, GitLab Dedicated
+**Tier:** Premium, Ultimate
+**Status:** Beta
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/161997) in GitLab 17.3 [with a flag](../../administration/feature_flags.md) named `cloud_connector_status`. Enabled by default.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+This feature is available for testing, but not ready for production use.
+
+Run a health check to test if your instance meets the requirements to use GitLab Duo.
+When the health check completes, it displays a pass or fail result and the types of issues.
+
+Prerequisites:
+
+- You must be an administrator.
+
+To run a health check:
+
+1. On the left sidebar, at the bottom, select **Admin**.
+1. Select **GitLab Duo**.
+1. On the upper-right corner, select **Run health check**.
+
 ## Turn off GitLab Duo features
 
 You can turn off GitLab Duo for a group, project, or instance.
@@ -89,7 +116,6 @@ Prerequisites:
 
 To turn off GitLab Duo for a group:
 
-<!-- vale gitlab.Substitutions = NO -->
 1. On the left sidebar, select **Search or go to** and find your group.
 1. Select **Settings > General**.
 1. Expand **Permissions and group features**.
@@ -98,7 +124,6 @@ To turn off GitLab Duo for a group:
    all subgroups.
 
    ![Cascading setting](img/disable_duo_features_v17_1.png)
-<!-- vale gitlab.Substitutions = YES -->
 
 ### Turn off for a project
 
@@ -130,14 +155,12 @@ Prerequisites:
 
 To turn off GitLab Duo for an instance:
 
-<!-- vale gitlab.Substitutions = NO -->
 1. On the left sidebar, at the bottom, select **Admin**.
 1. Select **Settings > General**
 1. Expand **AI-powered features**.
 1. Clear the **Use Duo features** checkbox.
 1. Optional. Select the **Enforce for all subgroups** checkbox to cascade
    the setting to all groups in the instance.
-<!-- vale gitlab.Substitutions = YES -->
 
 NOTE:
 An [issue exists](https://gitlab.com/gitlab-org/gitlab/-/issues/441532) to allow administrators

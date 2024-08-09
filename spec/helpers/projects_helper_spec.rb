@@ -300,7 +300,7 @@ RSpec.describe ProjectsHelper, feature_category: :source_code_management do
       it 'returns message prompting user to set password or set up a PAT' do
         stub_application_setting(password_authentication_enabled_for_git?: true)
 
-        expect(helper.no_password_message).to eq('Your account is authenticated with SSO or SAML. To <a href="/help/topics/git/terminology#pull-and-push" target="_blank" rel="noopener noreferrer">push and pull</a> over HTTP with Git using this account, you must <a href="/-/user_settings/password/edit">set a password</a> or <a href="/-/user_settings/personal_access_tokens">set up a Personal Access Token</a> to use instead of a password. For more information, see <a href="/help/gitlab-basics/start-using-git#clone-with-https" target="_blank" rel="noopener noreferrer">Clone with HTTPS</a>.')
+        expect(helper.no_password_message).to eq('Your account is authenticated with SSO or SAML. To <a href="/help/topics/git/terminology#pull-and-push" target="_blank" rel="noopener noreferrer">push and pull</a> over HTTP with Git using this account, you must <a href="/-/user_settings/password/edit">set a password</a> or <a href="/-/user_settings/personal_access_tokens">set up a personal access token</a> to use instead of a password. For more information, see <a href="/help/gitlab-basics/start-using-git#clone-with-https" target="_blank" rel="noopener noreferrer">Clone with HTTPS</a>.')
       end
     end
 
@@ -308,7 +308,7 @@ RSpec.describe ProjectsHelper, feature_category: :source_code_management do
       it 'returns message prompting user to set up a PAT' do
         stub_application_setting(password_authentication_enabled_for_git?: false)
 
-        expect(helper.no_password_message).to eq('Your account is authenticated with SSO or SAML. To <a href="/help/topics/git/terminology#pull-and-push" target="_blank" rel="noopener noreferrer">push and pull</a> over HTTP with Git using this account, you must <a href="/-/user_settings/personal_access_tokens">set up a Personal Access Token</a> to use instead of a password. For more information, see <a href="/help/gitlab-basics/start-using-git#clone-with-https" target="_blank" rel="noopener noreferrer">Clone with HTTPS</a>.')
+        expect(helper.no_password_message).to eq('Your account is authenticated with SSO or SAML. To <a href="/help/topics/git/terminology#pull-and-push" target="_blank" rel="noopener noreferrer">push and pull</a> over HTTP with Git using this account, you must <a href="/-/user_settings/personal_access_tokens">set up a personal access token</a> to use instead of a password. For more information, see <a href="/help/gitlab-basics/start-using-git#clone-with-https" target="_blank" rel="noopener noreferrer">Clone with HTTPS</a>.')
       end
     end
   end
@@ -433,6 +433,10 @@ RSpec.describe ProjectsHelper, feature_category: :source_code_management do
 
     it 'returns false when there are no projects and there is no name' do
       expect(helper.show_projects?(Project.none, {})).to eq(false)
+    end
+
+    it 'returns true when there are no projects but archived param is "only"' do
+      expect(helper.show_projects?(Project.none, archived: 'only')).to eq(true)
     end
   end
 
@@ -1893,14 +1897,13 @@ RSpec.describe ProjectsHelper, feature_category: :source_code_management do
     end
   end
 
-  describe '#projects_explore_filtered_search_and_sort_app_data' do
+  describe '#projects_filtered_search_and_sort_app_data' do
     it 'returns expected json' do
-      expect(Gitlab::Json.parse(helper.projects_explore_filtered_search_and_sort_app_data)).to eq(
+      expect(Gitlab::Json.parse(helper.projects_filtered_search_and_sort_app_data)).to eq(
         {
           'initial_sort' => 'created_desc',
           'programming_languages' => ProgrammingLanguage.most_popular,
-          'starred_explore_projects_path' => starred_explore_projects_path,
-          'explore_root_path' => explore_root_path
+          'paths_to_exclude_sort_on' => [starred_explore_projects_path, explore_root_path]
         }
       )
     end

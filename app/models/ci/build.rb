@@ -410,7 +410,7 @@ module Ci
     # A Ci::Bridge may transition to `canceling` as a result of strategy: :depend
     # but only a Ci::Build will transition to `canceling`` via `.cancel`
     def supports_canceling?
-      Feature.enabled?(:ci_canceling_status, project) && cancel_gracefully?
+      cancel_gracefully?
     end
 
     def build_matcher
@@ -456,6 +456,16 @@ module Ci
 
     def runnable?
       true
+    end
+
+    def degenerated?
+      super && execution_config_id.nil?
+    end
+
+    def degenerate!
+      super do
+        execution_config&.destroy
+      end
     end
 
     def archived?
@@ -1206,8 +1216,11 @@ module Ci
       Gitlab::Ci::Variables::Collection.new.tap do |variables|
         break variables unless id_tokens?
 
+        sub_components = project.ci_id_token_sub_claim_components.map(&:to_sym)
+
         id_tokens.each do |var_name, token_data|
-          token = Gitlab::Ci::JwtV2.for_build(self, aud: expanded_id_token_aud(token_data['aud']))
+          token = Gitlab::Ci::JwtV2.for_build(self, aud: expanded_id_token_aud(token_data['aud']),
+            sub_components: sub_components)
 
           variables.append(key: var_name, value: token, public: false, masked: true)
         end

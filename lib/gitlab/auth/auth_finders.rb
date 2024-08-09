@@ -99,7 +99,7 @@ module Gitlab
         login, token = user_name_and_password(current_request)
         user = User.find_by_login(login.to_s)
 
-        user if user && Gitlab::LfsToken.new(user).token_valid?(token.to_s)
+        user if user && Gitlab::LfsToken.new(user, nil).token_valid?(token.to_s)
       end
 
       def find_user_from_personal_access_token
@@ -110,7 +110,7 @@ module Gitlab
         access_token&.user || raise(UnauthorizedError)
       end
 
-      # We allow Private Access Tokens with `api` scope to be used by web
+      # We allow private access tokens with `api` scope to be used by web
       # requests on RSS feeds or ICS files for backwards compatibility.
       # It is also used by GraphQL/API requests.
       # And to allow accessing /archive programatically as it was a big pain point

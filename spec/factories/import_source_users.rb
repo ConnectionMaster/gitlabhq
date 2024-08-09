@@ -26,7 +26,13 @@ FactoryBot.define do
       status { 1 }
     end
 
+    trait :reassignment_in_progress do
+      with_reassign_to_user
+      status { 2 }
+    end
+
     trait :completed do
+      with_reassign_to_user
       status { 5 }
     end
 

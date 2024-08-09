@@ -984,6 +984,11 @@ Use **GitLab self-managed** to refer to the product offering. It refers to a Git
 
 Use **GitLab.com** to refer to the URL or product offering. GitLab.com is the instance that's managed by GitLab.
 
+## GitLab Workflow extension for VS Code
+
+Use **GitLab Workflow extension for VS Code** to refer to the extension.
+You can also use **GitLab Workflow for VS Code** or **GitLab Workflow**.
+
 ## group access token
 
 Use sentence case for **group access token**.
@@ -2286,7 +2291,7 @@ Sometimes you might need to use **yet** when writing a task. If you use
 **yet**, ensure the surrounding phrases are written
 in present tense, active voice.
 
-[View guidance about how to write about future features](../versions.md#promising-features-in-future-versions).
+[View guidance about how to write about future features](index.md#promising-features-in-future-versions).
 
 ## you, your, yours
 

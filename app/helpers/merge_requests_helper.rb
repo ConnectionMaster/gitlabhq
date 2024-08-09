@@ -231,6 +231,7 @@ module MergeRequestsHelper
 
   def project_merge_requests_list_data(project, current_user)
     {
+      autocomplete_award_emojis_path: autocomplete_award_emojis_path,
       full_path: project.full_path,
       has_any_merge_requests: project_merge_requests(project).exists?.to_s,
       initial_sort: current_user&.user_preference&.issues_sort,
@@ -370,7 +371,7 @@ module MergeRequestsHelper
           title: _('Reviews requested'),
           query: 'reviewRequestedMergeRequests',
           variables: {
-            reviewState: 'UNREVIEWED'
+            reviewStates: %w[UNREVIEWED REVIEW_STARTED]
           }
         },
         {
@@ -384,7 +385,7 @@ module MergeRequestsHelper
           title: _('Waiting for reviewers'),
           query: 'assignedMergeRequests',
           variables: {
-            reviewStates: %w[UNREVIEWED UNAPPROVED]
+            reviewStates: %w[UNREVIEWED UNAPPROVED REVIEW_STARTED]
           }
         },
         {

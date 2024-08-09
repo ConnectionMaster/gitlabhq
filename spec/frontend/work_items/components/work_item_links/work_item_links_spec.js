@@ -16,7 +16,7 @@ import WidgetWrapper from '~/work_items/components/widget_wrapper.vue';
 import WorkItemLinks from '~/work_items/components/work_item_links/work_item_links.vue';
 import WorkItemChildrenWrapper from '~/work_items/components/work_item_links/work_item_children_wrapper.vue';
 import WorkItemDetailModal from '~/work_items/components/work_item_detail_modal.vue';
-import AbuseCategorySelector from '~/abuse_reports/components/abuse_category_selector.vue';
+import WorkItemAbuseModal from '~/work_items/components/work_item_abuse_modal.vue';
 import { FORM_TYPES } from '~/work_items/constants';
 import getWorkItemTreeQuery from '~/work_items/graphql/work_item_tree.query.graphql';
 
@@ -49,7 +49,6 @@ describe('WorkItemLinks', () => {
     fetchHandler = responseWithAddChildPermission,
     issueDetailsQueryHandler = jest.fn().mockResolvedValue(getIssueDetailsResponse()),
     hasIterationsFeature = false,
-    isGroup = false,
   } = {}) => {
     mockApollo = createMockApollo(
       [
@@ -63,7 +62,6 @@ describe('WorkItemLinks', () => {
       provide: {
         fullPath: 'project/path',
         hasIterationsFeature,
-        isGroup,
         reportAbusePath: '/report/abuse/path',
       },
       propsData: {
@@ -94,7 +92,7 @@ describe('WorkItemLinks', () => {
   const findAddLinksForm = () => wrapper.findByTestId('add-links-form');
   const findChildrenCount = () => wrapper.findByTestId('children-count');
   const findWorkItemDetailModal = () => wrapper.findComponent(WorkItemDetailModal);
-  const findAbuseCategorySelector = () => wrapper.findComponent(AbuseCategorySelector);
+  const findAbuseCategoryModal = () => wrapper.findComponent(WorkItemAbuseModal);
   const findWorkItemLinkChildrenWrapper = () => wrapper.findComponent(WorkItemChildrenWrapper);
   const findShowLabelsToggle = () => wrapper.findComponent(GlToggle);
 
@@ -237,7 +235,7 @@ describe('WorkItemLinks', () => {
     });
 
     it('should not be visible by default', () => {
-      expect(findAbuseCategorySelector().exists()).toBe(false);
+      expect(findAbuseCategoryModal().exists()).toBe(false);
     });
 
     it('should be visible when the work item modal emits `openReportAbuse` event', async () => {
@@ -245,13 +243,13 @@ describe('WorkItemLinks', () => {
 
       await nextTick();
 
-      expect(findAbuseCategorySelector().exists()).toBe(true);
+      expect(findAbuseCategoryModal().exists()).toBe(true);
 
-      findAbuseCategorySelector().vm.$emit('close-drawer');
+      findAbuseCategoryModal().vm.$emit('close-modal');
 
       await nextTick();
 
-      expect(findAbuseCategorySelector().exists()).toBe(false);
+      expect(findAbuseCategoryModal().exists()).toBe(false);
     });
   });
 

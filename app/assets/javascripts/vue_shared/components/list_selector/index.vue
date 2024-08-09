@@ -1,13 +1,15 @@
 <script>
-import { GlCard, GlIcon, GlCollapsibleListbox, GlSearchBoxByType } from '@gitlab/ui';
+import { GlCollapsibleListbox, GlSearchBoxByType } from '@gitlab/ui';
 import { parseBoolean, convertObjectPropsToCamelCase } from '~/lib/utils/common_utils';
-import { getIdFromGraphQLId } from '~/graphql_shared/utils';
+import CrudComponent from '~/vue_shared/components/crud_component.vue';
 import { createAlert } from '~/alert';
 import { __, sprintf } from '~/locale';
-import { ACCESS_LEVEL_REPORTER_INTEGER } from '~/access_level/constants';
-import groupsAutocompleteQuery from '~/graphql_shared/queries/groups_autocomplete.query.graphql';
-import Api from '~/api';
-import { getProjects } from '~/rest_api';
+import {
+  fetchProjectGroups,
+  fetchAllGroups,
+  fetchProjects,
+  fetchUsers,
+} from '~/vue_shared/components/list_selector/api';
 import { CONFIG } from './constants';
 
 const I18N = {
@@ -20,10 +22,9 @@ export default {
   name: 'ListSelector',
   i18n: I18N,
   components: {
-    GlCard,
-    GlIcon,
     GlSearchBoxByType,
     GlCollapsibleListbox,
+    CrudComponent,
   },
   props: {
     type: {
@@ -128,67 +129,24 @@ export default {
       }
     },
     async fetchUsersBySearchTerm(search) {
-      const users = await Api.projectUsers(this.projectPath, search, this.usersQueryOptions);
-
-      return users?.map((user) => ({
-        text: user.name,
-        value: user.username,
-        ...this.convertToCamelCase(user),
-      }));
+      return fetchUsers(this.projectPath, search, this.usersQueryOptions);
     },
     async fetchGroupsBySearchTerm(search) {
       let groups = [];
       if (parseBoolean(this.isProjectNamespace)) {
-        groups = await this.fetchProjectGroups(search);
+        groups = await fetchProjectGroups(this.projectPath, search);
       } else {
-        groups = await this.fetchAllGroups(search);
+        groups = await fetchAllGroups(this.$apollo, search);
       }
 
       return groups;
-    },
-    fetchProjectGroups(search) {
-      return Api.projectGroups(this.projectPath, {
-        search,
-        with_shared: true,
-        shared_min_access_level: ACCESS_LEVEL_REPORTER_INTEGER,
-      }).then((data) =>
-        data?.map((group) => ({
-          text: group.full_name,
-          value: group.name,
-          ...this.convertToCamelCase(group),
-        })),
-      );
-    },
-    fetchAllGroups(search) {
-      return this.$apollo
-        .query({
-          query: groupsAutocompleteQuery,
-          variables: { search },
-        })
-        .then(({ data }) =>
-          data?.groups.nodes.map((group) => ({
-            text: group.fullName,
-            value: group.name,
-            ...group,
-            id: getIdFromGraphQLId(group.id),
-            type: 'group',
-          })),
-        );
     },
     fetchDeployKeysBySearchTerm() {
       // TODO - implement API request (follow-up)
       // https://gitlab.com/gitlab-org/gitlab/-/issues/432494
     },
-    async fetchProjectsBySearchTerm(search) {
-      const response = await getProjects(search, { membership: false });
-      const projects = response?.data || [];
-
-      return projects.map((project) => ({
-        ...this.convertToCamelCase(project),
-        text: project.name,
-        value: project.id,
-        type: 'project',
-      }));
+    fetchProjectsBySearchTerm(search) {
+      return fetchProjects(search);
     },
     getItemByKey(key) {
       return this.items.find((item) => item[this.config.filterKey] === key);
@@ -216,16 +174,7 @@ export default {
 </script>
 
 <template>
-  <gl-card header-class="gl-new-card-header gl-border-none" body-class="gl-card-footer">
-    <template #header
-      ><strong data-testid="list-selector-title"
-        >{{ config.title }}
-        <span class="gl-ml-3 gl-text-gray-700"
-          ><gl-icon :name="config.icon" /> {{ selectedItems.length }}</span
-        ></strong
-      ></template
-    >
-
+  <crud-component :title="config.title" :count="selectedItems.length" :icon="config.icon">
     <div class="gl-flex gl-gap-3" :class="{ 'gl-mb-4': selectedItems.length }">
       <gl-collapsible-listbox
         ref="results"
@@ -274,6 +223,6 @@ export default {
       />
     </div>
 
-    <div v-else class="gl-mt-5 gl-text-secondary">{{ emptyPlaceholder }}</div>
-  </gl-card>
+    <div v-else class="gl-mt-5 gl-text-subtle">{{ emptyPlaceholder }}</div>
+  </crud-component>
 </template>

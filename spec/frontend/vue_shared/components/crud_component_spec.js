@@ -36,6 +36,12 @@ describe('CRUD Component', () => {
     expect(findTitle().text()).toBe('CRUD Component title');
   });
 
+  it('renders `title` slot', () => {
+    createComponent({}, { title: '<p>Title slot</p>' });
+
+    expect(findTitle().text()).toBe('Title slot');
+  });
+
   it('renders description', () => {
     createComponent({ description: 'Description' });
 
@@ -62,6 +68,12 @@ describe('CRUD Component', () => {
     expect(findIcon().props('name')).toBe('rocket');
   });
 
+  it('renders `count` slot', () => {
+    createComponent({}, { count: '<p>Count slot</p>' });
+
+    expect(findCount().text()).toBe('Count slot');
+  });
+
   it('renders `actions` slot', () => {
     createComponent({}, { actions: '<p>Actions slot</p>' });
 
@@ -77,6 +89,7 @@ describe('CRUD Component', () => {
     findFormToggle().vm.$emit('click');
     await nextTick();
 
+    expect(findFormToggle().exists()).toBe(false);
     expect(findForm().text()).toBe('Form slot');
   });
 

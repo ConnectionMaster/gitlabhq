@@ -21,13 +21,14 @@ RSpec.describe 'Database schema', feature_category: :database do
     ci_pipeline_artifacts: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_sources_projects: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_daily_build_group_report_results: [%w[partition_id last_pipeline_id]], # index on last_pipeline_id is sufficient
-    ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
+    ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[upstream_pipeline_partition_id upstream_pipeline_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
     ci_pipeline_variables: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     p_ci_pipeline_variables: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
+    ci_pipelines: [%w[auto_canceled_by_partition_id auto_canceled_by_id]], # index on auto_canceled_by_id is sufficient
     ci_pipelines_config: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_pipeline_metadata: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_pipeline_messages: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
-    p_ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
+    p_ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[upstream_pipeline_partition_id upstream_pipeline_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
     ci_stages: [%w[partition_id pipeline_id]], # the index on pipeline_id is sufficient
     p_ci_stages: [%w[partition_id pipeline_id]], # the index on pipeline_id is sufficient
     ai_testing_terms_acceptances: %w[user_id], # testing terms only have 1 entry, and if the user is deleted the record should remain
@@ -119,10 +120,10 @@ RSpec.describe 'Database schema', feature_category: :database do
     merge_request_diff_commits: %w[commit_author_id committer_id],
     # merge_request_diff_commits_b5377a7a34 is the temporary table for the merge_request_diff_commits partitioning
     # backfill. It will get foreign keys after the partitioning is finished.
-    merge_request_diff_commits_b5377a7a34: %w[merge_request_diff_id commit_author_id committer_id],
+    merge_request_diff_commits_b5377a7a34: %w[merge_request_diff_id commit_author_id committer_id project_id],
     # merge_request_diff_files_99208b8fac is the temporary table for the merge_request_diff_commits partitioning
     # backfill. It will get foreign keys after the partitioning is finished.
-    merge_request_diff_files_99208b8fac: %w[merge_request_diff_id],
+    merge_request_diff_files_99208b8fac: %w[merge_request_diff_id project_id],
     merge_request_user_mentions: %w[project_id],
     namespaces: %w[owner_id parent_id],
     namespace_descendants: %w[namespace_id],

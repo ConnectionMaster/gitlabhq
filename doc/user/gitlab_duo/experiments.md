@@ -12,11 +12,17 @@ The following GitLab Duo features are
 ## Summarize issue discussions with Discussion summary
 
 DETAILS:
-**Tier:** Ultimate for a limited time. In the future, Ultimate with [GitLab Duo Enterprise](../../subscriptions/subscription-add-ons.md).
+**Tier:** For a limited time, Ultimate. In the future, Ultimate with [GitLab Duo Enterprise](../../subscriptions/subscription-add-ons.md).
 **Offering:** GitLab.com
 **Status:** Experiment
 
 > - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10344) in GitLab 16.0 as an [experiment](../../policy/experiment-beta-support.md#experiment).
+> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/454550) to GitLab Duo in GitLab 17.3 [with a flag](../../administration/feature_flags.md) named `summarize_notes_with_duo`. Disabled by default.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+This feature is available for testing, but not ready for production use.
 
 Generate a summary of discussions on an issue.
 
@@ -31,12 +37,12 @@ To generate a summary of issue discussions:
 1. Select **View summary**.
 
 The comments in the issue are summarized in as many as 10 list items.
-The summary is displayed only for you.
+You can ask follow up questions based on the response.
 
 Provide feedback on this experimental feature in [issue 407779](https://gitlab.com/gitlab-org/gitlab/-/issues/407779).
 
-**Data usage**: When you use this feature, the text of all comments on the issue are sent to the large
-language model referenced above.
+**Data usage**: When you use this feature, the text of all comments on the issue are sent to
+the large [language model listed on the GitLab Duo page](index.md#discussion-summary).
 
 ## Forecast deployment frequency with Value stream forecasting
 
@@ -76,7 +82,7 @@ Provide feedback on this experimental feature in [issue 416833](https://gitlab.c
 ## Summarize an issue with Issue description generation
 
 DETAILS:
-**Tier:** Ultimate for a limited time. In the future, Ultimate with [GitLab Duo Enterprise](../../subscriptions/subscription-add-ons.md).
+**Tier:** For a limited time, Ultimate. In the future, Ultimate with [GitLab Duo Enterprise](../../subscriptions/subscription-add-ons.md).
 **Offering:** GitLab.com
 **Status:** Experiment
 
@@ -99,5 +105,5 @@ The issue description is replaced with AI-generated text.
 
 Provide feedback on this experimental feature in [issue 409844](https://gitlab.com/gitlab-org/gitlab/-/issues/409844).
 
-**Data usage**: When you use this feature, the text you enter is sent to the large
-language model referenced above.
+**Data usage**: When you use this feature, the text you enter is sent to
+the large [language model listed on the GitLab Duo page](index.md#issue-description-generation).

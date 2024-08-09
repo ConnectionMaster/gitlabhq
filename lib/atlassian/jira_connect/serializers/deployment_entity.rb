@@ -58,7 +58,7 @@ module Atlassian
              #{environment.name}"
           end
 
-          "Deployment #{deployment.iid} of #{project.name} (project-#{project.id})
+          "Deployment #{deployment.iid} (deployment-#{deployment.id}) of #{project.name} (project-#{project.id})
           at #{short_sha} (#{build&.name}) to #{environment.name}"
         end
 
@@ -154,7 +154,8 @@ module Atlassian
           environments = jira_cloud_app_integration.jira_cloud_app_deployment_gating_environments.split(',')
           current_environment = environment.tier
 
-          return unless environments.include?(current_environment) && deployment.status == "blocked"
+          return unless environments.include?(current_environment)
+          return unless state == "pending"
 
           [{ command: 'initiate_deployment_gating' }]
         end

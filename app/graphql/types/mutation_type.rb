@@ -12,6 +12,7 @@ module Types
     mount_mutation Mutations::Achievements::DeleteUserAchievement, alpha: { milestone: '16.1' }
     mount_mutation Mutations::Achievements::Revoke, alpha: { milestone: '15.10' }
     mount_mutation Mutations::Achievements::Update, alpha: { milestone: '15.11' }
+    mount_mutation Mutations::Achievements::UpdateUserAchievement, alpha: { milestone: '17.3' }
     mount_mutation Mutations::Achievements::UpdateUserAchievementPriorities, alpha: { milestone: '16.5' }
     mount_mutation Mutations::Admin::SidekiqQueues::DeleteJobs
     mount_mutation Mutations::AlertManagement::CreateAlertIssue
@@ -208,6 +209,7 @@ module Types
     mount_mutation Mutations::WorkItems::LinkedItems::Add, alpha: { milestone: '16.3' }
     mount_mutation Mutations::WorkItems::LinkedItems::Remove, alpha: { milestone: '16.3' }
     mount_mutation Mutations::WorkItems::AddClosingMergeRequest, alpha: { milestone: '17.1' }
+    mount_mutation Mutations::WorkItems::Hierarchy::Reorder, alpha: { milestone: '17.3' }
     mount_mutation Mutations::Users::SavedReplies::Create
     mount_mutation Mutations::Users::SavedReplies::Update
     mount_mutation Mutations::Users::SavedReplies::Destroy

@@ -26,7 +26,7 @@ describe('Log scanner', () => {
       content: [
         {
           text: 'line 2',
-          style: ['xterm-bg-9', 'term-bold'],
+          style: ['xterm-bg-1', 'term-bold'],
         },
       ],
       sections: [],
@@ -38,7 +38,7 @@ describe('Log scanner', () => {
       content: [
         {
           text: 'line 1',
-          style: ['xterm-fg-10', 'term-bold'],
+          style: ['term-fg-green', 'term-bold'],
         },
       ],
       sections: [],
@@ -224,5 +224,18 @@ describe('Log scanner', () => {
       { content: [{ style: [], text: 'line 3' }], sections: ['my_section'] },
       null,
     ]);
+  });
+
+  describe('scans malformed sections as regular text', () => {
+    it.each([
+      'section_start:not_a_number:my_section',
+      'section_start:100:',
+      'section_wrong:100:my_section',
+    ])('scans "%s"', (text) => {
+      expect(scanner.scan(text)).toEqual({
+        content: [{ style: [], text }],
+        sections: [],
+      });
+    });
   });
 });

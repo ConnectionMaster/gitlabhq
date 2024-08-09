@@ -378,6 +378,23 @@ export const updateWorkItemMutationErrorResponse = {
   },
 };
 
+export const mockworkItemReferenceQueryResponse = {
+  data: {
+    workItemsByReference: {
+      nodes: [
+        {
+          id: 'gid://gitlab/WorkItem/705',
+          iid: '111',
+          title: 'Objective linked items 104',
+          confidential: false,
+          __typename: 'WorkItem',
+        },
+      ],
+      __typename: 'WorkItemConnection',
+    },
+  },
+};
+
 export const convertWorkItemMutationErrorResponse = {
   data: {
     workItemConvert: {
@@ -2860,6 +2877,10 @@ export const mockWorkItemNotesResponse = {
     workItem: {
       id: 'gid://gitlab/WorkItem/1',
       iid: '60',
+      namespace: {
+        id: 'gid://gitlab/Namespaces::ProjectNamespace/34',
+        __typename: 'Namespace',
+      },
       widgets: [
         {
           __typename: 'WorkItemWidgetIteration',
@@ -3076,6 +3097,10 @@ export const mockWorkItemNotesByIidResponse = {
       workItem: {
         id: 'gid://gitlab/WorkItem/600',
         iid: '51',
+        namespace: {
+          id: 'gid://gitlab/Namespaces::ProjectNamespace/34',
+          __typename: 'Namespace',
+        },
         widgets: [
           {
             __typename: 'WorkItemWidgetIteration',
@@ -3310,6 +3335,10 @@ export const mockMoreWorkItemNotesResponse = {
       workItem: {
         id: 'gid://gitlab/WorkItem/600',
         iid: '60',
+        namespace: {
+          id: 'gid://gitlab/Namespaces::ProjectNamespace/34',
+          __typename: 'Namespace',
+        },
         widgets: [
           {
             __typename: 'WorkItemWidgetIteration',
@@ -3662,6 +3691,10 @@ export const mockWorkItemNotesResponseWithComments = {
       workItem: {
         id: 'gid://gitlab/WorkItem/600',
         iid: '60',
+        namespace: {
+          id: 'gid://gitlab/Namespaces::ProjectNamespace/34',
+          __typename: 'Namespace',
+        },
         widgets: [
           {
             __typename: 'WorkItemWidgetIteration',
@@ -4089,6 +4122,10 @@ export const workItemNotesWithSystemNotesWithChangedDescription = {
       workItem: {
         id: 'gid://gitlab/WorkItem/733',
         iid: '79',
+        namespace: {
+          id: 'gid://gitlab/Namespaces::ProjectNamespace/34',
+          __typename: 'Namespace',
+        },
         widgets: [
           {
             __typename: 'WorkItemWidgetAssignees',

@@ -828,7 +828,7 @@ module API
       end
 
       unless access_token
-        forbidden!('Must be authenticated using an OAuth or Personal Access Token to use sudo')
+        forbidden!('Must be authenticated using an OAuth or personal access token to use sudo')
       end
 
       validate_and_save_access_token!(scopes: [:sudo])
@@ -861,7 +861,11 @@ module API
       env['api.format'] = :txt
       content_type 'text/plain'
 
-      header['Content-Disposition'] = ActionDispatch::Http::ContentDisposition.format(disposition: 'inline', filename: blob.name)
+      # Some browsers ignore content type when filename has an xhtml extension
+      # We remove the extensions to prevent the contents from being displayed inline
+      # See https://gitlab.com/gitlab-org/gitlab/-/issues/458236
+      filename = blob.name&.ends_with?('.xhtml') ? blob.name.split('.')[0] : blob.name
+      header['Content-Disposition'] = ActionDispatch::Http::ContentDisposition.format(disposition: 'inline', filename: filename)
 
       # Let Workhorse examine the content and determine the better content disposition
       header[Gitlab::Workhorse::DETECT_HEADER] = "true"

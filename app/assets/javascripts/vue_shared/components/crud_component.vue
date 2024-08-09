@@ -9,7 +9,8 @@ export default {
   props: {
     title: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
     },
     description: {
       type: String,
@@ -17,9 +18,9 @@ export default {
       default: null,
     },
     count: {
-      type: Number,
+      type: [String, Number],
       required: false,
-      default: null,
+      default: '',
     },
     icon: {
       type: String,
@@ -67,14 +68,18 @@ export default {
             class="gl-m-0 gl-inline-flex gl-gap-3 gl-text-base gl-font-bold gl-leading-24"
             data-testid="crud-title"
           >
-            {{ title }}
+            <slot v-if="$scopedSlots.title" name="title"></slot>
+            <template v-else>{{ title }}</template>
             <span
-              v-if="displayedCount"
+              v-if="displayedCount || $scopedSlots.count"
               class="gl-inline-flex gl-items-center gl-gap-2 gl-text-sm gl-text-subtle"
               data-testid="crud-count"
             >
-              <gl-icon v-if="icon" :name="icon" data-testid="crud-icon" />
-              {{ displayedCount }}
+              <slot v-if="$scopedSlots.count" name="count"></slot>
+              <template v-else>
+                <gl-icon v-if="icon" :name="icon" data-testid="crud-icon" />
+                {{ displayedCount }}
+              </template>
             </span>
           </h2>
           <p
@@ -88,7 +93,7 @@ export default {
         </div>
         <div class="gl-flex gl-items-baseline gl-gap-3" data-testid="crud-actions">
           <gl-button
-            v-if="toggleText"
+            v-if="toggleText && !isFormVisible"
             size="small"
             data-testid="crud-form-toggle"
             @click="toggleForm"
@@ -112,6 +117,14 @@ export default {
         data-testid="crud-body"
       >
         <slot></slot>
+
+        <div
+          v-if="$scopedSlots.pagination"
+          class="gl-flex gl-justify-center gl-p-5 gl-border-t"
+          data-testid="crud-pagination"
+        >
+          <slot name="pagination"></slot>
+        </div>
       </div>
 
       <footer
@@ -121,9 +134,6 @@ export default {
       >
         <slot name="footer"></slot>
       </footer>
-    </div>
-    <div v-if="$scopedSlots.pagination" class="gl-mt-5" data-testid="crud-pagination">
-      <slot name="pagination"></slot>
     </div>
   </section>
 </template>

@@ -4,8 +4,8 @@ module Groups
   class WorkItemsController < Groups::ApplicationController
     feature_category :team_planning
 
-    before_action :handle_new_work_item_path, only: [:show]
     before_action do
+      push_frontend_feature_flag(:comment_tooltips)
       push_frontend_feature_flag(:notifications_todos_buttons)
       push_force_frontend_feature_flag(:work_items, group&.work_items_feature_flag_enabled?)
       push_force_frontend_feature_flag(:work_items_beta, group&.work_items_beta_feature_flag_enabled?)
@@ -13,7 +13,9 @@ module Groups
       push_force_frontend_feature_flag(:namespace_level_work_items, namespace_work_items_enabled?)
       push_force_frontend_feature_flag(:create_group_level_work_items,
         group&.create_group_level_work_items_feature_flag_enabled?)
+      push_force_frontend_feature_flag(:glql_integration, group&.glql_integration_feature_flag_enabled?)
     end
+    before_action :handle_new_work_item_path, only: [:show]
 
     def index
       not_found unless namespace_work_items_enabled?

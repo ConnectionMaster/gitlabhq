@@ -10,7 +10,7 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-<!-- vale gitlab.FutureTense = NO -->
+<!-- vale gitlab_base.FutureTense = NO -->
 
 This tutorial provides step-by-step guidance on using agile planning and tracking features in GitLab
 to facilitate core Scrum ceremonies and workflows.
@@ -73,7 +73,7 @@ flowchart TD
     Issues .->|Visible in| Lists
     Issues .->|Assigned to| Iterations
     Issues .->|Assigned to| Milestones
-    Tasks  .->|Child of| Issues
+    Tasks .->|Child of| Issues
     Tasks .->|Assigned to| Iterations
     Tasks .->|Assigned to| Milestones
     Epics .->|Visible in| Boards

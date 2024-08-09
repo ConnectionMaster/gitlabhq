@@ -171,6 +171,8 @@ export const AVAILABLE_FILTERED_SEARCH_TOKENS = [
 
 export const AVATAR_SIZE = 48;
 
+export const DEFAULT_PAGE_SIZE = 20;
+
 export const MEMBERS_TAB_TYPES = Object.freeze({
   user: 'user',
   group: 'group',
@@ -227,3 +229,8 @@ export const I18N_USER_BOT = __('Bot');
 export const I188N_USER_2FA = __('2FA');
 export const I18N_ROLE_SAVE_SUCCESS = s__('Members|Role was successfully updated.');
 export const I18N_ROLE_SAVE_ERROR = s__('MemberRole|Could not update role.');
+
+export const CONTEXT_TYPE = Object.freeze({
+  PROJECT: 'PROJECT',
+  GROUP: 'GROUP',
+});

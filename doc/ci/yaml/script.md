@@ -99,10 +99,7 @@ job2:
 ## Skip `after_script` commands if a job is cancelled
 
 > - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/10158) in GitLab 17.0 [with a flag](../../administration/feature_flags.md) named `ci_canceling_status`. Enabled by default. Requires GitLab Runner version 16.11.1.
-
-FLAG:
-The availability of this feature is controlled by a feature flag.
-For more information, see the history.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/460285) in GitLab 17.3. Feature flag `ci_canceling_status` removed.
 
 [`after_script`](index.md) commands run if a job is canceled while the `before_script`
 or `script` section of that job are running.
@@ -200,13 +197,13 @@ Second command line.
 When you omit the `>` or `|` block scalar indicators, GitLab concatenates non-empty
 lines to form the command. Make sure the lines can run when concatenated.
 
-<!-- vale gitlab.MeaningfulLinkWords = NO -->
+<!-- vale gitlab_base.MeaningfulLinkWords = NO -->
 
 [Shell here documents](https://en.wikipedia.org/wiki/Here_document) work with the
 `|` and `>` operators as well. The example below transliterates lower case letters
 to upper case:
 
-<!-- vale gitlab.MeaningfulLinkWords = YES -->
+<!-- vale gitlab_base.MeaningfulLinkWords = YES -->
 
 ```yaml
 job:
@@ -463,8 +460,6 @@ script:
 
 This fails as the indentation causes the line breaks to be preserved:
 
-<!-- vale gitlab.CurlStringsQuoted = NO -->
-
 ```plaintext
 $ RESULT=$(curl --silent # collapsed multi-line command
 curl: no URL specified!
@@ -472,8 +467,6 @@ curl: try 'curl --help' or 'curl --manual' for more information
 /bin/bash: line 149: --header: command not found
 /bin/bash: line 150: https://gitlab.example.com/api/v4/job: No such file or directory
 ```
-
-<!-- vale gitlab.CurlStringsQuoted = YES -->
 
 Resolve this by either:
 

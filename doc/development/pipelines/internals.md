@@ -70,11 +70,11 @@ purposes.
 
 The default image is defined in [`.gitlab-ci.yml`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/.gitlab-ci.yml).
 
-<!-- vale gitlab.Spelling = NO -->
+<!-- vale gitlab_base.Spelling = NO -->
 
 It includes Ruby, Go, Git, Git LFS, Chrome, Node, Yarn, PostgreSQL, and Graphics Magick.
 
-<!-- vale gitlab.Spelling = YES -->
+<!-- vale gitlab_base.Spelling = YES -->
 
 The images used in our pipelines are configured in the
 [`gitlab-org/gitlab-build-images`](https://gitlab.com/gitlab-org/gitlab-build-images)
@@ -202,7 +202,7 @@ and included in `rules` definitions via [YAML anchors](../../ci/yaml/yaml_optimi
 
 ### `if:` conditions
 
-<!-- vale gitlab.Substitutions = NO -->
+<!-- vale gitlab_base.Substitutions = NO -->
 
 | `if:` conditions | Description | Notes |
 |------------------|-------------|-------|
@@ -229,7 +229,7 @@ and included in `rules` definitions via [YAML anchors](../../ci/yaml/yaml_optimi
 | `if-dot-com-gitlab-org-merge-request`                        | Limits jobs creation to merge requests for the `gitlab-org` group on GitLab.com. | |
 | `if-dot-com-ee-schedule`                                     | Limits jobs to scheduled pipelines for the `gitlab-org/gitlab` project on GitLab.com. | |
 
-<!-- vale gitlab.Substitutions = YES -->
+<!-- vale gitlab_base.Substitutions = YES -->
 
 ### `changes:` patterns
 
@@ -546,7 +546,7 @@ scripts/my-script.rb
 
 ## CI Configuration Testing
 
-We now have RSpec tests to verify changes to the CI configuration by simulating pipeline creation with the updated YAML files. You can find these tests in the `spec/dot_gitlab_ci/` directory.
+We now have RSpec tests to verify changes to the CI configuration by simulating pipeline creation with the updated YAML files. You can find these tests and a documentation of the current test coverage in [`spec/dot_gitlab_ci/job_dependency_spec.rb`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/spec/dot_gitlab_ci/job_dependency_spec.rb).
 
 ### How Do the Tests Work
 

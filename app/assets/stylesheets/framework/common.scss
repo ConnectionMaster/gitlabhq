@@ -70,15 +70,8 @@
 }
 
 /** COLORS **/
-.cgreen { color: $green-600; }
-.cdark { color: $gray-800; }
-
 .text-secondary {
   color: $gl-text-color-secondary;
-}
-
-.text-tertiary {
-  color: $gl-text-color-tertiary;
 }
 
 .text-warning,
@@ -89,10 +82,6 @@
 .text-info,
 .text-info:hover {
   color: $brand-info;
-}
-
-.bg-white {
-  background-color: $white;
 }
 
 .bg-line-target-blue {
@@ -544,8 +533,8 @@ copy-code {
   @apply gl-transition-all;
   opacity: 0;
 
-  top: 7px;
-  right: $input-horizontal-padding;
+  top: $gl-spacing-scale-3;
+  right: $gl-spacing-scale-3;
 
   .markdown-code-block:hover &,
   &:focus-within {

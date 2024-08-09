@@ -51,8 +51,6 @@ if rspec_profiling_is_configured && (!ENV.key?('CI') || branch_can_be_profiled)
   require 'rspec_profiling/rspec'
 end
 
-# require rainbow gem String monkeypatch, so we can test SystemChecks
-require 'rainbow/ext/string'
 Rainbow.enabled = false
 
 # Enable zero monkey patching mode before loading any other RSpec code.
@@ -81,7 +79,12 @@ quality_level = Quality::TestLevel.new
 RSpec.configure do |config|
   config.use_transactional_fixtures = true
   config.use_instantiated_fixtures = false
-  config.fixture_path = Rails.root
+
+  if ::Gitlab.next_rails?
+    config.fixture_paths = [Rails.root]
+  else
+    config.fixture_path = Rails.root
+  end
 
   config.verbose_retry = true
   config.display_try_failure_messages = true
@@ -148,7 +151,7 @@ RSpec.configure do |config|
     metadata[:type] = :feature
   end
 
-  config.define_derived_metadata(file_path: %r{spec/dot_gitlab_ci/}) do |metadata|
+  config.define_derived_metadata(file_path: %r{spec/dot_gitlab_ci/job_dependency_spec.rb}) do |metadata|
     metadata[:ci_config_validation] = true
   end
 

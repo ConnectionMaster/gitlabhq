@@ -50,6 +50,8 @@ You can use GitLab Flavored Markdown in the following areas:
 You can also use other rich text files in GitLab. You might have to install a dependency
 to do so. For more information, see the [`gitlab-markup` gem project](https://gitlab.com/gitlab-org/gitlab-markup).
 
+Support for improvements to Markdown preview when using GitLab Flavored Markdown in the Web IDE is proposed in [issue 645](https://gitlab.com/gitlab-org/gitlab-vscode-extension/-/issues/645).
+
 ### Differences between GitLab Flavored Markdown and standard Markdown
 
 <!--
@@ -218,7 +220,7 @@ do_this_and_do_that_and_another_thing
 but_emphasis is_desired _here_
 ```
 
-<!-- vale gitlab.Spelling = NO -->
+<!-- vale gitlab_base.Spelling = NO -->
 
 perform_complicated_task
 
@@ -226,7 +228,7 @@ do_this_and_do_that_and_another_thing
 
 but_emphasis is_desired _here_
 
-<!-- vale gitlab.Spelling = YES -->
+<!-- vale gitlab_base.Spelling = YES -->
 
 ---
 
@@ -425,16 +427,12 @@ Almost any URL you put into your text is auto-linked:
 - http://localhost:3000
 ```
 
-<!-- vale gitlab.Spelling = NO -->
-
 - <https://www.google.com>
 - <https://www.google.com>
 - <ftp://ftp.us.debian.org/debian/>
 - <a href="smb://foo/bar/baz/">smb://foo/bar/baz</a>
 - <a href="irc://irc.freenode.net">irc://irc.freenode.net</a>
 - <http://localhost:3000>
-
-<!-- vale gitlab.Spelling = YES -->
 
 ## Multimedia
 
@@ -1041,21 +1039,7 @@ a^2+b^2=c^2
 $$
 ````
 
-This math is inline: $`a^2+b^2=c^2`$.
-
-This math is on a separate line using a ```` ```math ```` block:
-
-```math
-a^2+b^2=c^2
-```
-
-This math is on a separate line using inline `$$`: $$a^2+b^2=c^2$$
-
-This math is on a separate line using a `$$...$$` block:
-
-$$
-a^2+b^2=c^2
-$$
+![Example of math in GitLab](img/markdown_math_v17_2.png)
 
 ## Tables
 
@@ -1488,13 +1472,13 @@ in GitLab might look different depending on the OS and browser used.
 Most emoji are natively supported on macOS, Windows, iOS, Android, and fall back on image-based
 emoji where there is no support.
 
-<!-- vale gitlab.Spelling = NO -->
+<!-- vale gitlab_base.Spelling = NO -->
 
 On Linux, you can download [Noto Color Emoji](https://github.com/googlefonts/noto-emoji)
 to get full native emoji support. Ubuntu 22.04 (like many modern Linux distributions) has
 this font installed by default.
 
-<!-- vale gitlab.Spelling = YES -->
+<!-- vale gitlab_base.Spelling = YES -->
 
 To learn more about adding custom emoji, see [Custom emoji](emoji_reactions.md#custom-emoji).
 
@@ -1826,12 +1810,12 @@ The formula for water is H<sub>2</sub>O
 while the equation for the theory of relativity is E = mc<sup>2</sup>.
 ```
 
-<!-- vale gitlab.Spelling = NO -->
+<!-- vale gitlab_base.Spelling = NO -->
 
 The formula for water is H<sub>2</sub>O
 while the equation for the theory of relativity is E = mc<sup>2</sup>.
 
-<!-- vale gitlab.Spelling = YES -->
+<!-- vale gitlab_base.Spelling = YES -->
 
 GitLab Flavored Markdown doesn't support the Redcarpet superscript syntax ( `x^2` ).
 
@@ -2076,6 +2060,21 @@ To update the rendered references if the assignee, milestone, or health status c
 
 Issue [420807](https://gitlab.com/gitlab-org/gitlab/-/issues/420807) tracks improving how these
 references refresh.
+
+### Show comment preview when hovering on a link
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/29663) in GitLab 17.3 [with a flag](../administration/feature_flags.md) named `comment_tooltips`. Disabled by default.
+
+FLAG:
+The availability of this feature is controlled by a feature flag.
+For more information, see the history.
+This feature is available for testing, but not ready for production use.
+
+When this feature is enabled, hovering over a link to a comment shows the author and
+part of the comment.
+
+When this feature is disabled, hovering over a link to a comment shows information about the item,
+such as issue or epic.
 
 ### Embedding Observability dashboards
 

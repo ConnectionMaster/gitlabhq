@@ -91,6 +91,13 @@ module API
     end
 
     before do
+      ::Current.organization = Gitlab::Current::Organization.new(
+        params: {},
+        user: @current_user
+      ).organization
+    end
+
+    before do
       set_peek_enabled_for_current_request
     end
 
@@ -384,6 +391,7 @@ module API
       mount ::API::Ml::Mlflow::Entrypoint
     end
 
+    mount ::API::Internal::Autoflow
     mount ::API::Internal::Base
     mount ::API::Internal::Coverage if Gitlab::Utils.to_boolean(ENV['COVERBAND_ENABLED'], default: false)
     mount ::API::Internal::Lfs
