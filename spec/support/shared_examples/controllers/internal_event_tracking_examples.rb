@@ -20,7 +20,7 @@
 RSpec.shared_examples 'internal event tracking' do
   let(:all_metrics) do
     additional_properties = try(:additional_properties) || {}
-    base_additional_properties = Gitlab::InternalEvents::BASE_ADDITIONAL_PROPERTIES.to_h do |key, _val|
+    base_additional_properties = Gitlab::Tracking::EventValidator::BASE_ADDITIONAL_PROPERTIES.to_h do |key, _val|
       [key, try(key)]
     end
 
@@ -46,6 +46,7 @@ RSpec.shared_examples 'internal event tracking' do
       namespace: try(:namespace) || try(:project)&.namespace,
       category: try(:category) || 'InternalEventTracking',
       feature_enabled_by_namespace_ids: try(:feature_enabled_by_namespace_ids),
+      **(try(:additional_properties) || {}),
       **{
         label: try(:label),
         property: try(:property),

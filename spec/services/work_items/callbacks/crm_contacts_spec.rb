@@ -27,25 +27,13 @@ RSpec.describe WorkItems::Callbacks::CrmContacts, feature_category: :service_des
     end
   end
 
-  shared_examples 'raises a WidgetError' do
-    let(:error_class) { ::WorkItems::Widgets::BaseService::WidgetError }
+  shared_examples 'raises a callback error' do
+    let(:error_class) { ::Issuable::Callbacks::Base::Error }
 
     it { expect { callback }.to raise_error(error_class, message) }
   end
 
   context 'when work item belongs to a project' do
-    it 'updates the contacts' do
-      allow(::Issues::SetCrmContactsService).to receive(:new).and_call_original
-
-      callback
-
-      expect(work_item.customer_relations_contacts).to contain_exactly(contact)
-    end
-  end
-
-  context 'when work item belongs to a group' do
-    let(:work_item) { create(:work_item, :group_level, namespace: group) }
-
     it 'updates the contacts' do
       allow(::Issues::SetCrmContactsService).to receive(:new).and_call_original
 
@@ -94,14 +82,14 @@ RSpec.describe WorkItems::Callbacks::CrmContacts, feature_category: :service_des
     let(:work_item) { build_stubbed(:work_item, project: user_namespace_project) }
     let(:message) { 'Work item not supported' }
 
-    it_behaves_like 'raises a WidgetError'
+    it_behaves_like 'raises a callback error'
   end
 
   context 'when feature is disabled' do
     let(:work_item) { WorkItem.new(project: Project.new(group: create(:group, :crm_disabled))) }
     let(:message) { 'Feature disabled' }
 
-    it_behaves_like 'raises a WidgetError'
+    it_behaves_like 'raises a callback error'
   end
 
   context 'when SetCrmContactsService returns error response' do
@@ -111,6 +99,6 @@ RSpec.describe WorkItems::Callbacks::CrmContacts, feature_category: :service_des
       allow(set_crm_contacts_service).to receive(:execute).and_return(ServiceResponse.error(message: message))
     end
 
-    it_behaves_like 'raises a WidgetError'
+    it_behaves_like 'raises a callback error'
   end
 end

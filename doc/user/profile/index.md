@@ -78,7 +78,7 @@ NOTE:
 [Making your email non-public](#set-your-public-email) does not prevent it from being used for commit matching,
 [project imports](../project/import/index.md), and [group migrations](../group/import/index.md).
 
-## Delete emails from your user profile
+## Delete email addresses from your user profile
 
 > - Automatic deletion of unverified secondary email addresses [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/151562) in GitLab 17.0.
 
@@ -101,7 +101,7 @@ To delete an email address from your account:
 1. On the left sidebar, select **Emails**.
 1. Select **Delete** (**{remove}**) and confirm you want to **Remove**.
 
-You can also [use the API to delete a secondary email address](../../api/users.md#delete-email-for-current-user).
+You can also [use the API to delete a secondary email address](../../api/user_email_addresses.md#delete-one-of-your-email-addresses).
 
 ## Make your user profile page private
 
@@ -173,6 +173,7 @@ to match your username.
 
 > - Mastodon user account [introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/132892) in GitLab 16.6 [with a flag](../feature_flags.md) named `mastodon_social_ui`. Disabled by default.
 > - Mastodon user account [generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/428163) in GitLab 16.7. Feature flag `mastodon_social_ui` removed.
+> - Ability to verify Mastodon account using your GitLab user profile [added](https://gitlab.com/gitlab-org/gitlab/-/issues/433391) in GitLab 17.4 [with a flag](../feature_flags.md) named `verify_mastodon_user`. Disabled by default.
 
 You can add links to certain other external accounts you might have, like Skype and X (formerly Twitter).
 They can help other users connect with you on other platforms.
@@ -185,7 +186,7 @@ To add links to other accounts:
    - Discord [user ID](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-).
    - LinkedIn profile name.
    - Bluesky [did:plc identifier](https://atproto.com/specs/did). To find your identifier, [resolve your user handle](https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=USER_HANDLE).
-   - Mastodon username.
+   - Mastodon handle. In GitLab 17.4 and later, you can use your [GitLab profile](#access-your-user-profile) to verify your Mastodon account.
    - Skype username.
    - X (formerly Twitter) @username.
 
@@ -243,7 +244,7 @@ To set your current status:
 1. Select a value from the **Clear status after** dropdown list.
 1. Select **Set status**. Alternatively, you can select **Remove status** to remove your user status entirely.
 
-You can also set your current status from [your user settings](#access-your-user-settings) or by [using the API](../../api/users.md#user-status).
+You can also set your current status from [your user settings](#access-your-user-settings) or by [using the API](../../api/users.md#set-your-user-status).
 
 If you select the **Busy** checkbox, remember to clear it when you become available again.
 

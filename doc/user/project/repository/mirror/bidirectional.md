@@ -27,7 +27,7 @@ conflicts. Configure them to reduce conflicts, and how to settle them when they 
 
 - [Mirror only protected branches](index.md#mirror-only-protected-branches). Rewriting
   any mirrored commit on either remote causes conflicts and mirroring to fail.
-- [Protect the branches](../../protected_branches.md) you want to mirror on both
+- [Protect the branches](../branches/protected.md) you want to mirror on both
   remotes to prevent conflicts caused by rewriting history.
 - Reduce mirroring delay with a [push event webhook](../../integrations/webhook_events.md#push-events).
   Bidirectional mirroring creates a race condition where commits made close together
@@ -52,7 +52,7 @@ To create the webhook in the downstream instance:
 1. On the left sidebar, select **Search or go to** and find your project.
 1. Select **Settings > Webhooks**.
 1. Add the webhook **URL**, which (in this case) uses the
-   [Pull Mirror API](../../../../api/projects.md#start-the-pull-mirroring-process-for-a-project)
+   [Pull Mirror API](../../../../api/project_pull_mirroring.md#start-the-pull-mirroring-process-for-a-project)
    request to trigger an immediate pull after a repository update:
 
    ```plaintext

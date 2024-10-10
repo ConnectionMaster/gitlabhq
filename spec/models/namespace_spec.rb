@@ -29,7 +29,6 @@ RSpec.describe Namespace, feature_category: :groups_and_projects do
     it { is_expected.to have_one(:catalog_verified_namespace) }
     it { is_expected.to have_many :custom_emoji }
     it { is_expected.to have_one :package_setting_relation }
-    it { is_expected.to have_one :onboarding_progress }
     it { is_expected.to have_one :admin_note }
     it { is_expected.to have_many :pending_builds }
     it { is_expected.to have_one :namespace_route }
@@ -734,32 +733,6 @@ RSpec.describe Namespace, feature_category: :groups_and_projects do
 
       expect(namespace.valid?).to eq(true)
     end
-
-    describe '.with_disabled_organization_validation' do
-      it 'does not require organization' do
-        namespace.organization = nil
-
-        Namespace.with_disabled_organization_validation do
-          expect(namespace.valid?).to eq(true)
-        end
-      end
-
-      context 'with nested calls' do
-        it 'validation will not be re-enabled' do
-          result = []
-          Namespace.with_disabled_organization_validation do
-            result << described_class.new.require_organization?
-            Namespace.with_disabled_organization_validation do
-              result << described_class.new.require_organization?
-            end
-            result << described_class.new.require_organization?
-          end
-
-          expect(result.any?(true)).to be false
-          expect(described_class.new.require_organization?).to be false
-        end
-      end
-    end
   end
 
   context 'when feature flag require_organization is enabled', :request_store do
@@ -767,32 +740,6 @@ RSpec.describe Namespace, feature_category: :groups_and_projects do
       namespace.organization = nil
 
       expect(namespace.valid?).to eq(false)
-    end
-
-    describe '.with_disabled_organization_validation' do
-      it 'does not require organization' do
-        namespace.organization = nil
-
-        Namespace.with_disabled_organization_validation do
-          expect(namespace.valid?).to eq(true)
-        end
-      end
-
-      context 'with nested calls' do
-        it 'only last call will re-enable the validation' do
-          result = []
-          Namespace.with_disabled_organization_validation do
-            result << described_class.new.require_organization?
-            Namespace.with_disabled_organization_validation do
-              result << described_class.new.require_organization?
-            end
-            result << described_class.new.require_organization?
-          end
-
-          expect(result.any?(true)).to be false
-          expect(described_class.new.require_organization?).to be true
-        end
-      end
     end
   end
 
@@ -1916,7 +1863,7 @@ RSpec.describe Namespace, feature_category: :groups_and_projects do
 
   describe '#root_ancestor' do
     context 'with persisted root group' do
-      let!(:root_group) { create(:group) }
+      let_it_be(:root_group) { create(:group) }
 
       it 'returns root_ancestor for root group without a query' do
         expect { root_group.root_ancestor }.not_to exceed_query_limit(0)
@@ -1938,6 +1885,19 @@ RSpec.describe Namespace, feature_category: :groups_and_projects do
         expect(nested_group.root_ancestor).to eq(root_group)
         expect(deep_nested_group.root_ancestor).to eq(root_group)
         expect(very_deep_nested_group.root_ancestor).to eq(root_group)
+      end
+
+      context 'when nested group references parent by id' do
+        let_it_be(:nested_group) { create(:group, parent: root_group) }
+        let_it_be(:deep_nested_group) { Group.new(attributes_for(:group, parent_id: nested_group.id)) }
+
+        it 'performs a single query' do
+          expect { deep_nested_group.root_ancestor }.not_to exceed_query_limit(1)
+        end
+
+        it 'returns the root ancestor' do
+          expect(deep_nested_group.root_ancestor).to eq root_group
+        end
       end
     end
 

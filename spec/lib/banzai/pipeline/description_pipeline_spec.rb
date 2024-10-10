@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe Banzai::Pipeline::DescriptionPipeline, feature_category: :team_planning do
+RSpec.describe Banzai::Pipeline::DescriptionPipeline, feature_category: :markdown do
   let_it_be(:project) { create(:project) }
 
   def parse(html)
@@ -20,6 +20,8 @@ RSpec.describe Banzai::Pipeline::DescriptionPipeline, feature_category: :team_pl
   before do
     stub_commonmark_sourcepos_disabled
   end
+
+  it_behaves_like 'sanitize pipeline'
 
   it 'uses a limited allowlist' do
     doc = parse('# Description')

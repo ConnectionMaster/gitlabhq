@@ -20,7 +20,7 @@ you must have the following prerequisites.
 
 Prerequisites:
 
-- To benefit from the latest improvements to GitLab Duo Chat, upgrade to the latest GitLab version.
+- GitLab Duo requires GitLab 17.2 and later for the best user experience and results. Earlier versions may continue to work, however the experience may be degraded.
 - You must have a Premium or Ultimate subscription that is [synchronized with GitLab](https://about.gitlab.com/pricing/licensing-faq/cloud-licensing/). To make sure GitLab Duo Chat works immediately, administrators can
   [manually synchronize your subscription](#manually-synchronize-your-subscription).
 - You must have [enabled network connectivity](../gitlab_duo/turn_on_off.md#configure-gitlab-duo-on-a-self-managed-instance).
@@ -76,5 +76,5 @@ To limit the data that Duo Chat has access to, follow the instructions for
 
 To disable GitLab Duo Chat in VS Code:
 
-1. Go to **Settings > Extensions > GitLab Workflow (GitLab VS Code Extension)**.
+1. Go to **Settings > Extensions > GitLab Workflow**.
 1. Clear the **Enable GitLab Duo Chat assistant** checkbox.

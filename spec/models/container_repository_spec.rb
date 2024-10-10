@@ -105,101 +105,94 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
       end
     end
 
-    context 'when the repository is migrated', :saas do
-      context 'when Gitlab API is supported' do
+    context 'when Gitlab API is supported' do
+      before do
+        allow(repository.gitlab_api_client).to receive(:supports_gitlab_api?).and_return(true)
+      end
+
+      shared_examples 'returning an instantiated tag from the API response' do
+        let_it_be(:response_body) do
+          {
+            pagination: {},
+            response_body: ::Gitlab::Json.parse(tags_response.to_json)
+          }
+        end
+
         before do
-          stub_container_registry_gitlab_api_support(supported: true)
-          allow(repository.gitlab_api_client).to receive(:supports_gitlab_api?).and_return(true)
+          allow(repository.gitlab_api_client).to receive(:tags).and_return(response_body)
+          allow(ContainerRegistry::Tag).to receive(:new).and_call_original
         end
 
-        shared_examples 'returning an instantiated tag from the API response' do
-          let_it_be(:response_body) do
-            {
-              pagination: {},
-              response_body: ::Gitlab::Json.parse(tags_response.to_json)
-            }
-          end
+        it 'returns an instantiated tag from the response' do
+          tag = repository.tag('test')
 
-          before do
-            allow(repository.gitlab_api_client).to receive(:tags).and_return(response_body)
-            allow(ContainerRegistry::Tag).to receive(:new).and_call_original
-          end
+          expect(ContainerRegistry::Tag).to have_received(:new).with(repository, 'test', from_api: true)
 
-          it 'returns an instantiated tag from the response' do
-            tag = repository.tag('test')
-
-            expect(ContainerRegistry::Tag).to have_received(:new).with(repository, 'test', from_api: true)
-
-            expect(tag).to be_a ContainerRegistry::Tag
-            expect(tag).to have_attributes(
-              repository: repository,
-              name: 'test',
-              digest: tags_response[0][:digest],
-              total_size: tags_response[0][:size_bytes]
-            )
-          end
-        end
-
-        context 'when the Gitlab API returns a tag' do
-          let_it_be(:tags_response) do
-            [
-              {
-                name: 'test',
-                digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
-                size_bytes: 1234567892
-              }
-            ]
-          end
-
-          it_behaves_like 'returning an instantiated tag from the API response'
-        end
-
-        context 'when the Gitlab API returns multiple tags' do
-          let_it_be(:tags_response) do
-            [
-              {
-                name: 'a-test',
-                digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
-                size_bytes: 1234567892
-              },
-              {
-                name: 'test',
-                digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
-                size_bytes: 1234567892
-              },
-
-              {
-                name: 'test-a',
-                digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
-                size_bytes: 1234567892
-              }
-            ]
-          end
-
-          it_behaves_like 'returning an instantiated tag from the API response'
-        end
-
-        context 'when the Gitlab API does not return a tag' do
-          before do
-            allow(repository.gitlab_api_client).to receive(:tags).and_return({ pagination: {}, response_body: {} })
-          end
-
-          it 'returns nil' do
-            expect(repository.tag('test')).to be_nil
-          end
+          expect(tag).to be_a ContainerRegistry::Tag
+          expect(tag).to have_attributes(
+            repository: repository,
+            name: 'test',
+            digest: tags_response[0][:digest],
+            total_size: tags_response[0][:size_bytes]
+          )
         end
       end
 
-      context 'when the Gitlab API is not supported' do
-        before do
-          stub_container_registry_gitlab_api_support(supported: false)
+      context 'when the Gitlab API returns a tag' do
+        let_it_be(:tags_response) do
+          [
+            {
+              name: 'test',
+              digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
+              size_bytes: 1234567892
+            }
+          ]
         end
 
-        it_behaves_like 'returning an instantiated tag'
+        it_behaves_like 'returning an instantiated tag from the API response'
+      end
+
+      context 'when the Gitlab API returns multiple tags' do
+        let_it_be(:tags_response) do
+          [
+            {
+              name: 'a-test',
+              digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
+              size_bytes: 1234567892
+            },
+            {
+              name: 'test',
+              digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
+              size_bytes: 1234567892
+            },
+
+            {
+              name: 'test-a',
+              digest: 'sha256:6c3c647c6eebdaab7c610cf7d66709b3',
+              size_bytes: 1234567892
+            }
+          ]
+        end
+
+        it_behaves_like 'returning an instantiated tag from the API response'
+      end
+
+      context 'when the Gitlab API does not return a tag' do
+        before do
+          allow(repository.gitlab_api_client).to receive(:tags).and_return({ pagination: {}, response_body: {} })
+        end
+
+        it 'returns nil' do
+          expect(repository.tag('test')).to be_nil
+        end
       end
     end
 
-    context 'when the repository is not migrated' do
+    context 'when the Gitlab API is not supported' do
+      before do
+        stub_container_registry_gitlab_api_support(supported: false)
+      end
+
       it_behaves_like 'returning an instantiated tag'
     end
   end
@@ -254,62 +247,56 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
       end
     end
 
-    context 'when the repository is migrated', :saas do
-      context 'when Gitlab API is supported' do
+    context 'when Gitlab API is supported' do
+      before do
+        stub_container_registry_gitlab_api_support(supported: true)
+      end
+
+      context 'when the Gitlab API returns tags' do
+        include_context 'with the container registry GitLab API returning tags'
+
         before do
-          stub_container_registry_gitlab_api_support(supported: true)
+          allow(repository.gitlab_api_client).to receive(:tags).and_return(response_body)
+          allow(repository).to receive(:each_tags_page).and_call_original
         end
 
-        context 'when the Gitlab API returns tags' do
-          include_context 'with the container registry GitLab API returning tags'
+        it 'returns an instantiated tag from the response' do
+          tags = repository.tags
 
-          before do
-            allow(repository.gitlab_api_client).to receive(:tags).and_return(response_body)
-            allow(repository).to receive(:each_tags_page).and_call_original
-          end
-
-          it 'returns an instantiated tag from the response' do
-            tags = repository.tags
-
-            expect(repository).to have_received(:each_tags_page)
-            expect(tags).to match_array([
-              have_attributes(
-                repository: repository,
-                name: tags_response[0][:name],
-                digest: tags_response[0][:digest],
-                total_size: tags_response[0][:size_bytes]
-              ),
-              have_attributes(
-                repository: repository,
-                name: tags_response[1][:name],
-                digest: tags_response[1][:digest],
-                total_size: tags_response[1][:size_bytes]
-              )
-            ])
-          end
-        end
-
-        context 'when the Gitlab API does not return any tags' do
-          before do
-            allow(repository.gitlab_api_client).to receive(:tags).and_return({ pagination: {}, response_body: {} })
-          end
-
-          it 'returns an empty array' do
-            expect(repository.tags).to be_empty
-          end
+          expect(repository).to have_received(:each_tags_page)
+          expect(tags).to match_array([
+            have_attributes(
+              repository: repository,
+              name: tags_response[0][:name],
+              digest: tags_response[0][:digest],
+              total_size: tags_response[0][:size_bytes]
+            ),
+            have_attributes(
+              repository: repository,
+              name: tags_response[1][:name],
+              digest: tags_response[1][:digest],
+              total_size: tags_response[1][:size_bytes]
+            )
+          ])
         end
       end
 
-      context 'when the Gitlab API is not supported' do
+      context 'when the Gitlab API does not return any tags' do
         before do
-          stub_container_registry_gitlab_api_support(supported: false)
+          allow(repository.gitlab_api_client).to receive(:tags).and_return({ pagination: {}, response_body: {} })
         end
 
-        it_behaves_like 'returning the non-empty tags list'
+        it 'returns an empty array' do
+          expect(repository.tags).to be_empty
+        end
       end
     end
 
-    context 'when the repository is not migrated' do
+    context 'when the Gitlab API is not supported' do
+      before do
+        stub_container_registry_gitlab_api_support(supported: false)
+      end
+
       it_behaves_like 'returning the non-empty tags list'
     end
   end
@@ -318,7 +305,7 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
     let(:page_size) { 100 }
 
     before do
-      allow(repository).to receive(:migrated?).and_return(true)
+      allow(repository.gitlab_api_client).to receive(:supports_gitlab_api?).and_return(true)
     end
 
     shared_examples 'iterating through a page' do |expected_tags: true|
@@ -451,13 +438,13 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
       it_behaves_like 'iterating through a page', expected_tags: false
     end
 
-    context 'calling on a non migrated repository' do
+    context 'when the Gitlab API is is not supported' do
       before do
-        allow(repository).to receive(:migrated?).and_return(false)
+        allow(repository.gitlab_api_client).to receive(:supports_gitlab_api?).and_return(false)
       end
 
       it 'raises an Argument error' do
-        expect { repository.each_tags_page }.to raise_error(ArgumentError, 'not a migrated repository')
+        expect { repository.each_tags_page }.to raise_error(ArgumentError, _('GitLab container registry API not supported'))
       end
     end
 
@@ -602,8 +589,24 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
   end
 
   describe '#has_tags?' do
-    it 'has tags' do
-      expect(repository).to have_tags
+    context 'when there are no tags' do
+      before do
+        allow(repository).to receive(:tags).and_return([])
+      end
+
+      it 'does not have tags' do
+        expect(repository).not_to have_tags
+      end
+    end
+
+    context 'when there are tags' do
+      before do
+        allow(repository).to receive(:tags).and_return([ContainerRegistry::Tag.new(repository, 'tag1')])
+      end
+
+      it 'have tags' do
+        expect(repository).to have_tags
+      end
     end
   end
 
@@ -617,25 +620,48 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
       )
     end
 
-    context 'when action succeeds' do
-      it 'returns status that indicates success' do
-        expect(repository.client)
-          .to receive(:delete_repository_tag_by_digest)
-          .twice
-          .and_return(true)
+    context 'when there are no tags' do
+      before do
+        allow(repository).to receive(:tags).and_return([])
+      end
 
-        expect(repository.delete_tags!).to be_truthy
+      it 'does nothing' do
+        expect(repository).not_to receive(:delete_tag)
+
+        repository.delete_tags!
       end
     end
 
-    context 'when action fails' do
-      it 'returns status that indicates failure' do
-        expect(repository.client)
-          .to receive(:delete_repository_tag_by_digest)
-          .twice
-          .and_return(false)
+    context 'when there are tags' do
+      before do
+        tag1 = ContainerRegistry::Tag.new(repository, 'tag1')
+        tag2 = ContainerRegistry::Tag.new(repository, 'tag2')
+        allow(tag1).to receive(:digest).and_return('123')
+        allow(tag2).to receive(:digest).and_return('234')
 
-        expect(repository.delete_tags!).to be_falsey
+        allow(repository).to receive(:tags).and_return([tag1, tag2])
+      end
+
+      context 'when action succeeds' do
+        it 'returns status that indicates success' do
+          expect(repository.client)
+            .to receive(:delete_repository_tag_by_digest)
+            .twice
+            .and_return(true)
+
+          expect(repository.delete_tags!).to be_truthy
+        end
+      end
+
+      context 'when action fails' do
+        it 'returns status that indicates failure' do
+          expect(repository.client)
+            .to receive(:delete_repository_tag_by_digest)
+            .twice
+            .and_return(false)
+
+          expect(repository.delete_tags!).to be_falsey
+        end
       end
     end
   end
@@ -756,7 +782,7 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
   end
 
   describe '#set_delete_ongoing_status', :freeze_time do
-    let_it_be(:repository) { create(:container_repository) }
+    let(:repository) { create(:container_repository, next_delete_attempt_at: Time.zone.now) }
 
     subject { repository.set_delete_ongoing_status }
 
@@ -764,16 +790,83 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
       expect { subject }.to change(repository, :status).from(nil).to('delete_ongoing')
                               .and change(repository, :delete_started_at).from(nil).to(Time.zone.now)
                               .and change(repository, :status_updated_at).from(nil).to(Time.zone.now)
+                              .and change(repository, :next_delete_attempt_at).to(nil)
+    end
+
+    context 'when the feature set_delete_failed_container_repository is disabled' do
+      before do
+        stub_feature_flags(set_delete_failed_container_repository: false)
+      end
+
+      it 'updates deletion status attributes', :freeze_time do
+        expect { subject }.to change(repository, :status).from(nil).to('delete_ongoing')
+                                .and change(repository, :delete_started_at).from(nil).to(Time.zone.now)
+                                .and change(repository, :status_updated_at).from(nil).to(Time.zone.now)
+                                .and not_change(repository, :next_delete_attempt_at)
+
+        expect(repository.updated_at).to eq(Time.zone.now)
+      end
     end
   end
 
   describe '#set_delete_scheduled_status', :freeze_time do
-    let_it_be(:repository) { create(:container_repository, :status_delete_ongoing, delete_started_at: 3.minutes.ago) }
-
     subject { repository.set_delete_scheduled_status }
 
+    let_it_be_with_reload(:repository) do
+      create(
+        :container_repository,
+        :status_delete_ongoing,
+        delete_started_at: 3.minutes.ago
+      )
+    end
+
+    where(:current_failed_count, :new_failed_count, :minutes_delay) do
+      0 |  1  | 1
+      1 |  2  | 2
+      2 |  3  | 4
+      3 |  4  | 8
+      4 |  5  | 16
+      5 |  6  | 32
+    end
+
+    with_them do
+      before do
+        repository.update!(failed_deletion_count: current_failed_count)
+      end
+
+      it 'updates delete attributes' do
+        expect { subject }.to change(repository, :status).from('delete_ongoing').to('delete_scheduled')
+                                .and change(repository, :delete_started_at).to(nil)
+                                .and change(repository, :failed_deletion_count).from(current_failed_count).to(new_failed_count)
+                                .and change(repository, :next_delete_attempt_at).to(minutes_delay.minute.from_now)
+
+        expect(repository.status_updated_at).to eq(Time.zone.now)
+      end
+
+      context 'when the feature set_delete_failed_container_repository is disabled' do
+        before do
+          stub_feature_flags(set_delete_failed_container_repository: false)
+        end
+
+        it 'updates delete attributes' do
+          expect { subject }.to change(repository, :status).from('delete_ongoing').to('delete_scheduled')
+                                  .and change(repository, :delete_started_at).to(nil)
+                                  .and not_change(repository, :failed_deletion_count)
+                                  .and not_change(repository, :next_delete_attempt_at)
+
+          expect(repository.status_updated_at).to eq(Time.zone.now)
+        end
+      end
+    end
+  end
+
+  describe '#set_delete_failed_status', :freeze_time do
+    let_it_be(:repository) { create(:container_repository, :status_delete_ongoing, delete_started_at: 3.minutes.ago) }
+
+    subject { repository.set_delete_failed_status }
+
     it 'updates delete attributes' do
-      expect { subject }.to change(repository, :status).from('delete_ongoing').to('delete_scheduled')
+      expect { subject }.to change(repository, :status).from('delete_ongoing').to('delete_failed')
                               .and change(repository, :delete_started_at).to(nil)
                               .and change(repository, :status_updated_at).to(Time.zone.now)
     end
@@ -796,6 +889,26 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
 
         expect { repository.save! }.not_to change(repository, :status_updated_at)
       end
+    end
+  end
+
+  describe '.pending_destruction' do
+    let_it_be(:delete_failed_repository) { create(:container_repository, :status_delete_failed) }
+    let_it_be(:delete_ongoing_repository) { create(:container_repository, :status_delete_ongoing) }
+    let_it_be(:delete_scheduled_in_the_future) { create(:container_repository, :status_delete_scheduled, next_delete_attempt_at: 2.hours.from_now) }
+    let_it_be(:delete_scheduled_in_the_past) { create(:container_repository, :status_delete_scheduled, next_delete_attempt_at: 2.hours.ago) }
+    let_it_be(:delete_scheduled_no_next_delete_attempt_at) { create(:container_repository, :status_delete_scheduled, next_delete_attempt_at: nil) }
+
+    it 'returns repositories that are delete_scheduled and next_delete_attempt_at is nil or has_passed' do
+      expect(described_class.pending_destruction).to include(
+        delete_scheduled_in_the_past,
+        delete_scheduled_no_next_delete_attempt_at
+      )
+      expect(described_class.pending_destruction).not_to include(
+        delete_failed_repository,
+        delete_ongoing_repository,
+        delete_scheduled_in_the_future
+      )
     end
   end
 
@@ -1093,18 +1206,6 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
     end
   end
 
-  describe '.all_migrated?' do
-    subject { project.container_repositories.all_migrated? }
-
-    context 'when on GitLab.com', :saas do
-      it { is_expected.to be_truthy }
-    end
-
-    context 'when not on GitLab.com' do
-      it { is_expected.to be_falsey }
-    end
-  end
-
   describe '.with_enabled_policy' do
     let_it_be(:repository) { create(:container_repository) }
     let_it_be(:repository2) { create(:container_repository) }
@@ -1116,26 +1217,6 @@ RSpec.describe ContainerRepository, :aggregate_failures, feature_category: :cont
     end
 
     it { is_expected.to eq([repository]) }
-  end
-
-  describe '#migrated?' do
-    subject { repository.migrated? }
-
-    context 'on gitlab.com' do
-      before do
-        allow(::Gitlab).to receive(:com_except_jh?).and_return(true)
-      end
-
-      it { is_expected.to eq(true) }
-    end
-
-    context 'not on gitlab.com' do
-      before do
-        allow(::Gitlab).to receive(:com_except_jh?).and_return(false)
-      end
-
-      it { is_expected.to eq(false) }
-    end
   end
 
   context 'with repositories' do

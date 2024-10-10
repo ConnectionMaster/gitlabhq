@@ -84,6 +84,10 @@ class Note < ApplicationRecord
   has_one :note_diff_file, inverse_of: :diff_note, foreign_key: :diff_note_id
   has_many :diff_note_positions
 
+  # rubocop:disable Cop/ActiveRecordDependent -- polymorphic association
+  has_many :events, as: :target, dependent: :delete_all
+  # rubocop:enable Cop/ActiveRecordDependent
+
   delegate :gfm_reference, :local_reference, to: :noteable
   delegate :name, to: :project, prefix: true
   delegate :title, to: :noteable, allow_nil: true
@@ -230,6 +234,10 @@ class Note < ApplicationRecord
       ActiveModel::Name.new(self, nil, 'note')
     end
 
+    def parent_object_field
+      :noteable
+    end
+
     # Group diff discussions by line code or file path.
     # It is not needed to group by line code when comment is
     # on an image.
@@ -351,6 +359,10 @@ class Note < ApplicationRecord
 
   def for_personal_snippet?
     noteable.is_a?(PersonalSnippet)
+  end
+
+  def for_wiki_page?
+    noteable_type == "WikiPage::Meta"
   end
 
   def for_project_noteable?
@@ -530,24 +542,31 @@ class Note < ApplicationRecord
   # overkill for just updating the timestamps. To work around this we manually
   # touch the data so we can SELECT only the columns we need.
   def touch_noteable
-    # Commits are not stored in the DB so we can't touch them.
-    return if for_commit?
+    Gitlab::Database::QueryAnalyzers::PreventCrossDatabaseModification.temporary_ignore_tables_in_transaction(
+      %w[
+        vulnerabilities
+        notes
+      ], url: 'https://gitlab.com/gitlab-org/gitlab/-/issues/486472'
+    ) do
+      # Commits are not stored in the DB so we can't touch them.
+      return if for_commit? # rubocop:disable Cop/AvoidReturnFromBlocks -- Temporary for cross join allowance
 
-    assoc = association(:noteable)
+      assoc = association(:noteable)
 
-    noteable_object =
-      if assoc.loaded?
-        noteable
-      else
-        # If the object is not loaded (e.g. when notes are loaded async) we
-        # _only_ want the data we actually need.
-        assoc.scope.select(:id, :updated_at).take
-      end
+      noteable_object =
+        if assoc.loaded?
+          noteable
+        else
+          # If the object is not loaded (e.g. when notes are loaded async) we
+          # _only_ want the data we actually need.
+          assoc.scope.select(:id, :updated_at).take
+        end
 
-    noteable_object&.touch
+      noteable_object&.touch
 
-    # We return the noteable object so we can re-use it in EE for Elasticsearch.
-    noteable_object
+      # We return the noteable object so we can re-use it in EE for Elasticsearch.
+      noteable_object
+    end
   end
 
   def notify_after_create
@@ -761,13 +780,11 @@ class Note < ApplicationRecord
 
     if user_visible_reference_count.present? && total_reference_count.present?
       # if they are not equal, then there are private/confidential references as well
-      total_reference_count == 0 ||
-        (user_visible_reference_count > 0 && user_visible_reference_count == total_reference_count)
+      user_visible_reference_count > 0 && user_visible_reference_count == total_reference_count
     else
       refs = all_references(user)
-      refs.all
 
-      refs.all_visible?
+      refs.all.present? && refs.all_visible?
     end
   end
 

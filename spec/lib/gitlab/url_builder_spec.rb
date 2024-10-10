@@ -64,6 +64,7 @@ RSpec.describe Gitlab::UrlBuilder do
       :package                             | ->(package) { "/#{package.project.full_path}/-/packages/#{package.id}" }
       :user_namespace                      | ->(user_namespace) { "/#{user_namespace.owner.full_path}" }
       :project_namespace                   | ->(project_namespace) { "/#{project_namespace.project.full_path}" }
+      :abuse_report_note                   | ->(note) { "/admin/abuse_reports/#{note.abuse_report_id}#anti_abuse_reports_note_#{note.id}" }
     end
 
     with_them do
@@ -76,6 +77,22 @@ RSpec.describe Gitlab::UrlBuilder do
 
       it 'returns only the path if only_path is given' do
         expect(subject.build(object, only_path: true)).to eq(path)
+      end
+    end
+
+    context 'when passing a wiki note' do
+      let_it_be(:wiki_page_slug) { create(:wiki_page_slug, canonical: true) }
+      let(:wiki_page_meta) { wiki_page_slug.reload.wiki_page_meta }
+      let(:note) { build_stubbed(:note, noteable: wiki_page_meta, project: wiki_page_meta.project) }
+
+      let(:path) { "/#{note.project.full_path}/-/wikis/#{note.noteable.canonical_slug}#note_#{note.id}" }
+
+      it 'returns the full URL' do
+        expect(subject.build(note)).to eq("#{Gitlab.config.gitlab.url}#{path}")
+      end
+
+      it 'returns only the path if only_path is given' do
+        expect(subject.build(note, only_path: true)).to eq(path)
       end
     end
 

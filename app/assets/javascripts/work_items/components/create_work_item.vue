@@ -13,7 +13,8 @@ import { capitalizeFirstCharacter } from '~/lib/utils/text_utility';
 import { fetchPolicies } from '~/lib/graphql';
 import { addHierarchyChild, setNewWorkItemCache } from '~/work_items/graphql/cache_utils';
 import { findWidget } from '~/issues/list/utils';
-import { newWorkItemFullPath } from '~/work_items/utils';
+import { newWorkItemFullPath, getNewWorkItemAutoSaveKey } from '~/work_items/utils';
+import { clearDraft } from '~/lib/utils/autosave';
 import {
   I18N_WORK_ITEM_CREATE_BUTTON_LABEL,
   I18N_WORK_ITEM_ERROR_CREATING,
@@ -416,6 +417,9 @@ export default {
         });
 
         this.$emit('workItemCreated', response.data.workItemCreate.workItem);
+        const workItemTypeName = this.selectedWorkItemTypeName || this.workItemTypeName;
+        const autosaveKey = getNewWorkItemAutoSaveKey(this.fullPath, workItemTypeName);
+        clearDraft(autosaveKey);
       } catch {
         this.error = this.createErrorText;
         this.loading = false;
@@ -423,6 +427,15 @@ export default {
     },
     handleCancelClick() {
       this.$emit('cancel');
+      const workItemTypeName = this.selectedWorkItemTypeName || this.workItemTypeName;
+      const autosaveKey = getNewWorkItemAutoSaveKey(this.fullPath, workItemTypeName);
+      clearDraft(autosaveKey);
+      setNewWorkItemCache(
+        this.fullPath,
+        this.workItemTypes[0]?.widgetDefinitions,
+        this.selectedWorkItemTypeName,
+        this.workItemTypes[0]?.id,
+      );
     },
   },
   NEW_WORK_ITEM_IID,
@@ -503,12 +516,12 @@ export default {
           <aside
             v-if="hasWidgets"
             data-testid="work-item-overview-right-sidebar"
-            class="work-item-overview-right-sidebar"
+            class="work-item-overview-right-sidebar gl-px-3"
             :class="{ 'is-modal': true }"
           >
             <template v-if="workItemAssignees">
               <work-item-assignees
-                class="js-assignee gl-mb-5"
+                class="js-assignee work-item-attributes-item"
                 :can-update="canUpdate"
                 :full-path="fullPath"
                 :is-group="isGroup"
@@ -524,7 +537,7 @@ export default {
             </template>
             <template v-if="workItemLabels">
               <work-item-labels
-                class="js-labels gl-mb-5"
+                class="js-labels work-item-attributes-item"
                 :can-update="canUpdate"
                 :full-path="fullPath"
                 :is-group="isGroup"
@@ -536,6 +549,7 @@ export default {
             </template>
             <template v-if="workItemRolledupDates">
               <work-item-rolledup-dates
+                class="work-item-attributes-item"
                 :can-update="canUpdate"
                 :full-path="fullPath"
                 :due-date-is-fixed="workItemRolledupDates.dueDateIsFixed"
@@ -551,7 +565,7 @@ export default {
             </template>
             <template v-if="workItemHealthStatus">
               <work-item-health-status
-                class="gl-mb-5"
+                class="work-item-attributes-item"
                 :work-item-id="workItemId"
                 :work-item-iid="workItemIid"
                 :work-item-type="selectedWorkItemTypeName"
@@ -561,7 +575,7 @@ export default {
             </template>
             <template v-if="workItemColor">
               <work-item-color
-                class="gl-mb-5"
+                class="work-item-attributes-item"
                 :work-item="workItem"
                 :full-path="fullPath"
                 :can-update="canUpdate"
@@ -570,7 +584,7 @@ export default {
             </template>
             <template v-if="workItemCrmContacts">
               <work-item-crm-contacts
-                class="gl-mb-5"
+                class="work-item-attributes-item"
                 :full-path="fullPath"
                 :work-item-id="workItemId"
                 :work-item-iid="workItemIid"

@@ -2,12 +2,14 @@
 
 require 'spec_helper'
 
-RSpec.describe Banzai::Pipeline::EmojiPipeline, feature_category: :team_planning do
+RSpec.describe Banzai::Pipeline::EmojiPipeline, feature_category: :markdown do
   let(:emoji) { TanukiEmoji.find_by_alpha_code('100') }
 
   def parse(text)
     described_class.to_html(text, {})
   end
+
+  it_behaves_like 'sanitize pipeline'
 
   it 'replaces emoji' do
     expected_result = "Hello world #{Gitlab::Emoji.gl_emoji_tag(emoji)}"

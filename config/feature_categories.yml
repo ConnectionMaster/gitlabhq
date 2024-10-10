@@ -26,6 +26,7 @@
 - capacity_planning
 - cell
 - ci_scaling
+- ci_variables
 - cloud_connector
 - cloud_native_installation
 - code_quality
@@ -39,6 +40,7 @@
 - container_scanning
 - continuous_delivery
 - continuous_integration
+- custom_dashboards_foundation
 - customersdot_and_quote_to_cash_integrations
 - database
 - dataops
@@ -58,7 +60,6 @@
 - editor_extensions
 - environment_management
 - error_budgets
-- error_tracking
 - feature_flags
 - five_minute_production_app
 - fleet_visibility
@@ -81,14 +82,14 @@
 - integrations
 - internationalization
 - job_artifacts
-- logging
+- markdown
 - merge_trains
-- metrics
 - mlops
 - mobile_devops
 - model_personalization
 - navigation
 - notifications
+- observability
 - okr_management
 - omnibus_package
 - on_call_schedule_management
@@ -101,8 +102,7 @@
 - pipeline_reports
 - plan_provisioning
 - portfolio_management
-- product_analytics_data_management
-- product_analytics_visualization
+- product_analytics
 - pubsec_services
 - quality_management
 - rate_limiting
@@ -130,7 +130,7 @@
 - switchboard
 - system_access
 - team_planning
-- tracing
+- text_editors
 - user_management
 - user_profile
 - value_stream_management

@@ -13,6 +13,10 @@ RSpec.describe API::Ci::JobArtifacts, feature_category: :job_artifacts do
     create(:project, :repository, public_builds: false)
   end
 
+  let_it_be(:other_project, reload: true) do
+    create(:project, :repository)
+  end
+
   let_it_be(:pipeline, reload: true) do
     create(:ci_pipeline, project: project, sha: project.commit.id, ref: project.default_branch)
   end
@@ -318,7 +322,7 @@ RSpec.describe API::Ci::JobArtifacts, feature_category: :job_artifacts do
               it 'does not allow downloading artifacts' do
                 subject
 
-                expect(response).to have_gitlab_http_status(:not_found)
+                expect(response).to have_gitlab_http_status(:forbidden)
               end
 
               context 'when project is added to the job token scope' do
@@ -327,6 +331,26 @@ RSpec.describe API::Ci::JobArtifacts, feature_category: :job_artifacts do
                 end
 
                 it_behaves_like 'downloads artifact'
+
+                it 'logs context data about the job and route' do
+                  expect(::Gitlab::AppLogger).to receive(:info).with a_hash_including({
+                    job_id: other_job.id,
+                    job_user_id: other_job.user_id,
+                    job_project_id: other_job.project_id,
+                    'meta.caller_id' => 'GET /api/:version/projects/:id/jobs/:job_id/artifacts'
+                  })
+
+                  subject
+                end
+              end
+            end
+
+            it_behaves_like 'logs inbound authorizations via job token', :ok, :forbidden do
+              let(:accessed_project) { project }
+              let(:origin_project) { other_job.project }
+
+              let(:perform_request) do
+                get api("/projects/#{project.id}/jobs/#{job.id}/artifacts", job_token: job_token)
               end
             end
           end

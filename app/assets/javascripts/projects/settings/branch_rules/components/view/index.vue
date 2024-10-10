@@ -42,7 +42,7 @@ import {
   EDIT_RULE_MODAL_ID,
 } from './constants';
 
-const protectedBranchesHelpDocLink = helpPagePath('user/project/protected_branches');
+const protectedBranchesHelpDocLink = helpPagePath('user/project/repository/branches/protected');
 const codeOwnersHelpDocLink = helpPagePath('user/project/codeowners/index');
 const pushRulesHelpDocLink = helpPagePath('user/project/repository/push_rules');
 
@@ -100,6 +100,7 @@ export default {
       variables() {
         return {
           projectPath: this.projectPath,
+          buildMissing: this.isAllBranchesRule,
         };
       },
       update({ project: { branchRules, group } }) {
@@ -199,11 +200,11 @@ export default {
     statusChecksCount() {
       return '0';
     },
+    isAllBranchesRule() {
+      return this.branch === this.$options.i18n.allBranches;
+    },
     isPredefinedRule() {
-      return (
-        this.branch === this.$options.i18n.allBranches ||
-        this.branch === this.$options.i18n.allProtectedBranches
-      );
+      return this.isAllBranchesRule || this.branch === this.$options.i18n.allProtectedBranches;
     },
     hasPushAccessLevelSet() {
       return this.pushAccessLevels?.total > 0;
@@ -216,8 +217,8 @@ export default {
     accessLevelsDrawerData() {
       return this.isAllowedToMergeDrawerOpen ? this.mergeAccessLevels : this.pushAccessLevels;
     },
-    showStatusChecksWithDrawer() {
-      return this.glFeatures.editBranchRules && !this.isPredefinedRule;
+    showStatusChecksSection() {
+      return this.showStatusChecks && this.branch !== this.$options.i18n.allProtectedBranches;
     },
   },
   methods: {
@@ -379,7 +380,7 @@ export default {
     <page-heading :heading="$options.i18n.pageTitle">
       <template #actions>
         <gl-button
-          v-if="glFeatures.editBranchRules && branchRule"
+          v-if="glFeatures.editBranchRules && branchRule && canAdminProtectedBranches"
           v-gl-modal="$options.deleteModalId"
           data-testid="delete-rule-button"
           category="secondary"
@@ -396,7 +397,7 @@ export default {
       <crud-component :title="$options.i18n.ruleTarget" data-testid="rule-target-card">
         <template #actions>
           <gl-button
-            v-if="glFeatures.editBranchRules && !isPredefinedRule"
+            v-if="glFeatures.editBranchRules && !isPredefinedRule && canAdminProtectedBranches"
             v-gl-modal="$options.editModalId"
             data-testid="edit-rule-name-button"
             size="small"
@@ -538,7 +539,7 @@ export default {
 
       <!-- Status checks -->
       <settings-section
-        v-if="showStatusChecks"
+        v-if="showStatusChecksSection"
         :heading="$options.i18n.statusChecksTitle"
         class="-gl-mt-5"
       >
@@ -554,10 +555,11 @@ export default {
 
         <!-- eslint-disable-next-line vue/no-undef-components -->
         <status-checks
-          v-if="showStatusChecksWithDrawer"
-          :branch-rule-id="branchRule.id"
+          v-if="glFeatures.editBranchRules"
+          :branch-rule-id="branchRule && branchRule.id"
           :status-checks="statusChecks"
           :project-path="projectPath"
+          :is-all-branches-rule="isAllBranchesRule"
           class="gl-mt-3"
         />
 

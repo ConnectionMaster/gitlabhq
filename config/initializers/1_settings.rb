@@ -524,6 +524,9 @@ Settings.cron_jobs['personal_access_tokens_expiring_worker']['job_class'] = 'Per
 Settings.cron_jobs['personal_access_tokens_expired_notification_worker'] ||= {}
 Settings.cron_jobs['personal_access_tokens_expired_notification_worker']['cron'] ||= '0 2 * * *'
 Settings.cron_jobs['personal_access_tokens_expired_notification_worker']['job_class'] = 'PersonalAccessTokens::ExpiredNotificationWorker'
+Settings.cron_jobs['resource_access_tokens_inactive_tokens_deletion_cron_worker'] ||= {}
+Settings.cron_jobs['resource_access_tokens_inactive_tokens_deletion_cron_worker']['cron'] ||= '0 0 * * *'
+Settings.cron_jobs['resource_access_tokens_inactive_tokens_deletion_cron_worker']['job_class'] = 'ResourceAccessTokens::InactiveTokensDeletionCronWorker'
 Settings.cron_jobs['repository_archive_cache_worker'] ||= {}
 Settings.cron_jobs['repository_archive_cache_worker']['cron'] ||= '0 * * * *'
 Settings.cron_jobs['repository_archive_cache_worker']['job_class'] = 'RepositoryArchiveCacheWorker'
@@ -723,6 +726,9 @@ Settings.cron_jobs['ci_click_house_finished_pipelines_sync_worker']['job_class']
 Settings.cron_jobs['deactivate_expired_deployments_cron_worker'] ||= {}
 Settings.cron_jobs['deactivate_expired_deployments_cron_worker']['cron'] ||= '*/10 * * * *'
 Settings.cron_jobs['deactivate_expired_deployments_cron_worker']['job_class'] ||= 'Pages::DeactivateExpiredDeploymentsCronWorker'
+Settings.cron_jobs['database_monitor_locked_tables_cron_worker'] ||= {}
+Settings.cron_jobs['database_monitor_locked_tables_cron_worker']['cron'] ||= '30 7 */3 * *'
+Settings.cron_jobs['database_monitor_locked_tables_cron_worker']['job_class'] = 'Database::MonitorLockedTablesWorker'
 
 Gitlab.ee do
   Settings.cron_jobs['analytics_devops_adoption_create_all_snapshots_worker'] ||= {}
@@ -749,9 +755,6 @@ Gitlab.ee do
   Settings.cron_jobs['adjourned_projects_deletion_cron_worker'] ||= {}
   Settings.cron_jobs['adjourned_projects_deletion_cron_worker']['cron'] ||= '0 7 * * *'
   Settings.cron_jobs['adjourned_projects_deletion_cron_worker']['job_class'] = 'AdjournedProjectsDeletionCronWorker'
-  Settings.cron_jobs['database_monitor_locked_tables_cron_worker'] ||= {}
-  Settings.cron_jobs['database_monitor_locked_tables_cron_worker']['cron'] ||= '30 7 */3 * *'
-  Settings.cron_jobs['database_monitor_locked_tables_cron_worker']['job_class'] = 'Database::MonitorLockedTablesWorker'
   Settings.cron_jobs['geo_verification_cron_worker'] ||= {}
   Settings.cron_jobs['geo_verification_cron_worker']['cron'] ||= '* * * * *'
   Settings.cron_jobs['geo_verification_cron_worker']['job_class'] ||= 'Geo::VerificationCronWorker'
@@ -927,12 +930,21 @@ Gitlab.ee do
   Settings.cron_jobs['gitlab_subscriptions_add_on_purchases_cleanup_worker'] ||= {}
   Settings.cron_jobs['gitlab_subscriptions_add_on_purchases_cleanup_worker']['cron'] ||= '0 1 * * *'
   Settings.cron_jobs['gitlab_subscriptions_add_on_purchases_cleanup_worker']['job_class'] = 'GitlabSubscriptions::AddOnPurchases::CleanupWorker'
+  Settings.cron_jobs['gitlab_subscriptions_offline_cloud_license_provision_worker'] ||= {}
+  Settings.cron_jobs['gitlab_subscriptions_offline_cloud_license_provision_worker']['cron'] ||= '30 0 * * *'
+  Settings.cron_jobs['gitlab_subscriptions_offline_cloud_license_provision_worker']['job_class'] = 'GitlabSubscriptions::AddOnPurchases::OfflineCloudLicenseProvisionWorker'
   Settings.cron_jobs['observability_alert_query_worker'] ||= {}
   Settings.cron_jobs['observability_alert_query_worker']['cron'] ||= '* * * * *'
   Settings.cron_jobs['observability_alert_query_worker']['job_class'] = 'Observability::AlertQueryWorker'
   Settings.cron_jobs['report_security_policies_metrics_worker.rb'] ||= {}
   Settings.cron_jobs['report_security_policies_metrics_worker.rb']['cron'] ||= '*/1 * * * *'
   Settings.cron_jobs['report_security_policies_metrics_worker.rb']['job_class'] = 'Security::Policies::ReportSecurityPoliciesMetricsWorker'
+  Settings.cron_jobs['usage_events_dump_write_buffer_cron_worker'] ||= {}
+  Settings.cron_jobs['usage_events_dump_write_buffer_cron_worker']['cron'] ||= "*/5 * * * *"
+  Settings.cron_jobs['usage_events_dump_write_buffer_cron_worker']['job_class'] = 'UsageEvents::DumpWriteBufferCronWorker'
+  Settings.cron_jobs['package_metadata_cve_enrichment_sync_worker'] ||= {}
+  Settings.cron_jobs['package_metadata_cve_enrichment_sync_worker']['cron'] ||= "*/5 * * * *"
+  Settings.cron_jobs['package_metadata_cve_enrichment_sync_worker']['job_class'] = 'PackageMetadata::CveEnrichmentSyncWorker'
 
   Gitlab.com do
     Settings.cron_jobs['disable_legacy_open_source_license_for_inactive_projects'] ||= {}
@@ -1030,10 +1042,11 @@ end
 #
 Gitlab.ee do
   Settings['duo_workflow'] ||= {}
+  executor_version = Rails.root.join('DUO_WORKFLOW_EXECUTOR_VERSION').read.chomp
   Settings.duo_workflow.reverse_merge!(
     secure: true,
-    executor_binary_url: 'https://gitlab.com/api/v4/projects/58711783/releases/permalink/latest',
-    executor_version: 'latest'
+    executor_binary_url: "https://gitlab.com/api/v4/projects/58711783/packages/generic/duo-workflow-executor/#{executor_version}/duo-workflow-executor.tar.gz",
+    executor_version: executor_version
   )
 
   # Default to proxy via Cloud Connector

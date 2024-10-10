@@ -209,7 +209,6 @@ RSpec.describe RegistrationsController, :with_current_organization, feature_cate
                   category: 'RegistrationsController',
                   action: 'accepted',
                   label: 'invite_email',
-                  property: member.id.to_s,
                   user: member.reload.user
                 )
               end
@@ -470,6 +469,16 @@ RSpec.describe RegistrationsController, :with_current_organization, feature_cate
           expect(controller.current_user).to be_present
           expect(controller.current_user.terms_accepted?).to be(false)
         end
+      end
+    end
+
+    context 'for system hooks' do
+      it 'executes user_create system hook' do
+        expect_next_instance_of(SystemHooksService) do |system_hook_service|
+          expect(system_hook_service).to receive(:execute_hooks_for).with(User.find_by(email: 'new@user.com'), :create)
+        end
+
+        expect { post_create }.to change { User.where(email: 'new@user.com').count }.from(0).to(1)
       end
     end
 

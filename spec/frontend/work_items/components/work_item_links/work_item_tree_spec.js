@@ -11,6 +11,7 @@ import WorkItemChildrenWrapper from '~/work_items/components/work_item_links/wor
 import WorkItemLinksForm from '~/work_items/components/work_item_links/work_item_links_form.vue';
 import WorkItemActionsSplitButton from '~/work_items/components/work_item_links/work_item_actions_split_button.vue';
 import WorkItemMoreActions from '~/work_items/components/shared/work_item_more_actions.vue';
+import WorkItemRolledUpData from '~/work_items/components/work_item_links/work_item_rolled_up_data.vue';
 import getWorkItemTreeQuery from '~/work_items/graphql/work_item_tree.query.graphql';
 import {
   FORM_TYPES,
@@ -29,6 +30,7 @@ import {
   workItemHierarchyPaginatedTreeResponse,
   workItemHierarchyTreeEmptyResponse,
   workItemHierarchyNoUpdatePermissionResponse,
+  mockRolledUpCountsByType,
 } from '../../mock_data';
 
 jest.mock('~/alert');
@@ -50,6 +52,7 @@ describe('WorkItemTree', () => {
   const findWorkItemLinkChildrenWrapper = () => wrapper.findComponent(WorkItemChildrenWrapper);
   const findMoreActions = () => wrapper.findComponent(WorkItemMoreActions);
   const findCrudComponent = () => wrapper.findComponent(CrudComponent);
+  const findRolledUpData = () => wrapper.findComponent(WorkItemRolledUpData);
 
   const createComponent = async ({
     workItemType = 'Objective',
@@ -60,6 +63,7 @@ describe('WorkItemTree', () => {
     canUpdateChildren = true,
     hasSubepicsFeature = true,
     workItemHierarchyTreeHandler = workItemHierarchyTreeResponseHandler,
+    shouldWaitForPromise = true,
   } = {}) => {
     wrapper = shallowMountExtended(WorkItemTree, {
       propsData: {
@@ -78,7 +82,10 @@ describe('WorkItemTree', () => {
       },
       stubs: { CrudComponent },
     });
-    await waitForPromises();
+
+    if (shouldWaitForPromise) {
+      await waitForPromises();
+    }
   };
 
   it('displays Add button', () => {
@@ -223,8 +230,8 @@ describe('WorkItemTree', () => {
       expect(findToggleFormSplitButton().exists()).toBe(false);
     });
 
-    it('does not display link menu on children', () => {
-      expect(findWorkItemLinkChildrenWrapper().exists()).toBe(false);
+    it('passes correct `canUpdate` prop to children wrapper', () => {
+      expect(findWorkItemLinkChildrenWrapper().props('canUpdate')).toBe(false);
     });
   });
 
@@ -339,5 +346,23 @@ describe('WorkItemTree', () => {
     await createComponent();
 
     expect(findCrudComponent().exists()).toBe(true);
+  });
+
+  it('renders rolled up data only when query is loaded', async () => {
+    createComponent({ shouldWaitForPromise: false });
+
+    expect(findRolledUpData().exists()).toBe(false);
+
+    await waitForPromises();
+
+    expect(findRolledUpData().exists()).toBe(true);
+
+    expect(findRolledUpData().props()).toEqual({
+      workItemId: 'gid://gitlab/WorkItem/2',
+      workItemIid: '2',
+      workItemType: 'Objective',
+      rolledUpCountsByType: mockRolledUpCountsByType,
+      fullPath: 'test/project',
+    });
   });
 });

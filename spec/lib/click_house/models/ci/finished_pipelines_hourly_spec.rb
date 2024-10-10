@@ -3,109 +3,41 @@
 require 'spec_helper'
 
 RSpec.describe ClickHouse::Models::Ci::FinishedPipelinesHourly, feature_category: :fleet_visibility do
-  let(:instance) { described_class.new }
+  it_behaves_like 'a ci_finished_pipelines aggregation model', :ci_finished_pipelines_hourly
 
-  let_it_be(:group) { create(:group, :nested) }
-  let_it_be(:project) { create(:project, group: group) }
-  let_it_be(:path) { project.reload.project_namespace.traversal_path }
+  describe '.time_window_valid?', :freeze_time do
+    subject(:time_window_valid?) { described_class.time_window_valid?(from_time, to_time) }
 
-  specify { expect(path).to match(%r{\A(\d+/){3}\z}) }
+    context 'with time window of one week and one hour' do
+      let(:from_time) { (1.hour - 1.second).before(1.week.ago) }
+      let(:to_time) { Time.current }
 
-  describe '#for_project' do
-    it 'builds the correct SQL' do
-      expected_sql = <<~SQL.lines(chomp: true).join(' ')
-        SELECT * FROM "ci_finished_pipelines_hourly"
-        WHERE "ci_finished_pipelines_hourly"."path" = '#{path}'
-      SQL
+      it { is_expected.to eq true }
+    end
 
-      result_sql = instance.for_project(project).to_sql
+    context 'with time window of one week and 1 hour' do
+      let(:from_time) { 1.hour.before(1.week.ago) }
+      let(:to_time) { Time.current }
 
-      expect(result_sql.strip).to eq(expected_sql.strip)
+      it { is_expected.to eq false }
     end
   end
 
-  describe '#by_status' do
-    it 'builds the correct SQL' do
-      expected_sql = <<~SQL.lines(chomp: true).join(' ')
-        SELECT * FROM "ci_finished_pipelines_hourly"
-        WHERE "ci_finished_pipelines_hourly"."status" IN ('failed', 'success')
-      SQL
+  describe '.validate_time_window', :freeze_time do
+    subject(:validate_time_window) { described_class.validate_time_window(from_time, to_time) }
 
-      result_sql = instance.by_status(%i[failed success]).to_sql
+    context 'with time window of one week and one hour' do
+      let(:from_time) { (1.hour - 1.second).before(1.week.ago) }
+      let(:to_time) { Time.current }
 
-      expect(result_sql.strip).to eq(expected_sql.strip)
-    end
-  end
-
-  describe '#group_by_status' do
-    it 'builds the correct SQL' do
-      expected_sql = <<~SQL.lines(chomp: true).join(' ')
-        SELECT "ci_finished_pipelines_hourly"."status"
-        FROM "ci_finished_pipelines_hourly"
-        GROUP BY "ci_finished_pipelines_hourly"."status"
-      SQL
-
-      result_sql = instance.select(:status).group_by_status.to_sql
-
-      expect(result_sql.strip).to eq(expected_sql.strip)
-    end
-  end
-
-  describe '#count_pipelines_function' do
-    it 'builds the correct SQL' do
-      expected_sql = <<~SQL.lines(chomp: true).join(' ')
-        SELECT "ci_finished_pipelines_hourly"."status", countMerge("ci_finished_pipelines_hourly"."count_pipelines")
-        FROM "ci_finished_pipelines_hourly"
-      SQL
-
-      result_sql = instance.select(:status, instance.count_pipelines_function).to_sql
-
-      expect(result_sql.strip).to eq(expected_sql.strip)
-    end
-  end
-
-  describe 'class methods' do
-    before do
-      allow(described_class).to receive(:new).and_return(instance)
+      it { is_expected.to be_nil }
     end
 
-    describe '.for_project' do
-      it 'calls the corresponding instance method' do
-        expect(instance).to receive(:for_project).with(project)
+    context 'with time window of one week and 1 hour' do
+      let(:from_time) { 1.hour.before(1.week.ago) }
+      let(:to_time) { Time.current }
 
-        described_class.for_project(project)
-      end
-    end
-
-    describe '.by_status' do
-      it 'calls the corresponding instance method' do
-        expect(instance).to receive(:by_status).with(:success)
-
-        described_class.by_status(:success)
-      end
-    end
-
-    describe '.group_by_status' do
-      it 'calls the corresponding instance method' do
-        expect(instance).to receive(:group_by_status)
-
-        described_class.group_by_status
-      end
-    end
-  end
-
-  describe 'method chaining' do
-    it 'builds the correct SQL with chained methods' do
-      expected_sql = <<~SQL.lines(chomp: true).join(' ')
-        SELECT "ci_finished_pipelines_hourly"."status" FROM "ci_finished_pipelines_hourly"
-        WHERE "ci_finished_pipelines_hourly"."path" = '#{path}'
-        AND "ci_finished_pipelines_hourly"."status" IN ('failed', 'success')
-        GROUP BY "ci_finished_pipelines_hourly"."status"
-      SQL
-
-      result_sql = instance.for_project(project).select(:status).by_status(%i[failed success]).group_by_status.to_sql
-
-      expect(result_sql.strip).to eq(expected_sql.strip)
+      it { is_expected.to eq("Maximum of 169 hours can be requested") }
     end
   end
 end

@@ -5,20 +5,18 @@ description: Seat assignment, GitLab Duo add-on
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Subscription add-ons
+# GitLab Duo add-ons
 
 DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-You can purchase subscription add-ons to give users in your organization access to more GitLab features.
-Subscription add-ons are purchased as additional seats in your subscription.
-Access to features provided by subscription add-ons is managed through seat assignment. Subscription
-add-ons can be assigned to billable users only.
+You can purchase GitLab Duo seats to give users in your organization access to more GitLab features. GitLab Duo is only available for Premium and Ultimate customers.
+Access to features provided by GitLab Duo is managed through seat assignment. GitLab Duo can be assigned to any user in your group namespace or instance.
 
 ## Purchase GitLab Duo seats
 
-You can purchase additional GitLab Duo Pro or GitLab Duo Enterprise seats for your group namespace or self-managed instance. After you complete the purchase, you must assign the seats to billable users so that they can use GitLab Duo.
+You can purchase additional GitLab Duo Pro or GitLab Duo Enterprise seats for your group namespace or self-managed instance. After you complete the purchase, you must assign the seats to users so that they can use GitLab Duo.
 
 To purchase GitLab Duo Pro seats, you can use the Customers Portal, or you can contact the [GitLab Sales team](https://about.gitlab.com/solutions/gitlab-duo-pro/sales/). To purchase GitLab Duo Enterprise, contact the [GitLab Sales team](https://about.gitlab.com/solutions/gitlab-duo-pro/sales/).
 
@@ -39,7 +37,7 @@ Prerequisites:
   - The GitLab Duo Pro add-on is available in GitLab 16.8 and later.
   - The GitLab Duo Enterprise add-on is only available in GitLab 17.3 and later.
 
-After you purchase GitLab Duo, you can assign seats to billable users to grant access to the add-on.
+After you purchase GitLab Duo, you can assign seats to users to grant access to the add-on.
 
 ### For GitLab.com
 
@@ -48,6 +46,8 @@ To use GitLab Duo features in any project or group, you must assign the user to 
 1. On the left sidebar, select **Search or go to** and find your group.
 1. Select **Settings > GitLab Duo**.
 1. To the right of the user, turn on the toggle to assign a GitLab Duo seat.
+
+The user is sent a confirmation email.
 
 ### For self-managed
 
@@ -63,6 +63,10 @@ Prerequisites:
      1. In **Subscription details**, to the right of **Last sync**, select
         synchronize subscription (**{retry}**).
 1. To the right of the user, turn on the toggle to assign a GitLab Duo seat.
+
+The user is sent a confirmation email.
+
+To turn off these emails, an administrator can [disable the `duo_seat_assignment_email_for_sm` feature flag](../administration/feature_flags.md#how-to-enable-and-disable-features-behind-flags).
 
 #### Configure network and proxy settings
 
@@ -150,7 +154,7 @@ Prerequisites:
 
 - You must have an active paid Premium or Ultimate subscription. GitLab Duo Pro trials are not available to free users of self-managed at this time.
 - You must have GitLab 16.8 or later and your instance must be able to [synchronize your subscription data](self_managed/index.md#subscription-data-synchronization) with GitLab.
-- For the best GitLab Duo experience, upgrade to the [latest version](https://about.gitlab.com/releases/categories/releases/) of GitLab.
+- GitLab Duo requires GitLab 17.2 and later for the best user experience and results. Earlier versions may continue to work, however the experience may be degraded.
 
 1. Go to the [GitLab Duo Pro trial page](https://about.gitlab.com/solutions/gitlab-duo-pro/self-managed-and-gitlab-dedicated-trial/).
 1. Complete the fields.
@@ -165,13 +169,19 @@ Prerequisites:
 
 The trial automatically syncs to your instance within 24 hours. After the trial has synced, [assign seats](#assign-gitlab-duo-seats) to users that you want to access GitLab Duo.
 
-## Automatic seat removal 
+## Automatic seat removal
 
 GitLab Duo add-on seats are removed automatically to ensure only eligible users have access. This
 happens when there are:
 
 - Seat overages
 - Blocked, banned, and deactivated users
+
+### At subscription expiration
+
+If your subscription containing the GitLab Duo add-on expires, seat assignments are retained for 28 days. If the subscription is renewed, or a new subscription containing GitLab Duo is purchased during this 28-day window, users will be automatically re-assigned.
+
+At the end of the 28 day grace period, seat assignments are removed and users will need to be reassigned.
 
 ### For seat overages
 
@@ -194,3 +204,26 @@ Once or twice each day, a CronJob reviews GitLab Duo seat assignments. If a user
 blocked, banned, or deactivated, their access to GitLab Duo features is automatically removed.
 
 After the seat has been removed, it becomes available and can be re-assigned to a new user.
+
+## Changes to GitLab Duo Pro and GitLab Duo Enterprise access
+
+DETAILS:
+**Tier:** Premium, Ultimate
+**Offering:** GitLab.com, Self-managed, GitLab Dedicated
+
+Starting October 17, 2024, customers with a Premium or Ultimate subscription
+must have a GitLab Duo add-on to access AI-powered features.
+
+To [continue using](https://about.gitlab.com/gitlab-duo/) GitLab Duo Pro or GitLab Duo Enterprise features, you can either:
+
+- Start a free trial
+- Purchase GitLab Duo Pro or Duo Enterprise
+
+GitLab Duo Enterprise is available only for Ultimate subscriptions.
+
+If you have already purchased GitLab Duo Pro or Enterprise, to avoid losing access, you must
+assign remaining seats before October 17, 2024.
+
+If you have an Ultimate subscription and purchased GitLab Duo Pro with the option to
+upgrade to Duo Enterprise, you must upgrade before October 17, 2024. If you
+don't upgrade, you will lose access to GitLab Duo Enterprise features.

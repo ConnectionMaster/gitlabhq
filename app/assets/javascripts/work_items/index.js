@@ -60,12 +60,18 @@ export const initWorkItemsRoot = ({ workItemType, workspaceType } = {}) => {
 
   const isGroup = workspaceType === WORKSPACE_GROUP;
   const router = createRouter({ fullPath, workItemType, workspaceType, defaultBranch, isGroup });
+  let listPath = issuesListPath;
 
-  if (isGroup)
-    injectVueAppBreadcrumbs(router, WorkItemBreadcrumb, apolloProvider, {
-      workItemType: listWorkItemType,
-      epicsListPath,
-    });
+  const breadcrumbParams = { workItemType: listWorkItemType, isGroup };
+
+  if (isGroup) {
+    listPath = epicsListPath;
+    breadcrumbParams.listPath = epicsListPath;
+  } else {
+    breadcrumbParams.listPath = issuesListPath;
+  }
+
+  injectVueAppBreadcrumbs(router, WorkItemBreadcrumb, apolloProvider, breadcrumbParams);
 
   apolloProvider.clients.defaultClient.cache.writeQuery({
     query: activeDiscussionQuery,
@@ -77,6 +83,14 @@ export const initWorkItemsRoot = ({ workItemType, workspaceType } = {}) => {
       },
     },
   });
+
+  if (workItemType === 'issue' && gon.features.workItemsViewPreference && !isGroup) {
+    import(/* webpackChunkName: 'work_items_feedback' */ '~/work_items_feedback')
+      .then(({ initWorkItemsFeedback }) => {
+        initWorkItemsFeedback();
+      })
+      .catch({});
+  }
 
   return new Vue({
     el,
@@ -91,8 +105,7 @@ export const initWorkItemsRoot = ({ workItemType, workspaceType } = {}) => {
       hasOkrsFeature: parseBoolean(hasOkrsFeature),
       hasSubepicsFeature: parseBoolean(hasSubepicsFeature),
       hasScopedLabelsFeature: parseBoolean(hasScopedLabelsFeature),
-      // TODO: remove `epicsListPath` with https://gitlab.com/gitlab-org/gitlab/-/issues/473073
-      issuesListPath: epicsListPath || issuesListPath,
+      issuesListPath: listPath,
       labelsManagePath,
       registerPath,
       signInPath,

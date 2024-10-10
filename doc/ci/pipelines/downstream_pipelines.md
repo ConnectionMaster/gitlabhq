@@ -402,7 +402,7 @@ In this example:
 
 1. The parent pipeline triggers the child pipeline and `job3` at the same time
 1. `job2` from the child pipeline fails and the child pipeline is canceled, stopping `job1` as well
-1. The child pipeline has been cancelled so the parent pipeline is auto-canceled
+1. The child pipeline has been canceled so the parent pipeline is auto-canceled
 
 ### Mirror the status of a downstream pipeline in the trigger job
 
@@ -721,7 +721,7 @@ Do not use this method to pass [masked variables](../variables/index.md#mask-a-c
 to a multi-project pipeline. The CI/CD masking configuration is not passed to the
 downstream pipeline and the variable could be unmasked in job logs in the downstream project.
 
-You cannot use this method to forward [job-level persisted variables](../variables/where_variables_can_be_used.md#persisted-variables)
+You cannot use this method to forward [job-only variables](../variables/predefined_variables.md#variable-availability)
 to a downstream pipeline, as they are not available in trigger jobs.
 
 Upstream pipelines take precedence over downstream ones. If there are two

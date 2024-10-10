@@ -75,6 +75,19 @@ Rejecting a user:
 - Prevents the user from signing in or accessing instance information.
 - Deletes the user.
 
+## View users pending role promotion
+
+When [user promotion management](../administration/settings/sign_up_restrictions.md#enable-role-promotion-approval) is enabled, any user added or promoted to a billable role will be pending administrator approval.
+
+To view users pending role promotion:
+
+1. On the left sidebar, at the bottom, select **Admin**.
+1. Select **Overview > Users**.
+1. Select **Role Promotions**.
+
+A list of users with the highest role requested is displayed.
+You can **Approve** or **Reject** the requests.
+
 ## Block and unblock users
 
 GitLab administrators can block and unblock users.
@@ -152,7 +165,7 @@ Prerequisites:
 
 - The user has had no activity in the last 90 days.
 
-To deactivate a user:
+To deactivate a user from a self-managed GitLab instance:
 
 1. On the left sidebar, at the bottom, select **Admin**.
 1. Select **Overview > Users**.
@@ -163,6 +176,9 @@ The user receives an email notification that their account has been deactivated.
 For more information, see [user deactivation emails](../administration/settings/email.md#user-deactivation-emails).
 
 To deactivate users with the GitLab API, see [deactivate user](../api/user_moderation.md#deactivate-a-user). For information about permanent user restrictions, see [block and unblock users](#block-and-unblock-users).
+
+To remove a user from a GitLab.com subscription, see
+[Remove users from your subscription](../subscriptions/gitlab_com/index.md#remove-users-from-subscription).
 
 ### Automatically deactivate dormant users
 

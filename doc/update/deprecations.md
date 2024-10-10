@@ -50,6 +50,27 @@ For deprecation reviewers (Technical Writers only):
 {::options parse_block_html="true" /}
 
 <div class="js-deprecation-filters"></div>
+<div class="milestone-wrapper" data-milestone="20.0">
+
+## GitLab 20.0
+
+<div class="deprecation breaking-change" data-milestone="20.0">
+
+### GitLab Runner Docker Machine executor is deprecated
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">20.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/498268).
+
+</div>
+
+The [GitLab Runner Docker Machine executor](https://docs.gitlab.com/runner/executors/docker_machine.html) is deprecated and will be fully removed from the product as a supported feature in GitLab 20.0 (May 2027). The replacement for Docker Machine, [GitLab Runner Autoscaler](https://docs.gitlab.com/runner/runner_autoscale/) with GitLab developed plugins for Amazon Web Services (AWS) EC2, Google Compute Engine (GCE) and Microsoft Azure virtual machines (VMs) is generally available. With this announcement, the GitLab Runner team will no longer accept community contributions for the GitLab maintained Docker Machine fork, or resolve newly identified bugs.
+
+</div>
+</div>
+
 <div class="milestone-wrapper" data-milestone="19.0">
 
 ## GitLab 19.0
@@ -392,6 +413,27 @@ See also how to [prevent your runner registration workflow from breaking](https:
 
 <div class="deprecation breaking-change" data-milestone="18.0">
 
+### Limited `scan` actions in a scan execution policy
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/472213).
+
+</div>
+
+Starting in GitLab 18.0, [scan execution policies](https://docs.gitlab.com/ee/user/application_security/policies/scan_execution_policies.html)
+are limited to 10 `scan` actions per policy. You can't create new policies that exceed the limit, and you
+can't update existing policies if they exceed the limit. For any existing policy that exceeds the limit,
+only the policy's first 10 `scan` actions are run.
+
+You can configure a custom limit on self-managed instances with the `scan_execution_policies_action_limit` application setting.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
 ### List container registry repository tags API endpoint pagination
 
 <div class="deprecation-notes">
@@ -602,6 +644,40 @@ The options to skip GitGuardian secret detection, `[skip secret detection]` and 
 
 <div class="deprecation breaking-change" data-milestone="18.0">
 
+### Replace GraphQL field `take_ownership_pipeline_schedule` with `admin_pipeline_schedule` in PipelineSchedulePermissions
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">15.9</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/391941).
+
+</div>
+
+The GraphQL field `take_ownership_pipeline_schedule` will be deprecated. To
+determine if a user can take ownership of a pipeline schedule, use the
+`admin_pipeline_schedule` field instead.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
+### Replace `add_on_purchase` GraphQL field with `add_on_purchases`
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.4</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/476858).
+
+</div>
+
+The GraphQL field `add_on_purchase` will be deprecated in GitLab 17.4 and removed in GitLab 18.0. Use the `add_on_purchases` field instead.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
 ### Replace `threshold` with `maxretries` for container registry notifications
 
 <div class="deprecation-notes">
@@ -617,6 +693,22 @@ You can configure the container registry to send [webhook notifications](https:/
 The problem is that the event will be held in memory forever until it is successful or the registry is shut down. This is not ideal as it can cause high memory and CPU usage on the registry side if the events are not sent properly. It will also delay any new events added to the queue of events.
 
 A new `maxretries` parameter has been added to control how many times an event will be retried before dropping the event. As such, we have deprecated the `threshold` parameter in favor of `maxretries` so that events are not held in memory forever.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
+### Replace namespace `add_on_purchase` GraphQL field with `add_on_purchases`
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/489850).
+
+</div>
+
+The namespace GraphQL field `add_on_purchase` will be deprecated in GitLab 17.5 and removed in GitLab 18.0. Use the root `add_on_purchases` field instead.
 
 </div>
 
@@ -785,6 +877,28 @@ If you are using `OUTBOUND` with the `direction` argument to control the directi
 
 <div class="deprecation breaking-change" data-milestone="18.0">
 
+### The `heroku/builder:22` image is deprecated
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.4</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/cluster-integration/auto-build-image/-/issues/79).
+
+</div>
+
+The cloud native buildpack (CNB) builder image was updated to `heroku/builder:24` in the Auto DevOps Build project. While we don't expect the changes to be disruptive for the most part, this might be a breaking change for some users of Auto DevOps, and especially users of Auto Build. To better understand the impact of you workloads, review the following:
+
+- [Heroku-24 stack release notes](https://devcenter.heroku.com/articles/heroku-24-stack#what-s-new)
+- [Heroku-24 stack upgrade notes](https://devcenter.heroku.com/articles/heroku-24-stack#upgrade-notes)
+- [Heroku stack packages](https://devcenter.heroku.com/articles/stack-packages)
+
+These changes affect you if your pipelines use the [`auto-build-image`](https://gitlab.com/gitlab-org/cluster-integration/auto-build-image) provided by [the Auto Build stage of Auto DevOps](https://docs.gitlab.com/ee/topics/autodevops/stages.html#auto-build).
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
 ### Toggle notes confidentiality on APIs
 
 <div class="deprecation-notes">
@@ -834,6 +948,58 @@ The [`GITLAB_SHARED_RUNNERS_REGISTRATION_TOKEN`](https://docs.gitlab.com/ee/admi
 
 <div class="deprecation breaking-change" data-milestone="18.0">
 
+### `ciJobTokenScopeAddProject` GraphQL mutation is deprecated
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/474175).
+
+</div>
+
+With the [upcoming default behavior change to the CI/CD job token](https://docs.gitlab.com/ee/update/deprecations.html#default-cicd-job-token-ci_job_token-scope-changed) in GitLab 18.0, we are also deprecating the associated `ciJobTokenScopeAddProject` GraphQL mutation as the associated feature will be no longer be available.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
+### `ciUsedMinutes` GraphQL field renamed to `ciDuration`
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/497364).
+
+</div>
+
+The `ciDuration` field of the `CiRunnerUsage` and `CiRunnerUsageByProject` types replaces the former `ciUsedMinutes` field.
+Update all references to `ciUsedMinutes` from these types to `ciDuration`.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
+### `mergeTrainIndex` and `mergeTrainsCount` GraphQL fields deprecated
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.5</span>
+- Removal in GitLab <span class="milestone">18.0</span> ([breaking change](https://docs.gitlab.com/ee/update/terminology.html#breaking-change))
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/473759).
+
+</div>
+
+The GraphQL field `mergeTrainIndex` and `mergeTrainsCount` in `MergeRequest` are deprecated. To
+determine the position of the merge request on the merge train use the
+`index` field in `MergeTrainCar` instead. To get the count of MRs in a merge train,
+use `count` from `cars` in `MergeTrains::TrainType` instead.
+
+</div>
+
+<div class="deprecation breaking-change" data-milestone="18.0">
+
 ### `require_password_to_approve` field
 
 <div class="deprecation-notes">
@@ -867,7 +1033,7 @@ field. You should switch to the new field as soon as possible.
 
 </div>
 
-The [`runnerRegistrationToken`](https://docs.gitlab.com/runner/install/kubernetes.html#required-configuration) parameter to use the GitLab Helm Chart to install a runner on Kubernetes is deprecated.
+The [`runnerRegistrationToken`](https://docs.gitlab.com/runner/install/kubernetes.html) parameter to use the GitLab Helm Chart to install a runner on Kubernetes is deprecated.
 
 We plan to implement a new method to bind runners to a GitLab instance leveraging `runnerToken`
 as part of the new [GitLab Runner token architecture](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html).
@@ -944,9 +1110,55 @@ This is one small step towards moving away from CI/CD templates in preference of
 </div>
 </div>
 
+<div class="milestone-wrapper" data-milestone="17.7">
+
+## GitLab 17.7
+
+<div class="deprecation " data-milestone="17.7">
+
+### TLS 1.0 and 1.1 no longer supported
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.4</span>
+- Removal in GitLab <span class="milestone">17.7</span>
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/164512).
+
+</div>
+
+Long term support (LTS) for [OpenSSL version 1.1.1 ended in September 2023](https://endoflife.date/openssl). Therefore, OpenSSL 3 will be the default in GitLab 17.7.
+
+With the upgrade to OpenSSL 3:
+
+- GitLab requires TLS 1.2 or higher for all outgoing and incoming TLS connections.
+- TLS/SSL certificates must have at least 112 bits of security. RSA, DSA, and DH keys shorter than 2048 bits, and ECC keys shorter than 224 bits are prohibited.
+
+See the [GitLab 17.5 changes](https://docs.gitlab.com/ee/update/versions/gitlab_17_changes.html#1750) for more details.
+
+</div>
+</div>
+
 <div class="milestone-wrapper" data-milestone="17.6">
 
 ## GitLab 17.6
+
+<div class="deprecation " data-milestone="17.6">
+
+### Group vulnerability report by OWASP top 10 2017 is deprecated
+
+<div class="deprecation-notes">
+
+- Announced in GitLab <span class="milestone">17.0</span>
+- Removal in GitLab <span class="milestone">17.6</span>
+- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/458835).
+
+</div>
+
+Grouping the vulnerability report by OWASP top 10 2017 is deprecated, replaced by grouping by OWASP top 10 2021.
+In the future we will support the most recent version of OWASP top 10 for grouping on the vulnerability report.
+Along with this change we are also deprecating and removing the 2017 GraphQL API enums which the feature uses. Additional details are included in [this issue](https://gitlab.com/gitlab-org/gitlab/-/issues/488433).
+
+</div>
 
 <div class="deprecation " data-milestone="17.6">
 
@@ -968,50 +1180,9 @@ Debian 11 or Debian 12 for continued support.
 </div>
 </div>
 
-<div class="milestone-wrapper" data-milestone="17.5">
-
-## GitLab 17.5
-
-<div class="deprecation " data-milestone="17.5">
-
-### Support for OpenSSL version 1
-
-<div class="deprecation-notes">
-
-- Announced in GitLab <span class="milestone">17.4</span>
-- Removal in GitLab <span class="milestone">17.5</span>
-- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/164512).
-
-</div>
-
-Long term support (LTS) for [OpenSSL version 1.1.1 ended in September 2023](https://endoflife.date/openssl).
-
-Therefore, we have deprecated support for incoming OpenSSL version 1 (TLS 1.0 or 1.1) connections to GitLab and will remove support in GitLab 17.5.
-External integrations such as LDAP servers and webhooks must use OpenSSL version 3 (TLS 1.2).
-
-</div>
-</div>
-
 <div class="milestone-wrapper" data-milestone="17.4">
 
 ## GitLab 17.4
-
-<div class="deprecation " data-milestone="17.4">
-
-### Group vulnerability report by OWASP top 10 2017 is deprecated
-
-<div class="deprecation-notes">
-
-- Announced in GitLab <span class="milestone">17.0</span>
-- Removal in GitLab <span class="milestone">17.4</span>
-- To discuss this change or learn more, see the [deprecation issue](https://gitlab.com/gitlab-org/gitlab/-/issues/458835).
-
-</div>
-
-Grouping the vulnerability report by OWASP top 10 2017 is deprecated, replaced by grouping by OWASP top 10 2021.
-In the future we will support the most recent version of OWASP top 10 for grouping on the vulnerability report.
-
-</div>
 
 <div class="deprecation " data-milestone="17.4">
 
@@ -3717,7 +3888,7 @@ GitLab 16.0.
 
 </div>
 
-GitLab administrators can no longer perform actions on protected branches or tags unless they have been explicitly granted that permission. These actions include pushing and merging into a [protected branch](https://docs.gitlab.com/ee/user/project/protected_branches.html), unprotecting a branch, and creating [protected tags](https://docs.gitlab.com/ee/user/project/protected_tags.html).
+GitLab administrators can no longer perform actions on protected branches or tags unless they have been explicitly granted that permission. These actions include pushing and merging into a [protected branch](https://docs.gitlab.com/ee/user/project/repository/branches/protected.html), unprotecting a branch, and creating [protected tags](https://docs.gitlab.com/ee/user/project/protected_tags.html).
 
 </div>
 

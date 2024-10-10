@@ -1,4 +1,5 @@
 import * as textUtils from '~/lib/utils/text_utility';
+import { stubCrypto } from 'helpers/crypto';
 
 describe('text_utility', () => {
   describe('addDelimiter', () => {
@@ -439,5 +440,32 @@ describe('text_utility', () => {
         expect(textUtils.uniquifyString(inputStr, inputArray, inputModifier)).toBe(outputValue);
       },
     );
+  });
+
+  describe('wildcardMatch', () => {
+    it.each`
+      pattern                  | str                      | result
+      ${'label'}               | ${'label'}               | ${true}
+      ${'label'}               | ${'a-label'}             | ${false}
+      ${'*label'}              | ${'a-label'}             | ${true}
+      ${'label'}               | ${'label-a'}             | ${false}
+      ${'label*'}              | ${'label-a'}             | ${true}
+      ${'label*'}              | ${'a-label-a'}           | ${false}
+      ${'*label'}              | ${'a-label-a'}           | ${false}
+      ${'*label*'}             | ${'a-label-a'}           | ${true}
+      ${'l*l'}                 | ${'label'}               | ${true}
+      ${'!@#$%^&*()-=+/?[]{}'} | ${'!@#$%^&*()-=+/?[]{}'} | ${true}
+    `('returns expected result', ({ pattern, str, result }) => {
+      expect(textUtils.wildcardMatch(str, pattern)).toBe(result);
+    });
+  });
+
+  describe('sha256', () => {
+    beforeEach(stubCrypto);
+
+    it('returns a sha256 hash', async () => {
+      const hash = await textUtils.sha256('How vexingly quick daft zebras jump!');
+      expect(hash).toBe('3f7282eed1c3cef3efc993275e9b9cc0cfe85927450d6b0e5d73a2c59663232e');
+    });
   });
 });

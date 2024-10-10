@@ -135,30 +135,23 @@ RSpec.describe RuboCop::Cop::BackgroundMigration::DictionaryFile, feature_catego
 
         context 'with dictionary file' do
           let(:introduced_by_url) { 'https://gitlab.com/gitlab-org/gitlab/-/merge_requests/132639' }
-          let(:finalize_after) { '20230507160251' }
           let(:milestone) { '16.1' }
 
           before do
             allow(File).to receive(:exist?).and_call_original
             allow(File).to receive(:exist?).with(dictionary_file_path).and_return(true)
-            allow(::RuboCop::BatchedBackgroundMigrationsDictionary).to receive(:dictionary_data).and_return({
-              '20231118100907' => {
-                finalize_after: finalize_after,
-                introduced_by_url: introduced_by_url,
-                milestone: milestone
-              }
-            })
+            allow(Gitlab::Utils::BatchedBackgroundMigrationsDictionary)
+              .to receive(:entries).and_return({
+                '20231118100907' => {
+                  introduced_by_url: introduced_by_url,
+                  milestone: milestone
+                }
+              })
           end
 
           context 'without introduced_by_url' do
             it_behaves_like 'migration with missing dictionary keys offense', :introduced_by_url do
               let(:introduced_by_url) { nil }
-            end
-          end
-
-          context 'without finalize_after' do
-            it_behaves_like 'migration with missing dictionary keys offense', :finalize_after do
-              let(:finalize_after) { nil }
             end
           end
 
@@ -229,8 +222,9 @@ RSpec.describe RuboCop::Cop::BackgroundMigration::DictionaryFile, feature_catego
   end
 
   describe '#external_dependency_checksum' do
-    it 'uses the RuboCop::BatchedBackgroundMigrationsDictionary.checksum' do
-      allow(RuboCop::BatchedBackgroundMigrationsDictionary).to receive(:checksum).and_return('aaaaa')
+    it 'uses the Utils::BatchedBackgroundMigrationsDictionary.checksum' do
+      allow(Gitlab::Utils::BatchedBackgroundMigrationsDictionary)
+        .to receive(:checksum).and_return('aaaaa')
 
       expect(cop.external_dependency_checksum).to eq('aaaaa')
     end

@@ -184,7 +184,7 @@ DETAILS:
     [issue 393216](https://gitlab.com/gitlab-org/gitlab/-/issues/393216).
   - The second [bug fix](https://gitlab.com/gitlab-org/gitlab/-/issues/394760) ensures it is possible to upgrade directly from 15.4.x.
 - As part of the [CI Partitioning effort](../../architecture/blueprints/ci_data_decay/pipeline_partitioning.md), a [new Foreign Key](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/107547) was added to `ci_builds_needs`. On GitLab instances with large CI tables, adding this constraint can take longer than usual.
-- Praefect's metadata verifier's [invalid metadata deletion behavior](../../administration/gitaly/praefect.md#enable-deletions) is now enabled by default.
+- Praefect's metadata verifier [invalid metadata deletion behavior](../../administration/gitaly/praefect.md#enable-deletions) is now enabled by default.
 
   The metadata verifier processes replica records in the Praefect database and verifies the replicas actually exist on the Gitaly nodes. If the replica doesn't exist, its
   metadata record is deleted. This enables Praefect to fix situations where a replica has a metadata record indicating it's fine but, in reality, it doesn't exist on disk.
@@ -709,7 +709,7 @@ A [license caching issue](https://gitlab.com/gitlab-org/gitlab/-/issues/376706) 
 
 ## 15.3.3
 
-- In GitLab 15.3.3, [SAML Group Links](../../api/groups.md#saml-group-links) API `access_level` attribute type changed to `integer`. See
+- In GitLab 15.3.3, [SAML Group Links](../../api/saml.md#saml-group-links) API `access_level` attribute type changed to `integer`. See
   [the API documentation](../../api/members.md).
 - A [license caching issue](https://gitlab.com/gitlab-org/gitlab/-/issues/376706) prevents some premium features of GitLab from working correctly if you add a new license. Workarounds for this issue:
 
@@ -863,7 +863,7 @@ DETAILS:
 
   1. Ensure all GitLab web nodes are running GitLab 15.1.6.
   1. If you run [GitLab on Kubernetes](https://docs.gitlab.com/charts/installation/) by using the cloud native GitLab Helm chart, make sure that all
-     webservice pods are running GitLab 15.1.Z:
+     Webservice pods are running GitLab 15.1.Z:
 
      ```shell
      kubectl get pods -l app=webservice -o custom-columns=webservice-image:{.spec.containers[0].image},workhorse-image:{.spec.containers[1].image}
@@ -1005,7 +1005,7 @@ DETAILS:
      sudo gitlab-ctl reconfigure
      ```
 
-- Support for Gitaly's internal socket path is removed.
+- Support for internal socket path for Gitaly is removed.
   In GitLab 14.10, Gitaly introduced a new directory that holds all runtime
   data Gitaly requires to operate correctly. This new directory replaces the
   old internal socket directory, and consequentially the usage of

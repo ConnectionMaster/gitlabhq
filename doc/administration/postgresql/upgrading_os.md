@@ -6,6 +6,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Upgrading operating systems for PostgreSQL
 
+WARNING:
+[Geo](../geo/index.md) cannot be used to migrate a PostgreSQL database from one operating system to another. If you attempt to do so, the secondary site may appear to be 100% replicated when in fact some data is not replicated, leading to data loss. This is because Geo depends on PostgreSQL streaming replication, which suffers from the limitations described in this document. Also see [Geo Troubleshooting - Check OS locale data compatibility](../geo/replication/troubleshooting/common.md#check-os-locale-data-compatibility).
+
 If you upgrade the operating system on which PostgreSQL runs, any
 [changes to locale data might corrupt your database indexes](https://wiki.postgresql.org/wiki/Locale_data_changes).
 In particular, the upgrade to `glibc` 2.28 is likely to cause this problem. To avoid this issue,
@@ -100,8 +103,16 @@ Backup and restore recreates the entire database, including the indexes.
 1. In all PostgreSQL nodes, install the new GitLab package of the same GitLab version.
 1. In a [database console](../troubleshooting/postgresql.md#start-a-database-console), rebuild all indexes:
 
-   ```shell
-   REINDEX DATABASE gitlabhq_production
+   ```sql
+   SET statement_timeout = 0;
+   REINDEX DATABASE gitlabhq_production;
+   ```
+
+1. After reindexing the database, the version must be refreshed for all affected collations.
+   To update the system catalog to record the current collation version:
+
+   ```sql
+   ALTER COLLATION <collation_name> REFRESH VERSION;
    ```
 
 1. In all nodes, start GitLab.
@@ -132,8 +143,16 @@ Backup and restore recreates the entire database, including the indexes.
 1. In the primary site, in a
    [database console](../troubleshooting/postgresql.md#start-a-database-console), rebuild all indexes:
 
-   ```shell
-   REINDEX DATABASE gitlabhq_production
+   ```sql
+   SET statement_timeout = 0;
+   REINDEX DATABASE gitlabhq_production;
+   ```
+
+1. After reindexing the database, the version must be refreshed for all affected collations.
+   To update the system catalog to record the current collation version:
+
+   ```sql
+   ALTER COLLATION <collation_name> REFRESH VERSION;
    ```
 
 1. If the secondary sites receive traffic from users, then let the read-replica databases catch up
@@ -160,15 +179,16 @@ different types of indexes were handled, see the blog post about
 1. [Determine which indexes are affected](https://wiki.postgresql.org/wiki/Locale_data_changes#What_indexes_are_affected).
 1. In a [database console](../troubleshooting/postgresql.md#start-a-database-console), reindex each affected index:
 
-   ```shell
-   REINDEX INDEX <index name> CONCURRENTLY
+   ```sql
+   SET statement_timeout = 0;
+   REINDEX INDEX <index name> CONCURRENTLY;
    ```
 
 1. After reindexing bad indexes, the collation must be refreshed. To update the system catalog to
    record the current collation version:
 
-   ```shell
-   ALTER COLLATION <collation_name> REFRESH VERSION
+   ```sql
+   ALTER COLLATION <collation_name> REFRESH VERSION;
    ```
 
 1. In all nodes, start GitLab.
@@ -200,15 +220,16 @@ different types of indexes were handled, see the blog post about
 1. In the primary site, in a
    [database console](../troubleshooting/postgresql.md#start-a-database-console), reindex each affected index:
 
-   ```shell
-   REINDEX INDEX <index name> CONCURRENTLY
+   ```sql
+   SET statement_timeout = 0;
+   REINDEX INDEX <index name> CONCURRENTLY;
    ```
 
 1. After reindexing bad indexes, the collation must be refreshed. To update the system catalog to
    record the current collation version:
 
-   ```shell
-   ALTER COLLATION <collation_name> REFRESH VERSION
+   ```sql
+   ALTER COLLATION <collation_name> REFRESH VERSION;
    ```
 
 1. The existing PostgreSQL streaming replication should replicate the reindex changes to the

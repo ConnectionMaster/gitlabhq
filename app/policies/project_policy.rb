@@ -376,6 +376,7 @@ class ProjectPolicy < BasePolicy
     enable :read_release
     enable :read_analytics
     enable :read_insights
+    enable :read_upload
   end
 
   rule { can?(:reporter_access) & can?(:create_issue) }.enable :create_incident
@@ -536,6 +537,7 @@ class ProjectPolicy < BasePolicy
     enable :create_release
     enable :update_release
     enable :destroy_release
+    enable :publish_catalog_version
     enable :read_alert_management_alert
     enable :update_alert_management_alert
     enable :read_terraform_state
@@ -608,7 +610,6 @@ class ProjectPolicy < BasePolicy
     enable :admin_project_google_cloud
     enable :admin_project_aws
     enable :admin_secure_files
-    enable :read_upload
     enable :admin_upload
     enable :destroy_upload
     enable :admin_incident_management_timeline_event_tag
@@ -807,6 +808,7 @@ class ProjectPolicy < BasePolicy
     enable :read_pages_content
     enable :read_analytics
     enable :read_insights
+    enable :read_upload
 
     # NOTE: may be overridden by IssuePolicy
     enable :read_issue
@@ -1017,7 +1019,7 @@ class ProjectPolicy < BasePolicy
     enable :read_namespace_catalog
   end
 
-  rule { reporter & model_registry_enabled }.policy do
+  rule { model_registry_enabled }.policy do
     enable :read_model_registry
   end
 
@@ -1025,7 +1027,7 @@ class ProjectPolicy < BasePolicy
     enable :write_model_registry
   end
 
-  rule { reporter & model_experiments_enabled }.policy do
+  rule { model_experiments_enabled }.policy do
     enable :read_model_experiments
   end
 

@@ -22,7 +22,6 @@ query requestingReview(
       after: $afterCursor
       sort: UPDATED_DESC
     ) {
-      count
       pageInfo {
         ...PageInfo
       }

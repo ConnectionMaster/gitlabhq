@@ -3,7 +3,12 @@
 require 'spec_helper'
 require Rails.root.join('ee', 'spec', 'db', 'schema_support') if Gitlab.ee?
 
-RSpec.describe 'Database schema', feature_category: :database do
+RSpec.describe 'Database schema',
+  # These skip a bit of unnecessary setup for each spec invocation,
+  # and there are thousands of specs in this file. In total, this improves runtime by roughly 30%
+  :do_not_mock_admin_mode_setting, :do_not_stub_snowplow_by_default,
+  stackprof: { interval: 101000 },
+  feature_category: :database do
   prepend_mod_with('DB::SchemaSupport')
 
   let(:tables) { connection.tables }
@@ -13,6 +18,7 @@ RSpec.describe 'Database schema', feature_category: :database do
     ai_testing_terms_acceptances: %w[user_id], # testing terms only have 1 entry, and if the user is deleted the record should remain
     ci_build_trace_metadata: [%w[partition_id build_id], %w[partition_id trace_artifact_id]], # the index on build_id is enough
     ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[upstream_pipeline_partition_id upstream_pipeline_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
+    ci_build_needs: %w[project_id], # we will create async index, see https://gitlab.com/gitlab-org/gitlab/-/merge_requests/163429#note_2065627176
     ci_daily_build_group_report_results: [%w[partition_id last_pipeline_id]], # index on last_pipeline_id is sufficient
     ci_pipeline_artifacts: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_pipeline_chat_data: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
@@ -24,6 +30,7 @@ RSpec.describe 'Database schema', feature_category: :database do
     ci_sources_pipelines: [%w[source_partition_id source_pipeline_id], %w[partition_id pipeline_id]],
     ci_sources_projects: [%w[partition_id pipeline_id]], # index on pipeline_id is sufficient
     ci_stages: [%w[partition_id pipeline_id]], # the index on pipeline_id is sufficient
+    issues: [%w[correct_work_item_type_id]],
     notes: %w[namespace_id], # this index is added in an async manner, hence it needs to be ignored in the first phase.
     p_ci_build_trace_metadata: [%w[partition_id build_id], %w[partition_id trace_artifact_id]], # the index on build_id is enough
     p_ci_builds: [%w[partition_id stage_id], %w[partition_id execution_config_id], %w[auto_canceled_by_partition_id auto_canceled_by_id], %w[upstream_pipeline_partition_id upstream_pipeline_id], %w[partition_id commit_id]], # https://gitlab.com/gitlab-org/gitlab/-/merge_requests/142804#note_1745483081
@@ -75,6 +82,8 @@ RSpec.describe 'Database schema', feature_category: :database do
     chat_teams: %w[team_id],
     ci_builds: %w[project_id runner_id user_id erased_by_id trigger_request_id partition_id auto_canceled_by_partition_id execution_config_id upstream_pipeline_partition_id],
     ci_builds_metadata: %w[partition_id project_id build_id],
+    ci_build_needs: %w[project_id],
+    ci_builds_runner_session: %w[project_id],
     ci_daily_build_group_report_results: %w[partition_id],
     ci_deleted_objects: %w[project_id],
     ci_job_artifacts: %w[partition_id project_id job_id],
@@ -84,19 +93,27 @@ RSpec.describe 'Database schema', feature_category: :database do
     ci_pipelines_config: %w[partition_id],
     ci_pipeline_messages: %w[partition_id],
     ci_pipeline_metadata: %w[partition_id],
+    ci_pipeline_schedule_variables: %w[project_id],
     ci_pipeline_variables: %w[partition_id pipeline_id project_id],
     ci_pipelines: %w[partition_id auto_canceled_by_partition_id],
+    ci_secure_file_states: %w[project_id],
+    ci_unit_test_failures: %w[project_id],
+    ci_resources: %w[project_id],
     p_ci_pipelines: %w[partition_id auto_canceled_by_partition_id auto_canceled_by_id],
+    p_ci_runner_machine_builds: %w[project_id],
+    ci_runners: %w[sharding_key_id], # This value is meant to populate the partitioned table, no other usage
+    ci_runner_machines: %w[sharding_key_id], # This value is meant to populate the partitioned table, no other usage
     ci_runner_projects: %w[runner_id],
     ci_sources_pipelines: %w[partition_id source_partition_id source_job_id],
     ci_sources_projects: %w[partition_id],
     ci_stages: %w[partition_id project_id pipeline_id],
     ci_trigger_requests: %w[commit_id],
-    ci_job_artifact_states: %w[partition_id],
+    ci_job_artifact_states: %w[partition_id project_id],
     cluster_providers_aws: %w[security_group_id vpc_id access_key_id],
     cluster_providers_gcp: %w[gcp_project_id operation_id],
     compliance_management_frameworks: %w[group_id],
     commit_user_mentions: %w[commit_id],
+    dast_scanner_profiles_builds: %w[project_id],
     dependency_list_export_parts: %w[start_id end_id],
     dep_ci_build_trace_sections: %w[build_id],
     deploy_keys_projects: %w[deploy_key_id],
@@ -113,7 +130,7 @@ RSpec.describe 'Database schema', feature_category: :database do
     gitlab_subscription_histories: %w[gitlab_subscription_id hosted_plan_id namespace_id],
     identities: %w[user_id],
     import_failures: %w[project_id],
-    issues: %w[last_edited_by_id state_id],
+    issues: %w[last_edited_by_id state_id correct_work_item_type_id],
     issue_emails: %w[email_message_id],
     jira_tracker_data: %w[jira_issue_transition_id],
     keys: %w[user_id],
@@ -179,7 +196,6 @@ RSpec.describe 'Database schema', feature_category: :database do
     vulnerability_identifiers: %w[external_id],
     vulnerability_occurrence_identifiers: %w[project_id],
     vulnerability_scanners: %w[external_id],
-    vulnerability_state_transitions: %w[state_changed_at_pipeline_id],
     security_scans: %w[pipeline_id project_id], # foreign key is not added as ci_pipeline table will be moved into different db soon
     dependency_list_exports: %w[pipeline_id], # foreign key is not added as ci_pipeline table is in different db
     vulnerability_reads: %w[cluster_agent_id namespace_id], # namespace_id is a denormalization of `project.namespace`
@@ -200,7 +216,9 @@ RSpec.describe 'Database schema', feature_category: :database do
     scan_result_policy_violations: %w[approval_policy_rule_id],
     software_license_policies: %w[approval_policy_rule_id],
     ai_testing_terms_acceptances: %w[user_id], # testing terms only have 1 entry, and if the user is deleted the record should remain
-    namespace_settings: %w[early_access_program_joined_by_id] # isn't used inside product itself. Only through Snowflake
+    namespace_settings: %w[early_access_program_joined_by_id], # isn't used inside product itself. Only through Snowflake
+    workspaces_agent_config_versions: %w[item_id], # polymorphic associations
+    work_item_types: %w[correct_id] # temporary column that is not a foreign key
   }.with_indifferent_access.freeze
 
   context 'for table' do
@@ -270,7 +288,7 @@ RSpec.describe 'Database schema', feature_category: :database do
             it 'only has existing indexes in the ignored duplicate indexes duplicate_indexes.yml' do
               table_ignored_indexes = (ignored_indexes[table] || {}).to_a.flatten.uniq
               indexes_by_name = indexes.map(&:name)
-              expect(indexes_by_name).to include(*table_ignored_indexes)
+              expect(indexes_by_name).to include(*table_ignored_indexes) unless table_ignored_indexes.empty?
             end
 
             it 'does not have any duplicated indexes' do
@@ -365,7 +383,8 @@ RSpec.describe 'Database schema', feature_category: :database do
     "RawUsageData" => %w[payload], # Usage data payload changes often, we cannot use one schema
     "Releases::Evidence" => %w[summary],
     "Vulnerabilities::Finding::Evidence" => %w[data], # Validation work in progress
-    "Ai::DuoWorkflows::Checkpoint" => %w[checkpoint metadata] # https://gitlab.com/gitlab-org/gitlab/-/issues/468632
+    "Ai::DuoWorkflows::Checkpoint" => %w[checkpoint metadata], # https://gitlab.com/gitlab-org/gitlab/-/issues/468632
+    "RemoteDevelopment::WorkspacesAgentConfigVersion" => %w[object object_changes] # Managed by paper_trail gem
   }.freeze
 
   # We are skipping GEO models for now as it adds up complexity
@@ -386,7 +405,7 @@ RSpec.describe 'Database schema', feature_category: :database do
   end
 
   context 'existence of Postgres schemas' do
-    def get_schemas
+    let_it_be(:schemas) do
       sql = <<~SQL
         SELECT schema_name FROM
         information_schema.schemata
@@ -401,17 +420,17 @@ RSpec.describe 'Database schema', feature_category: :database do
     end
 
     it 'we have a public schema' do
-      expect(get_schemas).to include('public')
+      expect(schemas).to include('public')
     end
 
     Gitlab::Database::EXTRA_SCHEMAS.each do |schema|
       it "we have a '#{schema}' schema'" do
-        expect(get_schemas).to include(schema.to_s)
+        expect(schemas).to include(schema.to_s)
       end
     end
 
     it 'we do not have unexpected schemas' do
-      expect(get_schemas.size).to eq(Gitlab::Database::EXTRA_SCHEMAS.size + 1)
+      expect(schemas.size).to eq(Gitlab::Database::EXTRA_SCHEMAS.size + 1)
     end
   end
 

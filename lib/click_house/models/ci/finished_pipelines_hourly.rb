@@ -3,37 +3,21 @@
 module ClickHouse # rubocop:disable Gitlab/BoundedContexts -- Existing module
   module Models
     module Ci
-      class FinishedPipelinesHourly < ClickHouse::Models::BaseModel
+      class FinishedPipelinesHourly < FinishedPipelinesBase
+        TIME_BUCKETS_LIMIT = 1.week.in_hours.to_i + 1 # +1 to add some error margin
+
         def self.table_name
           'ci_finished_pipelines_hourly'
         end
 
-        def self.for_project(project)
-          new.for_project(project)
+        def self.time_window_valid?(from_time, to_time)
+          (to_time - from_time) / 1.hour < TIME_BUCKETS_LIMIT
         end
 
-        def self.by_status(statuses)
-          new.by_status(statuses)
-        end
+        def self.validate_time_window(from_time, to_time)
+          return if time_window_valid?(from_time, to_time)
 
-        def self.group_by_status
-          new.group_by_status
-        end
-
-        def for_project(project)
-          where(path: project.project_namespace.traversal_path)
-        end
-
-        def by_status(statuses)
-          where(status: statuses)
-        end
-
-        def group_by_status
-          group([@query_builder.table[:status]])
-        end
-
-        def count_pipelines_function
-          Arel::Nodes::NamedFunction.new('countMerge', [@query_builder.table[:count_pipelines]])
+          "Maximum of #{TIME_BUCKETS_LIMIT} hours can be requested"
         end
       end
     end

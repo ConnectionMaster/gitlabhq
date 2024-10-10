@@ -1,7 +1,6 @@
 <script>
 import { GlAlert, GlModal } from '@gitlab/ui';
 import { s__ } from '~/locale';
-import { scrollToTargetOnResize } from '~/lib/utils/resize_observer';
 import { removeHierarchyChild } from '../graphql/cache_utils';
 import deleteWorkItemMutation from '../graphql/delete_work_item.mutation.graphql';
 
@@ -43,20 +42,16 @@ export default {
     return {
       error: undefined,
       updatedWorkItemIid: null,
+      updatedWorkItemId: null,
       isModalShown: false,
-      hasNotes: false,
     };
   },
   computed: {
     displayedWorkItemIid() {
       return this.updatedWorkItemIid || this.workItemIid;
     },
-  },
-  watch: {
-    hasNotes(newVal) {
-      if (newVal && this.isModalShown) {
-        scrollToTargetOnResize({ containerId: this.$options.WORK_ITEM_DETAIL_MODAL_ID });
-      }
+    displayedWorkItemId() {
+      return this.updatedWorkItemId || this.workItemId;
     },
   },
   methods: {
@@ -86,6 +81,7 @@ export default {
     },
     closeModal() {
       this.updatedWorkItemIid = null;
+      this.updatedWorkItemId = null;
       this.error = '';
       this.isModalShown = false;
       this.$emit('close');
@@ -101,13 +97,11 @@ export default {
     },
     updateModal($event, workItem) {
       this.updatedWorkItemIid = workItem.iid;
+      this.updatedWorkItemId = workItem.id;
       this.$emit('update-modal', $event, workItem);
     },
     onModalShow() {
       this.isModalShown = true;
-    },
-    updateHasNotes() {
-      this.hasNotes = true;
     },
     openReportAbuseModal(reply) {
       this.$emit('openReportAbuse', reply);
@@ -136,14 +130,13 @@ export default {
 
     <work-item-detail
       is-modal
-      :work-item-id="workItemId"
+      :work-item-id="displayedWorkItemId"
       :work-item-iid="displayedWorkItemIid"
       :modal-work-item-full-path="workItemFullPath"
       class="gl-isolate -gl-mt-3 gl-bg-inherit gl-p-5"
       @close="hide"
       @deleteWorkItem="deleteWorkItem"
       @update-modal="updateModal"
-      @has-notes="updateHasNotes"
       @openReportAbuse="openReportAbuseModal"
     />
   </gl-modal>

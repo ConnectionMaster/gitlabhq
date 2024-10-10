@@ -28,7 +28,7 @@ DELETE /projects/:id/pages
 
 | Attribute | Type           | Required | Description                              |
 | --------- | -------------- | -------- | ---------------------------------------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`      | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-paths) |
 
 ```shell
 curl --request 'DELETE' --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/projects/2/pages"
@@ -52,9 +52,9 @@ Supported attributes:
 
 | Attribute | Type           | Required | Description                              |
 | --------- | -------------- | -------- | ---------------------------------------- |
-| `id`      | integer/string | Yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`      | integer/string | Yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-paths) |
 
-If successful, returns [`200`](rest/index.md#status-codes) and the following
+If successful, returns [`200`](rest/troubleshooting.md#status-codes) and the following
 response attributes:
 
 | Attribute                                 | Type       | Description                                                                                                                  |
@@ -64,12 +64,12 @@ response attributes:
 | `force_https`                             | boolean    | `true` if the project is set to force HTTPS.                                                                                      |
 | `deployments[]`                           | array      | List of current active deployments.                                                                                          |
 
-| `deployments[]` attribute                 | Type       | Description                                                                                                                  |
-| ----------------------------------------- | ---------- | -----------------------                                                                                                      |
-| `created_at`                              | date       | Date deployment was created.                                                                                                 |
-| `url`                                     | string     | URL for this deployment.                                                                                                     |
-| `path_prefix`                             | string     | Path prefix of this deployment when using [multiple deployments](../user/project/pages/index.md#create-multiple-deployments). |
-| `root_directory`                          | string     | Root directory.                                                                                                              |
+| `deployments[]` attribute                 | Type       | Description                                                                                                                   |
+| ----------------------------------------- | ---------- |-------------------------------------------------------------------------------------------------------------------------------|
+| `created_at`                              | date       | Date deployment was created.                                                                                                  |
+| `url`                                     | string     | URL for this deployment.                                                                                                      |
+| `path_prefix`                             | string     | Path prefix of this deployment when using [parallel deployments](../user/project/pages/index.md#parallel-deployments). |
+| `root_directory`                          | string     | Root directory.                                                                                                               |
 
 Example request:
 
@@ -119,11 +119,11 @@ Supported attributes:
 
 | Attribute                       | Type           | Required | Description                                                                                                         |
 | --------------------------------| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------|
-| `id`                            | integer/string | Yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`                            | integer/string | Yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-paths)                                 |
 | `pages_unique_domain_enabled`   | boolean        | No       | Whether to use unique domain                                                                                        |
 | `pages_https_only`              | boolean        | No       | Whether to force HTTPs                                                                                              |
 
-If successful, returns [`200`](rest/index.md#status-codes) and the following
+If successful, returns [`200`](rest/troubleshooting.md#status-codes) and the following
 response attributes:
 
 | Attribute                                 | Type       | Description                                                                                                                  |
@@ -133,12 +133,12 @@ response attributes:
 | `force_https`                             | boolean    | `true` if the project is set to force HTTPS.                                                                                      |
 | `deployments[]`                           | array      | List of current active deployments.                                                                                          |
 
-| `deployments[]` attribute                 | Type       | Description                                                                                                                  |
-| ----------------------------------------- | ---------- | -----------------------                                                                                                      |
-| `created_at`                              | date       | Date deployment was created.                                                                                                 |
-| `url`                                     | string     | URL for this deployment.                                                                                                     |
-| `path_prefix`                             | string     | Path prefix of this deployment when using [multiple deployments](../user/project/pages/index.md#create-multiple-deployments). |
-| `root_directory`                          | string     | Root directory.                                                                                                              |
+| `deployments[]` attribute                 | Type       | Description                                                                                                                   |
+| ----------------------------------------- | ---------- |-------------------------------------------------------------------------------------------------------------------------------|
+| `created_at`                              | date       | Date deployment was created.                                                                                                  |
+| `url`                                     | string     | URL for this deployment.                                                                                                      |
+| `path_prefix`                             | string     | Path prefix of this deployment when using [parallel deployments](../user/project/pages/index.md#parallel-deployments). |
+| `root_directory`                          | string     | Root directory.                                                                                                               |
 
 Example request:
 

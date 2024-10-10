@@ -33,9 +33,8 @@ With GitLab Ultimate, pipeline secret detection results are also processed so yo
 
 ## Detected secrets
 
-GitLab maintains the detection rules used in pipeline secret detection.
-The [default ruleset](../pipeline/detected_secrets.md)
-contains more than 100 patterns.
+GitLab maintains the detection rules used in pipeline secret detection. The default ruleset contains
+more than 100 patterns.
 
 Most pipeline secret detection patterns search for specific types of secrets.
 Many services add prefixes or other structural details to their secrets so they can be identified if they're leaked.
@@ -554,7 +553,7 @@ For more information on the passthrough syntax to use, see [Schema](../pipeline/
 
 #### Extend the default ruleset
 
-You can also extend the [default ruleset](../pipeline/detected_secrets.md) configuration with additional rules as appropriate. This can be helpful when you would still like to benefit from the high-confidence predefined rules maintained by GitLab in the default ruleset, but also want to add rules for types of secrets that may be used in your own projects and namespaces.
+You can also extend the [default ruleset](../detected_secrets.md) configuration with additional rules as appropriate. This can be helpful when you would still like to benefit from the high-confidence predefined rules maintained by GitLab in the default ruleset, but also want to add rules for types of secrets that may be used in your own projects and namespaces.
 
 ##### With a local ruleset
 
@@ -716,6 +715,78 @@ For example:
 ```ruby
  "A personal token for GitLab will look like glpat-JUST20LETTERSANDNUMB" #gitleaks:allow
 ```
+
+#### Detecting complex strings
+
+The [default ruleset](#detected-secrets) provides patterns to detect structured strings with a low rate of false positives.
+However, you might want to detect more complex strings like passwords. Because [Gitleaks doesn't support lookahead or lookbehind](https://github.com/google/re2/issues/411),
+writing a high-confidence, general rule to detect unstructured strings is not possible.
+
+Although you can't detect every complex string, you can extend your ruleset to meet specific use cases.
+
+For example, this rule modifies the [`generic-api-key` rule](https://github.com/gitleaks/gitleaks/blob/4e43d1109303568509596ef5ef576fbdc0509891/config/gitleaks.toml#L507-L514) from the Gitleaks default ruleset:
+
+```regex
+(?i)(?:pwd|passwd|password)(?:[0-9a-z\-_\t .]{0,20})(?:[\s|']|[\s|"]){0,3}(?:=|>|=:|:{1,3}=|\|\|:|<=|=>|:|\?=)(?:'|\"|\s|=|\x60){0,5}([0-9a-z\-_.=\S_]{3,50})(?:['|\"|\n|\r|\s|\x60|;]|$)
+```
+
+This regular expression matches:
+
+1. A case-insensitive identifier that starts with `pwd`, or `passwd` or `password`. You can adjust this with other variations like `secret` or `key`.
+1. A suffix that follows the identifier. The suffix is a combination of digits, letters, and symbols, and is between zero and 23 characters long.
+1. Commonly used assignment operators, like `=`, `:=`, `:`, or `=>`.
+1. A secret prefix, often used as a boundary to help with detecting the secret.
+1. A string of digits, letters, and symbols, which is between three and 50 characters long. This is the secret itself. If you expect longer strings, you can adjust the length.
+1. A secret suffix, often used as a boundary. This matches common endings like ticks, line breaks, and new lines.
+
+Here are example strings which are matched by this regular expression:
+
+```plaintext
+pwd = password1234
+passwd = 'p@ssW0rd1234'
+password = thisismyverylongpassword
+password => mypassword
+password := mypassword
+password: password1234
+"password" = "p%ssward1234"
+'password': 'p@ssW0rd1234'
+```
+
+To use this regex, extend your ruleset with one of the methods documented on this page.
+
+For example, imagine you wish to extend the default ruleset [with a local ruleset](#with-a-local-ruleset-1) that includes this rule.
+
+Add the following to a `.gitlab/secret-detection-ruleset.toml` configuration file stored in the same repository. Adjust the `value` to point to the path of the extended configuration file:
+
+```toml
+# .gitlab/secret-detection-ruleset.toml
+[secrets]
+  [[secrets.passthrough]]
+    type   = "file"
+    target = "gitleaks.toml"
+    value  = "extended-gitleaks-config.toml"
+```
+
+In `extended-gitleaks-config.toml` file, add a new `[[rules]]` section with the regular expression you want to use:
+
+```toml
+# extended-gitleaks-config.toml
+[extend]
+# Extends default packaged ruleset, NOTE: do not change the path.
+path = "/gitleaks.toml"
+
+[[rules]]
+  description = "Generic Password Rule"
+  id = "generic-password"
+  regex = '''(?i)(?:pwd|passwd|password)(?:[0-9a-z\-_\t .]{0,20})(?:[\s|']|[\s|"]){0,3}(?:=|>|=:|:{1,3}=|\|\|:|<=|=>|:|\?=)(?:'|\"|\s|=|\x60){0,5}([0-9a-z\-_.=\S_]{3,50})(?:['|\"|\n|\r|\s|\x60|;]|$)'''
+  entropy = 3.5
+  keywords = ["pwd", "passwd", "password"]
+```
+
+NOTE:
+This example configuration is provided only for convenience, and might not work
+for all use cases. If you configure your ruleset to detect complex strings, you might
+create a large number of false positives, or fail to capture certain patterns.
 
 ### Available CI/CD variables
 
@@ -938,7 +1009,7 @@ When a secret is detected, you should rotate it immediately. GitLab attempts to
 [automatically revoke](../automatic_response.md) some types of leaked secrets. For those that are not
 automatically revoked, you must do so manually.
 
-[Purging a secret from the repository's history](../../../project/repository/reducing_the_repo_size_using_git.md#purge-files-from-repository-history)
+[Purging a secret from the repository's history](../../../project/repository/repository_size.md#purge-files-from-repository-history)
 does not fully address the leak. The original secret remains in any existing forks or
 clones of the repository.
 

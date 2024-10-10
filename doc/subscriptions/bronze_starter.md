@@ -23,9 +23,9 @@ the tiers are no longer mentioned in GitLab documentation:
   - [Setting a default template for merge requests and issues](../user/project/description_templates.md#set-a-default-template-for-merge-requests-and-issues)
 - [Email from GitLab](../administration/email_from_gitlab.md)
 - Groups:
-  - [Creating group memberships via CN](../user/group/access_and_permissions.md#create-group-links-via-cn)
+  - [Creating group memberships with a CN](../user/group/access_and_permissions.md#create-group-links-with-a-cn)
   - [Group push rules](../user/group/access_and_permissions.md#group-push-rules)
-  - [Managing group memberships via LDAP](../user/group/access_and_permissions.md#manage-group-memberships-via-ldap)
+  - [Managing group memberships with LDAP](../user/group/access_and_permissions.md#manage-group-memberships-with-ldap)
   - [Member locking](../user/group/access_and_permissions.md#prevent-members-from-being-added-to-projects-in-a-group)
   - [Overriding user permissions](../user/group/access_and_permissions.md#override-user-permissions)
   - [User contribution analytics](../user/group/contribution_analytics/index.md)
@@ -70,7 +70,7 @@ the tiers are no longer mentioned in GitLab documentation:
   - [Required Approvals](../user/project/merge_requests/approvals/index.md#required-approvals)
   - [Code Owners as eligible approvers](../user/project/merge_requests/approvals/rules.md#code-owners-as-eligible-approvers)
   - [Approval rules](../user/project/merge_requests/approvals/rules.md) features
-  - [Restricting push and merge access to certain users](../user/project/protected_branches.md)
+  - [Restricting push and merge access to certain users](../user/project/repository/branches/protected.md)
 - Metrics and analytics:
   - [Contribution Analytics](../user/group/contribution_analytics/index.md)
   - [Merge Request Analytics](../user/analytics/merge_request_analytics.md)
@@ -114,7 +114,7 @@ Bronze-level subscribers:
   - LDAP synchronization:
     - Certain fields in the [group details API](../api/groups.md#details-of-a-group)
     - [syncing groups](../api/groups.md#sync-group-with-ldap)
-    - Listing, adding, and deleting [group links](../api/groups.md#list-ldap-group-links)
+    - Listing, adding, and deleting [group links](../api/group_ldap_links.md)
     - [Push rules](../api/group_push_rules.md)
     - [Audit events](../api/audit_events.md), including
       [group audit events](../api/groups.md#group-audit-events) and

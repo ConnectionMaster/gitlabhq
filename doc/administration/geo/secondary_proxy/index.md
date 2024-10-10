@@ -79,12 +79,12 @@ routing configurations. To create a traffic policy:
    1. Select **Connect to**, then select **New endpoint**.
    1. Choose **Type** `value` and fill it in with `<your **secondary** IP address>`.
 
-   ![Add traffic policy endpoints](img/single_url_add_traffic_policy_endpoints.png)
+   ![Add traffic policy endpoints](img/single_url_add_traffic_policy_endpoints_v14_5.png)
 
 1. Select **Create traffic policy**.
 1. Fill in **Policy record DNS name** with `gitlab`.
 
-   ![Create policy records with traffic policy](img/single_url_create_policy_records_with_traffic_policy.png)
+   ![Create policy records with traffic policy](img/single_url_create_policy_records_with_traffic_policy_v14_5.png)
 
 1. Select **Create policy records**.
 
@@ -248,7 +248,11 @@ for details.
 
 ### Disable secondary site HTTP proxying per site
 
-If there are multiple secondary sites, you can disable HTTP proxying on each secondary site separately, by following these steps on a Linux package installation:
+If there are multiple secondary sites, you can disable HTTP proxying on each secondary site separately, by following these steps:
+
+::Tabs
+
+:::TabTitle Linux package (Omnibus)
 
 1. SSH into each application node (serving user traffic directly) on your secondary Geo site
    and add the following environment variable:
@@ -269,7 +273,9 @@ If there are multiple secondary sites, you can disable HTTP proxying on each sec
    sudo gitlab-ctl reconfigure
    ```
 
-In Kubernetes, you can use `--set gitlab.webservice.extraEnv.GEO_SECONDARY_PROXY="0"`,
+:::TabTitle Helm chart (Kubernetes)
+
+You can use `--set gitlab.webservice.extraEnv.GEO_SECONDARY_PROXY="0"`,
 or specify the following in your values file:
 
 ```yaml
@@ -278,6 +284,8 @@ gitlab:
     extraEnv:
       GEO_SECONDARY_PROXY: "0"
 ```
+
+::EndTabs
 
 ### Disable secondary site Git proxying
 

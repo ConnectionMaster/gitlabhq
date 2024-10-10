@@ -49,7 +49,7 @@ may require up to 10 minutes before the policy changes take effect.
 
 ## Policy design guidelines
 
-When designing your policies, your goals should be:
+When designing your policies, your goals should be to:
 
 - Design policy enforcement for minimum overhead but maximum coverage
 - Ensure separation of duties
@@ -60,10 +60,15 @@ To maximize policy coverage, link a security policy project at the highest level
 level, subgroup level, or project level. Enforcement at the highest level minimizes the number of
 security policy projects and therefore the management overhead. Policies cascade down from each level to a project, such that policies may be enforced from the group level, each subgroup above it, and then for any policies created at the project level itself.
 
-Policy inheritance of policies not only ensures maximum coverage with the minimum
+Policy inheritance not only ensures maximum coverage with the minimum
 number of security policy projects, but also helps when implementing policy changes. For example, to test a policy change
 you could copy an existing policy and enforce the modified policy first to a project, then to a
 subgroup, and, if applicable, to a group.
+
+Policies enforced on an existing group or subgroup are automatically enforced in any new subgroups and projects created under them, provided that all of the following are true:
+
+- The new subgroups and projects are included in the scope definition of the policy (for example, the scope includes all projects in this group).
+- The existing group or subgroup is already linked to the security policy project.
 
 NOTE:
 GitLab SaaS users may enforce policies against their top-level group or across subgroups, but cannot enforce policies across GitLab SaaS top-level groups. GitLab self-managed users can enforce policies across multiple top-level groups in their instance.
@@ -349,24 +354,6 @@ instructions and a demonstration of how to use the Vulnerability-Check Migration
 
 When working with security policies, consider these troubleshooting tips:
 
-- Confirm that scanners are properly configured and producing results for the latest branch.
-  Security Policies are designed to require approval when there are no results (no security report),
-  as this ensures that no vulnerabilities are introduced. We cannot know if there are any
-  vulnerabilities unless the scans enforced by the policy complete successfully and are evaluated.
-- When running scan execution policies based on a SAST action, ensure target repositories contain
-  proper code files. SAST runs different analyzers
-  [based on the types of files in the repository](../sast/index.md#supported-languages-and-frameworks),
-  and if no supported files are found it does not run any jobs. See the
-  [SAST CI template](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Jobs/SAST.gitlab-ci.yml)
-  for more details.
-- Scheduled scan execution policies run with a minimum 15 minute cadence. Learn more
-  [about the schedule rule type](../policies/scan_execution_policies.md#schedule-rule-type).
-- When scheduling pipelines, keep in mind that CRON scheduling is based on UTC on GitLab SaaS and is
-  based on your server time for self managed instances. When testing new policies, it may appear
-  pipelines are not running properly when in fact they are scheduled in your server's time zone.
-- When enforcing scan execution policies, security policies use a bot in the target project to
-  trigger scheduled pipelines to ensure enforcement. When the bot is missing, it is automatically
-  created, and the following scheduled scan uses it.
 - You should not link a security policy project to both a development project and the group or
   subgroup the development project belongs to. Linking this way results in approval
   rules from the merge request approval policies not being applied to merge requests in the development project.

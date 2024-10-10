@@ -85,7 +85,7 @@ reduce the repository size for another import attempt:
    ```
 
 1. To reduce the repository size, work on this `smaller-tmp-main` branch:
-   [identify and remove large files](../repository/reducing_the_repo_size_using_git.md)
+   [identify and remove large files](../repository/repository_size.md#reduce-repository-size)
    or [interactively rebase and fixup](../../../topics/git/git_rebase.md#rebase-interactively-by-using-git)
    to reduce the number of commits.
 
@@ -110,7 +110,7 @@ reduce the repository size for another import attempt:
    use `git remote set-url origin <new-url> && git push --force --all`
    to complete the import.
 1. Update the imported repository's
-   [branch protection rules](../protected_branches.md) and
+   [branch protection rules](../repository/branches/protected.md) and
    its [default branch](../repository/branches/default.md), and
    delete the temporary, `smaller-tmp-main` branch, and
    the local, temporary data.

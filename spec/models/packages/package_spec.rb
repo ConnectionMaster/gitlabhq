@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'spec_helper'
 
 RSpec.describe Packages::Package, type: :model, feature_category: :package_registry do
@@ -111,22 +112,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
       it { is_expected.to allow_value("my.app-11.07.2018").for(:name) }
       it { is_expected.not_to allow_value("my(dom$$$ain)com.my-app").for(:name) }
 
-      # TODO: Remove with the rollout of the FF generic_extract_generic_package_model
-      # https://gitlab.com/gitlab-org/gitlab/-/issues/479933
-      context 'generic package' do
-        subject { build_stubbed(:generic_package) }
-
-        it { is_expected.to allow_value('123').for(:name) }
-        it { is_expected.to allow_value('foo').for(:name) }
-        it { is_expected.to allow_value('foo.bar.baz-2.0-20190901.47283-1').for(:name) }
-        it { is_expected.not_to allow_value('../../foo').for(:name) }
-        it { is_expected.not_to allow_value('..\..\foo').for(:name) }
-        it { is_expected.not_to allow_value('%2f%2e%2e%2f%2essh%2fauthorized_keys').for(:name) }
-        it { is_expected.not_to allow_value('$foo/bar').for(:name) }
-        it { is_expected.not_to allow_value('my file name').for(:name) }
-        it { is_expected.not_to allow_value('!!().for(:name)().for(:name)').for(:name) }
-      end
-
       context 'nuget package' do
         subject { build_stubbed(:nuget_package) }
 
@@ -195,101 +180,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
         it { is_expected.not_to allow_value('1.2.3-4%2e%2e%').for(:version) }
         it { is_expected.not_to allow_value('../../../../../1.2.3').for(:version) }
         it { is_expected.not_to allow_value('%2e%2e%2f1.2.3').for(:version) }
-      end
-
-      context 'pypi package' do
-        subject { create(:pypi_package) }
-
-        it { is_expected.to allow_value('0.1').for(:version) }
-        it { is_expected.to allow_value('2.0').for(:version) }
-        it { is_expected.to allow_value('1.2.0').for(:version) }
-        it { is_expected.to allow_value('0100!0.0').for(:version) }
-        it { is_expected.to allow_value('00!1.2').for(:version) }
-        it { is_expected.to allow_value('1.0a').for(:version) }
-        it { is_expected.to allow_value('1.0-a').for(:version) }
-        it { is_expected.to allow_value('1.0.a1').for(:version) }
-        it { is_expected.to allow_value('1.0a1').for(:version) }
-        it { is_expected.to allow_value('1.0-a1').for(:version) }
-        it { is_expected.to allow_value('1.0alpha1').for(:version) }
-        it { is_expected.to allow_value('1.0b1').for(:version) }
-        it { is_expected.to allow_value('1.0beta1').for(:version) }
-        it { is_expected.to allow_value('1.0rc1').for(:version) }
-        it { is_expected.to allow_value('1.0pre1').for(:version) }
-        it { is_expected.to allow_value('1.0preview1').for(:version) }
-        it { is_expected.to allow_value('1.0.dev1').for(:version) }
-        it { is_expected.to allow_value('1.0.DEV1').for(:version) }
-        it { is_expected.to allow_value('1.0.post1').for(:version) }
-        it { is_expected.to allow_value('1.0.rev1').for(:version) }
-        it { is_expected.to allow_value('1.0.r1').for(:version) }
-        it { is_expected.to allow_value('1.0c2').for(:version) }
-        it { is_expected.to allow_value('2012.15').for(:version) }
-        it { is_expected.to allow_value('1.0+5').for(:version) }
-        it { is_expected.to allow_value('1.0+abc.5').for(:version) }
-        it { is_expected.to allow_value('1!1.1').for(:version) }
-        it { is_expected.to allow_value('1.0c3').for(:version) }
-        it { is_expected.to allow_value('1.0rc2').for(:version) }
-        it { is_expected.to allow_value('1.0c1').for(:version) }
-        it { is_expected.to allow_value('1.0b2-346').for(:version) }
-        it { is_expected.to allow_value('1.0b2.post345').for(:version) }
-        it { is_expected.to allow_value('1.0b2.post345.dev456').for(:version) }
-        it { is_expected.to allow_value('1.2.rev33+123456').for(:version) }
-        it { is_expected.to allow_value('1.1.dev1').for(:version) }
-        it { is_expected.to allow_value('1.0b1.dev456').for(:version) }
-        it { is_expected.to allow_value('1.0a12.dev456').for(:version) }
-        it { is_expected.to allow_value('1.0b2').for(:version) }
-        it { is_expected.to allow_value('1.0.dev456').for(:version) }
-        it { is_expected.to allow_value('1.0c1.dev456').for(:version) }
-        it { is_expected.to allow_value('1.0.post456').for(:version) }
-        it { is_expected.to allow_value('1.0.post456.dev34').for(:version) }
-        it { is_expected.to allow_value('1.2+123abc').for(:version) }
-        it { is_expected.to allow_value('1.2+abc').for(:version) }
-        it { is_expected.to allow_value('1.2+abc123').for(:version) }
-        it { is_expected.to allow_value('1.2+abc123def').for(:version) }
-        it { is_expected.to allow_value('1.2+1234.abc').for(:version) }
-        it { is_expected.to allow_value('1.2+123456').for(:version) }
-        it { is_expected.to allow_value('1.2.r32+123456').for(:version) }
-        it { is_expected.to allow_value('1!1.2.rev33+123456').for(:version) }
-        it { is_expected.to allow_value('1.0a12').for(:version) }
-        it { is_expected.to allow_value('1.2.3-45+abcdefgh').for(:version) }
-        it { is_expected.to allow_value('v1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('1.2.3-45-abcdefgh').for(:version) }
-        it { is_expected.not_to allow_value('..1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('  1.2.3').for(:version) }
-        it { is_expected.not_to allow_value("1.2.3  \r\t").for(:version) }
-        it { is_expected.not_to allow_value("\r\t 1.2.3").for(:version) }
-        it { is_expected.not_to allow_value('1./2.3').for(:version) }
-        it { is_expected.not_to allow_value('1.2.3-4/../../').for(:version) }
-        it { is_expected.not_to allow_value('1.2.3-4%2e%2e%').for(:version) }
-        it { is_expected.not_to allow_value('../../../../../1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('%2e%2e%2f1.2.3').for(:version) }
-      end
-
-      # TODO: Remove with the rollout of the FF generic_extract_generic_package_model
-      # https://gitlab.com/gitlab-org/gitlab/-/issues/479933
-      context 'generic package' do
-        subject { build_stubbed(:generic_package) }
-
-        it { is_expected.to validate_presence_of(:version) }
-        it { is_expected.to allow_value('1.2.3').for(:version) }
-        it { is_expected.to allow_value('1.3.350').for(:version) }
-        it { is_expected.to allow_value('1.3.350-20201230123456').for(:version) }
-        it { is_expected.to allow_value('1.2.3-rc1').for(:version) }
-        it { is_expected.to allow_value('1.2.3g').for(:version) }
-        it { is_expected.to allow_value('1.2').for(:version) }
-        it { is_expected.to allow_value('1.2.bananas').for(:version) }
-        it { is_expected.to allow_value('v1.2.4-build').for(:version) }
-        it { is_expected.to allow_value('d50d836eb3de6177ce6c7a5482f27f9c2c84b672').for(:version) }
-        it { is_expected.to allow_value('this_is_a_string_only').for(:version) }
-        it { is_expected.not_to allow_value('..1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('  1.2.3').for(:version) }
-        it { is_expected.not_to allow_value("1.2.3  \r\t").for(:version) }
-        it { is_expected.not_to allow_value("\r\t 1.2.3").for(:version) }
-        it { is_expected.not_to allow_value('1.2.3-4/../../').for(:version) }
-        it { is_expected.not_to allow_value('1.2.3-4%2e%2e%').for(:version) }
-        it { is_expected.not_to allow_value('../../../../../1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('%2e%2e%2f1.2.3').for(:version) }
-        it { is_expected.not_to allow_value('').for(:version) }
-        it { is_expected.not_to allow_value(nil).for(:version) }
       end
 
       it_behaves_like 'validating version to be SemVer compliant for', :npm_package
@@ -683,14 +573,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
       subject { described_class.search_by_name(query) }
 
       it { is_expected.to match_array([package1, package2]) }
-    end
-
-    describe '.with_normalized_pypi_name' do
-      let_it_be(:pypi_package) { create(:pypi_package, name: 'Foo.bAr---BAZ_buz') }
-
-      subject { described_class.with_normalized_pypi_name('foo-bar-baz-buz') }
-
-      it { is_expected.to match_array([pypi_package]) }
     end
 
     describe '.with_case_insensitive_version' do
@@ -1144,26 +1026,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
     end
   end
 
-  describe '#normalized_pypi_name' do
-    let_it_be(:package) { create(:pypi_package) }
-
-    subject { package.normalized_pypi_name }
-
-    where(:package_name, :normalized_name) do
-      'ASDF' | 'asdf'
-      'a.B_c-d' | 'a-b-c-d'
-      'a-------b....c___d' | 'a-b-c-d'
-    end
-
-    with_them do
-      before do
-        package.update_column(:name, package_name)
-      end
-
-      it { is_expected.to eq(normalized_name) }
-    end
-  end
-
   describe '#normalized_nuget_version' do
     let_it_be(:package) { create(:nuget_package, :with_metadatum, version: '1.0') }
     let(:normalized_version) { '1.0.0' }
@@ -1192,51 +1054,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
                 version: package.version,
                 package_type: package.package_type
               })
-    end
-
-    # TODO: Remove with the rollout of the FF generic_extract_generic_package_model
-    # https://gitlab.com/gitlab-org/gitlab/-/issues/479933
-    context 'with after_create_commit callback' do
-      let(:name) { FFaker::Lorem.word }
-      let(:version) { '1.0.0' }
-
-      subject(:create_package) do
-        described_class.create!(project: project, name: name, version: version, package_type: package_type)
-      end
-
-      context 'when package is generic' do
-        let(:package_type) { 'generic' }
-
-        it 'does not create event' do
-          expect { create_package }.not_to publish_event(::Packages::PackageCreatedEvent)
-        end
-
-        context 'when generic_extract_generic_package_model is disabled' do
-          before do
-            stub_feature_flags(generic_extract_generic_package_model: false)
-          end
-
-          it 'publishes an event' do
-            expect { create_package }
-              .to publish_event(::Packages::PackageCreatedEvent)
-                      .with({
-                        project_id: project.id,
-                        id: kind_of(Numeric),
-                        name: name,
-                        version: version,
-                        package_type: package_type
-                      })
-          end
-        end
-      end
-
-      context 'when package is not generic' do
-        let(:package_type) { 'debian' }
-
-        it 'does not create event' do
-          expect { create_package }.not_to publish_event(::Packages::PackageCreatedEvent)
-        end
-      end
     end
   end
 
@@ -1269,20 +1086,6 @@ RSpec.describe Packages::Package, type: :model, feature_category: :package_regis
           it 'maps to the correct class' do
             is_expected.to eq(described_class.inheritance_column_to_class_map[package_format].constantize)
           end
-        end
-      end
-    end
-
-    context 'when generic_extract_generic_package_model is disabled' do
-      before do
-        stub_feature_flags(generic_extract_generic_package_model: false)
-      end
-
-      context 'for package format generic' do
-        let(:format) { :generic }
-
-        it 'maps to Packages::Package' do
-          is_expected.to eq(described_class)
         end
       end
     end

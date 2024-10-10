@@ -145,7 +145,7 @@ The members of the invited group are not displayed on the **Members** tab unless
 
 ### View a group's shared projects
 
-In a group, a shared project is a project to which the group members gained access through the [**Invite a group**] action.
+In a group, a shared project is a project to which the group members gained access through the [**Invite a group**](#invite-a-group-to-a-project) action.
 
 To view a group's shared projects:
 
@@ -173,6 +173,9 @@ When this setting is enabled:
 
 - It applies to all subgroups, unless overridden by a group Owner.
 - Groups already added to a project lose access to it.
+
+NOTE:
+After you [specify a user cap for the group](../../group/manage.md#specify-a-user-cap-for-a-group), you cannot disable this setting.
 
 ## Sharing groups
 
@@ -225,7 +228,7 @@ To invite a group to your group:
 1. Select **Manage > Members**.
 1. Select **Invite a group**.
 1. In the **Select a group to invite** list, select the group you want to invite.
-1. Select the highest [role](../../permissions.md) for users in the group.
+1. Select the highest [role](../../permissions.md) or [custom role](../../custom_roles.md#assign-a-custom-role-to-an-invited-group) for users in the group.
 1. Optional. Select an **Access expiration date**.
    From that date onward, the invited group can no longer access the group.
 1. Select **Invite**.

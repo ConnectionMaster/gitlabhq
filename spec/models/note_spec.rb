@@ -34,6 +34,7 @@ RSpec.describe Note, feature_category: :team_planning do
 
     it { is_expected.to have_one(:note_metadata).inverse_of(:note).class_name('Notes::NoteMetadata') }
     it { is_expected.to belong_to(:review).inverse_of(:notes) }
+    it { is_expected.to have_many(:events) }
   end
 
   describe 'modules' do
@@ -98,6 +99,14 @@ RSpec.describe Note, feature_category: :team_planning do
 
     context 'when noteable is an abuse report' do
       subject { build(:note, noteable: build_stubbed(:abuse_report), project: nil, namespace: nil) }
+
+      it 'is not valid without project or namespace' do
+        is_expected.to be_invalid
+      end
+    end
+
+    context 'when noteable is a wiki page' do
+      subject { build(:note, noteable: build_stubbed(:wiki_page_meta), project: nil, namespace: nil) }
 
       it 'is not valid without project or namespace' do
         is_expected.to be_invalid
@@ -200,7 +209,7 @@ RSpec.describe Note, feature_category: :team_planning do
         end
 
         context 'when noteable is not allowed to have confidential notes' do
-          let_it_be(:noteable) { create(:snippet) }
+          let_it_be(:noteable) { create(:project_snippet) }
 
           it 'can not be set confidential' do
             expect(subject).not_to be_valid
@@ -972,16 +981,16 @@ RSpec.describe Note, feature_category: :team_planning do
         create :note, noteable: ext_issue, project: ext_proj, note: "mentioned in merge request !1", system: true
       end
 
-      it "returns true for other users" do
-        expect(note.system_note_visible_for?(private_user)).to be_truthy
+      it "returns false" do
+        expect(note.system_note_visible_for?(private_user)).to be_falsey
       end
 
-      it "returns true if user visible reference count set" do
+      it "returns false if user visible reference count set" do
         note.user_visible_reference_count = 0
         note.total_reference_count = 0
 
         expect(note).not_to receive(:reference_mentionables)
-        expect(note.system_note_visible_for?(ext_issue.author)).to be_truthy
+        expect(note.system_note_visible_for?(ext_issue.author)).to be_falsey
       end
     end
   end
@@ -1392,6 +1401,12 @@ RSpec.describe Note, feature_category: :team_planning do
 
     it 'returns true for a personal snippet note' do
       expect(build(:note_on_personal_snippet).for_personal_snippet?).to be_truthy
+    end
+  end
+
+  describe '#for_wiki_page?' do
+    it 'returns true for a wiki_page' do
+      expect(build(:note_on_wiki_page).for_wiki_page?).to be_truthy
     end
   end
 

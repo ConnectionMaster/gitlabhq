@@ -23,7 +23,7 @@ When you rebase:
 1. Git stacks the commits you have in your branch on top of all
    the commits it imported from that branch:
 
-   ![Git rebase illustration](img/git_rebase_v13_5.png)
+   ![Git rebase illustration](img/git_rebase_illustration.png)
 
 While most rebases are performed against `main`, you can rebase against any other
 branch, such as `release-15-3`. You can also specify a different remote repository
@@ -225,11 +225,11 @@ these more destructive changes from happening accidentally.
 Force pushing is not recommended on shared branches, because you risk destroying
 others' changes.
 
-If the branch you want to force push is [protected](../../user/project/protected_branches.md),
+If the branch you want to force push is [protected](../../user/project/repository/branches/protected.md),
 you can't force push to it unless you either:
 
 - Unprotect it.
-- [Allow force pushes](../../user/project/protected_branches.md#allow-force-push-on-a-protected-branch)
+- [Allow force pushes](../../user/project/repository/branches/protected.md#allow-force-push-on-a-protected-branch)
   to it.
 
 Then you can force push and protect it again.

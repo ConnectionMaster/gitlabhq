@@ -30,6 +30,7 @@ Gitaly implements a client-server architecture:
   - [GitLab Workhorse](https://gitlab.com/gitlab-org/gitlab-workhorse)
   - [GitLab Elasticsearch Indexer](https://gitlab.com/gitlab-org/gitlab-elasticsearch-indexer)
   - [GitLab Zoekt Indexer](https://gitlab.com/gitlab-org/gitlab-zoekt-indexer)
+  - [GitLab Agent for Kubernetes (KAS)](https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent)
 
 Gitaly manages only Git repository access for GitLab. Other types of GitLab data aren't accessed
 using Gitaly.
@@ -142,26 +143,33 @@ In this example:
 The following illustrates the Gitaly client-server architecture:
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph Gitaly clients
-    A[GitLab Rails]
-    B[GitLab Workhorse]
-    C[GitLab Shell]
-    D[...]
+    Rails[GitLab Rails]
+    Workhorse[GitLab Workhorse]
+    Shell[GitLab Shell]
+    Zoekt[Zoekt Indexer]
+    Elasticsearch[Elasticsearch Indexer]
+    KAS["GitLab Agent for Kubernetes (KAS)"]
   end
 
   subgraph Gitaly
-    E[Git integration]
+    GitalyServer[Gitaly server]
   end
 
-F[Local filesystem]
+  FS[Local filesystem]
+  ObjectStorage[Object storage]
 
-A -- gRPC --> Gitaly
-B -- gRPC--> Gitaly
-C -- gRPC --> Gitaly
-D -- gRPC --> Gitaly
+  Rails -- gRPC --> Gitaly
+  Workhorse -- gRPC --> Gitaly
+  Shell -- gRPC --> Gitaly
+  Zoekt -- gRPC --> Gitaly
+  Elasticsearch -- gRPC --> Gitaly
+  KAS -- gRPC --> Gitaly
 
-E --> F
+  GitalyServer --> FS
+  GitalyServer -- TCP --> Workhorse
+  GitalyServer -- TCP --> ObjectStorage
 ```
 
 ### Configure Gitaly
@@ -177,12 +185,15 @@ best suited by using Gitaly Cluster.
 
 ### Gitaly CLI
 
+> - `gitaly git` subcommand [introduced](https://gitlab.com/gitlab-org/gitaly/-/merge_requests/7119) in GitLab 17.4.
+
 The `gitaly` command is a command-line interface that provides additional subcommands for Gitaly administrators. For example,
 the Gitaly CLI is used to:
 
 - [Configure custom Git hooks](../server_hooks.md) for a repository.
 - Validate Gitaly configuration files.
 - Verify the internal Gitaly API is accessible.
+- [Run Git commands](troubleshooting.md#use-gitaly-git-when-git-is-required-for-troubleshooting) against a repository on disk.
 
 For more information on the other subcommands, run `sudo -u git -- /opt/gitlab/embedded/bin/gitaly --help`.
 
@@ -268,7 +279,7 @@ Gitaly Cluster and [Geo](../geo/index.md) both provide redundancy. However the r
   not aware when Gitaly Cluster is used.
 - Geo provides [replication](../geo/index.md) and [disaster recovery](../geo/disaster_recovery/index.md) for
   an entire instance of GitLab. Users know when they are using Geo for
-  [replication](../geo/index.md). Geo [replicates multiple data types](../geo/replication/datatypes.md#limitations-on-replicationverification),
+  [replication](../geo/index.md). Geo [replicates multiple data types](../geo/replication/datatypes.md#replicated-data-types),
   including Git data.
 
 The following table outlines the major differences between Gitaly Cluster and Geo:

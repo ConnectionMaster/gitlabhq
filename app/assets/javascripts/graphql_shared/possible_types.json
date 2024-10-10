@@ -11,9 +11,17 @@
     "GroupAuditEventStreamingDestination",
     "InstanceAuditEventStreamingDestination"
   ],
+  "BaseDiscussionInterface": [
+    "AbuseReportDiscussion",
+    "Discussion"
+  ],
   "BaseHeaderInterface": [
     "AuditEventStreamingHeader",
     "AuditEventsStreamingInstanceHeader"
+  ],
+  "BaseNoteInterface": [
+    "AbuseReportNote",
+    "Note"
   ],
   "CiRunnerCloudProvisioning": [
     "CiRunnerGoogleCloudProvisioning"
@@ -82,10 +90,10 @@
   "MemberInterface": [
     "GroupMember",
     "PendingGroupMember",
+    "PendingProjectMember",
     "ProjectMember"
   ],
   "NoteableInterface": [
-    "AbuseReport",
     "AlertManagementAlert",
     "BoardEpic",
     "Design",
@@ -105,7 +113,8 @@
     "ApprovalPolicy",
     "PipelineExecutionPolicy",
     "ScanExecutionPolicy",
-    "ScanResultPolicy"
+    "ScanResultPolicy",
+    "VulnerabilityManagementPolicy"
   ],
   "PackageFileMetadata": [
     "ConanFileMetadata",
@@ -118,6 +127,10 @@
     "NugetMetadata",
     "PypiMetadata",
     "TerraformModuleMetadata"
+  ],
+  "PendingMemberInterface": [
+    "PendingGroupMember",
+    "PendingProjectMember"
   ],
   "Registrable": [
     "CiSecureFileRegistry",
@@ -138,6 +151,8 @@
     "UploadRegistry"
   ],
   "ResolvableInterface": [
+    "AbuseReportDiscussion",
+    "AbuseReportNote",
     "Discussion",
     "Note"
   ],
@@ -170,6 +185,7 @@
     "MergeRequest",
     "Namespace",
     "Project",
+    "Vulnerability",
     "WorkItem"
   ],
   "User": [

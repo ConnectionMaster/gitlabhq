@@ -23,6 +23,8 @@ SAML responses are base64 encoded, so we recommend the following browser plugins
 - [SAML-tracer](https://addons.mozilla.org/en-US/firefox/addon/saml-tracer/) for Firefox.
 - [SAML Message Decoder](https://chromewebstore.google.com/detail/mpabchoaimgbdbbjjieoaeiibojelbhm?hl=en) for Chrome.
 
+If you cannot install a browser plugin, you can [manually generate and capture a SAML response](#manually-generate-a-saml-response) instead.
+
 Pay specific attention to:
 
 - The `NameID`, which we use to identify which user is signing in. If the user has previously signed in, this
@@ -44,13 +46,32 @@ To generate a SAML Response:
    - Firefox: Select the SAML-tracer icon located on the browser toolbar.
 1. For GitLab.com Groups:
    - Go to the GitLab single sign-on URL for the group.
-   - Select **Authorize** or attempt to sign 
-1. For Self Managed Instance: 
-   - Go to the instance home page  
+   - Select **Authorize** or attempt to sign
+1. For Self Managed Instance:
+   - Go to the instance home page
    - Click on the `SAML Login` button to sign in
 1. A SAML response is displayed in the tracer console that resembles this
    [example SAML response](index.md#example-saml-response).
 1. Within the SAML tracer, select the **Export** icon to save the response in JSON format.
+
+#### Manually generate a SAML response
+
+<i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
+For an overview, see this [video on manually generating a SAML response without using a browser plugin (using Google Chrome)](https://youtu.be/umMPj6ohF_I), uploaded by GitLab Support.
+<!-- Video published on 2024-09-09 -->
+
+Regardless of what browser you use, the process is similar to the following:
+
+1. Right-click on a new browser and click on **Inspect** to open the **DevTools** window.
+1. Select the **Network** tab. Make sure that **Preserve log** is selected.
+1. Switch to the browser page and sign in to GitLab using SAML SSO.
+1. Switch back to the **DevTools** window and filter for the `callback` event.
+1. Select the **Payload** tab for the callback event and right-click to copy the value.
+1. Paste this value into the following command: `echo "<value>" | base64 --decode > saml_response.xml`.
+1. Open `saml_response.xml` in a code editor.
+
+   If you have an XML "prettifier" installed in your code editor, you should be able to automatically
+   format the response to be easier to read.
 
 ## Search Rails logs for a SAML sign-in
 
@@ -256,9 +277,24 @@ you must set `attribute_statements` in the SAML configuration to
 
 ## User sign in banner error messages
 
-### Message: "SAML authentication failed: Extern UID has already been taken"
+### Message: "SAML authentication failed: SAML NameID is missing from your SAML response."
 
-This error suggests you are signed in as a GitLab user but have already linked your SAML identity to a different GitLab user. Sign out and then try to sign in again using SAML, which should log you into GitLab with the linked user account.
+You might get an error that states `SAML authentication failed: SAML NameID is missing from your SAML response. Please contact your administrator.`
+
+This issue occurs when you try sign into GitLab using Group SSO, but your SAML response did not include a `NameID`.
+
+To resolve this issue:
+
+- Contact your administrator to ensure your IdP account has an assigned `NameID`.
+- Use a [SAML debugging tool](#saml-debugging-tools) to verify that your SAML response has a valid `NameID`.
+
+### Message: "SAML authentication failed: Extern uid has already been taken."
+
+You might get an error that states `SAML authentication failed: Extern uid has already been taken. Please contact your administrator to generate a unique external_uid (NameID).`
+
+This issue occurs when you try to link your existing GitLab account to a SAML identity using Group SSO, but there is an existing GitLab account with your current `NameID`.
+
+To resolve this issue, tell your administrator to re-generate a unique `Extern UID` (`NameID`) for your IdP account. Make sure this new `Extern UID` adheres to the [GitLab `NameID` constraints](index.md#manage-user-saml-identity).
 
 If you do not wish to use that GitLab user with the SAML login, you can [unlink the GitLab account from the SAML app](index.md#unlink-accounts).
 
@@ -382,7 +418,7 @@ If the user receives a `404` after signing in successfully, check if you have IP
 
 Because SAML SSO for groups is a paid feature, your subscription expiring can result in a `404` error when you're signing in using SAML SSO on GitLab.com.
 If all users are receiving a `404` when attempting to sign in using SAML, confirm
-[there is an active subscription](../../../subscriptions/gitlab_com/index.md#view-your-gitlabcom-subscription) being used in this SAML SSO namespace.
+[there is an active subscription](../../../subscriptions/gitlab_com/index.md#view-gitlabcom-subscription) being used in this SAML SSO namespace.
 
 If you receive a `404` during setup when using "verify configuration", make sure you have used the correct
 [SHA-1 generated fingerprint](../../../integration/saml.md#configure-saml-on-your-idp).

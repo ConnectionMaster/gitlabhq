@@ -5,27 +5,73 @@ module NamespacesHelper
     params.dig(:project, :namespace_id) || params[:namespace_id]
   end
 
+  def check_group_lock(group, method)
+    if group.namespace_settings.respond_to?(method)
+      group.namespace_settings.public_send(method) # rubocop:disable GitlabSecurity/PublicSend
+    else
+      false
+    end
+  end
+
+  def check_project_lock(project, method)
+    if project.project_setting.respond_to?(method)
+      project.project_setting.public_send(method) # rubocop:disable GitlabSecurity/PublicSend
+    else
+      false
+    end
+  end
+
   def cascading_namespace_settings_tooltip_data(attribute, group, settings_path_helper)
-    locked_by_ancestor = group.namespace_settings.public_send("#{attribute}_locked_by_ancestor?") # rubocop:disable GitlabSecurity/PublicSend
+    {
+      tooltip_data: cascading_namespace_settings_tooltip_raw_data(attribute, group, settings_path_helper).to_json,
+      testid: 'cascading-settings-lock-icon'
+    }
+  end
+
+  def cascading_namespace_settings_tooltip_raw_data(attribute, group, settings_path_helper)
+    return {} if group.nil?
+
+    locked_by_ancestor = check_group_lock(group, "#{attribute}_locked_by_ancestor?")
+    locked_by_application = check_group_lock(group, "#{attribute}_locked_by_application_setting?")
 
     tooltip_data = {
-      locked_by_application_setting: group.namespace_settings.public_send("#{attribute}_locked_by_application_setting?"), # rubocop:disable GitlabSecurity/PublicSend
+      locked_by_application_setting: locked_by_application,
       locked_by_ancestor: locked_by_ancestor
     }
 
     if locked_by_ancestor
-      ancestor_namespace = group.namespace_settings.public_send("#{attribute}_locked_ancestor").namespace # rubocop:disable GitlabSecurity/PublicSend
+      ancestor_namespace = group.namespace_settings&.public_send("#{attribute}_locked_ancestor")&.namespace # rubocop:disable GitlabSecurity/PublicSend
 
-      tooltip_data[:ancestor_namespace] = {
-        full_name: ancestor_namespace.full_name,
-        path: settings_path_helper.call(ancestor_namespace)
-      }
+      if ancestor_namespace
+        tooltip_data[:ancestor_namespace] = {
+          full_name: ancestor_namespace.full_name,
+          path: settings_path_helper.call(ancestor_namespace)
+        }
+      end
     end
 
-    {
-      tooltip_data: tooltip_data.to_json,
-      testid: 'cascading-settings-lock-icon'
+    tooltip_data
+  end
+
+  def project_cascading_namespace_settings_tooltip_data(attribute, project, settings_path_helper)
+    return unless attribute && project && settings_path_helper
+
+    data = cascading_namespace_settings_tooltip_raw_data(attribute, project.parent, settings_path_helper)
+    return data if data[:locked_by_ancestor]
+
+    data[:locked_by_application_setting] = check_project_lock(project, "#{attribute}_locked_by_application_setting?")
+    locked_by_ancestor = check_project_lock(project, "#{attribute}_locked_by_ancestor?")
+    locked_by_project = check_project_lock(project, "#{attribute}_locked?")
+
+    return data unless locked_by_ancestor || locked_by_project
+
+    data[:locked_by_ancestor] = true
+    data[:ancestor_namespace] = {
+      full_name: project.parent.name,
+      path: Gitlab::UrlBuilder.build(project.parent, only_path: true)
     }
+
+    data
   end
 
   def cascading_namespace_setting_locked?(attribute, group, **args)

@@ -1,11 +1,20 @@
 <script>
-import { GlLoadingIcon, GlKeysetPagination, GlButton, GlBadge, GlTab, GlTabs } from '@gitlab/ui';
+import {
+  GlLoadingIcon,
+  GlKeysetPagination,
+  GlLink,
+  GlButton,
+  GlBadge,
+  GlTab,
+  GlTabs,
+} from '@gitlab/ui';
 import * as Sentry from '~/sentry/sentry_browser_wrapper';
 import { createAlert } from '~/alert';
 import { s__ } from '~/locale';
 import getTodosQuery from './queries/get_todos.query.graphql';
 import getTodosCountQuery from './queries/get_todos_count.query.graphql';
 import TodoItem from './todo_item.vue';
+import TodosEmptyState from './todos_empty_state.vue';
 import TodosFilterBar, { SORT_OPTIONS } from './todos_filter_bar.vue';
 
 const ENTRIES_PER_PAGE = 20;
@@ -13,12 +22,14 @@ const STATUS_BY_TAB = [['pending'], ['done'], ['pending', 'done']];
 
 export default {
   components: {
+    GlLink,
     GlLoadingIcon,
     GlKeysetPagination,
     GlButton,
     GlBadge,
     GlTabs,
     GlTab,
+    TodosEmptyState,
     TodosFilterBar,
     TodoItem,
   },
@@ -43,10 +54,12 @@ export default {
       queryFilterValues: {
         groupId: [],
         projectId: [],
+        authorId: [],
         type: [],
         action: [],
         sort: `${SORT_OPTIONS[0].value}_DESC`,
       },
+      alert: null,
     };
   },
   apollo: {
@@ -54,7 +67,7 @@ export default {
       query: getTodosQuery,
       variables() {
         return {
-          state: STATUS_BY_TAB[this.currentTab],
+          state: this.statusByTab,
           ...this.queryFilterValues,
           ...this.cursor,
         };
@@ -65,7 +78,7 @@ export default {
         return nodes;
       },
       error(error) {
-        createAlert({ message: s__('Todos|Something went wrong. Please try again.') });
+        this.alert = createAlert({ message: s__('Todos|Something went wrong. Please try again.') });
         Sentry.captureException(error);
       },
     },
@@ -90,11 +103,22 @@ export default {
     },
   },
   computed: {
+    statusByTab() {
+      return STATUS_BY_TAB[this.currentTab];
+    },
     isLoading() {
       return this.$apollo.queries.todos.loading;
     },
+    isFiltered() {
+      // Ignore sort value. It is always present and not really a filter.
+      const { sort: _, ...filters } = this.queryFilterValues;
+      return Object.values(filters).some((value) => value.length > 0);
+    },
     showPagination() {
       return !this.isLoading && (this.pageInfo?.hasPreviousPage || this.pageInfo?.hasNextPage);
+    },
+    showEmptyState() {
+      return !this.isLoading && this.todos.length === 0;
     },
     showMarkAllAsDone() {
       return this.currentTab === 0;
@@ -130,6 +154,7 @@ export default {
       };
     },
     handleFiltersChanged(data) {
+      this.alert?.dismiss();
       this.queryFilterValues = { ...data };
     },
   },
@@ -169,7 +194,7 @@ export default {
       </div>
     </div>
 
-    <todos-filter-bar @filters-changed="handleFiltersChanged" />
+    <todos-filter-bar :todos-status="statusByTab" @filters-changed="handleFiltersChanged" />
 
     <div>
       <div class="gl-flex gl-flex-col">
@@ -183,6 +208,9 @@ export default {
             :fade-done-todo="fadeDoneTodo"
           />
         </ul>
+
+        <todos-empty-state v-if="showEmptyState" :is-filtered="isFiltered" />
+
         <gl-keyset-pagination
           v-if="showPagination"
           v-bind="pageInfo"
@@ -190,6 +218,12 @@ export default {
           @prev="prevPage"
           @next="nextPage"
         />
+
+        <div class="gl-mt-5 gl-text-center">
+          <gl-link href="https://gitlab.com/gitlab-org/gitlab/-/issues/498315" target="_blank">{{
+            s__('Todos|Leave feedback')
+          }}</gl-link>
+        </div>
       </div>
     </div>
   </div>

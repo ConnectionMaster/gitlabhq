@@ -52,7 +52,7 @@ Prerequisites:
 - You must have the Owner role for the group.
 
 1. On the left sidebar, select **Search or go to** and find your group.
-1. Select **Settings > Roles and Permissions**.
+1. Select **Settings > Roles and permissions**.
 1. Select **New role**.
 1. In **Base role to use as template**, select an existing default role.
 1. In **Role name**, enter the custom role's title.
@@ -60,7 +60,7 @@ Prerequisites:
 1. Select the **Permissions** for the new custom role.
 1. Select **Create role**.
 
-In **Settings > Roles and Permissions**, the list of all custom roles displays the:
+In **Settings > Roles and permissions**, the list of all custom roles displays the:
 
 - Custom role name.
 - Role ID.
@@ -76,7 +76,7 @@ Prerequisites:
 After you create a custom role for your self-managed instance, you can assign that custom role to a user in any group or subgroup in that instance.
 
 1. On the left sidebar, at the bottom, select **Admin**.
-1. Select **Settings > Roles and Permissions**.
+1. Select **Settings > Roles and permissions**.
 1. Select **New role**.
 1. In **Base role to use as template**, select an existing default role.
 1. In **Role name**, enter the custom role's title.
@@ -84,7 +84,7 @@ After you create a custom role for your self-managed instance, you can assign th
 1. Select the **Permissions** for the new custom role.
 1. Select **Create role**.
 
-In **Settings > Roles and Permissions**, the list of all custom roles displays the:
+In **Settings > Roles and permissions**, the list of all custom roles displays the:
 
 - Custom role name.
 - Role ID.
@@ -108,20 +108,20 @@ Prerequisites:
 - You must have the Owner role for the group.
 
 1. On the left sidebar, select **Search or go to** and find your group.
-1. Select **Settings > Roles and Permissions**.
+1. Select **Settings > Roles and permissions**.
 1. Select the vertical ellipsis (**{ellipsis_v}**) for the custom role, then
    select **Edit role**.
 1. Modify the role as needed.
 1. Select **Save role** to update the role.
 
-### GitLab self-managed and GitLab Dedicated
+### GitLab self-managed
 
 Prerequisites:
 
 - You must be an administrator for the self-managed instance.
 
 1. On the left sidebar, at the bottom, select **Admin**.
-1. Select **Settings > Roles and Permissions**.
+1. Select **Settings > Roles and permissions**.
 1. Select the vertical ellipsis (**{ellipsis_v}**) for the custom role, then
    select **Edit role**.
 1. Modify the role as needed.
@@ -140,7 +140,7 @@ You can remove a custom role from a group only if no members have that role. See
 1. On the left sidebar:
    - For self-managed, at the bottom, select **Admin**.
    - For SaaS, select **Search or go to** and find your group.
-1. Select **Settings > Roles and Permissions**.
+1. Select **Settings > Roles and permissions**.
 1. Select **Custom Roles**.
 1. In the **Actions** column, select **Delete role** (**{remove}**) and confirm.
 
@@ -199,7 +199,7 @@ If you are assigning a custom role to an existing:
 
    Where:
 
-   - `<project_id` and `<group_id>`: The `id` or [URL-encoded path of the project or group](../api/rest/index.md#namespaced-path-encoding) associated with the membership receiving the custom role.
+   - `<project_id` and `<group_id>`: The `id` or [URL-encoded path of the project or group](../api/rest/index.md#namespaced-paths) associated with the membership receiving the custom role.
    - `<member_role_id>`: The `id` of the member role created in the previous section.
    - `<user_id>`: The `id` of the user receiving a custom role.
 
@@ -271,6 +271,38 @@ This does not apply when the user's custom role only has the `read_code` permiss
 enabled. Guest users with that specific permission only are not considered billable users
 and do not use a seat.
 
+## Assign a custom role to an invited group
+
+> - Support for custom roles for invited groups [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/443369) in GitLab 17.4 behind a feature flag named `assign_custom_roles_to_group_links_sm`. Disabled by default.
+
+FLAG:
+The availability of this feature is controlled by a feature flag. For more information, see the history.
+
+When a group is invited to another group with a custom role, the following rules determine each user's custom permissions in the new group:
+
+- When a user has a custom permission in one group with a base access level that is the same or higher than the default role in the other group, the user's maximum role is the default role. That is, the user is granted the lower of the two access levels.
+- When a user is invited with a custom permission with the same base access level as their original group, the user is always granted the custom permission from their original group.
+
+For example, let's say we have 5 users in Group A, and they are assigned the following roles:
+
+- User A: Guest role
+- User B: Guest role + `read_code` custom permission
+- User C: Guest role + `read_vulnerability` custom permission
+- User D: Developer role
+- User E: Developer + `admin_vulnerability` custom permission
+
+Group B invites Group A. The following table shows the maximum role that each the users in Group A will have in Group B:
+
+| Scenario                                                       | User A | User B              | User C                       | User D                       | User E                            |
+|----------------------------------------------------------------|--------|---------------------|------------------------------|------------------------------|-----------------------------------|
+| Group B invites Group A with Guest                             | Guest  | Guest               | Guest                        | Guest                        | Guest                             |
+| Group B invites Group A with Guest + `read_code`               | Guest  | Guest + `read_code` | Guest + `read_vulnerability` | Guest + `read_vulnerability` | Guest + `read_vulnerability`      |
+| Group B invites Group A with Guest + `read_vulnerability`      | Guest  | Guest + `read_code` | Guest + `read_vulnerability` | Guest + `read_vulnerability` | Guest + `read_vulnerability`      |
+| Group B invites Group A with Developer                         | Guest  | Guest + `read_code` | Guest + `read_vulnerability` | Developer                    | Developer                         |
+| Group B invites Group A with Developer + `admin_vulnerability` | Guest  | Guest + `read_code` | Guest + `read_vulnerability` | Developer                    | Developer + `admin_vulnerability` |
+
+When User C is invited to Group B with the same default role (Guest), but different custom permissions with the same base access level (`read_code` and `read_vulnerability`), User C retains the custom permission from Group A (`read_vulnerability`).
+
 ## Supported objects
 
 You can assign custom roles and permissions to the following:
@@ -286,7 +318,7 @@ You can assign custom roles and permissions to the following:
 You can sync users to custom roles with following authentication providers:
 
 - See [Configure SAML Group Links](group/saml_sso/group_sync.md#configure-saml-group-links).
-- See [Manage group memberships via LDAP](group/access_and_permissions.md#manage-group-memberships-via-ldap).
+- See [Manage group memberships via LDAP](group/access_and_permissions.md#manage-group-memberships-with-ldap).
 
 ## Known issues
 

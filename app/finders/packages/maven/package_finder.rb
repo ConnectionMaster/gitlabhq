@@ -23,7 +23,7 @@ module Packages
         if Feature.enabled?(:maven_remove_permissions_check_from_finder, @project_or_group)
           packages_for(@current_user, within_group: @project_or_group)
         else
-          super
+          packages_visible_to_user_including_public_registries(@current_user, within_group: @project_or_group)
         end
       end
     end

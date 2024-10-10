@@ -95,12 +95,12 @@ To view the rendered details:
 1. Select **Settings > CI/CD**.
 1. Expand **Runners**.
 
-![Instance runner details example](img/continuous_integration_shared_runner_details_v14_10.png)
+![A project's runner settings shows a message about shared runner guidelines.](img/continuous_integration_shared_runner_details_v14_10.png)
 
 ## Maximum artifacts size
 
 An administrator can set the maximum size of the
-[job artifacts](../../administration/job_artifacts.md) for:
+[job artifacts](../../administration/cicd/job_artifacts.md) for:
 
 - The entire instance
 - Each project
@@ -131,7 +131,7 @@ The value is in MB, and the default value is 100 MB per job. An administrator ca
 
 ## Default artifacts expiration
 
-The default expiration time of the [job artifacts](../../administration/job_artifacts.md)
+The default expiration time of the [job artifacts](../../administration/cicd/job_artifacts.md)
 can be set in the **Admin** area of your GitLab instance. The syntax of duration is
 described in [`artifacts:expire_in`](../../ci/yaml/index.md#artifactsexpire_in)
 and the default value is `30 days`.
@@ -149,7 +149,7 @@ NOTE:
 Any changes to this setting applies to new artifacts only. The expiration time is not
 be updated for artifacts created before this setting was changed.
 The administrator may need to manually search for and expire previously-created
-artifacts, as described in the [troubleshooting documentation](../../administration/job_artifacts_troubleshooting.md#delete-old-builds-and-artifacts).
+artifacts, as described in the [troubleshooting documentation](../../administration/cicd/job_artifacts_troubleshooting.md#delete-old-builds-and-artifacts).
 
 ## Keep the latest artifacts for all jobs in the latest successful pipelines
 
@@ -267,7 +267,7 @@ from the **Admin** area:
 By default, a banner displays in merge requests with no pipeline suggesting a
 walkthrough on how to add one.
 
-![Suggest pipeline banner](img/suggest_pipeline_banner_v14_5.png)
+![A banner displays guidance on how to get started with GitLab Pipelines.](img/suggest_pipeline_banner_v14_5.png)
 
 To enable or disable the banner:
 
@@ -290,6 +290,49 @@ so you can view job artifact pages directly:
 1. Select **Settings > CI/CD**.
 1. Expand **Continuous Integration and Deployment**.
 1. Deselect **Enable the external redirect page for job artifacts**.
+
+## Required pipeline configuration
+
+DETAILS:
+**Tier:** Ultimate
+**Offering:** Self-managed
+
+> - [Moved](https://gitlab.com/gitlab-org/gitlab/-/issues/352316) from GitLab Premium to GitLab Ultimate in 15.0.
+> - [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/389467) in GitLab 15.9.
+> - [Removed](https://gitlab.com/gitlab-org/gitlab/-/issues/389467) in GitLab 17.0.
+> - [Re-added](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/165111) behind the `required_pipelines` feature flag in GitLab 17.4. Disabled by default.
+
+WARNING:
+This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/389467) in GitLab 15.9
+and was removed in 17.0. From 17.4, it is available only behind the feature flag `required_pipelines`, disabled by default.
+Use [compliance pipelines](../../user/group/compliance_pipelines.md) instead. This change is a breaking change.
+
+You can set a [CI/CD template](../../ci/examples/index.md#cicd-templates)
+as a required pipeline configuration for all projects on a GitLab instance. You can
+use a template from:
+
+- The default CI/CD templates.
+- A custom template stored in an [instance template repository](instance_template_repository.md).
+
+  NOTE:
+  When you use a configuration defined in an instance template repository,
+  nested [`include:`](../../ci/yaml/index.md#include) keywords
+  (including `include:file`, `include:local`, `include:remote`, and `include:template`)
+  [do not work](https://gitlab.com/gitlab-org/gitlab/-/issues/35345).
+
+The project CI/CD configuration merges into the required pipeline configuration when
+a pipeline runs. The merged configuration is the same as if the required pipeline configuration
+added the project configuration with the [`include` keyword](../../ci/yaml/index.md#include).
+To view a project's full merged configuration, [View full configuration](../../ci/pipeline_editor/index.md#view-full-configuration)
+in the pipeline editor.
+
+To select a CI/CD template for the required pipeline configuration:
+
+1. On the left sidebar, at the bottom, select **Admin Area**.
+1. Select **Settings > CI/CD**.
+1. Expand the **Required pipeline configuration** section.
+1. Select a CI/CD template from the dropdown list.
+1. Select **Save changes**.
 
 ## Package registry configuration
 

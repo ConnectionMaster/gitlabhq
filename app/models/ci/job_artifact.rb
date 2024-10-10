@@ -215,7 +215,7 @@ module Ci
         file_store: file_store,
         store_dir: final_path_store_dir || file.store_dir.to_s,
         file: final_path_filename || file_identifier,
-        pick_up_at: pick_up_at || expire_at || Time.current,
+        pick_up_at: set_pick_up_at(pick_up_at),
         project_id: project_id
       }
     end
@@ -236,6 +236,10 @@ module Ci
 
     private
 
+    def set_pick_up_at(pick_up_at)
+      (pick_up_at || expire_at || Time.current).clamp(1.day.ago, 1.hour.from_now)
+    end
+
     def store_file_in_transaction!
       store_file_now! if saved_change_to_file?
 
@@ -249,12 +253,10 @@ module Ci
     end
 
     # method overridden in EE
-    def file_stored_after_transaction_hooks
-    end
+    def file_stored_after_transaction_hooks; end
 
     # method overridden in EE
-    def file_stored_in_transaction_hooks
-    end
+    def file_stored_in_transaction_hooks; end
 
     def set_size
       self.size = file.size

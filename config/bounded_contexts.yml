@@ -39,7 +39,7 @@ domains:
       - value_stream_management
       - devops_reports
       - dora_metrics
-      - product_analytics_data_management
+      - product_analytics
 
   AntiAbuse:
     description:
@@ -146,6 +146,7 @@ domains:
       - seat_cost_management
       - plan_provisioning
       - subscription_management
+      - add-on_provisioning
 
   Import:
     description:
@@ -210,8 +211,7 @@ domains:
   Observability:
     description:
     feature_categories:
-      - metrics
-      - error_tracking
+      - observability
       - incident_management
 
   Onboarding:
@@ -240,6 +240,11 @@ domains:
     description: Managing projects as workspaces and their lifecycle. Feature specific behavior must not go here.
     feature_categories:
       - groups_and_projects
+
+  ResourceAccessTokens:
+    description: Managing groups and projects access tokens
+    feature_categories:
+      - system_access
 
   Releases:
     description:
@@ -308,6 +313,11 @@ domains:
     description:
     feature_categories:
       - infrastructure_as_code
+
+  Todos:
+    description: User todos management
+    feature_categories:
+      - notifications
 
   Users:
     description: Behavior related to user lifecycle and profile settings. Feature specific behavior must not go here.

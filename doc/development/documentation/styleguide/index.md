@@ -16,7 +16,7 @@ use the `#docs-processes` channel.
 ## The GitLab voice
 
 The GitLab brand guidelines define the
-[voice used by the larger organization](https://design.gitlab.com/brand/overview/#tone-of-voice).
+[voice used by the larger organization](https://design.gitlab.com/brand-overview/brand-voice).
 
 Building on that guidance, the voice in the GitLab documentation strives to be concise,
 direct, and precise. The goal is to provide information that's easy to search and scan.
@@ -138,15 +138,6 @@ the page is rendered to HTML. There can be only **one** level 1 heading per page
 - Leave one blank line before and after the topic title.
 - If you use code in topic titles, ensure the code is in backticks.
 - Do not use bold text in topic titles.
-
-### Backticks in Markdown
-
-Use backticks for:
-
-- [Code blocks](#code-blocks).
-- Error messages.
-- Commands, parameters, and filenames.
-- Values. For example: "In the **Name** text box, type `test`."
 
 ## Language
 
@@ -380,20 +371,6 @@ when published. Example:
 <!-- This is a comment that is not rendered -->
 ```
 
-### Emphasis
-
-<!-- vale gitlab_base.Spelling = NO -->
-
-Use **bold** rather than italic to provide emphasis. GitLab uses a sans-serif font and italic text does not stand out as much as it would in a serif font. For details, see [Butterick's Practical Typography guide on bold or italic](https://practicaltypography.com/bold-or-italic.html).
-
-<!-- vale gitlab_base.Spelling = YES -->
-
-You can use italics when you are introducing a term for the first time. Otherwise, use bold.
-
-- Use double asterisks (`**`) to mark a word or text in bold (`**bold**`).
-- Use underscore (`_`) for text in italics (`_italic_`).
-- Use greater than (`>`) for blockquotes.
-
 ### Punctuation
 
 Follow these guidelines for punctuation.
@@ -411,15 +388,11 @@ When spacing content:
 - Do not use non-breaking spaces. Use standard spaces instead. (Tested in [`lint-doc.sh`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/scripts/lint-doc.sh).)
 - Do not use tabs for indentation. Use spaces instead. You can configure your code editor to output spaces instead of tabs when pressing the <kbd>Tab</kbd> key.
 
-<!-- vale gitlab_base.NonStandardQuotes = NO -->
-
 Do not use these punctuation characters:
 
 - `;` (semicolon): Use two sentences instead.
 - `–` (en dash) or `—` (em dash): Use separate sentences, or commas, instead.
 - `“` `”` `‘` `’`: Double or single typographer's ("curly") quotation marks. Use straight quotes instead. (Tested in [`NonStandardQuotes.yml`](https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/.vale/gitlab/NonStandardQuotes.yml).)
-
-<!-- vale gitlab_base.NonStandardQuotes = YES -->
 
 ### Placeholder text
 
@@ -442,6 +415,102 @@ in a single backtick. For example:
 Select **Grant admin consent for `<application_name>`**.
 ```
 
+### Quotation marks
+
+Only use quotation marks when quoting direct text, and use double quotes (`"`).
+For guidance about writing UI elements and in-line code, see [Text formatting](#text-formatting).
+
+Do not put punctuation inside quotation marks, unless it is part of the quoted text.
+
+## Text formatting
+
+When formatting text, use:
+
+- [Bold](#bold) for UI elements and pages.
+- [Inline code style](#inline-code) for inputs, outputs, code, and similar.
+- [Code blocks](#code-blocks) for command line examples, and multi-line inputs, outputs, code, and similar.
+- [`<kbd>`](#keyboard-commands) for keyboard commands.
+
+### Bold
+
+Use bold for:
+
+- UI elements with a visible label. Match the text and capitalization of the label.
+- Navigation paths.
+
+UI elements include:
+
+- Buttons
+- Checkboxes
+- Settings
+- Menus
+- Pages
+- Tabs
+
+For example:
+
+- Select **Cancel**.
+- On the **Issues** page...
+- On the **Pipelines** tab...
+
+To make text bold, wrap it with double asterisks (`**`). For example:
+
+```markdown
+1. Select **Cancel**.
+```
+
+### Inline code
+
+Use inline code for:
+
+- Text a user enters in the UI.
+- Short inputs and outputs like `true`, `false`, `Job succeeded`, and similar.
+- Filenames, configuration parameters, keywords, and code. For example:
+  `.gitlab-ci.yml`, `--version`, or `rules:`.
+- Short error messages.
+- API and HTTP methods (`POST`).
+- HTTP status codes. Full (`404 File Not Found`) and abbreviated (`404`).
+
+For example:
+
+- In the **Name** text box, enter `test`.
+- Use the `rules:` CI/CD keyword to control when to add jobs to a pipeline.
+- Send a `DELETE` request to delete the runner. Send a `POST` request to create one.
+- The job log displays `Job succeeded` when complete.
+
+To use inline code, wrap the text in single backticks (`` ` ``). For example:
+
+```markdown
+In the **Name** text box, enter `test`.
+```
+
+### Code blocks
+
+Code blocks separate code text from regular text, and can be copy-pasted by users.
+
+Use code blocks for:
+
+- CLI and [cURL commands](../restful_api_styleguide.md#curl-commands).
+- Multi-line inputs, outputs, and code samples that are too large for [inline code](#inline-code).
+
+To add a code block, add triple backticks (```` ``` ````) above and below the text,
+with a syntax name at the top for proper syntax highlighting. For example:
+
+````markdown
+```markdown
+This is a code block using Markdown to demonstrate **bold** and `backticks`.
+```
+````
+
+When using code blocks:
+
+- Add a blank line above and below code blocks.
+- Use one of the [supported syntax names](https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers).
+  Use `plaintext` if no better option is available.
+- Use quadruple backticks (````` ```` `````) when the code block contains another (nested) code block
+  which has triple backticks already. The example above uses quadruple backticks internally
+  to illustrate the code block format.
+
 ### Keyboard commands
 
 Use the HTML `<kbd>` tag when referring to keystroke presses. For example:
@@ -450,83 +519,29 @@ Use the HTML `<kbd>` tag when referring to keystroke presses. For example:
 To stop the command, press <kbd>Control</kbd>+<kbd>C</kbd>.
 ```
 
-When the docs are generated, the output is:
+This example renders as:
 
 To stop the command, press <kbd>Control</kbd>+<kbd>C</kbd>.
 
-### Buttons, tabs, and pages in the UI
+### Italics and emphasis
 
-For elements with a visible label, use the label in bold with matching case.
-
-For example:
-
-- `Select **Cancel**.`
-- `On the **Issues** page...`
-- `On the **Pipelines** tab...`
-
-### Text entered in the UI
-
-If you want the user to type something in the UI, use backticks. For example:
-
-```plaintext
-In the **Commit message** text box, type `This is my merge request`.
-```
-
-Backticks are more precise than quotes. For example, in this string:
-
-- In the **Commit message** text box, type "This is my merge request."
-
-It's not clear whether the user should include the period in the string.
-
-### Inline code
-
-Inline code style is applied inline with regular text. Use inline code style:
-
-- For filenames or fragments of configuration files. For example, `.gitlab-ci.yml`, `CODEOWNERS`, and `only: [main]`.
-- For HTTP methods (`HTTP POST`) and HTTP status codes, both full (`404 File Not Found`) and abbreviated (`404`).
-  For example: Send a `DELETE` request to delete the runner. Send a `POST` request to create one.
-
-To apply inline code style, wrap the text in a single backtick (`` ` ``). For example, `this is inline code style`.
-
-### Code blocks
-
-Code block style separates code text from regular text. Use code block style for commands run in the command-line
-interface. Code block style is easier to copy and paste in a user's terminal window.
-
-To apply code block style, wrap the text in triple backticks (three `` ` ``) and add a syntax highlighting hint. For
-example:
-
-````plaintext
-```plaintext
-This is codeblock style
-```
-````
-
-When using code block style:
-
-- Use quadruple backticks (four `` ` ``) to apply code block style when the code block you are styling has triple
-  backticks in it. For example, when illustrating code block style.
-- Add a blank line above and below code blocks.
-- Syntax highlight hints are required for code blocks. See the
-  [list of supported languages and lexers](https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers)
-  for available syntax highlighters. Use `plaintext` if no better hint is available.
-
-#### cURL commands in code blocks
-
-See [cURL commands](../restful_api_styleguide.md#curl-commands) for information
-about styling cURL commands.
+Avoid using [italics for emphasis](../../../user/markdown.md#emphasis) in product documentation.
+Instead, write content that is clear enough that emphasis is not needed. GitLab and
+<https://docs.gitlab.com> use a sans-serif font, but italic text [does not stand out in a page using sans-serif](https://practicaltypography.com/bold-or-italic.html).
 
 ## Lists
 
 Use lists to present information in a format that is easier to scan.
 
 - Make all items in the list parallel.
-  For example, do not start some bullets with nouns and others with verbs.
-- Do not use a period if the phrase is not a full sentence.
-- Use a period after every sentence. Do not use semicolons or commas.
+  For example, do not start some items with nouns and others with verbs.
+- Start all items with a capital letter.
 - Give all items the same punctuation.
-- Start list items with a capital letter.
-- Separate the introductory phrase from explanatory text with a colon (`:`). For example:
+- Do not use a period if the item is not a full sentence.
+- Use a period after every full sentence.
+  Do not use semicolons or commas.
+- Add a colon (`:`) after the introductory phrase.
+  For example:
 
   ```markdown
   You can:
@@ -783,19 +798,6 @@ If you use consecutive numbers, you must disable Markdown rule `029`:
 <!-- markdownlint-enable MD029 -->
 ```
 
-## Quotes
-
-Valid for Markdown content only, not for front matter entries:
-
-- Standard quotes: double quotes (`"`). Example: "This is wrapped in double
-  quotes".
-- Quote inside a quote: double quotes (`"`) wrap single quotes (`'`). Example:
-  "This sentence 'quotes' something in a quote".
-
-For other punctuation rules, refer to the
-[Pajamas Design System Punctuation section](https://design.gitlab.com/content/punctuation/).
-This is overridden by the [documentation-specific punctuation rules](#punctuation).
-
 ## Links
 
 Links help the docs adhere to the
@@ -994,8 +996,9 @@ elements:
 
 ### Names for UI elements
 
-UI elements, like button and checkbox names, should be **bold**.
-Guidance for each individual UI element is in [the word list](word_list.md).
+All UI elements [should be **bold**](#bold).
+
+Guidance for individual UI elements is in [the word list](word_list.md).
 
 ### How to write navigation task steps
 
@@ -1279,7 +1282,7 @@ if you were helping someone read and interact with the page and they couldn't se
 
 Do:
 
-`![A runner sending a request to the Docker API.](img/document_image_title_vX_Y.png)`
+`![A runner sending a request to the Docker API](img/document_image_title_vX_Y.png)`
 
 Do not:
 
@@ -1287,18 +1290,22 @@ Do not:
 
 When writing alt text:
 
-- Write short, descriptive alt text in 155 characters or fewer. Screen readers
-typically stop reading after this amount.
-- If the image has complex information, like a workflow diagram, use a short alt text to identify the image and
-include detailed information in the text.
-- Use complete sentences.
+- Write short, descriptive alt text in 155 characters or fewer.
+  Screen readers typically stop reading after this many characters.
+- If the image has complex information like a workflow diagram, use short alt text
+  to identify the image and include detailed information in the text.
 - Use punctuation.
-- Use sentence case and avoid using all-caps. Some screenreaders read capitals as individual letters.
-- Don't use phrases like **Image of** or **Graphic of**.
-- Don't use a string of keywords. Include keywords in a complete sentence to enhance context.
-- Introduce the image in the section text, not the alt text.
-- Try to avoid repeating content that you've already used in the section text.
-- Don't use inline styling, like bold, italics, or backticks. Screen readers will read `**text**` as `star star text star star`.
+- Do not use a period if the text is not a full sentence.
+- Use a period after every full sentence.
+- Use sentence case and avoid using all caps.
+  Some screen readers read capitals as individual letters.
+- Do not use phrases like **Image of** or **Graphic of**.
+- Do not use a string of keywords.
+  Include keywords in the text to enhance context.
+- Introduce the image in the topic, not the alt text.
+- Try to avoid repeating text you've already used in the topic.
+- Do not use inline styling like bold, italics, or backticks.
+  Screen readers read `**text**` as `star star text star star`.
 
 #### Automatic screenshot generator
 

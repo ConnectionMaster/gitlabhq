@@ -37,14 +37,57 @@ RSpec.describe NamespacesHelper, feature_category: :groups_and_projects do
     )
   end
 
+  let!(:project1) { build(:project, namespace: subgroup1) }
+  let!(:project2) do
+    user.create_namespace!(path: user.username, name: user.name) unless user.namespace
+    build(:project, namespace: user.namespace)
+  end
+
+  let_it_be(:attribute) { :math_rendering_limits_enabled }
+
   before do
     admin_group.add_owner(admin)
     user_group.add_owner(user)
   end
 
-  describe '#cascading_namespace_settings_tooltip_data' do
-    attribute = :math_rendering_limits_enabled
+  describe '#check_group_lock' do
+    context 'when the method exists on namespace_settings' do
+      it 'calls the method on namespace_settings' do
+        expect(subgroup1.namespace_settings).to receive(attribute).and_return(true)
+        expect(helper.check_group_lock(subgroup1, attribute)).to be true
+      end
+    end
 
+    context 'when the method does not exist on namespace_settings' do
+      it 'returns false' do
+        expect(helper.check_group_lock(subgroup1, :non_existent_method)).to be false
+      end
+    end
+  end
+
+  describe '#check_project_lock' do
+    let(:project) { build(:project, group: subgroup1) }
+
+    it 'returns true when the method exists and returns true' do
+      allow(project.project_setting).to receive(attribute).and_return(true)
+      expect(helper.check_project_lock(project, attribute)).to be true
+    end
+
+    it 'returns false when the method does not exist' do
+      expect(helper.check_project_lock(project, :non_existent_method)).to be false
+    end
+  end
+
+  describe '#cascading_namespace_settings_tooltip_data' do
+    it 'returns tooltip data with testid' do
+      allow(helper).to receive(:cascading_namespace_settings_tooltip_raw_data).and_return({ key: 'value' })
+      result = helper.cascading_namespace_settings_tooltip_data(attribute, subgroup1, -> {})
+      expect(result[:tooltip_data]).to eq('{"key":"value"}')
+      expect(result[:testid]).to eq('cascading-settings-lock-icon')
+    end
+  end
+
+  describe '#cascading_namespace_settings_tooltip_raw_data' do
     subject do
       helper.cascading_namespace_settings_tooltip_data(
         attribute,
@@ -93,9 +136,98 @@ RSpec.describe NamespacesHelper, feature_category: :groups_and_projects do
     end
   end
 
-  describe '#cascading_namespace_setting_locked?' do
-    let(:attribute) { :math_rendering_limits_enabled }
+  describe '#project_cascading_namespace_settings_tooltip_data' do
+    using RSpec::Parameterized::TableSyntax
 
+    let(:settings_path_helper) { ->(locked_ancestor) { edit_group_path(locked_ancestor) } }
+
+    subject do
+      helper.project_cascading_namespace_settings_tooltip_data(attribute, project, settings_path_helper)
+    end
+
+    shared_examples 'returns correct data' do
+      context 'when attribute is nil' do
+        let(:attribute) { nil }
+
+        it { is_expected.to be nil }
+      end
+
+      context 'when project is nil' do
+        let(:project) { nil }
+
+        it { is_expected.to be nil }
+      end
+
+      context 'when settings_path_helper is nil' do
+        let(:settings_path_helper) { nil }
+
+        it { is_expected.to be nil }
+      end
+
+      where(:locked_by_ancestor, :locked_by_application_setting, :locked_by_project, :expected_result) do
+        false | false | false | { locked_by_application_setting: false, locked_by_ancestor: false }
+        false | true  | false | { locked_by_application_setting: true, locked_by_ancestor: false }
+        true  | false | false | { locked_by_application_setting: false, locked_by_ancestor: true, ancestor_namespace: { full_name: String, path: String } }
+        false | false | true  | { locked_by_application_setting: false, locked_by_ancestor: true, ancestor_namespace: { full_name: String, path: String } }
+      end
+
+      with_them do
+        before do
+          allow(helper).to receive(:check_project_lock)
+            .with(project, "#{attribute}_locked_by_application_setting?")
+            .and_return(locked_by_application_setting)
+
+          allow(helper).to receive(:check_project_lock)
+            .with(project, "#{attribute}_locked_by_ancestor?")
+            .and_return(locked_by_ancestor)
+
+          allow(helper).to receive(:check_project_lock)
+            .with(project, "#{attribute}_locked?")
+            .and_return(locked_by_project)
+        end
+
+        it 'returns the expected result' do
+          is_expected.to include(expected_result)
+
+          if expected_result[:ancestor_namespace]
+            expect(subject[:ancestor_namespace][:full_name]).to eq(project.parent.name)
+            expect(subject[:ancestor_namespace][:path]).to eq(Gitlab::UrlBuilder.build(project.parent, only_path: true))
+          end
+        end
+
+        context 'when data is already locked by ancestor' do
+          before do
+            allow(helper).to receive(:check_group_lock)
+              .with(project.namespace, "#{attribute}_locked_by_ancestor?")
+              .and_return(true)
+            allow(helper).to receive(:check_group_lock)
+              .with(project.namespace, "#{attribute}_locked_by_application_setting?")
+              .and_return(false)
+          end
+
+          it 'returns early without modifying data' do
+            expect(helper).not_to receive(:check_project_lock)
+
+            is_expected.to eq({ locked_by_ancestor: true, locked_by_application_setting: false })
+          end
+        end
+      end
+    end
+
+    context 'when project parent is a group' do
+      let(:project) { project1 }
+
+      it_behaves_like 'returns correct data'
+    end
+
+    context 'when project parent is a user namespace' do
+      let(:project) { project2 }
+
+      it_behaves_like 'returns correct data'
+    end
+  end
+
+  describe '#cascading_namespace_setting_locked?' do
     context 'when `group` argument is `nil`' do
       it 'returns `false`' do
         expect(helper.cascading_namespace_setting_locked?(attribute, nil)).to eq(false)

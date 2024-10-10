@@ -114,7 +114,7 @@ To enforce multiple approval rules on a merge request, add multiple default appr
 When an [eligible approver](#eligible-approvers) approves a merge request, it
 reduces the number of approvals left (the **Approvals** column) for all rules that the approver belongs to:
 
-![Merge request approvals widget](img/mr_approvals_widget_16_0.png)
+![Merge request approvals widget](img/mr_approvals_widget_v16_0.png)
 
 <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 For an overview, see [Multiple Approvers](https://www.youtube.com/watch?v=8JQJ5821FrA).
@@ -187,7 +187,7 @@ become eligible approvers in the project. To enable this merge request approval 
 1. In the **Approvals required** column, enter the number of approvals required.
 
 You can also
-[require code owner approval](../../protected_branches.md#require-code-owner-approval-on-a-protected-branch)
+[require code owner approval](../../repository/branches/protected.md#require-code-owner-approval-on-a-protected-branch)
 for protected branches.
 
 ## Enable approval permissions for users with the Reporter role
@@ -204,10 +204,12 @@ Prerequisites:
 
 To enable approval permissions for these users without granting them push access:
 
-1. [Create a protected branch](../../protected_branches.md)
+1. [Create a protected branch](../../repository/branches/protected.md)
 1. [Create a new group](../../../group/index.md#create-a-group).
 1. [Add the user to the group](../../../group/index.md#add-users-to-a-group),
-   and select the Reporter role for the user.
+   and select the Reporter role for the user. Do not assign roles with higher permissions than
+   Reporter due to a [known issue](https://gitlab.com/gitlab-org/gitlab/-/issues/492467).
+   Assigning higher roles may result in unexpected behavior.
 1. [Share the project with your group](../../members/sharing_projects_groups.md#invite-a-group-to-a-project),
    with at least the Reporter role.
 1. On the left sidebar, select **Search or go to** and find your project.
@@ -279,7 +281,7 @@ approval rule for certain branches:
    - To apply the rule to all protected branches, select **All protected branches**.
    - To apply the rule to a specific branch, select it from the list.
 1. To enable this configuration, follow
-   [Require Code Owner approval on a protected branch](../../protected_branches.md#require-code-owner-approval-on-a-protected-branch).
+   [Require Code Owner approval on a protected branch](../../repository/branches/protected.md#require-code-owner-approval-on-a-protected-branch).
 
 ## Security Approvals
 

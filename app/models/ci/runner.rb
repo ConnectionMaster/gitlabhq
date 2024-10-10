@@ -97,7 +97,9 @@ module Ci
 
     belongs_to :creator, class_name: 'User', optional: true
 
+    before_validation :ensure_sharding_key_id, on: :update # TODO: will be removed with https://gitlab.com/gitlab-org/gitlab/-/issues/493256
     before_save :ensure_token
+    after_destroy :cleanup_runner_queue
 
     scope :active, ->(value = true) { where(active: value) }
     scope :paused, -> { active(false) }
@@ -224,6 +226,7 @@ module Ci
     scope :with_creator, -> { preload(:creator) }
 
     validate :tag_constraints
+    validates :sharding_key_id, presence: true, unless: :instance_type?
     validates :name, length: { maximum: 256 }, if: :name_changed?
     validates :description, length: { maximum: 1024 }, if: :description_changed?
     validates :access_level, presence: true
@@ -231,6 +234,7 @@ module Ci
     validates :registration_type, presence: true
 
     validate :no_projects, unless: :project_type?
+    validate :no_sharding_key_id, if: :instance_type?
     validate :no_groups, unless: :group_type?
     validate :any_project, if: :project_type?
     validate :exactly_one_group, if: :group_type?
@@ -242,8 +246,6 @@ module Ci
 
       where(runner_type: runner_type)
     end
-
-    after_destroy :cleanup_runner_queue
 
     cached_attr_reader :contacted_at
 
@@ -354,6 +356,7 @@ module Ci
 
       begin
         transaction do
+          self.sharding_key_id = project.id if self.runner_projects.empty?
           self.runner_projects << ::Ci::RunnerProject.new(project: project, runner: self)
           self.save!
         end
@@ -408,8 +411,12 @@ module Ci
     def short_sha
       return unless token
 
+      # We want to show the first characters of the hash, so we need to bypass any fixed components of the token,
+      # such as CREATED_RUNNER_TOKEN_PREFIX or partition_id_prefix_in_16_bit_encode
+      partition_prefix = partition_id_prefix_in_16_bit_encode
       start_index = authenticated_user_registration_type? ? CREATED_RUNNER_TOKEN_PREFIX.length : 0
-      token[start_index..start_index + RUNNER_SHORT_SHA_LENGTH]
+      start_index += partition_prefix.length if token[start_index..].start_with?(partition_prefix)
+      token[start_index..start_index + RUNNER_SHORT_SHA_LENGTH - 1]
     end
 
     def tag_list
@@ -542,6 +549,17 @@ module Ci
       Project.where(id: runner_projects.map(&:project_id)).map(&:effective_runner_token_expiration_interval).compact.min&.from_now
     end
 
+    def ensure_sharding_key_id
+      case runner_type
+      when 'group_type'
+        self.sharding_key_id ||= owner_runner_namespace.namespace_id if owner_runner_namespace
+      when 'project_type'
+        self.sharding_key_id ||= owner_project.id if owner_project
+      else
+        self.sharding_key_id = nil
+      end
+    end
+
     def cleanup_runner_queue
       ::Gitlab::Workhorse.cleanup_key(runner_queue_key)
     end
@@ -568,6 +586,12 @@ module Ci
       if tag_list_changed? && tag_list.count > TAG_LIST_MAX_LENGTH
         errors.add(:tags_list,
           "Too many tags specified. Please limit the number of tags to #{TAG_LIST_MAX_LENGTH}")
+      end
+    end
+
+    def no_sharding_key_id
+      if sharding_key_id
+        errors.add(:runner, 'cannot have sharding_key_id assigned')
       end
     end
 
@@ -601,20 +625,17 @@ module Ci
       end
     end
 
-    # TODO Remove in 16.0 when runners are known to send a system_id
-    # For now, heartbeats with version updates might result in two Sidekiq jobs being queued if a runner has a system_id
-    # This is not a problem since the jobs are deduplicated on the version
-    def schedule_runner_version_update(new_version)
-      return if Feature.enabled?(:hide_duplicate_runner_manager_fields_in_runner)
-      return unless new_version && Gitlab::Ci::RunnerReleases.instance.enabled?
-
-      Ci::Runners::ProcessRunnerVersionUpdateWorker.perform_async(new_version)
+    def partition_id_prefix_in_16_bit_encode
+      # Prefix with t1 / t2 / t3 (`t` as in runner type, to allow us to easily detect how a token got prefixed).
+      # This is needed in order to ensure that tokens have unique values across partitions
+      # in the new ci_runners_e59bb2812d partitioned table.
+      "t#{self.class.runner_types[runner_type].to_s(16)}_"
     end
 
     def prefix_for_new_and_legacy_runner
-      return if registration_token_registration_type?
+      return partition_id_prefix_in_16_bit_encode if registration_token_registration_type?
 
-      CREATED_RUNNER_TOKEN_PREFIX
+      "#{CREATED_RUNNER_TOKEN_PREFIX}#{partition_id_prefix_in_16_bit_encode}"
     end
   end
 end

@@ -11,7 +11,7 @@ GitLab sometimes releases features as experimental or beta, and users can opt in
 Some reasons for these kinds of feature releases include:
 
 - Validating the edge-cases of scale, support, and maintenance burden of features in their current form for every designed use case.
-- Features not complete enough to be considered an [MVC](https://handbook.gitlab.com/handbook/product/product-principles/#the-minimal-viable-change-mvc),
+- Features not complete enough to be considered an [MVC](https://handbook.gitlab.com/handbook/product/product-principles/#the-minimal-valuable-change-mvc),
   but added to the codebase as part of the development process.
 
 Please note that some features may not be aligned to these recommendations if they were developed before the recommendations were in place,
@@ -95,6 +95,7 @@ In addition to the [beta details](#beta) for users, beta features should:
 - Not be required or necessary for most features.
 - Have documentation that reflects the beta status.
 - Have [UI that reflects the beta status](https://design.gitlab.com/usability/feature-management#highlighting-feature-versions).
+- Have a feedback issue to engage with internal and external users.
 - Be behind a feature flag that is on by default.
 - Be behind a toggle that is off by default.
 - Be announced in a release post that reflects the beta status, if desired.

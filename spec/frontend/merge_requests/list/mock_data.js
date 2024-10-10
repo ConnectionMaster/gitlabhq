@@ -62,6 +62,8 @@ export const getQueryResponse = {
             conflicts: false,
             sourceBranchExists: true,
             targetBranchExists: true,
+            targetBranch: 'main',
+            targetBranchPath: '/target-branch',
             approved: false,
             approvedBy: {
               nodes: [
@@ -69,6 +71,10 @@ export const getQueryResponse = {
                   id: 1,
                 },
               ],
+            },
+            taskCompletionStatus: {
+              completedCount: 0,
+              count: 1,
             },
           },
         ],

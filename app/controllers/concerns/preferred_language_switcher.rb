@@ -15,7 +15,7 @@ module PreferredLanguageSwitcher
 
   def preferred_language
     cookies[:preferred_language].presence_in(Gitlab::I18n.available_locales) ||
-      selectable_language(marketing_site_language) ||
+      selectable_language(language_from_params) ||
       selectable_language(browser_languages) ||
       Gitlab::CurrentSettings.default_preferred_language
   end
@@ -37,14 +37,9 @@ module PreferredLanguageSwitcher
   end
   strong_memoize_attr :browser_languages
 
-  def marketing_site_language
-    return [] unless params[:glm_source]
-
-    locale = params[:glm_source].scan(%r{(\w{2})-(\w{2})}).flatten
-
-    return [] if locale.empty?
-
-    [locale[0], "#{locale[0]}_#{locale[1]}"]
+  def language_from_params
+    # overridden in ee
+    []
   end
 end
 

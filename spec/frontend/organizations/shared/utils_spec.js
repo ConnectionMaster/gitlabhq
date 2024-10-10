@@ -1,17 +1,8 @@
 import organizationGroupsGraphQlResponse from 'test_fixtures/graphql/organizations/groups.query.graphql.json';
-import organizationProjectsGraphQlResponse from 'test_fixtures/graphql/organizations/projects.query.graphql.json';
-import {
-  formatGroups,
-  onPageChange,
-  deleteParams,
-  renderDeleteSuccessToast,
-  timestampType,
-} from '~/organizations/shared/utils';
+import { formatGroups, timestampType } from '~/organizations/shared/utils';
 import { SORT_CREATED_AT, SORT_UPDATED_AT, SORT_NAME } from '~/organizations/shared/constants';
 import { ACTION_EDIT, ACTION_DELETE } from '~/vue_shared/components/list_actions/constants';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
-import { formatGraphQLProjects } from '~/vue_shared/components/projects_list/utils';
-import toast from '~/vue_shared/plugins/global_toast';
 import {
   TIMESTAMP_TYPE_CREATED_AT,
   TIMESTAMP_TYPE_UPDATED_AT,
@@ -26,14 +17,6 @@ const {
     },
   },
 } = organizationGroupsGraphQlResponse;
-
-const {
-  data: {
-    organization: {
-      projects: { nodes: organizationProjects },
-    },
-  },
-} = organizationProjectsGraphQlResponse;
 
 describe('formatGroups', () => {
   it('correctly formats the groups with edit and delete permissions', () => {
@@ -79,49 +62,6 @@ describe('formatGroups', () => {
     });
 
     expect(formattedGroups.length).toBe(organizationGroups.length);
-  });
-});
-
-describe('onPageChange', () => {
-  const mockRouteQuery = { start_cursor: 'mockStartCursor', end_cursor: 'mockEndCursor' };
-
-  describe('when `startCursor` is defined', () => {
-    it('sets start cursor query param', () => {
-      expect(
-        onPageChange({
-          startCursor: 'newMockStartCursor',
-          routeQuery: mockRouteQuery,
-        }),
-      ).toEqual({ start_cursor: 'newMockStartCursor' });
-    });
-  });
-
-  describe('when `endCursor` is defined', () => {
-    it('sets end cursor query param', () => {
-      expect(
-        onPageChange({
-          endCursor: 'newMockEndCursor',
-          routeQuery: mockRouteQuery,
-        }),
-      ).toEqual({ end_cursor: 'newMockEndCursor' });
-    });
-  });
-});
-
-describe('renderDeleteSuccessToast', () => {
-  const [MOCK_PROJECT] = formatGraphQLProjects(organizationProjects);
-  const MOCK_TYPE = 'Project';
-
-  it('calls toast correctly', () => {
-    renderDeleteSuccessToast(MOCK_PROJECT, MOCK_TYPE);
-
-    expect(toast).toHaveBeenCalledWith(`${MOCK_TYPE} '${MOCK_PROJECT.name}' is being deleted.`);
-  });
-});
-
-describe('deleteParams', () => {
-  it('returns {} always', () => {
-    expect(deleteParams()).toStrictEqual({});
   });
 });
 

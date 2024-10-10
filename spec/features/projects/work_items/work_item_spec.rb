@@ -14,14 +14,15 @@ RSpec.describe 'Work item', :js, feature_category: :team_planning do
 
   let_it_be(:group) { create(:group) }
   let_it_be(:project) { create(:project, :public, group: group) }
-  let_it_be(:work_item) { create(:work_item, project: project) }
+  let_it_be(:label) { create(:label, project: project, title: "testing-label") }
+  let_it_be(:label2) { create(:label, project: project, title: "another-label") }
+  let_it_be(:work_item) { create(:work_item, project: project, labels: [label]) }
   let_it_be(:task) { create(:work_item, :task, project: project) }
   let_it_be(:emoji_upvote) { create(:award_emoji, :upvote, awardable: work_item, user: user2) }
   let_it_be(:milestone) { create(:milestone, project: project) }
   let_it_be(:milestones) { create_list(:milestone, 25, project: project) }
   let_it_be(:note) { create(:note, noteable: work_item, project: work_item.project) }
   let(:work_items_path) { project_work_item_path(project, work_item.iid) }
-  let_it_be(:label) { create(:label, project: work_item.project, title: "testing-label") }
   let_it_be(:contact) { create(:contact, group: group) }
   let(:contact_name) { "#{contact.first_name} #{contact.last_name}" }
 
@@ -43,7 +44,7 @@ RSpec.describe 'Work item', :js, feature_category: :team_planning do
 
     it 'uses IID path in breadcrumbs' do
       within_testid('breadcrumb-links') do
-        expect(find('li:last-of-type')).to have_link("##{work_item.iid}", href: work_items_path)
+        expect(find('nav:last-of-type li:last-of-type')).to have_link("##{work_item.iid}", href: work_items_path)
       end
     end
 
@@ -89,7 +90,11 @@ RSpec.describe 'Work item', :js, feature_category: :team_planning do
     it_behaves_like 'work items comments', :issue
     it_behaves_like 'work items description'
     it_behaves_like 'work items milestone'
-    it_behaves_like 'work items notifications'
+
+    context 'with quarantine context', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/486486' do
+      it_behaves_like 'work items notifications'
+    end
+
     it_behaves_like 'work items todos'
     it_behaves_like 'work items award emoji'
     it_behaves_like 'work items time tracking'

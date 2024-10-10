@@ -45,7 +45,7 @@ Pipelines can be configured in many different ways:
 
 - [Basic pipelines](pipeline_architectures.md#basic-pipelines) run everything in each stage concurrently,
   followed by the next stage.
-- [Pipelines that use the `needs` keyword](../directed_acyclic_graph/index.md) run based on dependencies
+- [Pipelines that use the `needs` keyword](../yaml/needs.md) run based on dependencies
   between jobs and can run more quickly than basic pipelines.
 - [Merge request pipelines](../pipelines/merge_request_pipelines.md) run for merge
   requests only (rather than for every commit).
@@ -76,7 +76,7 @@ You can also configure specific aspects of your pipelines through the GitLab UI.
 
 The recommended tool for editing CI/CD configuration is the [pipeline editor](../pipeline_editor/index.md).
 
-If you use VS Code to edit your GitLab CI/CD configuration, the [GitLab Workflow VS Code extension](../../editor_extensions/visual_studio_code/index.md)
+If you use VS Code to edit your GitLab CI/CD configuration, the [GitLab Workflow extension for VS Code](../../editor_extensions/visual_studio_code/index.md)
 helps you [validate your configuration](https://marketplace.visualstudio.com/items?itemName=GitLab.gitlab-workflow#validate-gitlab-ci-configuration)
 and [view your pipeline status](https://marketplace.visualstudio.com/items?itemName=GitLab.gitlab-workflow#information-about-your-branch-pipelines-mr-closing-issue).
 
@@ -91,7 +91,7 @@ To execute a pipeline manually:
 
 1. On the left sidebar, select **Search or go to** and find your project.
 1. Select **Build > Pipelines**.
-1. Select **Run pipeline**.
+1. Select **New pipeline**.
 1. In the **Run for branch name or tag** field, select the branch or tag to run the pipeline for.
 1. Enter any [CI/CD variables](../variables/index.md) required for the pipeline to run.
    You can set specific variables to have their [values prefilled in the form](#prefill-variables-in-manual-pipelines).
@@ -108,7 +108,7 @@ information such as what the variable is used for, and what the acceptable value
 
 Job-level variables cannot be pre-filled.
 
-In manually-triggered pipelines, the **Run pipeline** page displays all pipeline-level variables
+In manually-triggered pipelines, the **New pipeline** page displays all pipeline-level variables
 that have a `description` defined in the `.gitlab-ci.yml` file. The description displays
 below the variable.
 
@@ -131,9 +131,9 @@ variables:
 
 In this example:
 
-- `DEPLOY_CREDENTIALS` is listed in the **Run pipeline** page, but with no value set.
+- `DEPLOY_CREDENTIALS` is listed in the **New pipeline** page, but with no value set.
   The user is expected to define the value each time the pipeline is run manually.
-- `DEPLOY_ENVIRONMENT` is pre-filled in the **Run pipeline** page with `canary` as the default value,
+- `DEPLOY_ENVIRONMENT` is pre-filled in the **New pipeline** page with `canary` as the default value,
   and the message explains the other options.
 
 NOTE:
@@ -149,7 +149,7 @@ when running a pipeline manually. To workaround this issue,
 > - The variables list sometimes did not populate correctly due to [a bug](https://gitlab.com/gitlab-org/gitlab/-/issues/386245), which was resolved in GitLab 15.9.
 
 You can define an array of CI/CD variable values the user can select from when running a pipeline manually.
-These values are in a dropdown list in the **Run pipeline** page. Add the list of
+These values are in a dropdown list in the **New pipeline** page. Add the list of
 value options to `options` and set the default value with `value`. The string in `value`
 must also be included in the `options` list.
 
@@ -168,9 +168,9 @@ variables:
 
 ### Run a pipeline by using a URL query string
 
-You can use a query string to pre-populate the **Run Pipeline** page. For example, the query string
+You can use a query string to pre-populate the **New pipeline** page. For example, the query string
 `.../pipelines/new?ref=my_branch&var[foo]=bar&file_var[file_foo]=file_bar` pre-populates the
-**Run Pipeline** page with:
+**New pipeline** page with:
 
 - **Run for** field: `my_branch`.
 - **Variables** section:
@@ -243,10 +243,10 @@ related objects, such as jobs, logs, artifacts, and triggers.
 ### Pipeline security on protected branches
 
 A strict security model is enforced when pipelines are executed on
-[protected branches](../../user/project/protected_branches.md).
+[protected branches](../../user/project/repository/branches/protected.md).
 
 The following actions are allowed on protected branches if the user is
-[allowed to merge or push](../../user/project/protected_branches.md)
+[allowed to merge or push](../../user/project/repository/branches/protected.md)
 to that specific branch:
 
 - Run manual pipelines (using the [Web UI](#run-a-pipeline-manually) or [pipelines API](#pipelines-api)).
@@ -273,8 +273,9 @@ DETAILS:
 **Tier:** Premium, Ultimate
 **Offering:** GitLab.com, Self-managed, GitLab Dedicated
 
-You can trigger a pipeline in your project whenever a pipeline finishes for a new
-tag in a different project.
+You can set up your project to automatically trigger a pipeline based on tags in a different project.
+When a new tag pipeline in the subscribed project finishes, it triggers a pipeline on your project's default branch,
+regardless of the tag pipeline's success, failure, or cancellation.
 
 Prerequisites:
 
@@ -292,13 +293,11 @@ To trigger the pipeline when the upstream project is rebuilt:
    For example, if the project is `https://gitlab.com/gitlab-org/gitlab`, use `gitlab-org/gitlab`.
 1. Select **Subscribe**.
 
-Any pipelines that complete successfully for new tags in the subscribed project
-now trigger a pipeline on the current project's default branch. The maximum
-number of upstream pipeline subscriptions is 2 by default, for both the upstream and
+The maximum number of upstream pipeline subscriptions is 2 by default, for both the upstream and
 downstream projects. On self-managed instances, an administrator can change this
 [limit](../../administration/instance_limits.md#number-of-cicd-subscriptions-to-a-project).
 
-### How pipeline duration is calculated
+## How pipeline duration is calculated
 
 The total running time for a given pipeline excludes:
 

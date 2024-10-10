@@ -118,7 +118,7 @@ Pipelines might not run for multiple reasons:
   being added to the pipeline.
 - Pipelines are triggered using [the account that set up the pull mirror](https://gitlab.com/gitlab-org/gitlab/-/issues/13697).
   If the account is no longer valid, pipelines do not run.
-- [Branch protection](../../protected_branches.md#run-pipelines-on-protected-branches)
+- [Branch protection](../../repository/branches/protected.md#run-pipelines-on-protected-branches)
   might prevent the account that set up mirroring from running pipelines.
 
 ## `The repository is being updated`, but neither fails nor succeeds visibly
@@ -261,7 +261,8 @@ When mirroring fails due to Silent Mode the following are the debug steps:
 - [Triggering the mirror using the API](pull.md#trigger-pipelines-for-mirror-updates) shows: `The project is not mirrored`.
 
 - If pull or push mirror was already set up but there are no further updates on the mirrored repository,
-  confirm the [project's pull and push mirror details ans status](../../../../api/projects.md#get-a-projects-pull-mirror-details) are not recent as shown below. This indicates mirroring was paused and disabling GitLab Silent Mode restarts it automatically.
+  confirm the [project's pull and push mirror details ans status](../../../../api/project_pull_mirroring.md#get-a-projects-pull-mirror-details)
+  are not recent as shown below. This indicates mirroring was paused and disabling GitLab Silent Mode restarts it automatically.
 
 For example, if Silent Mode is what is impeding your imports, the output is similar to the following:
 

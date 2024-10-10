@@ -6,6 +6,12 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
   subject(:cached_response) { build(:virtual_registries_packages_maven_cached_response) }
 
   it { is_expected.to include_module(FileStoreMounter) }
+  it { is_expected.to include_module(::UpdateNamespaceStatistics) }
+
+  it_behaves_like 'updates namespace statistics' do
+    let(:statistic_source) { cached_response }
+    let(:non_statistic_attribute) { :relative_path }
+  end
 
   describe 'validations' do
     %i[group file relative_path content_type downloads_count size].each do |attr|
@@ -16,13 +22,14 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
       it { is_expected.to validate_length_of(attr).is_at_most(255) }
     end
     it { is_expected.to validate_numericality_of(:downloads_count).only_integer.is_greater_than(0) }
+    it { is_expected.to validate_length_of(:file_final_path).is_at_most(1024) }
 
     context 'with persisted cached response' do
       before do
         cached_response.save!
       end
 
-      it { is_expected.to validate_uniqueness_of(:relative_path).scoped_to(:upstream_id) }
+      it { is_expected.to validate_uniqueness_of(:relative_path).scoped_to(:upstream_id, :status) }
 
       context 'when upstream_id is nil' do
         let(:new_cached_response) { build(:virtual_registries_packages_maven_cached_response) }
@@ -30,6 +37,33 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
         before do
           cached_response.update!(upstream_id: nil)
           new_cached_response.upstream = nil
+        end
+
+        it 'does not validate uniqueness of relative_path' do
+          new_cached_response.validate
+          expect(new_cached_response.errors.messages_for(:relative_path)).not_to include 'has already been taken'
+        end
+      end
+
+      context 'with a similar cached response in a different status' do
+        let!(:cached_response_in_error) do
+          create(
+            :virtual_registries_packages_maven_cached_response,
+            :error,
+            group_id: cached_response.group_id,
+            upstream_id: cached_response.upstream_id,
+            relative_path: cached_response.relative_path
+          )
+        end
+
+        let(:new_cached_response) do
+          build(
+            :virtual_registries_packages_maven_cached_response,
+            :error,
+            group_id: cached_response.group_id,
+            upstream_id: cached_response.upstream_id,
+            relative_path: cached_response.relative_path
+          )
         end
 
         it 'does not validate uniqueness of relative_path' do
@@ -46,6 +80,51 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
         .class_name('VirtualRegistries::Packages::Maven::Upstream')
         .inverse_of(:cached_responses)
     end
+  end
+
+  describe 'scopes' do
+    describe '.orphan' do
+      subject { described_class.orphan }
+
+      let_it_be(:cached_response) { create(:virtual_registries_packages_maven_cached_response) }
+      let_it_be(:orphan_cached_response) { create(:virtual_registries_packages_maven_cached_response, :orphan) }
+
+      it { is_expected.to contain_exactly(orphan_cached_response) }
+    end
+
+    describe '.pending_destruction' do
+      subject { described_class.pending_destruction }
+
+      let_it_be(:cached_response) { create(:virtual_registries_packages_maven_cached_response, :orphan, :processing) }
+      let_it_be(:pending_destruction_cached_response) do
+        create(:virtual_registries_packages_maven_cached_response, :orphan)
+      end
+
+      it { is_expected.to contain_exactly(pending_destruction_cached_response) }
+    end
+
+    describe '.for_group' do
+      let_it_be(:cached_response1) { create(:virtual_registries_packages_maven_cached_response) }
+      let_it_be(:cached_response2) { create(:virtual_registries_packages_maven_cached_response) }
+      let_it_be(:cached_response3) { create(:virtual_registries_packages_maven_cached_response) }
+
+      let(:groups) { [cached_response1.group, cached_response2.group] }
+
+      subject { described_class.for_group(groups) }
+
+      it { is_expected.to match_array([cached_response1, cached_response2]) }
+    end
+  end
+
+  describe '.next_pending_destruction' do
+    subject { described_class.next_pending_destruction }
+
+    let_it_be(:cached_response) { create(:virtual_registries_packages_maven_cached_response) }
+    let_it_be(:pending_destruction_cached_response) do
+      create(:virtual_registries_packages_maven_cached_response, :orphan)
+    end
+
+    it { is_expected.to eq(pending_destruction_cached_response) }
   end
 
   describe 'object storage key' do
@@ -115,6 +194,45 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
     end
   end
 
+  describe '.create_or_update_by!' do
+    let_it_be(:upstream) { create(:virtual_registries_packages_maven_upstream) }
+
+    let(:size) { 10.bytes }
+
+    subject(:create_or_update) do
+      with_threads do
+        file = Tempfile.new('test.txt').tap { |f| f.write('test') }
+        described_class.create_or_update_by!(
+          upstream: upstream,
+          group_id: upstream.group_id,
+          relative_path: '/test',
+          updates: { file: file, size: size }
+        )
+      ensure
+        file.close
+        file.unlink
+      end
+    end
+
+    it 'creates or update the existing record' do
+      expect { create_or_update }.to change { described_class.count }.by(1)
+
+      # downloads count don't behave accurately in a race condition situation.
+      # That's an accepted tradeoff for now.
+      # https://gitlab.com/gitlab-org/gitlab/-/issues/473152 should fix this problem.
+      expect(described_class.last.downloads_count).to be_between(2, 5).inclusive
+    end
+
+    context 'with invalid updates' do
+      let(:size) { nil }
+
+      it 'bubbles up the error' do
+        expect { create_or_update }.to not_change { described_class.count }
+          .and raise_error(ActiveRecord::RecordInvalid)
+      end
+    end
+  end
+
   describe '#filename' do
     let(:cached_response) { build(:virtual_registries_packages_maven_cached_response) }
 
@@ -131,10 +249,96 @@ RSpec.describe VirtualRegistries::Packages::Maven::CachedResponse, type: :model,
     end
   end
 
+  describe '#stale?' do
+    let(:cached_response) do
+      build(:virtual_registries_packages_maven_cached_response, upstream_checked_at: 10.hours.ago)
+    end
+
+    let(:threshold) do
+      cached_response.upstream_checked_at + cached_response.upstream.registry.cache_validity_hours.hours
+    end
+
+    subject { cached_response.stale?(registry: cached_response.upstream.registry) }
+
+    context 'when before the threshold' do
+      before do
+        allow(Time.zone).to receive(:now).and_return(threshold - 1.hour)
+      end
+
+      it { is_expected.to eq(false) }
+    end
+
+    context 'when on the threshold' do
+      before do
+        allow(Time.zone).to receive(:now).and_return(threshold)
+      end
+
+      it { is_expected.to eq(false) }
+    end
+
+    context 'when after the threshold' do
+      before do
+        allow(Time.zone).to receive(:now).and_return(threshold + 1.hour)
+      end
+
+      it { is_expected.to eq(true) }
+    end
+
+    context 'with no registry' do
+      before do
+        cached_response.upstream.registry = nil
+      end
+
+      it { is_expected.to eq(true) }
+    end
+  end
+
+  describe '#bump_statistics', :freeze_time do
+    let_it_be_with_reload(:cached_response) { create(:virtual_registries_packages_maven_cached_response) }
+
+    subject(:bump) { cached_response.bump_statistics }
+
+    it 'updates the correct statistics' do
+      expect { bump }
+        .to change { cached_response.downloaded_at }.to(Time.zone.now)
+        .and change { cached_response.downloads_count }.by(1)
+    end
+
+    context 'with include_upstream_checked_at' do
+      subject(:bump) { cached_response.bump_statistics(include_upstream_checked_at: true) }
+
+      it 'updates the correct statistics' do
+        expect { bump }
+          .to change { cached_response.reload.downloaded_at }.to(Time.zone.now)
+          .and change { cached_response.upstream_checked_at }.to(Time.zone.now)
+          .and change { cached_response.downloads_count }.by(1)
+      end
+    end
+  end
+
   context 'with loose foreign key on virtual_registries_packages_maven_cached_responses.upstream_id' do
     it_behaves_like 'cleanup by a loose foreign key' do
       let_it_be(:parent) { create(:virtual_registries_packages_maven_upstream) }
       let_it_be(:model) { create(:virtual_registries_packages_maven_cached_response, upstream: parent) }
     end
+  end
+
+  def with_threads(count: 5, &block)
+    return unless block
+
+    # create a race condition - structure from https://blog.arkency.com/2015/09/testing-race-conditions/
+    wait_for_it = true
+
+    threads = Array.new(count) do |i|
+      Thread.new do
+        # A loop to make threads busy until we `join` them
+        true while wait_for_it
+
+        yield(i)
+      end
+    end
+
+    wait_for_it = false
+    threads.each(&:join)
   end
 end

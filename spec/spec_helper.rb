@@ -34,7 +34,7 @@ require 'rspec-parameterized'
 require 'shoulda/matchers'
 require 'test_prof/recipes/rspec/let_it_be'
 require 'test_prof/factory_default'
-require 'test_prof/factory_prof/nate_heckler' if ENV.fetch('ENABLE_FACTORY_PROF', 'true') == 'true'
+require 'test_prof/factory_prof/nate_heckler'
 require 'parslet/rig/rspec'
 require 'axe-rspec'
 
@@ -178,6 +178,8 @@ RSpec.configure do |config|
   config.include WaitHelpers, type: :feature
   config.include WaitForRequests, type: :feature
   config.include Features::DomHelpers, type: :feature
+  config.include TestidHelpers, type: :feature
+  config.include TestidHelpers, type: :component
   config.include Features::HighlightContentHelper, type: :feature
   config.include EmailHelpers, :mailer, type: :mailer
   config.include Warden::Test::Helpers, type: :request
@@ -212,7 +214,6 @@ RSpec.configure do |config|
   config.include UserWithNamespaceShim
   config.include OrphanFinalArtifactsCleanupHelpers, :orphan_final_artifacts_cleanup
   config.include ClickHouseHelpers, :click_house
-  config.include DisableNamespaceOrganizationValidationHelper
 
   config.include_context 'when rendered has no HTML escapes', type: :view
 
@@ -347,6 +348,10 @@ RSpec.configure do |config|
       # See https://gitlab.com/gitlab-org/gitlab/-/issues/457283
       stub_feature_flags(duo_chat_requires_licensed_seat_sm: false)
 
+      # This flag is for [Selectively disable by actor](https://docs.gitlab.com/ee/development/feature_flags/controls.html#selectively-disable-by-actor).
+      # Hence, it should not enable by default in test.
+      stub_feature_flags(v2_chat_agent_integration_override: false) if Gitlab.ee?
+
       # Experimental merge request dashboard
       stub_feature_flags(merge_request_dashboard: false)
 
@@ -354,9 +359,8 @@ RSpec.configure do |config|
       # Please see https://gitlab.com/gitlab-org/gitlab/-/issues/466081 for tracking revisiting this.
       stub_feature_flags(your_work_projects_vue: false)
 
-      # disable license check by default, while migrating code to account for license. We still want out specs to be
-      # able to check functionality when license is enabled or disabled.
-      stub_feature_flags(enforce_check_group_level_work_items_license: false)
+      # This feature flag allows enabling self-hosted features on Staging Ref: https://gitlab.com/gitlab-org/gitlab/-/issues/497784
+      stub_feature_flags(allow_self_hosted_features_for_com: false)
     else
       unstub_all_feature_flags
     end

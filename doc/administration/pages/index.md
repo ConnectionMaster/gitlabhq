@@ -99,22 +99,10 @@ IPv6 address. If you don't have IPv6, you can omit the `AAAA` record.
 
 #### For namespace in URL path, without wildcard DNS
 
-DETAILS:
-**Status:** Beta
-
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/1111) implementation from NGINX to the GitLab Pages codebase in GitLab 17.2.
-
-FLAG:
-On self-managed GitLab, by default this feature is available.
-On GitLab.com and GitLab Dedicated, this feature is not available.
-This feature is not ready for production use.
-
-Prerequisites:
-
-- Your instance must use the Linux package installation method.
-- Your installation must use the default `auth_redirect_uri`.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/483365) in GitLab 17.4.
 
 If you need support for namespace in the URL path to remove the requirement for wildcard DNS:
 
@@ -198,17 +186,10 @@ Watch the [video tutorial](https://youtu.be/dD8c7WNcc6s) for this configuration.
 
 ### Pages domain without wildcard DNS
 
-DETAILS:
-**Status:** Beta
-
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/1111) implementation from NGINX to the GitLab Pages codebase in GitLab 17.2.
-
-FLAG:
-On self-managed GitLab, by default this feature is available.
-On GitLab.com and GitLab Dedicated, this feature is not available.
-This feature is not ready for production use.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/483365) in GitLab 17.4.
 
 This configuration is the minimum setup for GitLab Pages. It is the base for all
 other configurations. In this configuration, NGINX proxies all requests to the daemon,
@@ -216,7 +197,6 @@ because the GitLab Pages daemon doesn't listen to the outside world.
 
 Prerequisites:
 
-- Your instance must use the Linux package installation method.
 - You have configured DNS setup
   [without a wildcard](#for-namespace-in-url-path-without-wildcard-dns).
 
@@ -289,21 +269,13 @@ then run `gitlab-ctl reconfigure`. For more information, read
 
 ### Pages domain with TLS support, without wildcard DNS
 
-DETAILS:
-**Status:** Beta
-
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/17584) as an [experiment](../../policy/experiment-beta-support.md) in GitLab 16.7.
 > - [Moved](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/148621) to [beta](../../policy/experiment-beta-support.md) in GitLab 16.11.
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-pages/-/issues/1111) implementation from NGINX to the GitLab Pages codebase in GitLab 17.2.
-
-FLAG:
-On self-managed GitLab, by default this feature is available.
-On GitLab.com and GitLab Dedicated, this feature is not available.
-This feature is not ready for production use.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/483365) in GitLab 17.4.
 
 Prerequisites:
 
-- Your instance must use the Linux package installation method.
 - You have configured DNS setup
   [without a wildcard](#for-namespace-in-url-path-without-wildcard-dns).
 - You have a TLS certificate that covers your domain (like `example.io`).
@@ -396,10 +368,10 @@ control over how the Pages daemon runs and serves content in your environment.
 | **`gitlab_pages[]`**                    |                                                                                                                                                                                                                                                                                                            |
 | `access_control`                        | Whether to enable [access control](index.md#access-control).                                                                                                                                                                                                                                               |
 | `api_secret_key`                        | Full path to file with secret key used to authenticate with the GitLab API. Auto-generated when left unset.                                                                                                                                                                                                |
-| `artifacts_server`                      | Enable viewing [artifacts](../job_artifacts.md) in GitLab Pages.                                                                                                                                                                                                                                           |
+| `artifacts_server`                      | Enable viewing [artifacts](../cicd/job_artifacts.md) in GitLab Pages.                                                                                                                                                                                                                                           |
 | `artifacts_server_timeout`              | Timeout (in seconds) for a proxied request to the artifacts server.                                                                                                                                                                                                                                        |
 | `artifacts_server_url`                  | API URL to proxy artifact requests to. Defaults to GitLab `external URL` + `/api/v4`, for example `https://gitlab.com/api/v4`. When running a [separate Pages server](#running-gitlab-pages-on-a-separate-server), this URL must point to the main GitLab server's API.                                    |
-| `auth_redirect_uri`                     | Callback URL for authenticating with GitLab. Defaults to project's subdomain of `pages_external_url` + `/auth`, for example `https://projects.example.io/auth`. When `namespace_in_path` is enabled, defaults to `pages_external_url` + `/projects/auth`, for example `https://example.io/projects/auth`.  |
+| `auth_redirect_uri`                     | Callback URL for authenticating with GitLab. URL should be subdomain of `pages_external_url` + `/auth`. Defaults to project's subdomain of `pages_external_url` + `/auth`, for example `https://projects.example.io/auth`. When `namespace_in_path` is enabled, defaults to `pages_external_url` + `/projects/auth`, for example `https://example.io/projects/auth`.  |
 | `auth_secret`                           | Secret key for signing authentication requests. Leave blank to pull automatically from GitLab during OAuth registration.                                                                                                                                                                                   |
 | `client_cert`                           | Client certificate used for mutual TLS with the GitLab API. See [Support mutual TLS when calling the GitLab API](#support-mutual-tls-when-calling-the-gitlab-api) for details.                                                                                                                             |
 | `client_key`                            | Client key used for mutual TLS with the GitLab API. See [Support mutual TLS when calling the GitLab API](#support-mutual-tls-when-calling-the-gitlab-api) for details.                                                                                                                                     |
@@ -589,7 +561,7 @@ To enable it:
 1. On the left sidebar, at the bottom, select **Admin**.
 1. Select **Settings > Preferences**.
 1. Expand **Pages**.
-1. Enter the email address for receiving notifications and accept Let's Encrypt's Terms of Service.
+1. Enter the email address for receiving notifications and accept the Terms of Service for Let's Encrypt.
 1. Select **Save changes**.
 
 ### Access control
@@ -772,7 +744,7 @@ opened) it's refreshed. This extends the time the archive remains in memory from
 After an archive reaches `zip_cache_expiration`, it's marked as expired and removed on the next
 `zip_cache_cleanup` interval.
 
-![ZIP cache configuration](img/zip_cache_configuration.png)
+![A timeline shows the ZIP cache refresh extends the ZIP cache expiration time.](img/zip_cache_configuration.png)
 
 ### HTTP Strict Transport Security (HSTS) support
 
@@ -951,7 +923,7 @@ To set the maximum number of GitLab Pages custom domains for a project:
 1. Enter a value for **Maximum number of custom domains per project**. Use `0` for unlimited domains.
 1. Select **Save changes**.
 
-## Configure the default expiry for extra deployments
+## Configure the default expiry for parallel deployments
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/456477) in GitLab 17.4.
 
@@ -960,14 +932,14 @@ Prerequisites:
 - You must have administrator access to the instance.
 
 To configure the default duration for the instance after which
-[extra deployments](../../user/project/pages/index.md#create-multiple-deployments)
+[parallel deployments](../../user/project/pages/index.md#parallel-deployments)
 are deleted:
 
 1. On the left sidebar, at the bottom, select **Admin**.
 1. Select **Settings > Preferences**.
 1. Expand **Pages**.
-1. Enter a value for **Default expiration for extra deployments in seconds**.
-   Use `0` if extra deployments should not expire by default.
+1. Enter a value for **Default expiration for parallel deployments in seconds**.
+   Use `0` if parallel deployments should not expire by default.
 1. Select **Save changes**.
 
 ## Set maximum number of files per GitLab Pages website
@@ -991,6 +963,17 @@ The following procedure includes steps to back up and edit the
 `gitlab-secrets.json` file. This file contains secrets that control
 database encryption. Proceed with caution.
 
+1. Optionally, to enable [access control](#access-control), add the following to `/etc/gitlab/gitlab.rb` and [reconfigure the **GitLab server**](../restart_gitlab.md#reconfigure-a-linux-package-installation):
+
+   ```ruby
+   gitlab_pages['access_control'] = true
+   ```
+
+   WARNING:
+   If you plan to use GitLab Pages with access control, you must enable it on the first GitLab server before copying `gitlab-secrets.json`.
+   Enabling access control generates a new OAuth application, and information about it propagates to `gitlab-secrets.json`. If it's not done
+   in the correct order, you may face issues with access control.
+
 1. Create a backup of the secrets file on the **GitLab server**:
 
    ```shell
@@ -1001,12 +984,6 @@ database encryption. Proceed with caution.
 
    ```ruby
    pages_external_url "http://<pages_server_URL>"
-   ```
-
-1. Optionally, to enable [access control](#access-control), add the following to `/etc/gitlab/gitlab.rb`:
-
-   ```ruby
-   gitlab_pages['access_control'] = true
    ```
 
 1. Set up object storage by either:

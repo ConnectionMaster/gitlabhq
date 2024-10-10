@@ -3,7 +3,7 @@ import VueApollo from 'vue-apollo';
 import { GlAlert, GlModal } from '@gitlab/ui';
 import { shallowMountExtended } from 'helpers/vue_test_utils_helper';
 import * as Sentry from '~/sentry/sentry_browser_wrapper';
-import { visitUrl } from '~/lib/utils/url_utility';
+import { visitUrlWithAlerts } from '~/lib/utils/url_utility';
 import ModelVersionCreate from '~/ml/model_registry/components/model_version_create.vue';
 import ImportArtifactZone from '~/ml/model_registry/components/import_artifact_zone.vue';
 import UploadDropzone from '~/vue_shared/components/upload_dropzone/upload_dropzone.vue';
@@ -21,7 +21,7 @@ Vue.use(VueApollo);
 
 jest.mock('~/lib/utils/url_utility', () => ({
   ...jest.requireActual('~/lib/utils/url_utility'),
-  visitUrl: jest.fn(),
+  visitUrlWithAlerts: jest.fn(),
 }));
 
 jest.mock('~/ml/model_registry/services/upload_model', () => ({
@@ -33,6 +33,8 @@ describe('ModelVersionCreate', () => {
   let apolloProvider;
 
   const file = { name: 'file.txt', size: 1024 };
+  const anotherFile = { name: 'another file.txt', size: 10 };
+  const files = [file, anotherFile];
 
   beforeEach(() => {
     jest.spyOn(Sentry, 'captureException').mockImplementation();
@@ -237,7 +239,7 @@ describe('ModelVersionCreate', () => {
       createWrapper();
       findVersionInput().vm.$emit('input', '1.0.0');
       findDescriptionInput().vm.$emit('input', 'My model version description');
-      zone().vm.$emit('change', file);
+      zone().vm.$emit('change', files);
       jest.spyOn(apolloProvider.defaultClient, 'mutate');
 
       await submitForm();
@@ -273,7 +275,13 @@ describe('ModelVersionCreate', () => {
 
       await submitForm();
 
-      expect(visitUrl).toHaveBeenCalledWith('/some/project/-/ml/models/1/versions/1');
+      expect(visitUrlWithAlerts).toHaveBeenCalledWith('/some/project/-/ml/models/1/versions/1', [
+        {
+          id: 'import-artifact-alert',
+          message: 'Artifacts uploaded successfully.',
+          variant: 'info',
+        },
+      ]);
     });
 
     it('clicking on secondary button clears the form', async () => {
@@ -301,7 +309,7 @@ describe('ModelVersionCreate', () => {
       beforeEach(async () => {
         createWrapper();
         findVersionInput().vm.$emit('input', '1.0.0');
-        zone().vm.$emit('change', file);
+        zone().vm.$emit('change', files);
         await nextTick();
         uploadModel.mockRejectedValueOnce('Artifact import error.');
 
@@ -311,7 +319,13 @@ describe('ModelVersionCreate', () => {
       it('Visits the model versions page upon successful create mutation', async () => {
         await submitForm();
 
-        expect(visitUrl).toHaveBeenCalledWith('/some/project/-/ml/models/1/versions/1');
+        expect(visitUrlWithAlerts).toHaveBeenCalledWith('/some/project/-/ml/models/1/versions/1', [
+          {
+            id: 'import-artifact-alert',
+            message: 'Artifact uploads completed with errors. file.txt: Artifact import error.',
+            variant: 'danger',
+          },
+        ]);
       });
 
       it('Uploads the model upon retry', async () => {

@@ -1,6 +1,6 @@
 ---
 stage: Plan
-group: Project Management
+group: Knowledge
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
@@ -50,7 +50,8 @@ You can use GitLab Flavored Markdown in the following areas:
 You can also use other rich text files in GitLab. You might have to install a dependency
 to do so. For more information, see the [`gitlab-markup` gem project](https://gitlab.com/gitlab-org/gitlab-markup).
 
-Support for improvements to Markdown preview when using GitLab Flavored Markdown in the Web IDE is proposed in [issue 645](https://gitlab.com/gitlab-org/gitlab-vscode-extension/-/issues/645).
+Support for GitLab Flavored Markdown preview in the Web IDE is proposed in
+[issue 645](https://gitlab.com/gitlab-org/gitlab-vscode-extension/-/issues/645).
 
 ### Differences between GitLab Flavored Markdown and standard Markdown
 
@@ -1039,7 +1040,7 @@ $$
 
 When creating tables:
 
-- The first line contains the headers, separated by "pipes" (`|`).
+- The first line contains the headers, separated by pipe characters (`|`).
 - The second line separates the headers from the cells.
   - The cells can contain only empty spaces, hyphens, and (optionally) colons for horizontal alignment.
   - Each cell must contain at least one hyphen, but adding more hyphens to a cell does not change the cell's rendering.

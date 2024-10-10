@@ -9,6 +9,7 @@ import {
   VISIBILITY_LEVEL_INTERNAL_INTEGER,
   VISIBILITY_LEVEL_PUBLIC_INTEGER,
 } from '~/visibility_level/constants';
+import CascadingLockIcon from '~/namespaces/cascading_settings/components/cascading_lock_icon.vue';
 import {
   visibilityLevelDescriptions,
   featureAccessLevelMembers,
@@ -19,6 +20,7 @@ import {
   modelExperimentsHelpPath,
   modelRegistryHelpPath,
   duoHelpPath,
+  pipelineExecutionPoliciesHelpPath,
 } from '../constants';
 import { toggleHiddenClassBySelector } from '../external';
 import ProjectFeatureSetting from './project_feature_setting.vue';
@@ -90,6 +92,13 @@ export default {
     showDiffPreviewHelpText: s__(
       'ProjectSettings|Emails are not encrypted. Concerned administrators may want to disable diff previews.',
     ),
+    pipelineExecutionPoliciesLabel: s__('ProjectSettings|Pipeline execution policies'),
+    sppRepositoryPipelineAccessLabel: s__(
+      'ProjectSettings|Grant access to the CI/CD configurations for projects linked to this security policy project as the source for security policies.',
+    ),
+    sppRepositoryPipelineAccessHelpText: s__(
+      'ProjectSettings|Allow users and tokens read-only access to fetch security policy configurations in this project to enforce policies. %{linkStart}Learn more%{linkEnd}.',
+    ),
   },
   VISIBILITY_LEVEL_PRIVATE_INTEGER,
   VISIBILITY_LEVEL_INTERNAL_INTEGER,
@@ -97,10 +106,12 @@ export default {
   modelExperimentsHelpPath,
   modelRegistryHelpPath,
   duoHelpPath,
+  pipelineExecutionPoliciesHelpPath,
   components: {
     CiCatalogSettings,
     ProjectFeatureSetting,
     ProjectSettingRow,
+    CascadingLockIcon,
     GlButton,
     GlIcon,
     GlSprintf,
@@ -114,6 +125,7 @@ export default {
       ),
   },
   mixins: [settingsMixin, glFeatureFlagMixin()],
+  inject: ['cascadingSettingsData'],
   props: {
     requestCveAvailable: {
       type: Boolean,
@@ -276,6 +288,16 @@ export default {
       type: String,
       required: true,
     },
+    sppRepositoryPipelineAccessLocked: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    policySettingsAvailable: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
   },
   data() {
     const defaults = {
@@ -308,6 +330,7 @@ export default {
       showDiffPreviewInEmail: true,
       cveIdRequestEnabled: true,
       duoFeaturesEnabled: false,
+      sppRepositoryPipelineAccess: false,
       featureAccessLevelEveryone,
       featureAccessLevelMembers,
       featureAccessLevel,
@@ -415,11 +438,14 @@ export default {
         this.showDiffPreviewInEmail = newValue;
       },
     },
-    showDuoSettings() {
-      return this.licensedAiFeaturesAvailable;
+    showCascadingButton() {
+      return (
+        this.duoFeaturesLocked &&
+        this.cascadingSettingsData &&
+        Object.keys(this.cascadingSettingsData).length
+      );
     },
   },
-
   watch: {
     visibilityLevel(value, oldValue) {
       if (value === VISIBILITY_LEVEL_PRIVATE_INTEGER) {
@@ -1050,13 +1076,23 @@ export default {
         />
       </project-setting-row>
       <project-setting-row
-        v-if="showDuoSettings"
+        v-if="licensedAiFeaturesAvailable"
         data-testid="duo-settings"
         :label="$options.i18n.duoLabel"
         :help-text="$options.i18n.duoHelpText"
         :help-path="$options.duoHelpPath"
         :locked="duoFeaturesLocked"
       >
+        <template #label-icon>
+          <cascading-lock-icon
+            v-if="showCascadingButton"
+            data-testid="duo-cascading-lock-icon"
+            :is-locked-by-group-ancestor="cascadingSettingsData.lockedByAncestor"
+            :is-locked-by-application-settings="cascadingSettingsData.lockedByApplicationSetting"
+            :ancestor-namespace="cascadingSettingsData.ancestorNamespace"
+            class="gl-ml-1"
+          />
+        </template>
         <gl-toggle
           v-model="duoFeaturesEnabled"
           class="gl-mb-4 gl-mt-2"
@@ -1138,6 +1174,34 @@ export default {
       :full-path="confirmationPhrase"
     />
     <other-project-settings />
+    <project-setting-row
+      v-if="policySettingsAvailable"
+      data-testid="pipeline-execution-policy-settings"
+    >
+      <label>
+        <h5>{{ $options.i18n.pipelineExecutionPoliciesLabel }}</h5>
+        <input
+          :value="sppRepositoryPipelineAccess"
+          type="hidden"
+          name="project[project_setting_attributes][spp_repository_pipeline_access]"
+        />
+        <gl-form-checkbox
+          v-model="sppRepositoryPipelineAccess"
+          :disabled="sppRepositoryPipelineAccessLocked"
+        >
+          {{ $options.i18n.sppRepositoryPipelineAccessLabel }}
+          <template #help>
+            <gl-sprintf :message="$options.i18n.sppRepositoryPipelineAccessHelpText">
+              <template #link="{ content }">
+                <gl-link :href="$options.pipelineExecutionPoliciesHelpPath" target="_blank">{{
+                  content
+                }}</gl-link>
+              </template>
+            </gl-sprintf>
+          </template>
+        </gl-form-checkbox>
+      </label>
+    </project-setting-row>
     <confirm-danger
       v-if="isVisibilityReduced"
       button-variant="confirm"

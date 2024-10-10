@@ -3,7 +3,6 @@
 module UsageDataHelpers
   COUNTS_KEYS = %i[
     assignee_lists
-    ci_builds
     ci_external_pipelines
     ci_pipeline_config_auto_devops
     ci_pipeline_config_repository
@@ -28,13 +27,11 @@ module UsageDataHelpers
     clusters_integrations_prometheus
     clusters_management_project
     in_review_folder
-    grafana_integrated_projects
     groups
     issues
     issues_created_from_gitlab_error_tracking_ui
     issues_with_associated_zoom_link
     issues_using_zoom_quick_actions
-    issues_with_embedded_grafana_charts_approx
     incident_issues
     keys
     label_lists

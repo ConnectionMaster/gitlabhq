@@ -7,11 +7,17 @@ class PersonalAccessToken < ApplicationRecord
   include EachBatch
   include CreatedAtFilterable
   include Gitlab::SQL::Pattern
+  include SafelyChangeColumnDefault
+
   extend ::Gitlab::Utils::Override
 
   add_authentication_token_field :token,
     digest: true,
     format_with_prefix: :prefix_from_application_current_settings
+
+  columns_changing_default :organization_id
+
+  attribute :organization_id, default: -> { Organizations::Organization::DEFAULT_ORGANIZATION_ID }
 
   # PATs are 20 characters + optional configurable settings prefix (0..20)
   TOKEN_LENGTH_RANGE = (20..40)
@@ -29,11 +35,13 @@ class PersonalAccessToken < ApplicationRecord
   scope :active, -> { not_revoked.not_expired }
   scope :expiring_and_not_notified, ->(date) { where(["revoked = false AND expire_notification_delivered = false AND expires_at >= CURRENT_DATE AND expires_at <= ?", date]) }
   scope :expired_today_and_not_notified, -> { where(["revoked = false AND expires_at = CURRENT_DATE AND after_expiry_notification_delivered = false"]) }
+  scope :expired_before, ->(date) { expired.where(arel_table[:expires_at].lt(date)) }
   scope :inactive, -> { where("revoked = true OR expires_at < CURRENT_DATE") }
   scope :last_used_before_or_unused, ->(date) { where("personal_access_tokens.created_at < :date AND (last_used_at < :date OR last_used_at IS NULL)", date: date) }
   scope :with_impersonation, -> { where(impersonation: true) }
   scope :without_impersonation, -> { where(impersonation: false) }
   scope :revoked, -> { where(revoked: true) }
+  scope :revoked_before, ->(date) { revoked.where(arel_table[:updated_at].lt(date)) }
   scope :not_revoked, -> { where(revoked: [false, nil]) }
   scope :for_user, ->(user) { where(user: user) }
   scope :for_users, ->(users) { where(user: users) }

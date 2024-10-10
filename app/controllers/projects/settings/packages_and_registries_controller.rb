@@ -13,8 +13,7 @@ module Projects
       feature_category :package_registry
       urgency :low
 
-      def show
-      end
+      def show; end
 
       def cleanup_tags
         registry_settings_enabled!
@@ -38,7 +37,7 @@ module Projects
       end
 
       def set_feature_flag_container_registry_protected_containers
-        push_frontend_feature_flag(:container_registry_protected_containers, project)
+        push_frontend_feature_flag(:container_registry_protected_containers, project.root_ancestor)
       end
     end
   end

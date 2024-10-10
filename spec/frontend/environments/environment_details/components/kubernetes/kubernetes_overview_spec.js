@@ -3,19 +3,19 @@ import VueApollo from 'vue-apollo';
 import {
   GlEmptyState,
   GlAlert,
-  GlDrawer,
   GlSprintf,
   GlDisclosureDropdown,
   GlDisclosureDropdownItem,
 } from '@gitlab/ui';
 import { shallowMount } from '@vue/test-utils';
 import waitForPromises from 'helpers/wait_for_promises';
+import { stubComponent } from 'helpers/stub_component';
 import createMockApollo from 'helpers/mock_apollo_helper';
 import { useMockInternalEventsTracking } from 'helpers/tracking_internal_events_helper';
 import { createAlert } from '~/alert';
 import { getIdFromGraphQLId } from '~/graphql_shared/utils';
 import { createMockDirective, getBinding } from 'helpers/vue_mock_directive';
-import WorkloadDetails from '~/kubernetes_dashboard/components/workload_details.vue';
+import WorkloadDetailsDrawer from '~/kubernetes_dashboard/components/workload_details_drawer.vue';
 import KubernetesOverview from '~/environments/environment_details/components/kubernetes/kubernetes_overview.vue';
 import KubernetesStatusBar from '~/environments/environment_details/components/kubernetes/kubernetes_status_bar.vue';
 import KubernetesAgentInfo from '~/environments/environment_details/components/kubernetes/kubernetes_agent_info.vue';
@@ -24,8 +24,12 @@ import DeletePodModal from '~/environments/environment_details/components/kubern
 import { k8sResourceType } from '~/environments/graphql/resolvers/kubernetes/constants';
 import ConnectToAgentModal from '~/clusters_list/components/connect_to_agent_modal.vue';
 import { mockPodsTableItems } from 'jest/kubernetes_dashboard/graphql/mock_data';
-import eventHub from '~/environments/event_hub';
 import { CONNECT_MODAL_ID } from '~/clusters_list/constants';
+import {
+  FLUX_RECONCILE_ACTION,
+  FLUX_SUSPEND_ACTION,
+  FLUX_RESUME_ACTION,
+} from '~/environments/constants';
 import { agent, kubernetesNamespace } from '../../../graphql/mock_data';
 import { mockKasTunnelUrl, fluxResourceStatus, fluxKustomization } from '../../../mock_data';
 
@@ -59,6 +63,9 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
   const kustomizationResourcePath =
     'kustomize.toolkit.fluxcd.io/v1/namespaces/my-namespace/kustomizations/app';
 
+  const toggleDetailsDrawerSpy = jest.fn();
+  const closeDetailsDrawerSpy = jest.fn();
+
   let updateFluxResourceMutationMock;
   let fluxKustomizationQuery;
   let fluxHelmReleaseQuery;
@@ -90,7 +97,12 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
         fluxResourcePath,
       },
       apolloProvider,
-      stubs: { GlSprintf },
+      stubs: {
+        GlSprintf,
+        WorkloadDetailsDrawer: stubComponent(WorkloadDetailsDrawer, {
+          methods: { toggle: toggleDetailsDrawerSpy, close: closeDetailsDrawerSpy },
+        }),
+      },
       directives: {
         GlModalDirective: createMockDirective('gl-modal-directive'),
       },
@@ -102,12 +114,17 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
   const findKubernetesTabs = () => wrapper.findComponent(KubernetesTabs);
   const findEmptyState = () => wrapper.findComponent(GlEmptyState);
   const findAlert = () => wrapper.findComponent(GlAlert);
-  const findDrawer = () => wrapper.findComponent(GlDrawer);
-  const findWorkloadDetails = () => wrapper.findComponent(WorkloadDetails);
+  const findWorkloadDetailsDrawer = () => wrapper.findComponent(WorkloadDetailsDrawer);
   const findDeletePodModal = () => wrapper.findComponent(DeletePodModal);
   const findDisclosureDropdown = () => wrapper.findComponent(GlDisclosureDropdown);
   const findDisclosureDropdownItem = () => wrapper.findComponent(GlDisclosureDropdownItem);
   const findConnectModal = () => wrapper.findComponent(ConnectToAgentModal);
+
+  const itemHasAction = (action) => {
+    const { lastCall } = toggleDetailsDrawerSpy.mock;
+    const itemActions = lastCall?.[0]?.actions;
+    return Array.isArray(itemActions) && itemActions.includes(action);
+  };
 
   beforeEach(() => {
     updateFluxResourceMutationMock = jest.fn().mockResolvedValue({ errors: [] });
@@ -141,6 +158,7 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
         configuration,
         environmentName: defaultProps.environmentName,
         fluxResourcePath: kustomizationResourcePath,
+        fluxNamespace: '',
         namespace: kubernetesNamespace,
         resourceType: k8sResourceType.k8sPods,
         fluxApiError: '',
@@ -292,6 +310,12 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
             );
           });
 
+          it('provides correct `fluxNamespace` to KubernetesStatusBar', () => {
+            expect(findKubernetesStatusBar().props('fluxNamespace')).toBe(
+              fluxKustomization.metadata.namespace,
+            );
+          });
+
           it('provides correct `fluxKustomization` to KubernetesTabs', () => {
             expect(findKubernetesTabs().props('fluxKustomization')).toEqual(fluxKustomization);
           });
@@ -319,53 +343,18 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
     });
 
     describe('resource details drawer', () => {
-      it('is closed by default', () => {
+      beforeEach(() => {
         wrapper = createWrapper();
-
-        expect(findDrawer().props('open')).toBe(false);
       });
 
-      describe('when receives show-resource-details event from the tabs', () => {
-        beforeEach(() => {
-          wrapper = createWrapper();
-          findKubernetesTabs().vm.$emit('show-resource-details', mockPodsTableItems[0]);
-        });
+      it('renders workload-details-drawer', () => {
+        expect(findWorkloadDetailsDrawer().props('configuration')).toEqual(configuration);
+      });
 
-        it('opens the drawer', () => {
-          expect(findDrawer().props('open')).toBe(true);
-        });
+      it('toggles the details drawer when receives select-item event from the tabs', () => {
+        findKubernetesTabs().vm.$emit('select-item', mockPodsTableItems[0]);
 
-        it('provides the resource details to the drawer', () => {
-          expect(findWorkloadDetails().props('item')).toEqual(mockPodsTableItems[0]);
-        });
-
-        it('provides the agent access configuration to the drawer', () => {
-          expect(findWorkloadDetails().props('configuration')).toEqual(configuration);
-        });
-
-        it('renders a title with the selected item name', () => {
-          expect(findDrawer().text()).toContain(mockPodsTableItems[0].name);
-        });
-
-        it('is closed when clicked on a cross button', async () => {
-          const eventHubSpy = jest.spyOn(eventHub, '$emit');
-
-          expect(findDrawer().props('open')).toBe(true);
-
-          await findDrawer().vm.$emit('close');
-          expect(findDrawer().props('open')).toBe(false);
-          expect(eventHubSpy).toHaveBeenCalledWith('closeDetailsDrawer');
-        });
-
-        it('is closed on remove-selection event', async () => {
-          const eventHubSpy = jest.spyOn(eventHub, '$emit');
-
-          expect(findDrawer().props('open')).toBe(true);
-
-          await findKubernetesTabs().vm.$emit('remove-selection');
-          expect(findDrawer().props('open')).toBe(false);
-          expect(eventHubSpy).toHaveBeenCalledWith('closeDetailsDrawer');
-        });
+        expect(toggleDetailsDrawerSpy).toHaveBeenCalledWith(mockPodsTableItems[0]);
       });
 
       describe('when receives show-flux-resource-details event from the status bar', () => {
@@ -380,11 +369,7 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
           findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
         });
 
-        it('opens the drawer when gets selected item', () => {
-          expect(findDrawer().props('open')).toBe(true);
-        });
-
-        it('provides the resource details to the drawer', () => {
+        it('toggles the details drawer', () => {
           const selectedItem = {
             name: fluxKustomization.metadata.name,
             namespace: fluxKustomization.metadata.namespace,
@@ -394,109 +379,156 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
             kind: fluxKustomization.kind,
             spec: fluxKustomization.spec,
             fullStatus: fluxKustomization.status.conditions,
-            actions: [
-              {
-                name: 'flux-reconcile',
-                text: 'Trigger reconciliation',
-                icon: 'retry',
-              },
-            ],
+            actions: [FLUX_RECONCILE_ACTION, FLUX_SUSPEND_ACTION],
           };
-          expect(findWorkloadDetails().props('item')).toEqual(selectedItem);
-        });
 
-        it('renders a title with the selected item name', () => {
-          expect(findDrawer().text()).toContain(fluxKustomization.metadata.name);
+          expect(toggleDetailsDrawerSpy).toHaveBeenCalledWith(selectedItem);
         });
       });
     });
 
-    describe('flux reconciliation', () => {
+    describe('flux actions', () => {
       const { bindInternalEventDocument } = useMockInternalEventsTracking();
 
-      describe('when successful', () => {
-        beforeEach(async () => {
-          fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
-          updateFluxResourceMutationMock = jest.fn().mockResolvedValue({ errors: [] });
-          wrapper = createWrapper({
-            apolloProvider: createApolloProvider(),
-            fluxResourcePath: kustomizationResourcePath,
-          });
-          await waitForPromises();
-
-          findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
-          await nextTick();
-          findWorkloadDetails().vm.$emit('flux-reconcile', fluxKustomization);
+      it('contains reconcile action for the Flux resource', async () => {
+        fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
+        wrapper = createWrapper({
+          apolloProvider: createApolloProvider(),
+          fluxResourcePath: kustomizationResourcePath,
         });
+        await waitForPromises();
 
-        it('tracks `click_trigger_flux_reconciliation` event', () => {
-          const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
-          expect(trackEventSpy).toHaveBeenCalledWith(
-            'click_trigger_flux_reconciliation',
-            {},
-            undefined,
-          );
-        });
+        findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
+        await nextTick();
 
-        it('calls the mutation when receives `flux-reconcile` event', () => {
-          const body = JSON.stringify([
-            {
-              op: 'replace',
-              path: '/metadata/annotations/reconcile.fluxcd.io~1requestedAt',
-              value: new Date(),
-            },
-          ]);
-
-          expect(updateFluxResourceMutationMock).toHaveBeenCalledWith(
-            {},
-            {
-              configuration,
-              fluxResourcePath: kustomizationResourcePath,
-              data: body,
-            },
-            expect.anything(),
-            expect.anything(),
-          );
-        });
-
-        it('closes the drawer when mutation is successful', async () => {
-          expect(findDrawer().props('open')).toBe(true);
-          await waitForPromises();
-          expect(findDrawer().props('open')).toBe(false);
-        });
+        expect(itemHasAction(FLUX_RECONCILE_ACTION)).toBe(true);
       });
 
-      describe('when errored', () => {
-        const errorMessage = 'something went wrong';
+      it("contains suspend action for the Flux resource if it's not already suspended", async () => {
+        fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
+        wrapper = createWrapper({
+          apolloProvider: createApolloProvider(),
+          fluxResourcePath: kustomizationResourcePath,
+        });
+        await waitForPromises();
 
-        beforeEach(async () => {
-          fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
-          updateFluxResourceMutationMock = jest.fn().mockResolvedValue({ errors: [errorMessage] });
-          wrapper = createWrapper({
-            apolloProvider: createApolloProvider(),
-            fluxResourcePath: kustomizationResourcePath,
+        findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
+        await nextTick();
+
+        expect(itemHasAction(FLUX_SUSPEND_ACTION)).toBe(true);
+        expect(itemHasAction(FLUX_RESUME_ACTION)).toBe(false);
+      });
+
+      it('contains resume action for the Flux resource if it is already suspended', async () => {
+        const suspendedKustomization = {
+          ...fluxKustomization,
+          spec: {
+            ...fluxKustomization.spec,
+            suspend: true,
+          },
+        };
+        fluxKustomizationQuery = jest.fn().mockReturnValue(suspendedKustomization);
+        wrapper = createWrapper({
+          apolloProvider: createApolloProvider(),
+          fluxResourcePath: kustomizationResourcePath,
+        });
+        await waitForPromises();
+
+        findKubernetesStatusBar().vm.$emit('show-flux-resource-details', suspendedKustomization);
+        await nextTick();
+
+        expect(itemHasAction(FLUX_SUSPEND_ACTION)).toBe(false);
+        expect(itemHasAction(FLUX_RESUME_ACTION)).toBe(true);
+      });
+
+      const fluxReconcileUpdateData = {
+        path: '/metadata/annotations/reconcile.fluxcd.io~1requestedAt',
+        value: new Date(),
+      };
+
+      describe.each`
+        action              | event                                  | updateData
+        ${'flux-reconcile'} | ${'click_trigger_flux_reconciliation'} | ${fluxReconcileUpdateData}
+        ${'flux-suspend'}   | ${'click_trigger_flux_suspend'}        | ${{ path: '/spec/suspend', value: true }}
+        ${'flux-resume'}    | ${'click_trigger_flux_resume'}         | ${{ path: '/spec/suspend', value: false }}
+      `('with $action action', ({ action, event, updateData }) => {
+        describe('when successful', () => {
+          beforeEach(async () => {
+            fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
+            updateFluxResourceMutationMock = jest.fn().mockResolvedValue({ errors: [] });
+            wrapper = createWrapper({
+              apolloProvider: createApolloProvider(),
+              fluxResourcePath: kustomizationResourcePath,
+            });
+            await waitForPromises();
+
+            findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
+            await nextTick();
+            findWorkloadDetailsDrawer().vm.$emit(action, fluxKustomization);
           });
-          await waitForPromises();
 
-          findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
-          await nextTick();
-          findWorkloadDetails().vm.$emit('flux-reconcile', fluxKustomization);
-          await waitForPromises();
+          it(`tracks '${event}' event`, () => {
+            const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
+            expect(trackEventSpy).toHaveBeenCalledWith(event, {}, undefined);
+          });
+
+          it(`calls the mutation when receives '${action}' event`, () => {
+            const body = JSON.stringify([
+              {
+                op: 'replace',
+                ...updateData,
+              },
+            ]);
+
+            expect(updateFluxResourceMutationMock).toHaveBeenCalledWith(
+              {},
+              {
+                configuration,
+                fluxResourcePath: kustomizationResourcePath,
+                data: body,
+              },
+              expect.anything(),
+              expect.anything(),
+            );
+          });
+
+          it('closes the details drawer when mutation is successful', async () => {
+            expect(closeDetailsDrawerSpy).not.toHaveBeenCalled();
+            await waitForPromises();
+            expect(closeDetailsDrawerSpy).toHaveBeenCalledTimes(1);
+          });
         });
 
-        it('tracks `click_trigger_flux_reconciliation` event', () => {
-          const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
-          expect(trackEventSpy).toHaveBeenCalledWith(
-            'click_trigger_flux_reconciliation',
-            {},
-            undefined,
-          );
-        });
+        describe('when errored', () => {
+          const errorMessage = 'something went wrong';
 
-        it('shows error alert if the pod was not deleted', () => {
-          expect(createAlert).toHaveBeenCalledWith({
-            message: `Error: ${errorMessage}`,
-            variant: 'danger',
+          beforeEach(async () => {
+            fluxKustomizationQuery = jest.fn().mockReturnValue(fluxKustomization);
+            updateFluxResourceMutationMock = jest
+              .fn()
+              .mockResolvedValue({ errors: [errorMessage] });
+            wrapper = createWrapper({
+              apolloProvider: createApolloProvider(),
+              fluxResourcePath: kustomizationResourcePath,
+            });
+            await waitForPromises();
+
+            findKubernetesStatusBar().vm.$emit('show-flux-resource-details', fluxKustomization);
+            await nextTick();
+            findWorkloadDetailsDrawer().vm.$emit(action, fluxKustomization);
+            await waitForPromises();
+          });
+
+          it(`tracks '${event}' event`, () => {
+            const { trackEventSpy } = bindInternalEventDocument(wrapper.element);
+            expect(trackEventSpy).toHaveBeenCalledWith(event, {}, undefined);
+          });
+
+          it('shows error alert', () => {
+            expect(createAlert).toHaveBeenCalledWith({
+              message: `Error: ${errorMessage}`,
+              variant: 'danger',
+            });
           });
         });
       });
@@ -529,10 +561,19 @@ describe('~/environments/environment_details/components/kubernetes/kubernetes_ov
         const podToDelete = mockPodsTableItems[1];
         findKubernetesTabs().vm.$emit('show-resource-details', mockPodsTableItems[1]);
         await nextTick();
-        findWorkloadDetails().vm.$emit('delete-pod', podToDelete);
+        findWorkloadDetailsDrawer().vm.$emit('delete-pod', podToDelete);
         await nextTick();
 
         expect(findDeletePodModal().props('pod')).toEqual(podToDelete);
+      });
+
+      it('closes the details drawer when pod is deleted', async () => {
+        expect(closeDetailsDrawerSpy).not.toHaveBeenCalled();
+
+        findDeletePodModal().vm.$emit('pod-deleted');
+        await nextTick();
+
+        expect(closeDetailsDrawerSpy).toHaveBeenCalledTimes(1);
       });
     });
 

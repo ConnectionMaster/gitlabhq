@@ -29,11 +29,9 @@ module Users
       !user_dismissed?(GCP_SIGNUP_OFFER)
     end
 
-    def render_dashboard_ultimate_trial(user)
-    end
+    def render_dashboard_ultimate_trial(user); end
 
-    def render_two_factor_auth_recovery_settings_check
-    end
+    def render_two_factor_auth_recovery_settings_check; end
 
     def show_suggest_popover?
       !user_dismissed?(SUGGEST_POPOVER_DISMISSED)
@@ -57,15 +55,14 @@ module Users
 
     def show_openssl_callout?
       return false unless Gitlab.version_info >= Gitlab::VersionInfo.new(17, 1) &&
-        Gitlab.version_info < Gitlab::VersionInfo.new(17, 5)
+        Gitlab.version_info < Gitlab::VersionInfo.new(17, 7)
 
       current_user&.can_admin_all_resources? &&
         !user_dismissed?(OPENSSL_CALLOUT) &&
         controller.controller_path.match?(%r{^admin(/\S*)?$})
     end
 
-    def dismiss_two_factor_auth_recovery_settings_check
-    end
+    def dismiss_two_factor_auth_recovery_settings_check; end
 
     def show_security_newsletter_user_callout?
       current_user&.can_admin_all_resources? &&

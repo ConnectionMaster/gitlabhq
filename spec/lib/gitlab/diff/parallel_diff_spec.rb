@@ -60,5 +60,14 @@ RSpec.describe Gitlab::Diff::ParallelDiff do
 
       expect(subject.parallelize).to eq(expected)
     end
+
+    it 'works as a static method' do
+      diff_lines = [Gitlab::Diff::Line.new("", 'match', nil, 1, 1)]
+      expect(described_class.parallelize(diff_lines)).to eq([
+        {
+          left: diff_lines[0], right: diff_lines[0]
+        }
+      ])
+    end
   end
 end

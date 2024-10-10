@@ -457,10 +457,6 @@ class Repository
     expire_status_cache
 
     repository_event(:create_repository)
-
-    return unless project.present?
-
-    project.run_after_commit_or_now { Onboarding::ProgressWorker.perform_async(namespace_id, 'git_write') }
   end
 
   # Runs code just before a repository is deleted.
@@ -894,7 +890,7 @@ class Repository
     end
 
     skip_target_sha = options.delete(:skip_target_sha)
-    unless skip_target_sha || Feature.disabled?(:validate_target_sha_in_user_commit_files, project)
+    unless skip_target_sha
       options[:target_sha] = self.commit(options[:branch_name])&.sha
     end
 

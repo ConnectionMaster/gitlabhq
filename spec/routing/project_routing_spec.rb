@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe 'project routing' do
+RSpec.describe 'project routing', feature_category: :groups_and_projects do
   let(:base_params) { { namespace_id: 'gitlab', project_id: 'gitlabhq' } }
 
   before do
@@ -75,6 +75,7 @@ RSpec.describe 'project routing' do
   describe Projects::RedirectController, 'routing' do
     it 'to #redirect_from_id' do
       expect(get('/projects/1')).to route_to('projects/redirect#redirect_from_id', id: '1')
+      expect(get('/-/p/1')).to route_to('projects/redirect#redirect_from_id', id: '1')
     end
   end
 
@@ -239,7 +240,13 @@ RSpec.describe 'project routing' do
 
     it_behaves_like 'redirecting a legacy path',
       '/gitlab/gitlabhq/refs/feature%2345/logs_tree/../../../../../@example.com/tree/a',
-      '/gitlab/gitlabhq/-/refs/feature#45/logs_tree/../../../../../-/example.com/tree/a'
+      '/gitlab/gitlabhq/-/refs/feature#45/logs_tree/../../../../../-/example.com/tree/a' do
+      before do
+        # TODO: remove spec once the feature flag is removed
+        # https://gitlab.com/gitlab-org/gitlab/-/issues/415460
+        stub_feature_flags(check_path_traversal_middleware_reject_requests: false)
+      end
+    end
   end
 
   describe Projects::MergeRequestsController, 'routing' do

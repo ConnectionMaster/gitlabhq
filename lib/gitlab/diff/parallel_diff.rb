@@ -5,17 +5,12 @@ module Gitlab
     class ParallelDiff
       attr_accessor :diff_file
 
-      def initialize(diff_file)
-        @diff_file = diff_file
-      end
-
-      def parallelize
+      def self.parallelize(diff_lines)
         i = 0
         free_right_index = nil
 
         lines = []
-        highlighted_diff_lines = diff_file.highlighted_diff_lines
-        highlighted_diff_lines.each do |line|
+        diff_lines.each do |line|
           if line.removed?
             lines << {
               left: line,
@@ -57,6 +52,14 @@ module Gitlab
         end
 
         lines
+      end
+
+      def initialize(diff_file)
+        @diff_file = diff_file
+      end
+
+      def parallelize
+        self.class.parallelize(diff_file.highlighted_diff_lines)
       end
     end
   end

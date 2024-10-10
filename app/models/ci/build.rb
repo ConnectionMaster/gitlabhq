@@ -230,6 +230,7 @@ module Ci
     scope :with_pipeline_source_type, ->(pipeline_source_type) { joins(:pipeline).where(pipeline: { source: pipeline_source_type }) }
     scope :created_after, ->(time) { where(arel_table[:created_at].gt(time)) }
     scope :updated_after, ->(time) { where(arel_table[:updated_at].gt(time)) }
+    scope :for_project_ids, ->(project_ids) { where(project_id: project_ids) }
 
     add_authentication_token_field :token,
       encrypted: :required,
@@ -385,13 +386,15 @@ module Ci
       after_transition any => [:failed] do |build|
         next unless build.project
 
-        if build.auto_retry_allowed?
-          begin
-            # rubocop: disable CodeReuse/ServiceClass
-            Ci::RetryJobService.new(build.project, build.user).execute(build)
-            # rubocop: enable CodeReuse/ServiceClass
-          rescue Gitlab::Access::AccessDeniedError => e
-            Gitlab::AppLogger.error "Unable to auto-retry job #{build.id}: #{e}"
+        build.run_after_commit do
+          if build.auto_retry_allowed?
+            begin
+              # rubocop: disable CodeReuse/ServiceClass -- https://gitlab.com/gitlab-org/gitlab/-/issues/494865
+              Ci::RetryJobService.new(build.project, build.user).execute(build)
+              # rubocop: enable CodeReuse/ServiceClass
+            rescue Gitlab::Access::AccessDeniedError => e
+              Gitlab::AppLogger.error "Unable to auto-retry job #{build.id}: #{e}"
+            end
           end
         end
       end
@@ -957,7 +960,7 @@ module Ci
     end
 
     def multi_build_steps?
-      options.dig(:release)&.any?
+      options[:release]&.any?
     end
 
     def hide_secrets(data, metrics = ::Gitlab::Ci::Trace::Metrics.new)

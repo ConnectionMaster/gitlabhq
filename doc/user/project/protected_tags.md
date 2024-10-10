@@ -21,14 +21,14 @@ Each rule allows you to match either:
 - An individual tag name.
 - Wildcards to control multiple tags at once.
 
-This feature evolved out of [protected branches](protected_branches.md).
+This feature evolved out of [protected branches](repository/branches/protected.md).
 
 ## Who can modify a protected tag
 
 By default:
 
-- To create tags, you must have the Maintainer role.
-- No one can update or delete tags.
+- To create or delete tags, you must have the Maintainer role.
+- Protected tags [can only be deleted](#delete-a-protected-tag) using the UI or API.
 
 ## Configuring protected tags
 
@@ -75,7 +75,7 @@ In that case, if _any_ of these protected tags have a setting like
 If you select a protected tag's name, GitLab displays a list of
 all matching tags:
 
-![Protected tag matches](img/protected_tag_matches.png)
+![Protected tag matches](img/protected_tag_matches_v9_1.png)
 
 ## Prevent tag creation with the same name as branches
 
@@ -124,6 +124,16 @@ To allow a deploy key to create a protected tag:
 1. From the **Tag** dropdown list, select the tag you want to protect.
 1. From the **Allowed to create** list, select the deploy key.
 1. Select **Protect**.
+
+## Run pipelines on protected tags
+
+The permissions to create protected tags define if a user can:
+
+- Initiate and run CI/CD pipelines.
+- Execute actions on jobs associated with these tags.
+
+These permissions ensure that only authorized users can trigger and manage
+CI/CD processes for protected tags.
 
 ## Delete a protected tag
 

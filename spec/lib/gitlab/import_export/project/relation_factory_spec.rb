@@ -30,6 +30,7 @@ RSpec.describe Gitlab::ImportExport::Project::RelationFactory, :use_clean_rails_
     stub_const('FooModel', Class.new)
     FooModel.class_eval do
       include ActiveModel::Model
+      include ActiveModel::AttributeMethods
 
       def initialize(params = {})
         params.each { |key, value| send("#{key}=", value) }
@@ -505,7 +506,7 @@ RSpec.describe Gitlab::ImportExport::Project::RelationFactory, :use_clean_rails_
     end
   end
 
-  describe 'protected branch access levels' do
+  describe 'protected refs access levels' do
     shared_examples 'access levels' do
       let(:relation_hash) { { 'access_level' => access_level, 'created_at' => '2022-03-29T09:53:13.457Z', 'updated_at' => '2022-03-29T09:54:13.457Z' } }
 
@@ -562,16 +563,26 @@ RSpec.describe Gitlab::ImportExport::Project::RelationFactory, :use_clean_rails_
       end
     end
 
-    describe 'merge access level' do
-      let(:relation_sym) { :'ProtectedBranch::MergeAccessLevel' }
+    describe 'protected branch access levels' do
+      context 'merge access level' do
+        let(:relation_sym) { :'ProtectedBranch::MergeAccessLevel' }
 
-      include_examples 'access levels'
+        include_examples 'access levels'
+      end
+
+      context 'push access level' do
+        let(:relation_sym) { :'ProtectedBranch::PushAccessLevel' }
+
+        include_examples 'access levels'
+      end
     end
 
-    describe 'push access level' do
-      let(:relation_sym) { :'ProtectedBranch::PushAccessLevel' }
+    describe 'protected tag access levels' do
+      context 'create access level' do
+        let(:relation_sym) { :'ProtectedTag::CreateAccessLevel' }
 
-      include_examples 'access levels'
+        include_examples 'access levels'
+      end
     end
   end
 

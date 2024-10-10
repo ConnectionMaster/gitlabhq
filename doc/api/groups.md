@@ -202,7 +202,7 @@ Parameters:
 
 | Attribute                | Type              | Required | Description |
 | ------------------------ | ----------------- | -------- | ----------- |
-| `id`                     | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) of the immediate parent group |
+| `id`                     | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) of the immediate parent group |
 | `skip_groups`            | array of integers | no       | Skip the group IDs passed |
 | `all_available`          | boolean           | no       | Show all the groups you have access to (defaults to `false` for authenticated users, `true` for administrators); Attributes `owned` and `min_access_level` have precedence |
 | `search`                 | string            | no       | Return the list of authorized groups matching the search criteria. Only subgroup short paths are searched (not full paths) |
@@ -277,7 +277,7 @@ Parameters:
 
 | Attribute                | Type              | Required | Description |
 | ------------------------ | ----------------- | -------- | ----------- |
-| `id`                     | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) of the immediate parent group |
+| `id`                     | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) of the immediate parent group |
 | `skip_groups`            | array of integers | no       | Skip the group IDs passed |
 | `all_available`          | boolean           | no       | Show all the groups you have access to (defaults to `false` for authenticated users, `true` for administrators). Attributes `owned` and `min_access_level` have precedence |
 | `search`                 | string            | no       | Return the list of authorized groups matching the search criteria. Only descendant group short paths are searched (not full paths) |
@@ -394,7 +394,7 @@ Parameters:
 
 | Attribute                              | Type           | Required | Description |
 | -------------------------------------- | -------------- | -------- | ----------- |
-| `id`                                   | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`                                   | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `archived`                             | boolean        | no       | Limit by archived status |
 | `visibility`                           | string         | no       | Limit by visibility `public`, `internal`, or `private` |
 | `order_by`                             | string         | no       | Return projects ordered by `id`, `name`, `path`, `created_at`, `updated_at`, `similarity` <sup>1</sup>, `star_count` or `last_activity_at` fields. Default is `created_at` |
@@ -476,7 +476,7 @@ Parameters:
 
 | Attribute                             | Type              | Required | Description |
 | ------------------------------------- | ----------------- | -------- | ---------- |
-| `id`                                  | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`                                  | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `skip_groups`                         | array of integers | no       | Skip the specified group IDs |
 | `search`                              | string            | no       | Return the list of authorized groups matching the search criteria |
 | `order_by`                            | string            | no       | Order groups by `name`, `path`, `id`, or `similarity`. Default is `name` |
@@ -555,7 +555,7 @@ Parameters:
 
 | Attribute                             | Type              | Required | Description |
 | ------------------------------------- | ----------------- | -------- | ---------- |
-| `id`                                  | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`                                  | integer/string    | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `search`                              | string            | no       | Return the list of authorized groups matching the search criteria |
 | `min_access_level`                    | integer           | no       | Limit to groups where current user has at least the specified [role (`access_level`)](members.md#roles) |
 | `relation`                            | array of strings  | no       | Filter the groups by relation (direct or inherited) |
@@ -633,7 +633,7 @@ Parameters:
 
 | Attribute                     | Type           | Required | Description |
 | ----------------------------- | -------------- | -------- | ----------- |
-| `id`                          | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) owned by the authenticated user |
+| `id`                          | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `archived`                    | boolean        | no       | Limit by archived status |
 | `visibility`                  | string         | no       | Limit by visibility `public`, `internal`, or `private` |
 | `order_by`                    | string         | no       | Return projects ordered by `id`, `name`, `path`, `created_at`, `updated_at`, `star_count` or `last_activity_at` fields. Default is `created_at` |
@@ -771,7 +771,7 @@ Parameters:
 
 | Attribute                | Type           | Required | Description |
 | ------------------------ | -------------- | -------- | ----------- |
-| `id`                     | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `id`                     | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths). |
 | `with_custom_attributes` | boolean        | no       | Include [custom attributes](custom_attributes.md) in response (administrators only). |
 | `with_projects`          | boolean        | no       | Include details from projects that belong to the specified group (defaults to `true`). (Deprecated, [scheduled for removal in API v5](https://gitlab.com/gitlab-org/gitlab/-/issues/213797). To get the details of all projects within a group, use the [list a group's projects endpoint](#list-a-groups-projects).)  |
 
@@ -1129,8 +1129,8 @@ Parameters:
 
 | Attribute    | Type           | Required | Description |
 | ------------ | -------------- | -------- | ----------- |
-| `id`         | integer/string | yes      | The ID or [URL-encoded path of the target group](rest/index.md#namespaced-path-encoding) |
-| `project_id` | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) |
+| `id`         | integer/string | yes      | The ID or [URL-encoded path of the target group](rest/index.md#namespaced-paths) |
+| `project_id` | integer/string | yes      | The ID or [URL-encoded path of the project](rest/index.md#namespaced-paths) |
 
 ```shell
 curl --request POST --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -1149,7 +1149,7 @@ GET /groups/:id/transfer_locations
 
 | Attribute   | Type           | Required               | Description |
 |-------------|----------------|------------------------|-------------|
-| `id`        | integer or string | Yes | The ID or [URL-encoded path of the group to be transferred](rest/index.md#namespaced-path-encoding). |
+| `id`        | integer or string | Yes | The ID or [URL-encoded path of the group to be transferred](rest/index.md#namespaced-paths). |
 | `search` | string | No  | The group names to search for. |
 
 Example request:
@@ -1406,14 +1406,14 @@ Parameters:
 
 | Attribute            | Type             | Required | Description                                                                                                                                                 |
 |----------------------|------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `id`                 | integer/string   | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding)                                                                                |
+| `id`                 | integer/string   | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths)                                                                                |
 | `permanently_remove` | boolean/string   | no       | Immediately deletes a subgroup if it is marked for deletion. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/368276) in GitLab 15.4. Premium and Ultimate only. |
 | `full_path`   | string           | no       | Full path of subgroup to use with `permanently_remove`. [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/368276) in GitLab 15.4. To find the subgroup path, see the [group details](groups.md#details-of-a-group). Premium and Ultimate only. |
 
 The response is `202 Accepted` if the user has authorization.
 
 NOTE:
-A GitLab.com group can't be deleted if it is linked to a subscription. To delete such a group, first [link the subscription](../subscriptions/gitlab_com/index.md#change-the-linked-group) with a different group.
+A GitLab.com group can't be deleted if it is linked to a subscription. To delete such a group, first [link the subscription](../subscriptions/gitlab_com/index.md#link-subscription-to-a-group) with a different group.
 
 ## Restore group marked for deletion
 
@@ -1431,7 +1431,7 @@ Parameters:
 
 | Attribute       | Type           | Required | Description |
 | --------------- | -------------- | -------- | ----------- |
-| `id`            | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
+| `id`            | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 
 ## Search for group
 
@@ -1470,7 +1470,7 @@ Parameters:
 
 | Attribute        | Type           | Required | Description                                                              |
 |:-----------------|:---------------|:---------|:-------------------------------------------------------------------------|
-| `id`             | integer/string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
+| `id`             | integer/string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `username`       | string         | no       | Return single user with a specific username                              |
 | `search`         | string         | no       | Search users by name, email, username                                    |
 | `active`         | boolean        | no       | Return only active users                                                 |
@@ -1556,12 +1556,12 @@ Parameters:
 
 | Attribute                  | Type           | Required                  | Description                                                                    |
 |:---------------------------|:---------------|:--------------------------|:-------------------------------------------------------------------------------|
-| `id`                       | integer/string | yes                       | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding). |
+| `id`                       | integer/string | yes                       | ID or [URL-encoded path of the group](rest/index.md#namespaced-paths). |
 | `include_saml_users`       | boolean        | yes (see description)  | Include users with a SAML identity. Either this value or `include_service_accounts` must be `true`. |
 | `include_service_accounts` | boolean        | yes (see description)  | Include service account users. Either this value or `include_saml_users` must be `true`. |
 | `search`                   | string         | no                        | Search users by name, email, username.                                         |
 
-If successful, returns [`200 OK`](../api/rest/index.md#status-codes) and the
+If successful, returns [`200 OK`](../api/rest/troubleshooting.md#status-codes) and the
 following response attributes:
 
 Example response:
@@ -1613,99 +1613,6 @@ Example response:
 ]
 ```
 
-## Markdown uploads
-
-Markdown uploads are files uploaded to a group that can be referenced in Markdown text in an epic or wiki page.
-
-### List uploads
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/157066) in GitLab 17.2.
-
-Get all uploads of the group sorted by `created_at` in descending order.
-
-You must have at least the Maintainer role to use this endpoint.
-
-```plaintext
-GET /groups/:id/uploads
-```
-
-| Attribute | Type              | Required | Description |
-|-----------|-------------------|----------|-------------|
-| `id`      | integer or string | Yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding). |
-
-Example request:
-
-```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/5/uploads"
-```
-
-Returned object:
-
-```json
-[
-  {
-    "id": 1,
-    "size": 1024,
-    "filename": "image.png",
-    "created_at":"2024-06-20T15:53:03.067Z",
-    "uploaded_by": {
-      "id": 18,
-      "name" : "Alexandra Bashirian",
-      "username" : "eileen.lowe"
-    }
-  },
-  {
-    "id": 2,
-    "size": 512,
-    "filename": "other-image.png",
-    "created_at":"2024-06-19T15:53:03.067Z",
-    "uploaded_by": null
-  }
-]
-```
-
-### Download an uploaded file
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/157066) in GitLab 17.2.
-
-You must have at least the Maintainer role to use this endpoint.
-
-```plaintext
-GET /groups/:id/uploads/:upload_id
-```
-
-| Attribute   | Type              | Required | Description |
-|-------------|-------------------|----------|-------------|
-| `id`        | integer or string | Yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding). |
-| `upload_id` | integer           | Yes      | The ID of the upload. |
-
-Example request:
-
-```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/5/uploads/1"
-```
-
-### Delete an uploaded file
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/157066) in GitLab 17.2.
-
-You must have at least the Maintainer role to use this endpoint.
-
-```plaintext
-DELETE /groups/:id/uploads/:upload_id
-```
-
-| Attribute   | Type              | Required | Description |
-|-------------|-------------------|----------|-------------|
-| `id`        | integer or string | Yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding). |
-| `upload_id` | integer           | Yes      | The ID of the upload. |
-
-Example request:
-
-```shell
-curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/5/uploads/1"
-```
-
 ## Group audit events
 
 DETAILS:
@@ -1734,261 +1641,6 @@ Parameters:
 
 See the [Group Members](members.md) documentation.
 
-## LDAP Group Links
-
-List, add, and delete LDAP group links.
-
-### List LDAP group links
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** Self-managed
-
-Lists LDAP group links.
-
-```plaintext
-GET /groups/:id/ldap_group_links
-```
-
-| Attribute | Type           | Required | Description |
-| --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-
-### Add LDAP group link with CN or filter
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** Self-managed
-
-Adds an LDAP group link using a CN or filter. Adding a group link by filter is only supported in the Premium and Ultimate tier.
-
-```plaintext
-POST /groups/:id/ldap_group_links
-```
-
-| Attribute | Type           | Required | Description |
-| --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `cn`      | string         | no       | The CN of an LDAP group |
-| `filter`  | string         | no       | The LDAP filter for the group |
-| `group_access` | integer   | yes      | [Role (`access_level`)](members.md#roles) for members of the LDAP group |
-| `provider` | string        | yes      | LDAP provider for the LDAP group link |
-
-NOTE:
-To define the LDAP group link, provide either a `cn` or a `filter`, but not both.
-
-### Delete LDAP group link
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** Self-managed
-
-Deletes an LDAP group link. Deprecated. Scheduled for removal in a future release.
-
-```plaintext
-DELETE /groups/:id/ldap_group_links/:cn
-```
-
-| Attribute | Type           | Required | Description |
-| --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `cn`      | string         | yes      | The CN of an LDAP group |
-
-Deletes an LDAP group link for a specific LDAP provider. Deprecated. Scheduled for removal in a future release.
-
-```plaintext
-DELETE /groups/:id/ldap_group_links/:provider/:cn
-```
-
-| Attribute | Type           | Required | Description |
-| --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `cn`      | string         | yes      | The CN of an LDAP group |
-| `provider` | string        | yes      | LDAP provider for the LDAP group link |
-
-### Delete LDAP group link with CN or filter
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** Self-managed
-
-Deletes an LDAP group link using a CN or filter. Deleting by filter is only supported in the Premium and Ultimate tier.
-
-```plaintext
-DELETE /groups/:id/ldap_group_links
-```
-
-| Attribute | Type           | Required | Description |
-| --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `cn`      | string         | no       | The CN of an LDAP group |
-| `filter`  | string         | no       | The LDAP filter for the group |
-| `provider` | string        | yes       | LDAP provider for the LDAP group link |
-
-NOTE:
-To delete the LDAP group link, provide either a `cn` or a `filter`, but not both.
-
-## SAML Group Links
-
-DETAILS:
-**Tier:** Premium, Ultimate
-**Offering:** GitLab.com, Self-managed, GitLab Dedicated
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/290367) in GitLab 15.3.0.
-> - `access_level` type [changed](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/95607) from `string` to `integer` in GitLab 15.3.3.
-> - `member_role_id` type [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/417201) in GitLab 16.7 [with a flag](../administration/feature_flags.md) named `custom_roles_for_saml_group_links`. Disabled by default.
-> - `member_role_id` type [Generally available](https://gitlab.com/gitlab-org/gitlab/-/issues/417201) in GitLab 16.8. Feature flag `custom_roles_for_saml_group_links` removed.
-
-List, get, add, and delete SAML group links.
-
-### List SAML group links
-
-Lists SAML group links.
-
-```plaintext
-GET /groups/:id/saml_group_links
-```
-
-Supported attributes:
-
-| Attribute | Type           | Required | Description                                                              |
-|:----------|:---------------|:---------|:-------------------------------------------------------------------------|
-| `id`      | integer/string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-
-If successful, returns [`200`](rest/index.md#status-codes) and the following response attributes:
-
-| Attribute          | Type    | Description                                                                  |
-|:-------------------|:--------|:-----------------------------------------------------------------------------|
-| `[].name`          | string  | Name of the SAML group                                                       |
-| `[].access_level`  | integer | [Role (`access_level`)](members.md#roles) for members of the SAML group. The attribute had a string type from GitLab 15.3.0 to GitLab 15.3.3 |
-| `[].member_role_id` | integer | [Member Role ID (`member_role_id`)](member_roles.md) for members of the SAML group. |
-
-Example request:
-
-```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/1/saml_group_links"
-```
-
-Example response:
-
-```json
-[
-  {
-    "name": "saml-group-1",
-    "access_level": 10,
-    "member_role_id": 12
-  },
-  {
-    "name": "saml-group-2",
-    "access_level": 40,
-    "member_role_id": 99
-  }
-]
-```
-
-### Get SAML group link
-
-Get a SAML group link for the group.
-
-```plaintext
-GET /groups/:id/saml_group_links/:saml_group_name
-```
-
-Supported attributes:
-
-| Attribute          | Type           | Required | Description                                                              |
-|:-------------------|:---------------|:---------|:-------------------------------------------------------------------------|
-| `id`               | integer/string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `saml_group_name`  | string         | yes      | Name of an SAML group                                                    |
-
-If successful, returns [`200`](rest/index.md#status-codes) and the following response attributes:
-
-| Attribute      | Type    | Description                                                                  |
-|:---------------|:--------|:-----------------------------------------------------------------------------|
-| `name`         | string  | Name of the SAML group                                                       |
-| `access_level` | integer | [Role (`access_level`)](members.md#roles) for members of the SAML group. The attribute had a string type from GitLab 15.3.0 to GitLab 15.3.3 |
-| `member_role_id` | integer | [Member Role ID (`member_role_id`)](member_roles.md) for members of the SAML group. |
-
-Example request:
-
-```shell
-curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/1/saml_group_links/saml-group-1"
-```
-
-Example response:
-
-```json
-{
-"name": "saml-group-1",
-"access_level": 10,
-"member_role_id": 12
-}
-```
-
-### Add SAML group link
-
-Adds a SAML group link for a group.
-
-```plaintext
-POST /groups/:id/saml_group_links
-```
-
-Supported attributes:
-
-| Attribute          | Type           | Required | Description                                                                  |
-|:-------------------|:---------------|:---------|:-----------------------------------------------------------------------------|
-| `id`               | integer or string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding)     |
-| `saml_group_name`  | string         | yes      | Name of a SAML group                                                         |
-| `access_level`     | integer        | yes      | [Role (`access_level`)](members.md#roles) for members of the SAML group |
-| `member_role_id`   | integer        | no       | [Member Role ID (`member_role_id`)](member_roles.md) for members of the SAML group. |
-
-If successful, returns [`201`](rest/index.md#status-codes) and the following response attributes:
-
-| Attribute      | Type    | Description                                                                  |
-|:---------------|:--------|:-----------------------------------------------------------------------------|
-| `name`         | string  | Name of the SAML group                                                       |
-| `access_level` | integer | [Role (`access_level`)](members.md#roles) for members of the for members of the SAML group. The attribute had a string type from GitLab 15.3.0 to GitLab 15.3.3 |
-| `member_role_id` | integer | [Member Role ID (`member_role_id`)](member_roles.md) for members of the SAML group. |
-
-Example request:
-
-```shell
-curl --request POST --header "PRIVATE-TOKEN: <your_access_token>" --header "Content-Type: application/json" --data '{ "saml_group_name": "<your_saml_group_name`>", "access_level": <chosen_access_level>, "member_role_id": <chosen_member_role_id> }' --url  "https://gitlab.example.com/api/v4/groups/1/saml_group_links"
-```
-
-Example response:
-
-```json
-{
-"name": "saml-group-1",
-"access_level": 10,
-"member_role_id": 12
-}
-```
-
-### Delete SAML group link
-
-Deletes a SAML group link for the group.
-
-```plaintext
-DELETE /groups/:id/saml_group_links/:saml_group_name
-```
-
-Supported attributes:
-
-| Attribute          | Type           | Required | Description                                                              |
-|:-------------------|:---------------|:---------|:-------------------------------------------------------------------------|
-| `id`               | integer/string | yes      | ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
-| `saml_group_name`  | string         | yes      | Name of a SAML group                                                     |
-
-If successful, returns [`204`](rest/index.md#status-codes) status code without any response body.
-
-Example request:
-
-```shell
-curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/groups/1/saml_group_links/saml-group-1"
-```
-
 ## Namespaces in groups
 
 By default, groups only get 20 namespaces at a time because the API results are paginated.
@@ -2005,16 +1657,6 @@ And to switch pages add:
 /groups?per_page=100&page=2
 ```
 
-## Group badges
-
-Read more in the [Group Badges](group_badges.md) documentation.
-
-## Group Import/Export
-
-Read more in the [Group Import/Export](group_import_export.md)
-and [Group Relations Export](group_relations_export.md)
-documentation.
-
 ## Share Groups with Groups
 
 These endpoints create and delete links for sharing a group with another group. For more information, see the related discussion in the [GitLab Groups](../user/project/members/sharing_projects_groups.md#invite-a-group-to-a-group) page.
@@ -2029,7 +1671,7 @@ POST /groups/:id/share
 
 | Attribute | Type           | Required | Description |
 | --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
+| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `group_id` | integer | yes | The ID of the group to share with |
 | `group_access` | integer | yes | The [role (`access_level`)](members.md#roles) to grant the group |
 | `expires_at` | string | no | Share expiration date in ISO 8601 format: 2016-09-26 |
@@ -2044,7 +1686,7 @@ DELETE /groups/:id/share/:group_id
 
 | Attribute | Type           | Required | Description |
 | --------- | -------------- | -------- | ----------- |
-| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding) |
+| `id`      | integer/string | yes      | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths) |
 | `group_id` | integer | yes | The ID of the group to share with |
 
 ## Revoke Token
@@ -2068,8 +1710,8 @@ The following criteria must be met:
   - Personal access token
   - Group access token
   - Project access token
-  - Group Deploy Token
-  - User Feed Tokens
+  - Group deploy token
+  - User feed tokens
 
 Additional token types may be supported at a later date.
 
@@ -2079,10 +1721,10 @@ POST /groups/:id/tokens/revoke
 
 | Attribute   | Type           | Required               | Description |
 |-------------|----------------|------------------------|-------------|
-| `id`        | integer or string | Yes | The ID or [URL-encoded path of the group](rest/index.md#namespaced-path-encoding). |
+| `id`        | integer or string | Yes | The ID or [URL-encoded path of the group](rest/index.md#namespaced-paths). |
 | `token` | string | Yes  | The plaintext token. |
 
-If successful, returns [`200 OK`](rest/index.md#status-codes) and
+If successful, returns [`200 OK`](rest/troubleshooting.md#status-codes) and
 a JSON representation of the token. The attributes returned will vary by
 token type.
 

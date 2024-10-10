@@ -66,7 +66,7 @@ RSpec.describe OmniAuth::Strategies::Jwt do
 
           let(:private_key) { private_key_class ? private_key_class.new(secret) : secret }
 
-          it 'decodes the user information' do
+          it 'decodes the user information', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/463691' do
             result = subject.decoded
 
             expect(result).to eq(claims.stringify_keys)
@@ -84,7 +84,7 @@ RSpec.describe OmniAuth::Strategies::Jwt do
         }
       end
 
-      it 'raises error' do
+      it 'raises error', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/463692' do
         expect { subject.decoded }.to raise_error(OmniAuth::Strategies::Jwt::ClaimInvalid)
       end
     end
@@ -123,7 +123,7 @@ RSpec.describe OmniAuth::Strategies::Jwt do
         subject.options[:valid_within] = 2.seconds.to_s
       end
 
-      it 'raises error' do
+      it 'raises error', quarantine: 'https://gitlab.com/gitlab-org/gitlab/-/issues/463694' do
         expect { subject.decoded }.to raise_error(OmniAuth::Strategies::Jwt::ClaimInvalid)
       end
     end

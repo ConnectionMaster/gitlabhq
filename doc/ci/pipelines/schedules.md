@@ -17,7 +17,7 @@ Use scheduled pipelines to run GitLab CI/CD [pipelines](index.md) at regular int
 For a scheduled pipeline to run:
 
 - The schedule owner must have the Developer role. For pipelines on protected branches,
-  the schedule owner must be [allowed to merge](../../user/project/protected_branches.md#add-protection-to-existing-branches)
+  the schedule owner must be [allowed to merge](../../user/project/repository/branches/protected.md#add-protection-to-existing-branches)
   to the branch.
 - The `.gitlab-ci.yml` file must have valid syntax.
 
@@ -33,7 +33,7 @@ To add a pipeline schedule:
    - **Interval Pattern**: Select one of the preconfigured intervals, or enter a custom
      interval in [cron notation](../../topics/cron/index.md). You can use any cron value,
      but scheduled pipelines cannot run more frequently than the instance's
-     [maximum scheduled pipeline frequency](../../administration/cicd.md#change-maximum-scheduled-pipeline-frequency).
+     [maximum scheduled pipeline frequency](../../administration/cicd/index.md#change-maximum-scheduled-pipeline-frequency).
    - **Target branch or tag**: Select the branch or tag for the pipeline.
    - **Variables**: Add any number of [CI/CD variables](../variables/index.md) to the schedule.
      These variables are available only when the scheduled pipeline runs,

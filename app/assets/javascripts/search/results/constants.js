@@ -6,5 +6,14 @@ export const DEFAULT_SHOW_CHUNKS = 3;
 
 export const REF_FIELD_NAME = 'repository_ref';
 
-export const DEFAULT_THEME_COLOR = 'white';
 export const DEFAULT_HEADER_LABEL_COLOR = '#D9C2EE';
+
+export const CODE_THEME_DARK = 'dark';
+export const CODE_THEME_DEFAULT = 'white';
+export const CODE_THEME_NONE = 'none';
+export const CODE_THEME_MONOKAI = 'monokai';
+export const CODE_THEME_SOLARIZED_DARK = 'solarized-dark';
+export const CODE_THEME_SOLARIZED_LIGHT = 'solarized-light';
+
+export const BORDER_DARK = 'multimatch-divider-dark';
+export const BORDER_LIGHT = 'multimatch-divider-light';

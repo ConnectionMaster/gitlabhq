@@ -1,5 +1,5 @@
 %p
-  - link = link_to('', help_page_path('user/project/deploy_tokens/index'), target: '_blank', rel: 'noopener noreferrer')
+  - link = link_to('', help_page_path('user/project/deploy_tokens/index.md'), target: '_blank', rel: 'noopener noreferrer')
   = safe_format(s_('DeployTokens|Create a new deploy token for all projects in this group. %{link_start}What are deploy tokens?%{link_end}'), tag_pair(link, :link_start, :link_end))
 
 = gitlab_ui_form_for token, url: create_deploy_token_path(group_or_project, anchor: 'js-deploy-tokens'), method: :post, remote: true do |f|
@@ -7,7 +7,7 @@
   .form-group
     = f.label :name, class: 'label-bold'
     = f.text_field :name, class: 'form-control gl-form-input', data: { testid: 'deploy-token-name-field' }, required: true
-    .text-secondary= s_('DeployTokens|Enter a unique name for your deploy token.')
+    .text-secondary= s_('DeployTokens|Enter a unique name for your deploy token. Name the token gitlab-deploy-token to expose it to CI/CD jobs.')
 
   .form-group
     = f.label :expires_at, _('Expiration date (optional)'), class: 'label-bold'

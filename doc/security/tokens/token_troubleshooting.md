@@ -78,7 +78,7 @@ To replace the token:
      to list recently expired tokens.
 1. Create a new access token:
    - For personal access tokens, [use the UI](../../user/profile/personal_access_tokens.md#create-a-personal-access-token)
-     or [Users API](../../api/users.md#create-a-personal-access-token).
+     or [User tokens API](../../api/user_tokens.md#create-a-personal-access-token).
    - For a project access token, [use the UI](../../user/project/settings/project_access_tokens.md#create-a-project-access-token)
      or [project access tokens API](../../api/project_access_tokens.md#create-a-project-access-token).
    - For a group access token, [use the UI](../../user/group/settings/group_access_tokens.md#create-a-group-access-token-using-ui)
@@ -107,7 +107,7 @@ This script extends the lifetime of all tokens which expire on a specified date,
 - Group access tokens
 - Project access tokens
 
-The lifetimes of tokens intentionally set to expire on the specified date are also extended.
+For group and project access tokens, this script only extends the lifetime of these tokens if they were given an expiration date automatically when upgrading to GitLab 16.0 or later. If a group or project access token was generated with an expiration date, or was rotated, the validity of that token is dependent on a valid membership to a resource, and therefore the token lifetime cannot be extended using this script.
 
 To use the script:
 

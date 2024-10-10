@@ -41,6 +41,7 @@ RSpec.describe ApplicationSetting, feature_category: :shared, type: :model do
     it { expect(setting.group_projects_api_limit).to eq(600) }
     it { expect(setting.group_shared_groups_api_limit).to eq(60) }
     it { expect(setting.groups_api_limit).to eq(200) }
+    it { expect(setting.create_organization_api_limit).to eq(10) }
     it { expect(setting.project_api_limit).to eq(400) }
     it { expect(setting.project_invited_groups_api_limit).to eq(60) }
     it { expect(setting.projects_api_limit).to eq(2000) }
@@ -53,6 +54,12 @@ RSpec.describe ApplicationSetting, feature_category: :shared, type: :model do
     subject { described_class::USERS_UNCONFIRMED_SECONDARY_EMAILS_DELETE_AFTER_DAYS }
 
     it { is_expected.to eq(3) }
+  end
+
+  describe 'INACTIVE_RESOURCE_ACCESS_TOKENS_DELETE_AFTER_DAYS' do
+    subject { described_class::INACTIVE_RESOURCE_ACCESS_TOKENS_DELETE_AFTER_DAYS }
+
+    it { is_expected.to eq(30) }
   end
 
   describe 'validations' do
@@ -198,6 +205,9 @@ RSpec.describe ApplicationSetting, feature_category: :shared, type: :model do
 
     it { is_expected.to validate_inclusion_of(:silent_admin_exports_enabled).in_array([true, false]) }
 
+    it { is_expected.to allow_values([true, false]).for(:enforce_ci_inbound_job_token_scope_enabled) }
+    it { is_expected.not_to allow_value(nil).for(:enforce_ci_inbound_job_token_scope_enabled) }
+
     context 'for non-null integer attributes starting from 0' do
       where(:attribute) do
         %i[
@@ -231,6 +241,7 @@ RSpec.describe ApplicationSetting, feature_category: :shared, type: :model do
           package_registry_cleanup_policies_worker_capacity
           packages_cleanup_package_file_worker_capacity
           pipeline_limit_per_project_user_sha
+          create_organization_api_limit
           project_api_limit
           projects_api_limit
           projects_api_rate_limit_unauthenticated

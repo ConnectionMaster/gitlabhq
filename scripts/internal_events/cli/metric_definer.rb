@@ -142,7 +142,10 @@ module InternalEventsCli
         'Which metrics do you want to add?',
         eligible_metrics,
         **select_opts,
-        per_page: 20)
+        **filter_opts,
+        per_page: 20,
+        &disabled_format_callback
+      )
 
       assign_shared_attrs(:actions, :milestone) do
         {
@@ -155,6 +158,7 @@ module InternalEventsCli
     def prompt_for_event_filters
       return if @metrics.none?(&:filters_expected?)
 
+      selected_unique_identifier = @metrics.first.identifier.value
       event_count = selected_events.length
       previous_inputs = {
         'label' => nil,
@@ -168,6 +172,8 @@ module InternalEventsCli
         next if deselect_nonfilterable_event?(event) # prompts user
 
         filter_values = event.additional_properties&.filter_map do |property, _|
+          next if selected_unique_identifier == property
+
           prompt_for_property_filter(
             event.action,
             property,
@@ -217,6 +223,13 @@ module InternalEventsCli
           metric.key = key
         end
       end
+    end
+
+    def file_saved_context_message(attributes)
+      format_prefix "  ", <<~TEXT.chomp
+        - Visit #{format_info('https://metrics.gitlab.com')} to find dashboard links for this metric
+        - Metric trend dashboard: #{format_info(metric_trend_path(attributes['key_path']))}
+      TEXT
     end
 
     # Check existing event files for attributes to copy over
@@ -297,16 +310,20 @@ module InternalEventsCli
       new_page!
 
       outcome = outcomes.any? ? outcomes.compact.join("\n") : '  No files saved.'
+      metric = @metrics.first
 
       cli.say <<~TEXT
         #{divider}
         #{format_info('Done with metric definitions!')}
 
         #{outcome}
-
         #{divider}
 
           Have you instrumented the application code to trigger the event yet? View usage examples to easily copy/paste implementation!
+
+          Want to verify the metrics? Check out the group::#{metric[:product_group]} Metrics Exploration Dashboard in Tableau
+            Note: The Metrics Exploration Dashboard data would be available ~1 week after deploy for Gitlab.com, ~1 week after next release for self-managed
+            Link: #{format_info(metric_exploration_group_path(metric[:product_group], find_stage(metric.product_group)))}
 
           Typical flow: Define event > Define metric > Instrument app code > Merge/Deploy MR > Verify data in Tableau/Snowflake
 
@@ -448,6 +465,7 @@ module InternalEventsCli
 
       prompt_for_text("  Finish the description: #{description_start}", default, multiline: true) do |q|
         q.required true
+        q.modify :trim
         q.messages[:required?] = Text::METRIC_DESCRIPTION_HELP
       end
     end

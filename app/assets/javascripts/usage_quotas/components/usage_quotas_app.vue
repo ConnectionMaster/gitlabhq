@@ -43,7 +43,7 @@ export default {
     <gl-alert v-if="!tabs.length" variant="danger" :dismissible="false">
       {{ s__('UsageQuota|Something went wrong while loading Usage Quotas Tabs.') }}
     </gl-alert>
-    <gl-tabs v-else>
+    <gl-tabs v-else content-class="gl-leading-[unset]">
       <gl-tab
         v-for="tab in tabs"
         :key="tab.hash"
@@ -51,6 +51,7 @@ export default {
         :active="isActive(tab.hash)"
         :data-testid="`${tab.testid}-tab-content`"
         :title-link-attributes="glTabLinkAttributes(tab)"
+        lazy
         @click="updateActiveTab(tab)"
       >
         <component :is="tab.component" :data-testid="`${tab.testid}-app`" />

@@ -33,13 +33,11 @@ module Members
       add_members
       after_add_hooks
 
-      enqueue_onboarding_progress_action
-
       publish_event!
 
       result
     rescue BlankInvitesError, TooManyInvitesError, MembershipLockedError, SeatLimitExceededError => e
-      Gitlab::ErrorTracking.log_exception(e, class: self.class.to_s, user_id: current_user.id)
+      Gitlab::ErrorTracking.log_exception(e, class: self.class.to_s, user_id: current_user&.id)
 
       error(e.message, pass_back: { reason: e.class.name.demodulize.underscore.to_sym })
     end
@@ -57,7 +55,7 @@ module Members
     end
 
     def cannot_assign_owner_responsibilities_to_member_in_project?
-      source.is_a?(Project) && !current_user.can?(:manage_owners, source)
+      source.is_a?(Project) && !current_user&.can?(:manage_owners, source)
     end
 
     def invites_from_params
@@ -178,21 +176,15 @@ module Members
       limit && limit < 0 ? nil : limit
     end
 
-    def enqueue_onboarding_progress_action
-      return unless at_least_one_member_created?
-
-      Onboarding::UserAddedWorker.perform_async(member_created_namespace_id)
-    end
-
     def at_least_one_member_created?
       member_created_namespace_id.present?
     end
 
-    def result
+    def result(pass_back = {})
       if errors.any?
-        error(formatted_errors, http_status)
+        error(formatted_errors, http_status, pass_back: pass_back)
       else
-        success
+        success(pass_back)
       end
     end
 

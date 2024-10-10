@@ -51,6 +51,7 @@ module Gitlab
       end
 
       def log_job_start(job, payload)
+        add_thread_identity(payload)
         payload['message'] = "#{base_message(payload)}: start"
         payload['job_status'] = 'start'
 
@@ -65,6 +66,7 @@ module Gitlab
 
       def log_job_done(job, started_time, payload, job_exception = nil)
         payload = payload.dup
+        add_thread_identity(payload)
         add_instrumentation_keys!(job, payload)
         add_logging_extras!(job, payload)
 
@@ -105,6 +107,11 @@ module Gitlab
         end
 
         payload
+      end
+
+      def add_thread_identity(payload)
+        payload['sidekiq_tid'] = Gitlab::SidekiqProcess.tid
+        payload['sidekiq_thread_name'] = Thread.current.name if Thread.current.name
       end
 
       def add_time_keys!(time, payload)

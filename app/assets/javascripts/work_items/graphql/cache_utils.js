@@ -1,17 +1,20 @@
 import { produce } from 'immer';
 import VueApollo from 'vue-apollo';
+import { isEmpty } from 'lodash';
 import { apolloProvider } from '~/graphql_shared/issuable_client';
 import { issuesListClient } from '~/issues/list';
 import { TYPENAME_USER } from '~/graphql_shared/constants';
 import { convertToGraphQLId } from '~/graphql_shared/utils';
 import { getBaseURL } from '~/lib/utils/url_utility';
 import { convertEachWordToTitleCase } from '~/lib/utils/text_utility';
+import { getDraft, clearDraft } from '~/lib/utils/autosave';
 import {
   findHierarchyWidgets,
   findHierarchyWidgetChildren,
   isNotesWidget,
   newWorkItemFullPath,
   newWorkItemId,
+  getNewWorkItemAutoSaveKey,
 } from '../utils';
 import {
   WIDGET_TYPE_ASSIGNEES,
@@ -30,6 +33,7 @@ import {
   WIDGET_TYPE_DESCRIPTION,
   WIDGET_TYPE_CRM_CONTACTS,
   NEW_WORK_ITEM_IID,
+  WIDGET_TYPE_CURRENT_USER_TODOS,
 } from '../constants';
 import workItemByIidQuery from './work_item_by_iid.query.graphql';
 import getWorkItemTreeQuery from './work_item_tree.query.graphql';
@@ -263,6 +267,30 @@ export const updateParent = ({ cache, fullPath, iid, workItem }) => {
   });
 };
 
+export const updateWorkItemCurrentTodosWidget = ({ cache, fullPath, iid, todos }) => {
+  const query = {
+    query: workItemByIidQuery,
+    variables: { fullPath, iid },
+  };
+
+  const sourceData = cache.readQuery(query);
+
+  if (!sourceData) {
+    return;
+  }
+
+  const newData = produce(sourceData, (draftState) => {
+    const { widgets } = draftState.workspace.workItem;
+    const widgetCurrentUserTodos = widgets.find(
+      (widget) => widget.type === WIDGET_TYPE_CURRENT_USER_TODOS,
+    );
+
+    widgetCurrentUserTodos.currentUserTodos.nodes = todos;
+  });
+
+  cache.writeQuery({ ...query, data: newData });
+};
+
 export const setNewWorkItemCache = async (
   fullPath,
   widgetDefinitions,
@@ -306,25 +334,6 @@ export const setNewWorkItemCache = async (
     lastEditedBy: null,
     taskCompletionStatus: null,
     __typename: 'WorkItemWidgetDescription',
-  });
-
-  widgets.push({
-    type: WIDGET_TYPE_PARTICIPANTS,
-    participants: {
-      nodes: [
-        {
-          id: currentUserId,
-          avatarUrl: gon?.current_user_avatar_url,
-          username: gon?.current_username,
-          name: gon?.current_user_fullname,
-          webUrl: `${baseURL}/${gon?.current_username}`,
-          webPath: `/${gon?.current_username}`,
-          __typename: 'UserCore',
-        },
-      ],
-      __typename: 'UserCoreConnection',
-    },
-    __typename: 'WorkItemWidgetParticipants',
   });
 
   workItemAttributesWrapperOrder.forEach((widgetName) => {
@@ -440,6 +449,7 @@ export const setNewWorkItemCache = async (
         widgets.push({
           type: 'HEALTH_STATUS',
           healthStatus: null,
+          rolledUpHealthStatus: [],
           __typename: 'WorkItemWidgetHealthStatus',
         });
       }
@@ -459,6 +469,8 @@ export const setNewWorkItemCache = async (
           hasChildren: false,
           hasParent: false,
           parent: null,
+          depthLimitReachedByType: [],
+          rolledUpCountsByType: [],
           children: {
             nodes: [],
             __typename: 'WorkItemConnection',
@@ -492,65 +504,81 @@ export const setNewWorkItemCache = async (
 
   const newWorkItemPath = newWorkItemFullPath(fullPath, workItemType);
 
+  const autosaveKey = getNewWorkItemAutoSaveKey(fullPath, workItemType);
+
+  const getStorageDraftString = getDraft(autosaveKey);
+
+  const draftData = JSON.parse(getDraft(autosaveKey));
+
+  const isValidDraftData =
+    !isEmpty(draftData) && getStorageDraftString && draftData?.workspace?.workItem;
+
+  /** check in case of someone plays with the localstorage, we need to be sure */
+  if (!isValidDraftData) {
+    clearDraft(autosaveKey);
+  }
+
   cacheProvider.clients.defaultClient.cache.writeQuery({
     query: workItemByIidQuery,
     variables: {
       fullPath: newWorkItemPath,
       iid: NEW_WORK_ITEM_IID,
     },
-    data: {
-      workspace: {
-        id: newWorkItemPath,
-        workItem: {
-          id: newWorkItemId(workItemType),
-          iid: NEW_WORK_ITEM_IID,
-          archived: false,
-          title: '',
-          state: 'OPEN',
-          description: null,
-          confidential: false,
-          createdAt: null,
-          updatedAt: null,
-          closedAt: null,
-          webUrl: `${baseURL}/groups/gitlab-org/-/work_items/new`,
-          reference: '',
-          createNoteEmail: null,
-          namespace: {
+    data: isValidDraftData
+      ? { ...draftData }
+      : {
+          workspace: {
             id: newWorkItemPath,
-            fullPath,
-            name: newWorkItemPath,
+            workItem: {
+              id: newWorkItemId(workItemType),
+              iid: NEW_WORK_ITEM_IID,
+              archived: false,
+              title: '',
+              state: 'OPEN',
+              description: null,
+              confidential: false,
+              createdAt: null,
+              updatedAt: null,
+              closedAt: null,
+              webUrl: `${baseURL}/groups/gitlab-org/-/work_items/new`,
+              reference: '',
+              createNoteEmail: null,
+              namespace: {
+                id: newWorkItemPath,
+                fullPath,
+                name: newWorkItemPath,
+                __typename: 'Namespace', // eslint-disable-line @gitlab/require-i18n-strings
+              },
+              author: {
+                id: currentUserId,
+                avatarUrl: gon?.current_user_avatar_url,
+                username: gon?.current_username,
+                name: gon?.current_user_fullname,
+                webUrl: `${baseURL}/${gon?.current_username}`,
+                webPath: `/${gon?.current_username}`,
+                __typename: 'UserCore',
+              },
+              workItemType: {
+                id: workItemTypeId || 'mock-work-item-type-id',
+                name: workItemTitleCase,
+                iconName: 'issue-type-epic',
+                __typename: 'WorkItemType',
+              },
+              userPermissions: {
+                deleteWorkItem: true,
+                updateWorkItem: true,
+                adminParentLink: true,
+                setWorkItemMetadata: true,
+                createNote: true,
+                adminWorkItemLink: true,
+                __typename: 'WorkItemPermissions',
+              },
+              widgets,
+              __typename: 'WorkItem',
+            },
             __typename: 'Namespace', // eslint-disable-line @gitlab/require-i18n-strings
           },
-          author: {
-            id: currentUserId,
-            avatarUrl: gon?.current_user_avatar_url,
-            username: gon?.current_username,
-            name: gon?.current_user_fullname,
-            webUrl: `${baseURL}/${gon?.current_username}`,
-            webPath: `/${gon?.current_username}`,
-            __typename: 'UserCore',
-          },
-          workItemType: {
-            id: workItemTypeId || 'mock-work-item-type-id',
-            name: workItemTitleCase,
-            iconName: 'issue-type-epic',
-            __typename: 'WorkItemType',
-          },
-          userPermissions: {
-            deleteWorkItem: true,
-            updateWorkItem: true,
-            adminParentLink: true,
-            setWorkItemMetadata: true,
-            createNote: true,
-            adminWorkItemLink: true,
-            __typename: 'WorkItemPermissions',
-          },
-          widgets,
-          __typename: 'WorkItem',
         },
-        __typename: 'Namespace', // eslint-disable-line @gitlab/require-i18n-strings
-      },
-    },
   });
 };
 

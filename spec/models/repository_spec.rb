@@ -2715,34 +2715,6 @@ RSpec.describe Repository, feature_category: :source_code_management do
 
       repository.after_create
     end
-
-    context 'when repository is attached to a personal snippet' do
-      let(:repository) { create(:personal_snippet).repository }
-
-      it 'does not raise an error for onboarding considerations' do
-        expect { repository.after_create }.not_to raise_error
-      end
-    end
-
-    context 'when namespace is onboarded', :sidekiq_inline do
-      before do
-        ::Onboarding::Progress.onboard(project.namespace)
-      end
-
-      it 'records the onboarding progress' do
-        repository.after_create
-
-        expect(::Onboarding::Progress.completed?(project.namespace, :git_write)).to eq(true)
-      end
-    end
-
-    context 'when namespace is not onboarded', :sidekiq_inline do
-      it 'does not record the onboarding progress' do
-        repository.after_create
-
-        expect(::Onboarding::Progress.completed?(project.namespace, :git_write)).to eq(false)
-      end
-    end
   end
 
   describe '#expire_status_cache' do
@@ -4397,24 +4369,6 @@ RSpec.describe Repository, feature_category: :source_code_management do
       end
 
       subject
-    end
-
-    context 'when validate_target_sha_in_user_commit_files feature flag is disabled' do
-      let_it_be(:project) { create(:project, :repository) }
-      let(:target_sha) { nil }
-
-      before do
-        stub_feature_flags(validate_target_sha_in_user_commit_files: false)
-      end
-
-      it 'does not find or pass the branches target_sha' do
-        expect_next_instance_of(Gitlab::GitalyClient::OperationService) do |client|
-          expect(client).to receive(:user_commit_files).with(*expected_params)
-        end
-        expect(repository).not_to receive(:commit)
-
-        subject
-      end
     end
 
     context 'with an empty branch' do

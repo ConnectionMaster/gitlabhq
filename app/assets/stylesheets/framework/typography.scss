@@ -39,6 +39,10 @@
     display: inline-flex;
     flex-direction: column;
     margin-bottom: $gl-spacing-scale-2;
+
+    video {
+      max-width: 100%;
+    }
   }
 
   img {
@@ -158,12 +162,16 @@
     color: $gray-700;
     padding-top: $gl-spacing-scale-3;
     padding-bottom: $gl-spacing-scale-3;
-    padding-left: $gl-spacing-scale-6;
+    padding-left: $gl-spacing-scale-5;
     margin-top: $gl-spacing-scale-3;
     margin-bottom: $gl-spacing-scale-3;
     margin-left: 0;
     margin-right: 0;
-    @apply gl-shadow-inner-l-4-gray-100;
+    border-left: 4px solid var(--gl-color-neutral-100);
+
+    .gl-dark & {
+      border-left-color: var(--gl-color-neutral-600);
+    }
 
     &:dir(rtl) {
       border-left: 0;
@@ -258,7 +266,6 @@
         }
       }
     }
-
 
     &.grid-rows {
       > thead > tr > th,
@@ -447,7 +454,8 @@
     padding-left: 3px;
 
     /* Normalize the bullet position on webkit. */
-    @include on-webkit-only {
+    /* stylelint-disable-next-line media-feature-name-no-vendor-prefix */
+    @media screen and (-webkit-min-device-pixel-ratio: 0) {
       margin-left: 28px;
       padding-left: 0;
     }
@@ -759,13 +767,6 @@ pre {
   }
 }
 
-code {
-  &.key-fingerprint {
-    background: $body-bg;
-    color: $text-color;
-  }
-}
-
 .monospace {
   @include gl-font-monospace;
 }
@@ -824,7 +825,6 @@ h4 {
   background: $line-added-dark;
 }
 
-
 /**
  * form text input i.e. search bar, comments, forms, etc.
  */
@@ -860,4 +860,39 @@ wbr {
 // The font used in Monaco editor - Web IDE, Snippets, single file editor
 :root {
   --code-editor-font: #{$monospace-font};
+}
+
+/**
+ * FOOTNOTES
+ */
+ section.footnotes {
+  position: relative;
+  padding-top: $gl-spacing-scale-5;
+  margin-top: $gl-spacing-scale-7;
+  font-size: $gl-font-size-12;
+
+  &::before {
+    content: '';
+    width: 16rem;
+    max-width: 100%;
+    border-top: 1px solid $border-color;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  ol > li {
+    margin-inline-start: $gl-spacing-scale-6;
+
+     p {
+      margin-block-end: 0;
+     }
+  }
+
+  // prevent backref character from rendering as emoji
+  .footnote-backref gl-emoji {
+    font-family: inherit;
+    font-size: 0.875em;
+    pointer-events: none;
+  }
 }

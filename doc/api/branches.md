@@ -30,7 +30,7 @@ Parameters:
 
 | Attribute | Type           | Required | Description |
 |:----------|:---------------|:---------|:------------|
-| `id`      | integer or string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user.|
+| `id`      | integer or string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-paths).|
 | `search`  | string         | no       | Return list of branches containing the search string. Use `^term` to find branches that begin with `term`, and `term$` to find branches that end with `term`. |
 | `regex`   | string         | no       | Return list of branches with names matching a [re2](https://github.com/google/re2/wiki/Syntax) regular expression. |
 
@@ -92,8 +92,8 @@ Parameters:
 
 | Attribute | Type              | Required | Description |
 |-----------|-------------------|----------|-------------|
-| `id`      | integer or string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
-| `branch`  | string            | yes      | [URL-encoded name](rest/index.md#namespaced-path-encoding) of the branch. |
+| `id`      | integer or string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-paths). |
+| `branch`  | string            | yes      | [URL-encoded name](rest/index.md#namespaced-paths) of the branch. |
 
 Example request:
 
@@ -157,7 +157,7 @@ Parameters:
 
 | Attribute | Type    | Required | Description |
 |-----------|---------|----------|-------------|
-| `id`      | integer | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `id`      | integer | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-paths). |
 | `branch`  | string  | yes      | Name of the branch. |
 | `ref`     | string  | yes      | Branch name or commit SHA to create branch from. |
 
@@ -216,7 +216,7 @@ Parameters:
 
 | Attribute | Type           | Required | Description |
 |-----------|----------------|----------|-------------|
-| `id`      | integer/string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `id`      | integer/string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-paths). |
 | `branch`  | string         | yes      | Name of the branch. |
 
 Example request:
@@ -231,7 +231,7 @@ curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" \
 Deletes all branches that are merged into the project's default branch.
 
 NOTE:
-[Protected branches](../user/project/protected_branches.md) are not deleted as part of this operation.
+[Protected branches](../user/project/repository/branches/protected.md) are not deleted as part of this operation.
 
 ```plaintext
 DELETE /projects/:id/repository/merged_branches
@@ -241,7 +241,7 @@ Parameters:
 
 | Attribute | Type           | Required | Description                                                                                                  |
 |:----------|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------|
-| `id`      | integer/string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-path-encoding) owned by the authenticated user. |
+| `id`      | integer/string | yes      | ID or [URL-encoded path of the project](rest/index.md#namespaced-paths). |
 
 Example request:
 
@@ -253,5 +253,5 @@ curl --request DELETE --header "PRIVATE-TOKEN: <your_access_token>" \
 ## Related topics
 
 - [Branches](../user/project/repository/branches/index.md)
-- [Protected branches](../user/project/protected_branches.md)
+- [Protected branches](../user/project/repository/branches/protected.md)
 - [Protected branches API](protected_branches.md)

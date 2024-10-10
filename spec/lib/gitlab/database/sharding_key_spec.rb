@@ -36,7 +36,6 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       *['labels.project_id', 'labels.group_id'], # https://gitlab.com/gitlab-org/gitlab/-/issues/434356
       'member_roles.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/444161
       *['milestones.project_id', 'milestones.group_id'],
-      'pages_domains.project_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/442178,
       'sprints.group_id',
       *['todos.project_id', 'todos.group_id']
     ]
@@ -65,6 +64,7 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       'ci_job_artifacts.project_id',
       'ci_namespace_monthly_usages.namespace_id', # https://gitlab.com/gitlab-org/gitlab/-/issues/321400
       'ci_builds_metadata.project_id',
+      'p_ci_job_annotations.project_id', # LFK already present on p_ci_builds and cascade delete all ci resources
       'ldap_group_links.group_id',
       'namespace_descendants.namespace_id',
       'p_batched_git_ref_updates_deletions.project_id',
@@ -176,14 +176,15 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       FROM information_schema.columns c
       LEFT JOIN postgres_foreign_keys fk
       ON fk.constrained_table_name = c.table_name AND fk.constrained_columns = '{organization_id}' and fk.referenced_columns = '{id}'
-      WHERE c.column_name = 'organization_id' AND (c.column_default IS NOT NULL OR c.is_nullable::boolean OR fk.name IS NULL)
+      WHERE c.column_name = 'organization_id'
+        AND (fk.referenced_table_name = 'organizations' OR fk.referenced_table_name IS NULL)
+        AND (c.column_default IS NOT NULL OR c.is_nullable::boolean OR fk.name IS NULL)
       ORDER BY c.table_name;
     SQL
 
     # To add a table to this list, create an issue under https://gitlab.com/groups/gitlab-org/-/epics/11670.
     # Use https://gitlab.com/gitlab-org/gitlab/-/issues/476206 as an example.
     work_in_progress = {
-      "customer_relations_contacts" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476206',
       "dependency_list_export_parts" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476207',
       "dependency_list_exports" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476208',
       "namespaces" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476209',
@@ -194,12 +195,13 @@ RSpec.describe 'new tables missing sharding_key', feature_category: :cell do
       "sbom_source_packages" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476214',
       "sbom_sources" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476215',
       "snippets" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476216',
-      "upcoming_reconciliations" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476217',
       "vulnerability_export_parts" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476218',
       "vulnerability_exports" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/476219',
       "personal_access_tokens" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/477750',
       "sbom_components" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/469436',
-      "subscription_user_add_on_assignments" => "https://gitlab.com/gitlab-org/gitlab/-/issues/480697"
+      "sbom_component_versions" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/483194',
+      "subscription_user_add_on_assignments" => "https://gitlab.com/gitlab-org/gitlab/-/issues/480697",
+      "topics" => 'https://gitlab.com/gitlab-org/gitlab/-/issues/463254'
     }
 
     organization_id_columns = ApplicationRecord.connection.select_rows(sql)
